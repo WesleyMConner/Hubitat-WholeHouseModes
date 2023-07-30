@@ -47,10 +47,10 @@ Map monoPage() {
         paragraph bullet('It also groups <b>Room Scenes</b> (children) together.')
       } else {
         //addRoomListToSettings('<b> Step 1:</b> Identify the Participating Rooms')
-      }
-      if (settings.roomIds) {
-        paragraph emphasis('<b>Step 1: Identify Participating Devices')
-        paragraph emphasis2('Identify all Lutron Main Repeaters') \
+      //}
+      //if (settings.roomIds) {
+        paragraph emphasis('<b>Step 1: Identify Participating Devices<br/>') \
+          + emphasis2('Identify all Lutron Main Repeaters<br/>') \
           + bullet('Repeater buttons invoke in-kind Lutron scenes')
         input (
           name: 'lutronRepeaters',

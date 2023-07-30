@@ -64,7 +64,7 @@ void addRoomObjToSettings(String heading) {
   input(
     name: 'roomId',
     type: 'enum',
-    title: 'Select the Room',
+    title: 'Select the Room Name (and double click)',
     submitOnChange: true,
     required: true,
     multiple: false,
@@ -157,7 +157,7 @@ Map monoPage() {
     section {
       app.updateLabel("${state?.roomObj?.name ?: 'ROOM NAME PENDING'} Room Scenes")
       // paragraph heading("${state.roomObj.name ?: 'TBD'} Room Scenes") \
-      paragraph important('<br/>Tab to register field changes!')
+      paragraph important("<br/><b>IMPORTANT:</b> <em>After editing any field, use the 'tab' key to register your changes!</em>")
       addRoomObjToSettings('<b>Step 1:</b> Identify the Hubitat Room to control')
       if (state.roomObj) {
         addScenesToSettings ("<b>Step 2:</b> Identify <b>${state.roomObj.name}</b> Scenes")
