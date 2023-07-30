@@ -1,0 +1,28 @@
+// cSpell: kpad kpads 
+= RA2 Integration Notes
+
+== Test Results
+
+[width="100%", frame="all", grid="all", cols="^34,<33,<33", options="header"]
+|===
+|Configuration
+|PRO
+|CON
+
+>| *Shared (single scene)* +
+(on REPs and KPADs)
+| * KPAD LEDs track Scene Buttons +
+ * KPAD LEDs are seen by Hubitat
+| * No COOK <--> AUTO toggle. 
+
+>| *Shared (toggle control)* +
+(on REPs and KPADs)
+| * COOK -> OFF -> AUTO (possible)
+| * LEDs are unreliable for multiple Shared Toggles in a room.
+
+>| *->* *KPAD Buttons Unassigned* +
+(WINNING APPROACH OPTION)
+| * KPAD LEDs cycle on/then off +
+* Hubitat sees KPAD Button Press
+| * RA2 -> Hubitat -> RA2 Delay
+|===

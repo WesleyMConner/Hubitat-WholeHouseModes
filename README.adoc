@@ -1,0 +1,69 @@
+:table-caption!:
+= Whole House Modes
+
+*Whole House Modes* is a https://docs2.hubitat.com/developer/app/overview["_custom Hubitat Application_", window=read-ref,opts=”noopener,nofollow”] designed to manage whole-house modal lighting.
+
+== Application Terminology
+[width="100%", frame="none", grid="none", cols=">25,<75a"]
+|===
+|*mode*
+|See https://docs2.hubitat.com/user-interface/settings/modes["Hubitat Modes", window=read-ref,opts=”noopener,nofollow”].
+
+|*Pushbutton Switches*
+|A group of switches that are managed by a https://github.com/WesleyMConner/Hubitat-PushbuttonSwitches/blob/main/README.adoc["*PushButton Switches*", window=read-ref,opts=”noopener,nofollow”] instance, which:
+
+* Ensures only one switch in the group is "on" at any given time.
+* Optionally, ensures one switch in the group (the *_Default Switch_*) is turned "on" if all switches in the group would otherwise be turned "off".
+
+|*mode VSWs*
+|Per-mode virtual switches are created and managed by this application.
+
+* These VSWs *must be used exclusively* to adjust the Hubitat mode.
+* The VSWs are placed in a *Pushbutton Switches* instance and one switch is designated as the *Default Switch*.
+
+|*RA2*
+|The Lutron RadioRA 2 lighting system
+
+|*Main Repeater(s)*
+|The RA2 component(s) that control participating RA2 devices.
+
+|*Integration Button* +
+(_Phantom Button_) |An RA2 Main Repeater facility for activating RA2-managed scenes.
+
+|*room*
+|See https://docs2.hubitat.com/user-interface/rooms["Hubitat Rooms", window=read-ref,opts=”noopener,nofollow”].
+
+|*roomScene*
+|A per-room scene *specific to this application* where:
+
+* RA2 device levels are set via a corresponding *Integration Button*.
+* Non-RA2 devices levels are specified in the scene's definition.
+* The RA2 Keypad LEDs for the scene (if any) are identified.
+
+|*room VSWs*
+|This application creates and manages one virtual switch per *roomScene*.
+Additionally, the application creates per room *AUTO* and *MANUAL* virtual switches, where:
+
+* When *AUTO* is "on" a the client's choice of per-mode *roomScene* is automatically enabled when the Hubitat mode changes.
+* *MANUAL* is turned "on", when a user has adjusted a room device manually which suspends automation for the room.
+* The room's *roomScene*, *AUTO* and *MANUAL* VSWs are placed in a *PushButton Switch* instance and the *AUTO* VSW is designated as the *Default Device*. 
+
+|*Lutron Integrator*
+|The https://docs2.hubitat.com/apps/lutron-integrator["built-in Hubitat Parent App", window=read-ref,opts=”noopener,nofollow”] that bridges an RA2 Main Repeater into the Hubitat ecosystem.
+
+* Child Devices are created in Hubitat that correspond to RA2 devices.
+* Activity on an RA2 keypad can be used to trigger Hubitat virtual switches created and managed by this application.
+* Activity on an RA2 device can be used to detect manual override of room scenes. 
+|===
+
+== Application Configuration
+
+.Outline
+. Detect Hubitat `modes`, create the corresponding VSWs and *PushButton Switches* instance.
+. Detect Hubitat `rooms`.
+. Facilitate client enable/disable to isolate participating rooms.
+. Per participating room:
+* Facilitate *roomScenes* creation.
+* Facilitate client `mode`-to-`scene` mappings.
+* Create VSWs and *PushButton Switches* instance.
+
