@@ -19,6 +19,7 @@ import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
 #include wesmc.UtilsLibrary
+#include wesmc.DeviceLibrary
 
 definition(
   parent: "wesmc:WholeHouseAutomation",
@@ -158,18 +159,19 @@ Map monoPage() {
       app.updateLabel("${state?.roomObj?.name ?: 'ROOM NAME PENDING'} Room Scenes")
       // paragraph heading("${state.roomObj.name ?: 'TBD'} Room Scenes") \
       paragraph important("<br/><b>IMPORTANT:</b> <em>After editing any field, use the 'tab' key to register your changes!</em>")
-      addRoomObjToSettings('<b>Step 1:</b> Identify the Hubitat Room to control')
+      addRoomObjToSettings('Identify the Hubitat Room to control')
       if (state.roomObj) {
-        addScenesToSettings ("<b>Step 2:</b> Identify <b>${state.roomObj.name}</b> Scenes")
+        addScenesToSettings ("Identify <b>${state.roomObj.name}</b> Scenes")
       }
       if (state.scenes) {
         paragraph "<b>Current Scenes:</b> ${state.scenes?.join(', ') ?: '...none...'}"
-        addModeIdToSceneToSettings("<b>Step 3:</b> Map Hub modes to ${state.roomObj.name} Scenes (for automation)")
+        addModeIdToSceneToSettings("Map Hub modes to ${state.roomObj.name} Scenes (for automation)")
       }
       if (state.modeIdToScene) {
         //--paragraph "state.modeIdToScene: ${state.modeIdToScene}"
+        paragraph "***** DEMO PARENT METHOD CALL ***** >${parent.getLetters()}<"
         // READY TO IDENTIFY DEVICES
-        paragraph emphasis("<b>Step 4:</b> Identify Devices for ${state.roomObj.name}")
+        paragraph emphasis("AUTOMATE FROM PARENT SETTINGS<br/>Identify Devices for ${state.roomObj.name}")
         paragraph emphasis2('Identify Lutron AND <b>Non-Lutron</b>, <b>Non-VSW</b> Devices')
         input (
           name: 'nonLutronDevices',
@@ -179,7 +181,11 @@ Map monoPage() {
           required: true,
           multiple: true
         )
-        paragraph emphasis2('Identify <b>Lutron</b>, <b>Non-VSW</b> Devices')
+
+        //--NO-GOOD-- paragraph "Parent's switches: ${parent.settings.switches}"
+        //--NO-GOOD-- paragraph "Room's switches: ${getDevicesForRoom(state.roomObj.name, parent.settings.switches)}"
+
+        paragraph emphasis2("AUTOMATE FROM PARENT SETTINGS<br/>Identify <b>Lutron</b>, <b>Non-VSW</b> Devices")
         input (
           name: 'lutronRepeaters',
           type: 'device.LutronKeypad',           // Enums in the future
