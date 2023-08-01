@@ -32,58 +32,26 @@ definition(
   singleInstance: true
 )
 
-
-
-
-
-String dah(DeviceWrapperList devices) {
-  // Not helpful
-  //   - d.getMetaPropertyValues()
-  //   = d.type() DOES NOT EXIST
-  //   = d.type always null
-  String headerRow = """<tr>
-    <th style='border: 1px solid black' align='center'>Id</th>
-    <th style='border: 1px solid black' align='center'>Display Name</th>
-    <th style='border: 1px solid black' align='center'>Room Id</th>
-    <th style='border: 1px solid black' align='center'>Room Name</th>
-    <th style='border: 1px solid black' align='center'>Supported Attributes</th>
-    <th style='border: 1px solid black' align='center'>Data</th>
-    <th style='border: 1px solid black' align='center'>Current States</th>
-    <th style='border: 1px solid black' align='center'>Supported Commands</th>
-    <th style='border: 1px solid black' align='center'>Parent Device ID</th>
-    <th style='border: 1px solid black' align='center'>Disabled?</th>
-    <th style='border: 1px solid black' align='center'>Type</th>
-  </tr>"""
-  String dataRows = settings.devices.collect{d ->
-    """<tr>
-      <td style='border: 1px solid black' align='center'>${d.id}</td>
-      <td style='border: 1px solid black' align='center'>${d.displayName}</td>
-      <td style='border: 1px solid black' align='center'>${d.getRoomId()}</td>
-      <td style='border: 1px solid black' align='center'>${d.getRoomName()}</td>
-      <td style='border: 1px solid black' align='center'>${d.getSupportedAttributes()}</td>
-      <td style='border: 1px solid black' align='center'>${d.getData()}</td>
-      <td style='border: 1px solid black' align='center'>${d.getCurrentStates}</td>
-      <td style='border: 1px solid black' align='center'>${d.getSupportedCommands}</td>
-      <td style='border: 1px solid black' align='center'>${d.getParentDeviceId()}</td>
-      <td style='border: 1px solid black' align='center'>${d.isDisabled()}</td>
-      <td style='border: 1px solid black' align='center'>${d.type}</td>
-    </tr>"""
-  }.join()
-  return "<table>${headerRow}${dataRows}</table>"
-}
-
-
-
-
-
-
-
-
 // -------------------------------
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
   page name: "monoPage", title: "", install: true, uninstall: true
+}
+
+Map<String, String> mapDeviceIdAsStringToRoomName () {
+  Map<String, String> results = [:]
+  app.getRooms().each{room ->
+    room.deviceIds.each{deviceIdAsInteger ->
+      results[deviceIdAsInteger.toString()] = room.name
+    }
+  }
+  return results
+}
+
+Map<String, String> getRoomNameForDeviceId(Integer deviceId) {
+  return app.getRooms().deviceIds.collect{}
+
 }
 
 void identifyParticipatingDevices(heading) {
@@ -133,6 +101,35 @@ void identifyParticipatingDevices(heading) {
   )
 }
 
+void addMainRepeatersToState() {
+  // - The containing room DOES NOT matter for repeaters.
+  Map<String, DeviceWrapper> reps = [:]
+  reps = settings.lutronRepeaters.collectEntries{[it.displayName, it]}
+  state.mainRepeaters = reps
+}
+
+void addKeypadsToState() {
+  // - The containing room DOES NOT matter for keypads or picos.
+  Map<String, DeviceWrapper> kpads1 = [:]
+  kpads1 = settings.lutronNonRepeaters.collectEntries{[it.displayName, it]}
+  Map<String, DeviceWrapper> kpads2 = [:]
+  kpads2 = settings.lutronKeypads.collectEntries{[it.displayName, it]}
+  Map<String, DeviceWrapper> picos = [:]
+  picos = settings.lutronPicos.collectEntries{[it.displayName, it]}
+  state.keypads = kpads1 + kpads2 + picos
+}
+
+Map<String, List<DeviceWrapper>> getRoomToSwitches() {
+  Map<String, List<DeviceWrapper>> roomToSwitches = [:]
+  app.getRooms().each{ room -> roomToSwitches[room.name] = [] }
+  roomToSwitches['UNKNOWN'] = []
+  settings.switches.each{ sw ->
+    String switchRoom = state.deviceIdToRoomName[sw.id] ?: 'UNKNOWN'
+    roomToSwitches[switchRoom] += sw
+  }
+  return roomToSwitches
+}
+
 Map monoPage() {
   return dynamicPage(name: "monoPage") {
     section {
@@ -144,6 +141,8 @@ Map monoPage() {
         paragraph bullet('The parent collects data used by <b>Room Scenes</b>.')
         paragraph bullet('It also groups <b>Room Scenes</b> (children) together.')
       } else {
+        // Err on the side of refreshing device-to-room mappings frequently.
+        state.deviceIdToRoomName = mapDeviceIdAsStringToRoomName()
         identifyParticipatingDevices('<b>Step 1:</b> Identify Participating Devices')
       }
       // ------------------      -------------------- -----------------
@@ -157,42 +156,37 @@ Map monoPage() {
       //                     \-> nonLutronSwitches -> nonLutronSwitches
       // ------------------      -------------------- -----------------
       if (settings.lutronRepeaters) {
-        // addMainRepeatersToState()
-        // - The containing room DOES NOT matter for repeaters.
-        Map<String, DeviceWrapper> reps = [:]
-        reps = settings.lutronRepeaters.collectEntries{[it.displayName, it]}
-        state.mainRepeaters = reps
+        addMainRepeatersToState()
       }
       if (settings.lutronNonRepeaters && settings.lutronKeypads && settings.lutronPicos) {
-        // addKeypadsToState()
-        // - The containing room DOES NOT matter for keypads or picos.
-        Map<String, DeviceWrapper> kpads1 = [:]
-        kpads1 = settings.lutronNonRepeaters.collectEntries{[it.displayName, it]}
-        Map<String, DeviceWrapper> kpads2 = [:]
-        kpads2 = settings.lutronKeypads.collectEntries{[it.displayName, it]}
-        Map<String, DeviceWrapper> picos = [:]
-        picos = settings.lutronPicos.collectEntries{[it.displayName, it]}
-        state.keypads = kpads1 + kpads2 + picos
+        addKeypadsToState()
       }
-//      if (settings.switches) {
-//        // addLutronSwitchesToState()
-//        // - The containing room DOES matter for switches.
-//        //Map<String, Map<String, DeviceWrapper>> settings.lutronSwitches = [:].withDefault { [:] }
-//        Map settings.lutronSwitches = [:]  //.withDefault { [:] }
-//        lutronSwitches = settings.switches
-//                         .findAll{it.displayName.contains('lutron')}
-//                         .collectEntries{[it.displayName, it]}
-//                         .groupBy{it.value.getRoomName ?: 'UNKNOWN'}
-//        state.lutronSwitches = lutronSwitches
-        // addNonLutronSwitchesToState()
-        // - The containing room DOES matter for switches.
-//        Map<String, Map<String, DeviceWrapper>> nonLutronSwitches = [:]
-//        nonLutronSwitches = settings.switches
-//                            .findAll{it.displayName.contains('lutron') == false}
-//                            .collectEntries{[it.displayName, it]}
-//                            .groupBy{it.value.getRoomName ?: 'UNKNOWN'}
-//        state.nonLutronSwitches = nonLutronSwitches
-//      }
+      if (settings.switches) {
+        //--paragraph "settings.switches ${settings.switches} ${settings.switches.size()}"
+        Map<String, List<DeviceWrapper>> roomToSwitches = getRoomToSwitches()
+        //--paragraph "roomToSwitches: ${roomToSwitches}"
+
+        // Design Note:
+        //   - The device's displayName needs to be processed with toString() before
+        //     using .contains('')
+        Map<String, List<DeviceWrapper>> lutronNoLED = roomToSwitches.findAll{
+          it.value.displayName.toString().contains('lutron') && !it.value.displayName.toString().contains('LED')
+        }
+        paragraph emphasis('lutronNoLED')
+        paragraph """[${lutronNoLED.each{k, v -> "<br/>${k}: ${v}"}}].join()"""
+
+        Map<String, List<DeviceWrapper>> lutronLED = roomToSwitches.findAll{
+          it.value.displayName.toString().contains('LED')
+        }
+        paragraph emphasis('lutronLED')
+        paragraph """${lutronLED.each{k, v -> "<br/>${k}: ${v}"}}"""
+
+        Map<String, List<DeviceWrapper>> notLutron = roomToSwitches.findAll{
+          !it.value.displayName.toString().contains('lutron')
+        }
+        paragraph emphasis('notLutron')
+        paragraph """${notLutron.each{k, v -> "<br/>${k}: ${v}"}}"""
+      }
       if (state.mainRepeaters && state.keypads /* && state.lutronSwitches
          && state.lutronSwitches */) {
         paragraph "state.mainRepeaters (displayName): ${state.mainRepeaters.collect{it.value.displayName}}"
