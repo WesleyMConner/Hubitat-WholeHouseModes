@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------------
-// P U S H B U T T O N   S W I T C H E S
+// W H O L E   H O U S E   A U T O M A T I O N
 //
-//  Copyright (C) 2023-Present Wesley M. Conner
+//   Copyright (C) 2023-Present Wesley M. Conner
 //
 // Licensed under the Apache License, Version 2.0 (aka Apache-2.0, the
 // "License"); you may not use this file except in compliance with the
@@ -21,21 +21,17 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DeviceWrapper
 import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
-import com.hubitat.hub.domain.Event as Event
-import com.hubitat.hub.domain.Hub as Hub
-
-// https://docs2.hubitat.com/en/developer/allowed-imports
-import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
-import com.hubitat.app.EventSubscriptionWrapper as EventSubscriptionWrapper
-import com.hubitat.app.InstalledAppWrapper as InstalledAppWrapper
-import com.hubitat.app.ParentDeviceWrapper as ParentDeviceWrapper
-import com.hubitat.hub.domain.State as State
-import com.hubitat.hub.domain.Event as Event
-import com.hubitat.hub.domain.Hub as Hub
-import com.hubitat.hub.domain.Location as Location
-
-#include wesmc.UtilsLibrary
+//import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
+//import com.hubitat.app.EventSubscriptionWrapper as EventSubscriptionWrapper
+//import com.hubitat.app.InstalledAppWrapper as InstalledAppWrapper
+//import com.hubitat.app.ParentDeviceWrapper as ParentDeviceWrapper
+//import com.hubitat.hub.domain.Event as Event
+//import com.hubitat.hub.domain.Event as Event
+//import com.hubitat.hub.domain.Hub as Hub
+//import com.hubitat.hub.domain.Location as Location
+//import com.hubitat.hub.domain.State as State
 #include wesmc.DeviceLibrary
+#include wesmc.UtilsLibrary
 
 definition(
   name: "WholeHouseAutomation",
@@ -60,7 +56,6 @@ Map monoPage() {
   return dynamicPage(name: "monoPage") {
     section {
       if (app.getInstallationState() != 'COMPLETE') {
-
         paragraph heading("Whole House Automation")
         paragraph emphasis('Before you can create <b>Room Scene(s)</b> ...')
         paragraph normal('Push the <b>Done</b> button.')
@@ -110,36 +105,34 @@ Map monoPage() {
               )}",
           type: 'capability.switch'
         )
-        // Decide what rooms to support at parent scope? Then ...
-        // - InstalledAppWrapper addChildApp(String namespace, String name, String label, Map properties = null)
-        // - Leverage the Map to push applicable data?
-        // - ...AND, mutable.asImmutable() ???
         app(
           name: "RoomScenes",
           appName: "RoomScenes",
           namespace: "wesmc",
           title: "<b>Add Rooms</b>",
-          multiple: true//,
-          //properties = [
-          //  roomName: 'Den',
-          //  switches: settings.switches
-          //]
+          multiple: true
         )
-        /*
-        */
-        /*
-        InstalledAppWrapper myKid = app.addChildApp(
-          name: 'RoomScenes',
-          namespace: 'wesmc',
-          label: 'Den',
-          properties = [
-            roomName: 'Den',
-            switches: settings.switches
-          ]
-        )
-        */
-        paragraph "myKid: ${myKid}"
       }
+
+      paragraph "<b>Main Repeaters:</b> ${getMainRepeaters().collect{it.displayName}.join(', ')}"
+      paragraph "<b>Keypads:</b> ${getKeypads().collect{it.displayName}.join(', ')}"
+      app.getRooms().collect{it.name}.each{ r ->
+        paragraph "<b>${r}</b>"
+        paragraph bullet('<b>devicesForRoom: </b>' + getDevicesForRoom(r, settings.switches).join(', '))
+        paragraph bullet('<b>Lutron Devices: </b>' + getLutronDevices(r).join(', '))
+        paragraph bullet('<b>LED Devices: </b>' + getLedDevices(r).join(', '))
+        paragraph bullet('<b>Non-Lutron Devices: </b>' + getNonLutronDevices(r).join(', '))
+      }
+
+mapDeviceIdAsStringToRoomName()
+
+
+
+
+//      paragraph partial
+//&nbsp;&nbsp;<b>LED Devices:</b> "${getLedDevices(r).collect{it.displayName}.join(', ')}"
+//&nbsp;&nbsp;<b>Non-Lutron Devices:</b> "${getNonLutronDevices(r).collect{it.displayName}.join(', ')}"
+//"""
       paragraph comment("""Whole House Automation - @wesmc, \
         <a href='https://github.com/WesleyMConner/Hubitat-WholeHouseAutomation' \
         target='_blank'> <br/>Click for more information</a>""")
@@ -147,11 +140,40 @@ Map monoPage() {
   }
 }
 
-// ---------------------------------
-// J U S T   F O R   T H E   K I D S
-// ---------------------------------
-List<String> getLetters() { return ['A', 'B', 'C', 'D', 'E', 'F']}
 
+// -------------------------------------
+// M E T H O D S   O N   S E T T I N G S
+// -------------------------------------
+List<DeviceWrapper> getMainRepeaters () {
+  return settings?.lutronRepeaters?.collect{it}
+}
+
+List<DeviceWrapper> getKeypads() {
+  return settings?.lutronNonRepeaters?.collect{it}
+         + settings?.lutronKeypads?.collect{it}
+         + settings?.lutronPicos?.collect{it}
+}
+
+List<DeviceWrapper> getLutronDevices (String room) {
+  return getDevicesForRoom(room, settings?.switches).findAll{
+    (
+      it.displayName.toString().contains('lutron')
+      && ! (it.displayName.toString().contains('LED'))
+    )
+  }
+}
+
+List<DeviceWrapper> getLedDevices (String room) {
+  return getDevicesForRoom(room, settings?.switches).findAll{
+    it.displayName.toString().contains('LED')
+  }
+}
+
+List<DeviceWrapper> getNonLutronDevices (String room) {
+  return getDevicesForRoom(room, settings?.switches).findAll{
+    ! (it.displayName.toString().contains('lutron'))
+  }
+}
 
 // ---------------------------------------------------
 // I N I T I A L I Z A T I O N   &   O P E R A T I O N
@@ -211,29 +233,9 @@ void initialize() {
 // T B D
 // -----
 
-Map<String, String> mapDeviceIdAsStringToRoomName () {
-  Map<String, String> results = [:]
-  app.getRooms().each{room ->
-    room.deviceIds.each{deviceIdAsInteger ->
-      results[deviceIdAsInteger.toString()] = room.name ?: 'UNKNOWN'
-    }
-  }
-//--DEBUG--  paragraph "DEBUG XXX: ${results}"
-  return results
-}
 
 
 
-void addKeypadsToState() {
-  // - The containing room DOES NOT matter for keypads or picos.
-  Map<String, DeviceWrapper> kpads1 = [:]
-  kpads1 = settings.lutronNonRepeaters.collectEntries{[it.displayName, it]}
-  Map<String, DeviceWrapper> kpads2 = [:]
-  kpads2 = settings.lutronKeypads.collectEntries{[it.displayName, it]}
-  Map<String, DeviceWrapper> picos = [:]
-  picos = settings.lutronPicos.collectEntries{[it.displayName, it]}
-  state.keypads = kpads1 + kpads2 + picos
-}
 
 Map<String, List<DeviceWrapper>> getRoomToSwitches() {
   Map<String, List<DeviceWrapper>> roomToSwitches = [:]
@@ -246,17 +248,6 @@ Map<String, List<DeviceWrapper>> getRoomToSwitches() {
   return roomToSwitches
 }
 
-List<DeviceWrapper> keepLutron (List<DeviceWrapper> dList) {
-  return dList.findAll{ (it.displayName.toString().contains('lutron') && !it.displayName.toString().contains('LED')) }
-}
-
-List<DeviceWrapper> keepLED (List<DeviceWrapper> dList) {
-  return dList.findAll{ it.displayName.toString().contains('LED') }
-}
-
-List<DeviceWrapper> keepNonLutron (List<DeviceWrapper> dList) {
-  return dList.findAll{ !(it.displayName.toString().contains('lutron')) }
-}
 
 /*
 void addRoomToDeviceMapsToState() {

@@ -1,19 +1,9 @@
-// ---------------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 // R O O M   S C E N E S
-//
-//  Copyright (C) 2023-Present Wesley M. Conner
-//
-// Licensed under the Apache License, Version 2.0 (aka Apache-2.0, the
-// "License"); you may not use this file except in compliance with the
-// License. You may obtain a copy of the License at
+//   Copyright (C) 2023-Present Wesley M. Conner
+//   Licensed under the Apache License, Version 2.0
 //   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// ---------------------------------------------------------------------------------
+// ------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DeviceWrapper
 import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
 import com.hubitat.hub.domain.Event as Event
@@ -168,38 +158,18 @@ Map monoPage() {
         addModeIdToSceneToSettings("Map Hub modes to ${state.roomObj.name} Scenes (for automation)")
       }
       if (state.modeIdToScene) {
-        //--paragraph "state.modeIdToScene: ${state.modeIdToScene}"
-        paragraph "***** DEMO PARENT METHOD CALL ***** >${parent.getLetters()}<"
-        // READY TO IDENTIFY DEVICES
-        paragraph emphasis("AUTOMATE FROM PARENT SETTINGS<br/>Identify Devices for ${state.roomObj.name}")
-        paragraph emphasis2('Identify Lutron AND <b>Non-Lutron</b>, <b>Non-VSW</b> Devices')
-        input (
-          name: 'nonLutronDevices',
-          type: 'capability.switch',             // Enums in the future
-          title: 'Select Non-Lutron Switches',
-          submitOnChange: true,
-          required: true,
-          multiple: true
-        )
+        paragraph "state.modeIdToScene: ${state.modeIdToScene}"
 
-        //--NO-GOOD-- paragraph "Parent's switches: ${parent.settings.switches}"
-        //--NO-GOOD-- paragraph "Room's switches: ${getDevicesForRoom(state.roomObj.name, parent.settings.switches)}"
+        paragraph "<b>Main Repeaters:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Keypads:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Lutron Devices:</b><br/>${parent.getLutronDevices(state.roomObj.name).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Lutron LEDs:</b><br/>${parent.getLutronLedDevices(state.roomObj.name).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Non-Lutron Devices:</b><br/>${parent.getNonLutronDevices(state.roomObj.name).collect{it.displayName}.join('<br/>')}"
 
-        paragraph emphasis2("AUTOMATE FROM PARENT SETTINGS<br/>Identify <b>Lutron</b>, <b>Non-VSW</b> Devices")
-        input (
-          name: 'lutronRepeaters',
-          type: 'device.LutronKeypad',           // Enums in the future
-          title: 'Select Lutron Main Repeaters',
-          submitOnChange: true,
-          required: true,
-          multiple: true
-        )
-      }
-      if (settings.nonLutronDevices && settings.lutronRepeaters) {
-        paragraph emphasis("<b>Step 5:</b> Configure Scenes for ${state.roomObj.name}")
+        paragraph emphasis("Configure Scenes for ${state.roomObj.name}")
         state.scenes.each{scene ->
           paragraph emphasis2("SCENE: ${scene}")
-          settings.nonLutronDevices.each{device ->
+          parent.getNonLutronDevices(state.roomObj.name).each{device ->
             input(
               name: "${scene}.${device.id}",
               type: 'number',
@@ -211,7 +181,7 @@ Map monoPage() {
               defaultValue: 0
             )
           }
-          settings.lutronRepeaters.each{device ->
+          parent.getMainRepeaters().each{device ->
             input(
               name: "${scene}.${device.id}",
               type: 'number',
