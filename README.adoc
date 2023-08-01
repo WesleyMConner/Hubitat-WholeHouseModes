@@ -1,3 +1,12 @@
 = Whole House Automation
 
-TBD
+      // ------------------      -------------------- -----------------
+      //       SETTINGS              INTERMEDIATE          STATE
+      // ------------------      -------------------- -----------------
+      //    lutronRepeaters ---> reps --------------> mainRepeaters
+      // lutronNonRepeaters ---> kpads1 ->\
+      //      lutronKeypads ---> kpads2 -->\
+      //        lutronPicos ---> picos  --->+-------> keypads
+      //           switches +--> lutronSwitches ----> lutronSwitches
+      //                     \-> nonLutronSwitches -> nonLutronSwitches
+      // ------------------      -------------------- -----------------

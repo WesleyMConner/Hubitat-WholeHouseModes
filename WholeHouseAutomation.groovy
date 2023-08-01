@@ -19,6 +19,7 @@ import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
 #include wesmc.UtilsLibrary
+#include wesmc.DeviceLibrary
 
 definition(
   name: "WholeHouseAutomation",
@@ -43,22 +44,18 @@ Map<String, String> mapDeviceIdAsStringToRoomName () {
   Map<String, String> results = [:]
   app.getRooms().each{room ->
     room.deviceIds.each{deviceIdAsInteger ->
-      results[deviceIdAsInteger.toString()] = room.name
+      results[deviceIdAsInteger.toString()] = room.name ?: 'UNKNOWN'
     }
   }
+//--DEBUG--  paragraph "DEBUG XXX: ${results}"
   return results
 }
 
-Map<String, String> getRoomNameForDeviceId(Integer deviceId) {
-  return app.getRooms().deviceIds.collect{}
-
-}
-
 void identifyParticipatingDevices(heading) {
-  paragraph emphasis("${heading}<br/>") \
+  paragraph emphasis(heading) \
     + comment(
-      'The devices selected during this step are organized by room and '
-       + 'post-processed for presentation on room-specific screens.'
+      '<br/>The devices selected during this step are organized by room '
+       + 'and post-processed for presentation on room-specific screens.'
       )
   collapsibleInput (
     blockLabel: "Prospective Lutron 'Main Repeaters'",
@@ -130,6 +127,76 @@ Map<String, List<DeviceWrapper>> getRoomToSwitches() {
   return roomToSwitches
 }
 
+List<DeviceWrapper> keepLutron (List<DeviceWrapper> dList) {
+  return dList.findAll{ (it.displayName.toString().contains('lutron') && !it.displayName.toString().contains('LED')) }
+}
+
+List<DeviceWrapper> keepLED (List<DeviceWrapper> dList) {
+  return dList.findAll{ it.displayName.toString().contains('LED') }
+}
+
+List<DeviceWrapper> keepNonLutron (List<DeviceWrapper> dList) {
+  return dList.findAll{ !(it.displayName.toString().contains('lutron')) }
+}
+
+/*
+void addRoomToDeviceMapsToState() {
+  // Design Note:
+  //   - Use "device.displayName.toString().contains('...')".
+  //   - The use of "toString()" is critical for proper parsing.
+  Map<String, List<DeviceWrapper>> roomToSwitches = getRoomToSwitches()
+  //Map<String, List<DeviceWrapper>> den = roomToSwitches.findAll{it.key == 'Den'}
+  Map<String, List<DeviceWrapper>> zzz = roomToSwitches.findAll{['UNKNOWN', 'Den'].contains(it.key)}
+// (room2switches) ${roomToSwitches}
+//--DEBUG--  paragraph """DEBUG:
+//--DEBUG--(raw) ${zzz}
+//--DEBUG--(led) ${zzz.collectEntries{r, dlist ->
+//--DEBUG--  [r, keepLED(dList)]
+//--DEBUG--}}
+//--DEBUG--(non-lutron) ${zzz.collectEntries{r, dlist ->
+//--DEBUG--  [r, keepNonLutron(dList)]
+//--DEBUG--}}
+//--DEBUG--(lutron) ${zzz.collectEntries{r, dList ->
+//--DEBUG--  [r, keepLutron(dList)]
+//--DEBUG--}}
+"""
+//==>  Map<String, List<DeviceWrapper>> roomToLutronDevice = roomToSwitches.findAll{ r, dList ->
+//==>    dList.findAll{ d -> d.displayName.toString().contains('lutron') }
+//==>  }
+
+//==>String testString = '(lutron-100 something with LED)'
+//==>paragraph """EXPLORE \
+//==>${testString.contains('lutron')} \
+//==>${testString.contains('lutron') && !testString.contains('LED')} \
+//==>${!testString.contains('lutron')}"""
+
+//  paragraph """DEBUG:
+//<b>original:</b> ${roomToSwitches}
+//<b>roomToLutronDevice:</b> ${roomToSwitches.findAll{ r, dList -> keepLutron(dList)}}
+//"""
+//==>    (it.value.displayName.toString().contains('lutron') && !it.value.displayName.toString().contains('LED'))
+//==>  }
+  state.roomToLutronDevice = roomToLutronDevice
+  Map<String, List<DeviceWrapper>> roomToLutronLED = roomToSwitches.findAll{
+    it.value.displayName.toString().contains('LED')
+  }
+  state.roomToLutronLED = roomToLutronLED
+  Map<String, List<DeviceWrapper>> roomToNonLutron = roomToSwitches.findAll{
+    !it.value.displayName.toString().contains('lutron')
+  }
+  state.roomToNonLutron = roomToNonLutron
+}
+*/
+
+/*
+void showDevicesByRoom (String label, Map<String, List<DeviceWrapper>> roomToDevice) {
+  String summary = roomToDevice.collect{ r, dList ->
+    bullet("<b>${r}</b>: ${dList.collect{it.displayName}.join(', ')}")
+  }.join('<br/>')
+  paragraph "<b>${label}:</b><br/>${summary}"
+}
+*/
+
 Map monoPage() {
   return dynamicPage(name: "monoPage") {
     section {
@@ -143,18 +210,8 @@ Map monoPage() {
       } else {
         // Err on the side of refreshing device-to-room mappings frequently.
         state.deviceIdToRoomName = mapDeviceIdAsStringToRoomName()
-        identifyParticipatingDevices('<b>Step 1:</b> Identify Participating Devices')
+        identifyParticipatingDevices('Identify Participating Devices')
       }
-      // ------------------      -------------------- -----------------
-      //       SETTINGS              INTERMEDIATE          STATE
-      // ------------------      -------------------- -----------------
-      //    lutronRepeaters ---> reps --------------> mainRepeaters
-      // lutronNonRepeaters ---> kpads1 ->\
-      //      lutronKeypads ---> kpads2 -->\
-      //        lutronPicos ---> picos  --->+-------> keypads
-      //           switches +--> lutronSwitches ----> lutronSwitches
-      //                     \-> nonLutronSwitches -> nonLutronSwitches
-      // ------------------      -------------------- -----------------
       if (settings.lutronRepeaters) {
         addMainRepeatersToState()
       }
@@ -162,41 +219,22 @@ Map monoPage() {
         addKeypadsToState()
       }
       if (settings.switches) {
-        //--paragraph "settings.switches ${settings.switches} ${settings.switches.size()}"
-        Map<String, List<DeviceWrapper>> roomToSwitches = getRoomToSwitches()
-        //--paragraph "roomToSwitches: ${roomToSwitches}"
-
-        // Design Note:
-        //   - The device's displayName needs to be processed with toString() before
-        //     using .contains('')
-        Map<String, List<DeviceWrapper>> lutronNoLED = roomToSwitches.findAll{
-          it.value.displayName.toString().contains('lutron') && !it.value.displayName.toString().contains('LED')
-        }
-        paragraph emphasis('lutronNoLED')
-        paragraph """[${lutronNoLED.each{k, v -> "<br/>${k}: ${v}"}}].join()"""
-
-        Map<String, List<DeviceWrapper>> lutronLED = roomToSwitches.findAll{
-          it.value.displayName.toString().contains('LED')
-        }
-        paragraph emphasis('lutronLED')
-        paragraph """${lutronLED.each{k, v -> "<br/>${k}: ${v}"}}"""
-
-        Map<String, List<DeviceWrapper>> notLutron = roomToSwitches.findAll{
-          !it.value.displayName.toString().contains('lutron')
-        }
-        paragraph emphasis('notLutron')
-        paragraph """${notLutron.each{k, v -> "<br/>${k}: ${v}"}}"""
+//--NOT-READY--        addRoomToDeviceMapsToState()
       }
-      if (state.mainRepeaters && state.keypads /* && state.lutronSwitches
-         && state.lutronSwitches */) {
-        paragraph "state.mainRepeaters (displayName): ${state.mainRepeaters.collect{it.value.displayName}}"
-        paragraph "state.keypads (displayName): ${state.keypads.collect{it.value.displayName}}"
+      if (state.mainRepeaters && state.keypads /* && state.roomToLutronDevice
+         && state.roomToLutronLED && state.roomToNonLutron */) {
+        paragraph "mainRepeaters: ${state.mainRepeaters.collect{it.value.displayName}}"
+        paragraph "keypads: ${state.keypads.collect{it.value.displayName}}"
 
-//        paragraph "settings.switches: ${settings.switches}"
-
-//        //paragraph "state.lutronSwitches (roomName): " \
-//          + "${state.lutronSwitches.collect{it.key}}"
-          //paragraph "state.nonLutronSwitches: ${state.nonLutronSwitches.keySet()}"
+//--NOT-READY--        showDevicesByRoom('Lutron Device', state.roomToLutronDevice)
+//--NOT-READY--        showDevicesByRoom('Lutron LED', state.roomToLutronLED)
+//--NOT-READY--        showDevicesByRoom('Non-Lutron Device', state.roomToNonLutron)
+//        paragraph """roomToLutronDevice: """
+//        paragraph """[${state.roomToLutronDevice.each{k, v -> "<br/>${k}: ${v}"}}].join()"""
+//        paragraph """roomToLutronLED: """
+//        paragraph """${state.roomToLutronLED.each{k, v -> "<br/>${k}: ${v}"}}"""
+//        paragraph """roomToNonLutron: """
+//        paragraph """${state.roomToNonLutron.each{k, v -> "<br/>${k}: ${v}"}}"""
         app(
           name: "RoomScenes",
           appName: "RoomScenes",
