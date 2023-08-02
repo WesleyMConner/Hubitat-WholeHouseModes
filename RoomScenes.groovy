@@ -6,20 +6,22 @@
 // ------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DeviceWrapper
 import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
+import com.hubitat.app.InstalledAppWrapper as InstalledAppWrapper
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
+
 #include wesmc.UtilsLibrary
 #include wesmc.DeviceLibrary
 
 definition(
-  parent: "wesmc:WholeHouseAutomation",
-  name: "RoomScenes",
+  parent: 'wesmc:WholeHouseAutomation',
+  name: 'RoomScenes',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: "Define and Execute RA2-aware Scenes for a Hubitat Room",
-  category: "",           // Not supported as of Q3'23
-  iconUrl: "",            // Not supported as of Q3'23
-  iconX2Url: "",          // Not supported as of Q3'23
+  description: 'Define and Execute RA2-aware Scenes for a Hubitat Room',
+  category: '',           // Not supported as of Q3'23
+  iconUrl: '',            // Not supported as of Q3'23
+  iconX2Url: '',          // Not supported as of Q3'23
   iconX3Url: '',          // Not supported as of Q3'23
   installOnOpen: false,
   documentationLink: '',  // TBD
@@ -29,18 +31,37 @@ definition(
   singleInstance: false
 )
 
+Map <String, InstalledAppWrapper> mapRoomToChildApp () {
+  List<String> roomNames = parent.getPartipatingRooms()
+  List<InstalledAppWrapper> kidApps = parent.getChildApps()
+  Map <String, InstalledAppWrapper> results = roomNames.collectEntries{ room ->
+    List<InstalledAppWrapper> matches = kidApps.findAll{ kid -> kid.label?.contains(room) }
+    InstalledAppWrapper match = matches ? matches.first() : null
+    match ? [room, match] : [room, null]
+  }
+  return results
+}
+
+List<String> getIncompleteRooms () {
+  Map <String, InstalledAppWrapper> roomToChildApp = mapRoomToChildApp()
+  List<String> result = roomToChildApp.findAll{ ! it.value }.keySet() as List<String>
+  log.trace "getIncompleteRooms() preview: ${result}"
+  return result
+}
+
 // -------------------------------
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
-  page(name: "monoPage", title: "", install: true, uninstall: true)
+  page(name: 'monoPage', title: '', install: true, uninstall: true)
 }
 
+/*
 void addRoomObjToSettings(String heading) {
   //-----------------------------------------------------------------------
   // ABSTRACT
   //   Ask client to select a single room and save the whole room object
-  //   as "state.roomObj". This method must be called from a Hubitat App
+  //   as 'state.roomObj'. This method must be called from a Hubitat App
   //   page's section.
   //
   // DESIGN NOTES
@@ -65,6 +86,7 @@ void addRoomObjToSettings(String heading) {
     state.roomObj = rooms.find{it.id.toString() == settings.roomId}
   }
 }
+*/
 
 void addScenesToSettings (String heading) {
   paragraph emphasis(heading)
@@ -90,7 +112,7 @@ void addScenesToSettings (String heading) {
     input(
       name: "cust${i}",
       type: 'text',
-      title: "Custom Name",
+      title: 'Custom Name',
       width: 3,
       submitOnChange: true,
       required: false,
@@ -109,7 +131,7 @@ void addScenesToSettings (String heading) {
 void addModeIdToSceneToSettings (String heading) {
   // Abstract
   //   Ask client to select a scene for each current Hub mode and persist
-  //   the results as "state.modeIdToScene" (a Map<String, String>).
+  //   the results as 'state.modeIdToScene' (a Map<String, String>).
   //
   // Design Notes
   //   - The mapping facilitates state.currentScene == 'AUTO'
@@ -140,37 +162,39 @@ void addModeIdToSceneToSettings (String heading) {
 
 Map monoPage() {
   return dynamicPage(
-    name: "monoPage",
-    title: "",
+    name: 'monoPage',
+    title: '',
     install: true,
     uninstall: true
   ) {
     section {
-      app.updateLabel("${state?.roomObj?.name ?: 'ROOM NAME PENDING'} Room Scenes")
-      // paragraph heading("${state.roomObj.name ?: 'TBD'} Room Scenes") \
-      paragraph important("<br/><b>IMPORTANT:</b> <em>After editing any field, use the 'tab' key to register your changes!</em>")
-      addRoomObjToSettings('Identify the Hubitat Room to control')
-      if (state.roomObj) {
-        addScenesToSettings ("Identify <b>${state.roomObj.name}</b> Scenes")
-      }
+      String roomName = getIncompleteRooms().first()
+      app.updateLabel("${roomName} Room Scenes")
+      //-- app.updateLabel("${state?.roomObj?.name ?: 'ROOM NAME PENDING'} Room Scenes")
+      //-- // paragraph heading("${roomName ?: 'TBD'} Room Scenes") \
+      //-- paragraph important("<br/><b>IMPORTANT:</b> <em>After editing any field, use the 'tab' key to register your changes!</em>")
+      //-- addRoomObjToSettings('Identify the Hubitat Room to control')
+      //-- if (state.roomObj) {
+        addScenesToSettings ("Identify <b>${roomName}</b> Scenes")
+      //-- }
       if (state.scenes) {
         paragraph "<b>Current Scenes:</b> ${state.scenes?.join(', ') ?: '...none...'}"
-        addModeIdToSceneToSettings("Map Hub modes to ${state.roomObj.name} Scenes (for automation)")
+        addModeIdToSceneToSettings("Map Hub modes to ${roomName} Scenes (for automation)")
       }
       if (state.modeIdToScene) {
         paragraph "state.modeIdToScene: ${state.modeIdToScene}"
 
         paragraph "<b>Main Repeaters:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
         paragraph "<b>Keypads:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Lutron Devices:</b><br/>${parent.getLutronDevices(state.roomObj.name).collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Lutron LEDs:</b><br/>${parent.getLutronLedDevices(state.roomObj.name).collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Non-Lutron Devices:</b><br/>${parent.getNonLutronDevices(state.roomObj.name).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Lutron Devices:</b><br/>${parent.getLutronDevices(roomName).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Lutron LEDs:</b><br/>${parent.getLutronLedDevices(roomName).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Non-Lutron Devices:</b><br/>${parent.getNonLutronDevices(roomName).collect{it.displayName}.join('<br/>')}"
 
-        paragraph emphasis("Configure Scenes for ${state.roomObj.name}")
+        paragraph emphasis("Configure Scenes for ${roomName}")
         state.scenes.each{scene ->
           paragraph emphasis2("SCENE: ${scene}")
           /*
-          parent.getNonLutronDevices(state.roomObj.name).each{device ->
+          parent.getNonLutronDevices(roomName).each{device ->
             input(
               name: "${scene}.${device.id}",
               type: 'number',
@@ -291,5 +315,5 @@ void initialize() {
   //--enforceMutualExclusion()
   //--enforceDefault()
   //--logSettingsAndState('initialize() about to enable subscription(s)')
-  //--subscribe(settings.swGroup, "switch", buttonHandler)
+  //--subscribe(settings.swGroup, 'switch', buttonHandler)
 }

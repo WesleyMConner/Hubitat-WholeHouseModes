@@ -10,11 +10,11 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
 
 library (
- name: "DeviceLibrary",
- namespace: "wesmc",
+ name: 'DeviceLibrary',
+ namespace: 'wesmc',
  author: 'WesleyMConner',
- description: "Methods extending Hubitat DeviceWrapperList and DeviceWrappers",
- category: "general purpose",
+ description: 'Methods extending Hubitat DeviceWrapperList and DeviceWrappers',
+ category: 'general purpose',
  documentationLink: '',
  importUrl: ''
 )
@@ -25,13 +25,13 @@ List<String> deviceIdsForRoom (String room) {
 
 String deviceIdToRoom (String deviceId) {
   // Constantly re-pulling app.getRooms() may be slow, but it avoids
-  // stale data and brings any consistency issues "to the fore".
+  // stale data and brings any consistency issues 'to the fore'.
   Map<String, String> deviceIdToRoomName = app.getRooms().collectEntries{
     roomObj -> roomObj.deviceIds.each{
       dId -> [ dId, roomObj.name ]
     }
   }
-  return deviceIdToRoomName[deviceId] ?: "UNKNOWN"
+  return deviceIdToRoomName[deviceId] ?: 'UNKNOWN'
 }
 
 // groovy.lang.MissingMethodException:
