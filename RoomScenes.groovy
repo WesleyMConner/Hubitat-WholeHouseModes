@@ -9,7 +9,7 @@ import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
 import com.hubitat.app.InstalledAppWrapper as InstalledAppWrapper
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
-
+import com.hubitat.hub.domain.Location as Location
 #include wesmc.UtilsLibrary
 #include wesmc.DeviceLibrary
 
@@ -31,21 +31,28 @@ definition(
   singleInstance: false
 )
 
-Map <String, InstalledAppWrapper> mapRoomToChildApp () {
+String getRoomName (Long appId) {
+  if (!parent) log.error "getRoomName() called before parent was defined."
   List<String> roomNames = parent.getPartipatingRooms()
+  log.trace "Participating roomNames: ${roomNames}"
   List<InstalledAppWrapper> kidApps = parent.getChildApps()
-  Map <String, InstalledAppWrapper> results = roomNames.collectEntries{ room ->
-    List<InstalledAppWrapper> matches = kidApps.findAll{ kid -> kid.label?.contains(room) }
-    InstalledAppWrapper match = matches ? matches.first() : null
-    match ? [room, match] : [room, null]
+  log.trace "Current kidApps: ${kidApps}"
+  Map<String, String> kidIdToRoomName = \
+    kidApps.collectEntries{ kid ->
+      [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
+    }
+  log.trace "Current kidIdToRoomName: ${kidIdToRoomName}"
+  Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
+  kidIdToRoomName.each{ kidId, roomName ->
+    if (roomName) roomNameToKidId[roomName] = kidId
   }
-  return results
-}
-
-List<String> getIncompleteRooms () {
-  Map <String, InstalledAppWrapper> roomToChildApp = mapRoomToChildApp()
-  List<String> result = roomToChildApp.findAll{ ! it.value }.keySet() as List<String>
-  log.trace "getIncompleteRooms() preview: ${result}"
+  log.trace "Current roomNameToKidId: ${roomNameToKidId}"
+  log.trace "roomNameToKidId: ${roomNameToKidId}"
+  log.trace "roomNameToKidId.findAll{!it.value}: ${roomNameToKidId.findAll{!it.value}}"
+  log.trace "roomNameToKidId.findAll{!it.value}.keySet(): ${roomNameToKidId.findAll{!it.value}.keySet()}"
+  log.trace "roomNameToKidId.findAll{!it.value}.keySet().first(): ${roomNameToKidId.findAll{!it.value}.keySet().first()}"
+  String result = kidIdToRoomName[appId.toString()] ?: roomNameToKidId.findAll{!it.value}.keySet().first()
+  log.trace "result: ${result}"
   return result
 }
 
@@ -56,110 +63,6 @@ preferences {
   page(name: 'monoPage', title: '', install: true, uninstall: true)
 }
 
-/*
-void addRoomObjToSettings(String heading) {
-  //-----------------------------------------------------------------------
-  // ABSTRACT
-  //   Ask client to select a single room and save the whole room object
-  //   as 'state.roomObj'. This method must be called from a Hubitat App
-  //   page's section.
-  //
-  // DESIGN NOTES
-  //    There may not be an import for defining a RoomWrapper or a
-  //    RoomWrapperList.
-  //-----------------------------------------------------------------------
-  paragraph emphasis(heading)
-  ArrayList<LinkedHashMap> rooms = app.getRooms()
-  List<Map<String, String>> roomPicklist = rooms
-    .sort{ it.name }
-    .collect{ [(it.id.toString()): it.name] }
-  input(
-    name: 'roomId',
-    type: 'enum',
-    title: 'Select the Room Name (and double click)',
-    submitOnChange: true,
-    required: true,
-    multiple: false,
-    options: roomPicklist
-  )
-  if (settings.roomId) {
-    state.roomObj = rooms.find{it.id.toString() == settings.roomId}
-  }
-}
-*/
-
-void addScenesToSettings (String heading) {
-  paragraph emphasis(heading)
-  paragraph emphasis2('Use Hubitat Modes to name Room Scenes <em>..(optional)</em>')
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // !!! UNKNOWN IMPORT FOR ModeWrapper or ModeWrapperList !!!
-  // !!!   Mode appears to have mode.id, mode.name, ...    !!!
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ArrayList<LinkedHashMap> modes = location.modes
-  state.modes = modes
-  List<String> locationNamePicklist = state.modes.collect{it.name}
-  input(
-    name: 'modesAsScenes',
-    type: 'enum',
-    title: 'Select the Modes',
-    submitOnChange: true,
-    required: false,
-    multiple: true,
-    options: locationNamePicklist
-  )
-  paragraph emphasis2('Create Custom Room Scene Name <em>..(optional)</em>')
-  for (int i = 1; i<9; i++) {
-    input(
-      name: "cust${i}",
-      type: 'text',
-      title: 'Custom Name',
-      width: 3,
-      submitOnChange: true,
-      required: false,
-      defaultValue: 'n/a'
-    )
-  }
-  List<String> scenes = (
-    modesAsScenes.findAll{it}
-    + [settings.cust1, settings.cust2, settings.cust3,
-       settings.cust4, settings.cust5, settings.cust6,
-       settings.cust7, settings.cust8].findAll{it && it != 'n/a'}
-  ).sort{}
-  state.scenes = scenes
-}
-
-void addModeIdToSceneToSettings (String heading) {
-  // Abstract
-  //   Ask client to select a scene for each current Hub mode and persist
-  //   the results as 'state.modeIdToScene' (a Map<String, String>).
-  //
-  // Design Notes
-  //   - The mapping facilitates state.currentScene == 'AUTO'
-  //   - Refresh the mapping if/when site modes are changed.
-  paragraph emphasis(heading)
-  Map<String, String> modeIdToRoomScene
-  ArrayList<LinkedHashMap> modes = location.modes
-  Map<String, String> modeIdToScene = [:]
-  modes.each{mode ->
-    Boolean modeNameIsSceneName = state.scenes.find{it == mode.name} ? true : false
-    input(
-      name: "${mode.id}ToScene",
-      type: 'enum',
-      title: "Scene for ${mode.name}",
-      width: 2,
-      submitOnChange: true,
-      required: true,
-      multiple: false,
-      options: state.scenes,
-      defaultValue: modeNameIsSceneName ? mode.name : ''
-    )
-    modeIdToScene[mode.id] = settings["${mode.id}ToScene"]
-  }
-  // Only promote mappings to state if there are zero remaining nulls.
-  Map<String, String> nullMappings = modeIdToScene.findAll{it.value == null}
-  state.modeIdToScene = nullMappings.size() == 0 ? modeIdToScene : [:]
-}
-
 Map monoPage() {
   return dynamicPage(
     name: 'monoPage',
@@ -168,60 +71,62 @@ Map monoPage() {
     uninstall: true
   ) {
     section {
-      String roomName = getIncompleteRooms().first()
-      app.updateLabel("${roomName} Room Scenes")
-      //-- app.updateLabel("${state?.roomObj?.name ?: 'ROOM NAME PENDING'} Room Scenes")
-      //-- // paragraph heading("${roomName ?: 'TBD'} Room Scenes") \
-      //-- paragraph important("<br/><b>IMPORTANT:</b> <em>After editing any field, use the 'tab' key to register your changes!</em>")
-      //-- addRoomObjToSettings('Identify the Hubitat Room to control')
-      //-- if (state.roomObj) {
-        addScenesToSettings ("Identify <b>${roomName}</b> Scenes")
-      //-- }
-      if (state.scenes) {
-        paragraph "<b>Current Scenes:</b> ${state.scenes?.join(', ') ?: '...none...'}"
-        addModeIdToSceneToSettings("Map Hub modes to ${roomName} Scenes (for automation)")
-      }
-      if (state.modeIdToScene) {
-        paragraph "state.modeIdToScene: ${state.modeIdToScene}"
-
-        paragraph "<b>Main Repeaters:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Keypads:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Lutron Devices:</b><br/>${parent.getLutronDevices(roomName).collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Lutron LEDs:</b><br/>${parent.getLutronLedDevices(roomName).collect{it.displayName}.join('<br/>')}"
-        paragraph "<b>Non-Lutron Devices:</b><br/>${parent.getNonLutronDevices(roomName).collect{it.displayName}.join('<br/>')}"
-
-        paragraph emphasis("Configure Scenes for ${roomName}")
-        state.scenes.each{scene ->
-          paragraph emphasis2("SCENE: ${scene}")
-          /*
-          parent.getNonLutronDevices(roomName).each{device ->
-            input(
-              name: "${scene}.${device.id}",
-              type: 'number',
-              title: "<b>${device.displayName}</b><br/>Level 0..100",
-              width: 2,
-              submitOnChange: true,
-              required: true,
-              multiple: false,
-              defaultValue: 0
-            )
-          }
-          */
-          /*
-          parent.getMainRepeaters().each{device ->
-            input(
-              name: "${scene}.${device.id}",
-              type: 'number',
-              title: "<b>${device.displayName}</b><br/>Button #",
-              width: 2,
-              submitOnChange: true,
-              required: true,
-              multiple: false,
-              defaultValue: 0
-            )
-          }
-          */
+      String assignedRoom = getRoomName(app.id)
+      paragraph "app.id: ${app.id}, assignedRoom: ${assignedRoom} "
+      app.updateLabel(assignedRoom)
+      paragraph heading(assignedRoom)
+      List<String> modes = location.getModes()   // No Mode for expected List<Mode>
+      input(
+        name: 'modesAsScenes',
+        type: 'enum',
+        title: '<b>Use Hubitat Modes to name Room Scenes</b> <em>..(optional)</em>',
+        submitOnChange: true,
+        required: false,
+        multiple: true,
+        options: modes.collect{it.name}
+      )
+      Integer max = 1
+      Boolean keepLooping = true
+      /*
+      while (keepLooping && max <= 9) {
+        //paragraph "DEBUG-ALPHA keepLooping: ${keepLooping}, max: ${max}"
+        for (int i = 0; i < max; i++) {
+          //paragraph "DEBUG-GAMMA-${i}"
+      */
+          Integer i=0
+          input(
+            name: "cust${i}",
+            type: 'text',
+            title: 'Add Scene Name<br/><em>(optional)</em>',
+            width: 3,
+            submitOnChange: true,
+            required: false,
+            defaultValue: 'n/a'
+          )
+      /*
+          //if (settings["cust${i}"]) {
+          //  max++
+          //  paragraph "settings[cust${i}]: ${settings["cust${i}"]}, max: ${max}"
+          //}
         }
+      }
+      */
+      //----------------------------------
+      // P U R G E   S T A T E   B E L O W
+      //----------------------------------
+      modes.each{mode ->
+        Boolean modeNameIsSceneName = state.scenes.find{it == mode.name} ? true : false
+        input(
+          name: "${mode.id}ToScene",
+          type: 'enum',
+          title: "Scene for ${mode.name}",
+          width: 2,
+          submitOnChange: true,
+          required: true,
+          multiple: false,
+          options: state.scenes,
+          defaultValue: modeNameIsSceneName ? mode.name : ''
+        )
       }
       ////
       //// EXIT
@@ -238,6 +143,51 @@ Map monoPage() {
   }
 }
 
+      /*
+      if (state.scenes) {
+        paragraph "<b>Current Scenes:</b> ${state.scenes?.join(', ') ?: '...none...'}"
+        addModeIdToSceneToSettings("Map Hub modes to ${roomName} Scenes (for automation)")
+      }
+      if (state.modeIdToScene) {
+      }
+      */
+
+/*
+        paragraph "state.modeIdToScene: ${state.modeIdToScene}"
+        paragraph "<b>Main Repeaters:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Keypads:</b><br/>${parent.getMainRepeaters().collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Lutron Devices:</b><br/>${parent.getLutronDevices(roomName).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Lutron LEDs:</b><br/>${parent.getLutronLedDevices(roomName).collect{it.displayName}.join('<br/>')}"
+        paragraph "<b>Non-Lutron Devices:</b><br/>${parent.getNonLutronDevices(roomName).collect{it.displayName}.join('<br/>')}"
+        paragraph emphasis("Configure Scenes for ${roomName}")
+        state.scenes.each{scene ->
+          paragraph emphasis2("SCENE: ${scene}")
+          parent.getNonLutronDevices(roomName).each{device ->
+            input(
+              name: "${scene}.${device.id}",
+              type: 'number',
+              title: "<b>${device.displayName}</b><br/>Level 0..100",
+              width: 2,
+              submitOnChange: true,
+              required: true,
+              multiple: false,
+              defaultValue: 0
+            )
+          }
+          parent.getMainRepeaters().each{device ->
+            input(
+              name: "${scene}.${device.id}",
+              type: 'number',
+              title: "<b>${device.displayName}</b><br/>Button #",
+              width: 2,
+              submitOnChange: true,
+              required: true,
+              multiple: false,
+              defaultValue: 0
+            )
+          }
+        }
+*/
 
 /*
 void deviceSceneInputs(DeviceWrapper d, List<String> scenes) {
@@ -264,9 +214,6 @@ void deviceSceneInputs(DeviceWrapper d, List<String> scenes) {
 //     ${room.mainRepId.collect{ d -> roomRowHtml(d, room.scenes) }}
 //    </table>"""
 // }
-
-
-
 
 //      if (settings.roomObj) {
 //        paragraph "roomObj: ${settings.roomObj}"
@@ -309,6 +256,61 @@ void updated() {
   unschedule()   // Placeholder for any future scheduled jobs.
   initialize()
 }
+
+/*
+void addScenesToSettings (String heading) {
+  paragraph emphasis(heading)
+  paragraph emphasis2('Use Hubitat Modes to name Room Scenes <em>..(optional)</em>')
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // !!! UNKNOWN IMPORT FOR ModeWrapper or ModeWrapperList !!!
+  // !!!   Mode appears to have mode.id, mode.name, ...    !!!
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ArrayList<LinkedHashMap> modes = location.modes
+  state.modes = modes
+  List<String> locationNamePicklist = state.modes.collect{it.name}
+    for (int i = 1; i<9; i++) {
+    input(
+      name: "cust${i}",
+      type: 'text',
+      title: 'Create Scene Name',
+      width: 3,
+      submitOnChange: true,
+      required: false,
+      defaultValue: 'n/a'
+    )
+  }
+  List<String> scenes = (
+    modesAsScenes.findAll{it}
+    + [settings.cust1, settings.cust2, settings.cust3,
+       settings.cust4, settings.cust5, settings.cust6,
+       settings.cust7, settings.cust8].findAll{it && it != 'n/a'}
+  ).sort{}
+  state.scenes = scenes
+}
+*/
+
+/*
+void addModeIdToSceneToSettings (String heading) {
+  // Abstract
+  //   Ask client to select a scene for each current Hub mode and persist
+  //   the results as 'state.modeIdToScene' (a Map<String, String>).
+  //
+  // Design Notes
+  //   - The mapping facilitates state.currentScene == 'AUTO'
+  //   - Refresh the mapping if/when site modes are changed.
+  paragraph emphasis(heading)
+  Map<String, String> modeIdToRoomScene
+  ArrayList<LinkedHashMap> modes = location.modes
+  Map<String, String> modeIdToScene = [:]
+  modes.each{mode ->
+    Boolean modeNameIsSceneName = state.scenes.find{it == mode.name} ? true : false
+    modeIdToScene[mode.id] = settings["${mode.id}ToScene"]
+  }
+  // Only promote mappings to state if there are zero remaining nulls.
+  Map<String, String> nullMappings = modeIdToScene.findAll{it.value == null}
+  state.modeIdToScene = nullMappings.size() == 0 ? modeIdToScene : [:]
+}
+*/
 
 void initialize() {
   if (settings.LOG) log.trace 'initialize()'
