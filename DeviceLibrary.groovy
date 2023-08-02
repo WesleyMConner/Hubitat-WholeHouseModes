@@ -23,23 +23,42 @@ List<String> deviceIdsForRoom (String room) {
   return app.getRooms().findAll{it.name == room}.collect{it.deviceIds}.flatten().collect{it.toString()}
 }
 
-Map<String, String> mapDeviceIdAsStringToRoomName () {
-  Map<String, String> results = [:]
-  app.getRooms().each{room ->
-    log.trace "#29 Room ${room.name}"
-    room.deviceIds.each{deviceIdAsInteger ->
-      results[deviceIdAsInteger.toString()] = room.name ?: 'UNKNOWN'
+String deviceIdToRoom (String deviceId) {
+  // Constantly re-pulling app.getRooms() may be slow, but it avoids
+  // stale data and brings any consistency issues "to the fore".
+  Map<String, String> deviceIdToRoomName = app.getRooms().collectEntries{
+    roomObj -> roomObj.deviceIds.each{
+      dId -> [ dId, roomObj.name ]
     }
   }
-//--DEBUG--  paragraph "DEBUG XXX: ${results}"
-  return results
+  return deviceIdToRoomName[deviceId] ?: "UNKNOWN"
 }
+
+// groovy.lang.MissingMethodException:
+// No signature of method:
+//   user_app_wesmc_WholeHouseAutomation_332$_deviceIdToRoom_closure16.doCall()
+// is applicable for argument types: (java.util.LinkedHashMap)
+// values: [[id:1, name:Control, deviceIds:[5536, 3, 5165, 5614, 5615, 5232, ...]]]
+// Possible solutions: doCall(java.lang.Object, java.lang.Object),
+//   findAll(), findAll(), isCase(java.lang.Object), isCase(java.lang.Object)
+// on line 349 (method monoPage) (library wesmc.DeviceLibrary, line 29)
+
+// Map<String, String> mapDeviceIdAsStringToRoomName () {
+//   // This function DOES NOT help with missing/unknown room assignments.
+//   Map<String, String> results = [:]
+//   app.getRooms().each{room ->
+//     log.trace "#29 Room ${room.name}"
+//     room.deviceIds.each{deviceIdAsInteger ->
+//       results[deviceIdAsInteger.toString()] = room.name ?: 'UNKNOWN'
+//     }
+//   }
+//   return results
+// }
 
 
 // ---------------------------------------------------------------------------
 // THIS FUNCTION DOES NOT CURRENTLY HANDLE DEVICES THAT HAVE NO ENCLOSING ROOM
 // ---------------------------------------------------------------------------
 List<DeviceWrapper> getDevicesForRoom (String room, DeviceWrapperList devices) {
-  List<Integer> deviceIds = deviceIdsForRoom(room)
-  return devices.findAll{ deviceIds.contains(it.id) }
+  return devices.findAll{ device -> deviceIdToRoom(device.id) == room }
 }

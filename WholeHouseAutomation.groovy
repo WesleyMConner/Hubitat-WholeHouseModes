@@ -66,6 +66,25 @@ Map monoPage() {
         paragraph heading("Whole House Automation") \
           + comment('<br/>The "settings" solicited here are at '\
               + '"parent-scope" and are available to Child applications.')
+
+        ArrayList<LinkedHashMap> rooms = app.getRooms()
+        //--List<Map<String, String>> roomPicklist = rooms
+        //--  .sort{ it.name }
+        //--  .collect{ [(it.id.toString()): it.name] }
+
+        List<String> roomPicklist = app.getRooms().collect{it.name}.sort()
+        paragraph "roomPicklist: >${roomPicklist}<"
+
+        collapsibleInput(
+          blockLabel: "Participating Rooms",
+          name: 'roomNames',
+          type: 'enum',
+          title: 'Select the Participating Rooms',
+          options: roomPicklist
+        )
+        /*
+        */
+
         collapsibleInput (
           blockLabel: "Prospective Lutron 'Main Repeaters'",
           name: 'lutronRepeaters',
@@ -114,17 +133,17 @@ Map monoPage() {
         )
       }
 
-      paragraph "<b>Main Repeaters:</b> ${getMainRepeaters().collect{it.displayName}.join(', ')}"
-      paragraph "<b>Keypads:</b> ${getKeypads().collect{it.displayName}.join(', ')}"
-      app.getRooms().collect{it.name}.each{ r ->
-        paragraph "<b>${r}</b>"
-        paragraph bullet('<b>devicesForRoom: </b>' + getDevicesForRoom(r, settings.switches).join(', '))
-        paragraph bullet('<b>Lutron Devices: </b>' + getLutronDevices(r).join(', '))
-        paragraph bullet('<b>LED Devices: </b>' + getLedDevices(r).join(', '))
-        paragraph bullet('<b>Non-Lutron Devices: </b>' + getNonLutronDevices(r).join(', '))
-      }
+      //paragraph "<b>Main Repeaters:</b> ${getMainRepeaters().collect{it.displayName}.join(', ')}"
+      //paragraph "<b>Keypads:</b> ${getKeypads().collect{it.displayName}.join(', ')}"
+      //app.getRooms().collect{it.name}.each{ r ->
+      //  paragraph "<b>${r}</b>"
+      //  paragraph bullet('<b>devicesForRoom: </b>' + getDevicesForRoom(r, settings.switches).join(', '))
+      //  paragraph bullet('<b>Lutron Devices: </b>' + getLutronDevices(r).join(', '))
+      //  paragraph bullet('<b>LED Devices: </b>' + getLedDevices(r).join(', '))
+      //  paragraph bullet('<b>Non-Lutron Devices: </b>' + getNonLutronDevices(r).join(', '))
+      //}
 
-mapDeviceIdAsStringToRoomName()
+//mapDeviceIdAsStringToRoomName()
 
 
 
@@ -156,17 +175,13 @@ List<DeviceWrapper> getKeypads() {
 
 List<DeviceWrapper> getLutronDevices (String room) {
   return getDevicesForRoom(room, settings?.switches).findAll{
-    (
-      it.displayName.toString().contains('lutron')
-      && ! (it.displayName.toString().contains('LED'))
-    )
+    it.displayName.toString().contains('lutron') && it.displayName.toString().contains('LED') == false
   }
 }
 
 List<DeviceWrapper> getLedDevices (String room) {
   return getDevicesForRoom(room, settings?.switches).findAll{
-    it.displayName.toString().contains('LED')
-  }
+    it?.displayName.toString().contains('LED')  }
 }
 
 List<DeviceWrapper> getNonLutronDevices (String room) {
@@ -190,9 +205,9 @@ void updated() {
 }
 
 void initialize() {
-  log.info """initialize() with ${childApps.size()} Automation Groups<br/>
-    ${childApps.each({ child -> "&#x2022;&nbsp;${child.label}" })}
-  """
+  //??--log.info """initialize() with ${childApps.size()} Automation Groups<br/>
+  //??--  ${childApps.each({ child -> "&#x2022;&nbsp;${child.label}" })}
+  //??--"""
   /*
   state.deviceIdToRoomName = mapDeviceIdAsStringToRoomName()
   identifyParticipatingDevices('Identify Participating Devices')

@@ -169,6 +169,7 @@ Map monoPage() {
         paragraph emphasis("Configure Scenes for ${state.roomObj.name}")
         state.scenes.each{scene ->
           paragraph emphasis2("SCENE: ${scene}")
+          /*
           parent.getNonLutronDevices(state.roomObj.name).each{device ->
             input(
               name: "${scene}.${device.id}",
@@ -181,6 +182,8 @@ Map monoPage() {
               defaultValue: 0
             )
           }
+          */
+          /*
           parent.getMainRepeaters().each{device ->
             input(
               name: "${scene}.${device.id}",
@@ -193,6 +196,7 @@ Map monoPage() {
               defaultValue: 0
             )
           }
+          */
         }
       }
       ////
