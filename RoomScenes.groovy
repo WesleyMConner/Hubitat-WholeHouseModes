@@ -75,7 +75,7 @@ Map monoPage() {
       paragraph "app.id: ${app.id}, assignedRoom: ${assignedRoom} "
       app.updateLabel(assignedRoom)
       paragraph heading(assignedRoom)
-      List<String> modes = location.getModes()   // No Mode for expected List<Mode>
+      ArrayList<LinkedHashMap> modes = location.getModes()   // Type def for Mode is TBD
       input(
         name: 'modesAsScenes',
         type: 'enum',
@@ -85,29 +85,54 @@ Map monoPage() {
         multiple: true,
         options: modes.collect{it.name}
       )
-      Integer max = 1
-      Boolean keepLooping = true
+      LinkedHashMap<String, String> indexToCustomScene = [
+        'cust1': settings.cust1 ?: '', 'cust2': settings.cust2 ?: '',
+        'cust3': 'birdy' ?: '', 'cust4': settings.cust4 ?: '',
+        'cust5': settings.cust5 ?: '', 'cust6': settings.cust6 ?: '',
+        'cust7': settings.cust6 ?: '', 'cust8': 'purple' ?: '',
+        'cust9': settings.cust7 ?: ''
+      ]
+      LinkedHashMap<String, String> X = indexToCustomScene.findAll{it.value}.sort{it.value}   //.keySet()
+      //LinkedHashMap<String, String> Y = indexToCustomScene.findAll{!it.value}                 //.keySet().first()
+      String firstKey = indexToCustomScene.findAll{!it.value}.keySet().first()                 //.keySet().first()
+      LinkedHashMap<String, String> Y = indexToCustomScene.findAll{ it.key == firstKey }
+      LinkedHashMap<String, String> Z = X + Y
+/*
+ * The easiest way to get the first key or first value from a HashMap in Java is to
+ * use the entrySet() method to get a set of key-value pairs, and then use the
+ * iterator() method to get an iterator over the set. Finally, you can use the
+ * next() method to get the first entry in the Map.
+*/
+      //LinkedHashMap<String, String> Z = X + Y
+      paragraph "X: ${X}"
+      paragraph "Y: ${Y}"
+      paragraph "Z: ${Z.sort()}"
       /*
-      while (keepLooping && max <= 9) {
-        //paragraph "DEBUG-ALPHA keepLooping: ${keepLooping}, max: ${max}"
-        for (int i = 0; i < max; i++) {
-          //paragraph "DEBUG-GAMMA-${i}"
-      */
-          Integer i=0
+      Map<String, String> customIdToCustomScene = [ : ]
+      while (customIdToCustomScene.size < 9)
+      input (
+        name: hideCustomScenes,
+        type: 'bool',
+        title: settings[hideCustomScenes]
+          ? "Hiding Custom Scenes"
+          : "Showing Custom Scenes",
+        submitOnChange: true,
+        defaultValue: false,
+      )
+      if (!settings.hideCustomScenes) {
+        customScenes.eachWithIndex{ scene, index ->
           input(
-            name: "cust${i}",
+            name: "custom${index}",
             type: 'text',
-            title: 'Add Scene Name<br/><em>(optional)</em>',
+            title: 'Custom Scene<br/><em>(optional)</em>',
             width: 3,
             submitOnChange: true,
             required: false,
             defaultValue: 'n/a'
           )
-      /*
-          //if (settings["cust${i}"]) {
-          //  max++
-          //  paragraph "settings[cust${i}]: ${settings["cust${i}"]}, max: ${max}"
-          //}
+        }
+        if (customScenes.size() < 9 && customScenes.findAll('_TBD_').size() == 0) {
+          customScenes += '__TBD__'
         }
       }
       */
@@ -209,7 +234,7 @@ void deviceSceneInputs(DeviceWrapper d, List<String> scenes) {
 //     ${roomRowHtml(settings.devices[0], room.scenes)}
 //   </table>"""
 //   return """<table>
-//     <td>Device Name</td>${roomHeadingsHtml(room.scenes)}
+//     <td>Device Name</td>${oomHeadingsHtml(room.scenes)}
 //     ${room.nonLutronId.collect{ d -> roomRowHtml(d, room.scenes) }}
 //     ${room.mainRepId.collect{ d -> roomRowHtml(d, room.scenes) }}
 //    </table>"""
