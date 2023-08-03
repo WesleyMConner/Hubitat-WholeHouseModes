@@ -34,26 +34,16 @@ definition(
 String getRoomName (Long appId) {
   if (!parent) log.error "getRoomName() called before parent was defined."
   List<String> roomNames = parent.getPartipatingRooms()
-  log.trace "Participating roomNames: ${roomNames}"
   List<InstalledAppWrapper> kidApps = parent.getChildApps()
-  log.trace "Current kidApps: ${kidApps}"
   Map<String, String> kidIdToRoomName = \
     kidApps.collectEntries{ kid ->
       [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
     }
-  log.trace "Current kidIdToRoomName: ${kidIdToRoomName}"
   Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
   kidIdToRoomName.each{ kidId, roomName ->
     if (roomName) roomNameToKidId[roomName] = kidId
   }
-  log.trace "Current roomNameToKidId: ${roomNameToKidId}"
-  log.trace "roomNameToKidId: ${roomNameToKidId}"
-  log.trace "roomNameToKidId.findAll{!it.value}: ${roomNameToKidId.findAll{!it.value}}"
-  log.trace "roomNameToKidId.findAll{!it.value}.keySet(): ${roomNameToKidId.findAll{!it.value}.keySet()}"
-  log.trace "roomNameToKidId.findAll{!it.value}.keySet().first(): ${roomNameToKidId.findAll{!it.value}.keySet().first()}"
-  String result = kidIdToRoomName[appId.toString()] ?: roomNameToKidId.findAll{!it.value}.keySet().first()
-  log.trace "result: ${result}"
-  return result
+  return result = kidIdToRoomName[appId.toString()] ?: roomNameToKidId.findAll{!it.value}.keySet().first()
 }
 
 // -------------------------------
@@ -72,84 +62,71 @@ Map monoPage() {
   ) {
     section {
       String assignedRoom = getRoomName(app.id)
-      paragraph "app.id: ${app.id}, assignedRoom: ${assignedRoom} "
       app.updateLabel(assignedRoom)
       paragraph heading(assignedRoom)
       ArrayList<LinkedHashMap> modes = location.getModes()   // Type def for Mode is TBD
       input(
         name: 'modesAsScenes',
         type: 'enum',
-        title: '<b>Use Hubitat Modes to name Room Scenes</b> <em>..(optional)</em>',
+        title: '<span style="margin-left: 10px;">' \
+               + '<b>Create some/all scene names based on Hubitat Modes names:</b>' \
+               + '</span>',
+        //title: '<b>Option 1:</b> Create scenes based on some/all Hubitat Modes names',
         submitOnChange: true,
         required: false,
         multiple: true,
         options: modes.collect{it.name}
       )
       LinkedHashMap<String, String> indexToCustomScene = [
-        'cust1': settings.cust1 ?: '', 'cust2': settings.cust2 ?: '',
-        'cust3': 'birdy' ?: '', 'cust4': settings.cust4 ?: '',
-        'cust5': settings.cust5 ?: '', 'cust6': settings.cust6 ?: '',
-        'cust7': settings.cust6 ?: '', 'cust8': 'purple' ?: '',
-        'cust9': settings.cust7 ?: ''
+        'cust1': settings.cust1 ?: 'TBD', 'cust2': settings.cust2 ?: 'TBD',
+        'cust3': settings.cust3 ?: 'TBD', 'cust4': settings.cust4 ?: 'TBD',
+        'cust5': settings.cust5 ?: 'TBD', 'cust6': settings.cust6 ?: 'TBD',
+        'cust7': settings.cust7 ?: 'TBD', 'cust8': settings.cust8 ?: 'TBD',
+        'cust9': settings.cust9 ?: 'TBD'
       ]
-      LinkedHashMap<String, String> X = indexToCustomScene.findAll{it.value}.sort{it.value}   //.keySet()
-      //LinkedHashMap<String, String> Y = indexToCustomScene.findAll{!it.value}                 //.keySet().first()
-      String firstKey = indexToCustomScene.findAll{!it.value}.keySet().first()                 //.keySet().first()
-      LinkedHashMap<String, String> Y = indexToCustomScene.findAll{ it.key == firstKey }
-      LinkedHashMap<String, String> Z = X + Y
-/*
- * The easiest way to get the first key or first value from a HashMap in Java is to
- * use the entrySet() method to get a set of key-value pairs, and then use the
- * iterator() method to get an iterator over the set. Finally, you can use the
- * next() method to get the first entry in the Map.
-*/
-      //LinkedHashMap<String, String> Z = X + Y
-      paragraph "X: ${X}"
-      paragraph "Y: ${Y}"
-      paragraph "Z: ${Z.sort()}"
-      /*
-      Map<String, String> customIdToCustomScene = [ : ]
-      while (customIdToCustomScene.size < 9)
-      input (
-        name: hideCustomScenes,
-        type: 'bool',
-        title: settings[hideCustomScenes]
-          ? "Hiding Custom Scenes"
-          : "Showing Custom Scenes",
-        submitOnChange: true,
-        defaultValue: false,
-      )
-      if (!settings.hideCustomScenes) {
-        customScenes.eachWithIndex{ scene, index ->
+      LinkedHashMap<String, String> haveValues = indexToCustomScene.findAll{it.value != 'TBD'}
+      String firstEmptyKey = indexToCustomScene.findAll{it.value == 'TBD'}.keySet().first()
+      LinkedHashMap<String, String> needsValue = indexToCustomScene.findAll{ it.key == firstEmptyKey }
+      LinkedHashMap<String, String> customScenes = needsValue + haveValues.sort()
+      //-- paragraph "X: ${X}<br/>Y: ${Y}<br/>Z: ${Z}"
+      paragraph '<b>Create some/all ad hoc scene names:</b>'
+      //-- input (
+      //--   name: 'hideCustomScenes',
+      //--   type: 'bool',
+      //--   title: settings.hideCustomScenes ? "Hiding Custom Scenes" : "Showing Custom Scenes",
+      //--   submitOnChange: true,
+      //--   defaultValue: false
+      //-- )
+      //-- if (!settings.hideCustomScenes) {
+        customScenes.eachWithIndex{ settingName, settingValue, index ->
           input(
-            name: "custom${index}",
+            name: settingName,
             type: 'text',
-            title: 'Custom Scene<br/><em>(optional)</em>',
-            width: 3,
+            title: "<b>Custom ${index+1}:</b>",
+            width: 1,
             submitOnChange: true,
             required: false,
-            defaultValue: 'n/a'
+            defaultValue: settingValue
           )
         }
-        if (customScenes.size() < 9 && customScenes.findAll('_TBD_').size() == 0) {
-          customScenes += '__TBD__'
-        }
-      }
-      */
+      //-- }
       //----------------------------------
       // P U R G E   S T A T E   B E L O W
       //----------------------------------
+      paragraph '<b>Select Scenes for Automation Modes:</b>'
+      List<String> scenes = (settings.modesAsScenes ?: []) + (indexToCustomScene.findAll{it.value != 'TBD'} ?: [])
+      //--DEBUG-> paragraph "scenes: ${scenes}"
       modes.each{mode ->
-        Boolean modeNameIsSceneName = state.scenes.find{it == mode.name} ? true : false
+        Boolean modeNameIsSceneName = scenes.find{it == mode.name} ? true : false
         input(
           name: "${mode.id}ToScene",
           type: 'enum',
-          title: "Scene for ${mode.name}",
+          title: mode.name,
           width: 2,
           submitOnChange: true,
           required: true,
           multiple: false,
-          options: state.scenes,
+          options: scenes,
           defaultValue: modeNameIsSceneName ? mode.name : ''
         )
       }
@@ -167,15 +144,6 @@ Map monoPage() {
     }
   }
 }
-
-      /*
-      if (state.scenes) {
-        paragraph "<b>Current Scenes:</b> ${state.scenes?.join(', ') ?: '...none...'}"
-        addModeIdToSceneToSettings("Map Hub modes to ${roomName} Scenes (for automation)")
-      }
-      if (state.modeIdToScene) {
-      }
-      */
 
 /*
         paragraph "state.modeIdToScene: ${state.modeIdToScene}"

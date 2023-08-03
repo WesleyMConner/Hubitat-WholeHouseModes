@@ -11,3 +11,12 @@
       //           switches +--> lutronSwitches ----> lutronSwitches
       //                     \-> nonLutronSwitches -> nonLutronSwitches
       // ------------------      -------------------- -----------------
+
+
+/*
+ * FOR LATER:
+ * The easiest way to get the first key or first value from a HashMap in Java is to
+ * use the entrySet() method to get a set of key-value pairs, and then use the
+ * iterator() method to get an iterator over the set. Finally, you can use the
+ * next() method to get the first entry in the Map.
+*/
