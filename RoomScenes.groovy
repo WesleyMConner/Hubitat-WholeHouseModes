@@ -31,21 +31,6 @@ definition(
   singleInstance: false
 )
 
-String getRoomName (Long appId) {
-  if (!parent) log.error "getRoomName() called before parent was defined."
-  List<String> roomNames = parent.getPartipatingRooms()
-  List<InstalledAppWrapper> kidApps = parent.getChildApps()
-  Map<String, String> kidIdToRoomName = \
-    kidApps.collectEntries{ kid ->
-      [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
-    }
-  Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
-  kidIdToRoomName.each{ kidId, roomName ->
-    if (roomName) roomNameToKidId[roomName] = kidId
-  }
-  return result = kidIdToRoomName[appId.toString()] ?: roomNameToKidId.findAll{!it.value}.keySet().first()
-}
-
 // -------------------------------
 // C L I E N T   I N T E R F A C E
 // -------------------------------
@@ -61,7 +46,7 @@ Map monoPage() {
     uninstall: true
   ) {
     section {
-      String assignedRoom = getRoomName(app.id)
+      String assignedRoom = parent.assignChildAppRoomName(app.id)
       app.updateLabel(assignedRoom)
       paragraph heading(assignedRoom)
       ArrayList<LinkedHashMap> modes = location.getModes()   // Type def for Mode is TBD
@@ -90,29 +75,17 @@ Map monoPage() {
       LinkedHashMap<String, String> customScenes = needsValue + haveValues.sort()
       //-- paragraph "X: ${X}<br/>Y: ${Y}<br/>Z: ${Z}"
       paragraph '<b>Create some/all ad hoc scene names:</b>'
-      //-- input (
-      //--   name: 'hideCustomScenes',
-      //--   type: 'bool',
-      //--   title: settings.hideCustomScenes ? "Hiding Custom Scenes" : "Showing Custom Scenes",
-      //--   submitOnChange: true,
-      //--   defaultValue: false
-      //-- )
-      //-- if (!settings.hideCustomScenes) {
-        customScenes.eachWithIndex{ settingName, settingValue, index ->
-          input(
-            name: settingName,
-            type: 'text',
-            title: "<b>Custom ${index+1}:</b>",
-            width: 1,
-            submitOnChange: true,
-            required: false,
-            defaultValue: settingValue
-          )
-        }
-      //-- }
-      //----------------------------------
-      // P U R G E   S T A T E   B E L O W
-      //----------------------------------
+      customScenes.eachWithIndex{ settingName, settingValue, index ->
+        input(
+          name: settingName,
+          type: 'text',
+          title: "<b>Custom ${index+1}:</b>",
+          width: 1,
+          submitOnChange: true,
+          required: false,
+          defaultValue: settingValue
+        )
+      }
       paragraph '<b>Select Scenes for Automation Modes:</b>'
       List<String> scenes = (settings.modesAsScenes ?: []) + (indexToCustomScene.findAll{it.value != 'TBD'} ?: [])
       //--DEBUG-> paragraph "scenes: ${scenes}"
@@ -130,6 +103,17 @@ Map monoPage() {
           defaultValue: modeNameIsSceneName ? mode.name : ''
         )
       }
+      List<DeviceWrapper> mainRepeaters = parent.getMainRepeaters()
+      List<DeviceWrapper> keypads = parent.getKeypads()
+      List<DeviceWrapper> leds = parent.getLedDevices()
+      List<DeviceWrapper> lutronDevices = parent.getLutronDevices(assignedRoom)
+      List<DeviceWrapper> nonLutronDevices = parent.getNonLutronDevices(assignedRoom)
+      paragraph "assignedRoom: ${assignedRoom}"
+      paragraph "mainRepeaters: ${mainRepeaters}"
+      paragraph "keypads: ${keypads}"
+      paragraph "leds: ${leds}"
+      paragraph "lutronDevices: ${lutronDevices}"
+      paragraph "nonLutronDevices: ${nonLutronDevices}"
       ////
       //// EXIT
       ////

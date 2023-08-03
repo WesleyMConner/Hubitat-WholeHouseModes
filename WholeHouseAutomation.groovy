@@ -45,20 +45,26 @@ definition(
   singleInstance: true
 )
 
+String assignChildAppRoomName (Long childAppId) {
+  List<String> roomNames = settings.roomNames
+  List<InstalledAppWrapper> kidApps = getChildApps()
+  Map<String, String> kidIdToRoomName = \
+    kidApps.collectEntries{ kid ->
+      [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
+    }
+  Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
+  kidIdToRoomName.each{ kidId, roomName ->
+    if (roomName) roomNameToKidId[roomName] = kidId
+  }
+  return result = kidIdToRoomName[childAppId.toString()]
+                  ?: roomNameToKidId.findAll{!it.value}.keySet().first()
+}
+
 // -------------------------------
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
   page name: 'monoPage', title: '', install: true, uninstall: true
-}
-
-List<String> getPartipatingRooms() {
-  log.trace "entered getParticipatingRoom()"
-  if (!settings.roomNames) {
-    log.Error('getParticipatingRooms() called before identifying participating rooms.')
-  }
-  log.trace "getParticipatingRoom() with ${settings.roomNames}"
-  return settings.roomNames
 }
 
 Map monoPage() {
@@ -124,24 +130,6 @@ Map monoPage() {
           type: 'capability.switch'
         )
         if (settings.roomNames) {
-          /*
-          // Identify Incomplete Room
-          List<InstalledAppWrapper> kidApps = getChildApps()
-          Map <String, InstalledAppWrapper> roomToRoomScenes \
-            = settings.roomNames.collectEntries{ room ->
-                List<InstalledAppWrapper> matches = kidApps.findAll{ kid -> kid.label.contains(room) }
-                InstalledAppWrapper match = matches ? matches.first() : null
-                match ? [room, match] : [room, null]
-              }
-          paragraph """roomToRoomScenes: ${roomToRoomScenes.collectEntries{[it.key, it.value?.label]}}"""
-          List<String> incompleteRoom = roomToRoomScenes.findAll{ it.value == null }.collect{ it.key }
-          paragraph "incompleteRoom: ${incompleteRoom}"
-          */
-          //paragraph "getIncompleteRooms: ${getIncompleteRooms()}"
-          //paragraph "this: ${this}"
-          //paragraph "mapRoomToChildApp(this): ${mapRoomToChildApp(this)}"
-          //getIncompleteRooms()
-
           app(
             name: 'RoomScenes',
             appName: 'RoomScenes',
@@ -177,34 +165,35 @@ Map monoPage() {
   }
 }
 
-
 // -------------------------------------
 // M E T H O D S   O N   S E T T I N G S
 // -------------------------------------
 List<DeviceWrapper> getMainRepeaters () {
-  return settings?.lutronRepeaters?.collect{it}
+  return settings?.lutronRepeaters
 }
 
 List<DeviceWrapper> getKeypads() {
-  return settings?.lutronNonRepeaters?.collect{it}
-         + settings?.lutronKeypads?.collect{it}
-         + settings?.lutronPicos?.collect{it}
+  return (settings?.lutronNonRepeaters ?: []) \
+         + (settings?.lutronKeypads ?: []) \
+         + (settings?.lutronPicos ?: [])
+}
+
+List<DeviceWrapper> getLedDevices () {
+  return settings?.switches.findAll{ it?.displayName.toString().contains('LED') }
 }
 
 List<DeviceWrapper> getLutronDevices (String room) {
-  return getDevicesForRoom(room, settings?.switches).findAll{
-    it.displayName.toString().contains('lutron') && it.displayName.toString().contains('LED') == false
-  }
-}
-
-List<DeviceWrapper> getLedDevices (String room) {
-  return getDevicesForRoom(room, settings?.switches).findAll{
-    it?.displayName.toString().contains('LED')  }
+  log.trace "(1) room: ${room}, all switches: ${settings?.switches.collect{"${it.id} (${it.displayName})"}}"
+  List<DeviceWrapper> b = getDevicesForRoom(room, settings?.switches)
+  log.trace "(2) room: ${room}, all switches: ${b.collect{"${it.id} (${it.displayName})"}}"
+  List<DeviceWrapper> c = b.findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
+  log.trace "(3) room: ${room}, den lutron, not led: ${c.collect{"${it.id} (${it.displayName})"}}"
+  return c
 }
 
 List<DeviceWrapper> getNonLutronDevices (String room) {
   return getDevicesForRoom(room, settings?.switches).findAll{
-    ! (it.displayName.toString().contains('lutron'))
+    it.displayName.toString().contains('lutron') == false
   }
 }
 
