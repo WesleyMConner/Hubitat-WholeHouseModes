@@ -183,12 +183,7 @@ List<DeviceWrapper> getLedDevices () {
 }
 
 List<DeviceWrapper> getLutronDevices (String room) {
-  log.trace "(1) room: ${room}, all switches: ${settings?.switches.collect{"${it.id} (${it.displayName})"}}"
-  List<DeviceWrapper> b = getDevicesForRoom(room, settings?.switches)
-  log.trace "(2) room: ${room}, all switches: ${b.collect{"${it.id} (${it.displayName})"}}"
-  List<DeviceWrapper> c = b.findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
-  log.trace "(3) room: ${room}, den lutron, not led: ${c.collect{"${it.id} (${it.displayName})"}}"
-  return c
+  return getDevicesForRoom(room, settings?.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
 }
 
 List<DeviceWrapper> getNonLutronDevices (String room) {

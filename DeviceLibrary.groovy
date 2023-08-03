@@ -25,13 +25,9 @@ List<String> deviceIdsForRoom (String room) {
 
 List<DeviceWrapper> getDevicesForRoom (String room, DeviceWrapperList devices) {
   // This function excludes devices that are not associated with any room.
-  log.trace """(1.1) room: ${room}, passed devices: ${devices.collect{"${it.id} (${it.displayName})"}}"""
   List<String> deviceIdsForRoom = app.getRooms()
                                   .findAll{it.name == room}
                                   .collect{it.deviceIds.collect{it.toString()}}
                                   .flatten()
-  log.trace """(1.2) room: ${room}, deviceIdsForRoom: ${deviceIdsForRoom}}"""
-  List<DeviceWrapper> results = devices.findAll{ deviceIdsForRoom.contains(it.id.toString()) }
-  log.trace """(1.3) room: ${room}, devices for room: ${devices.collect{"${it.id} (${it.displayName})"}}"""
-  return results
+  return devices.findAll{ deviceIdsForRoom.contains(it.id.toString()) }
 }
