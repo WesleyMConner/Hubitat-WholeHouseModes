@@ -55,6 +55,7 @@ Map monoPage() {
         type: 'enum',
         title: '<span style="margin-left: 10px;">' \
                + '<b>Create some/all scene names based on Hubitat Modes names:</b>' \
+               + ' <em>(tab to register changes)</em>' \
                + '</span>',
         //title: '<b>Option 1:</b> Create scenes based on some/all Hubitat Modes names',
         submitOnChange: true,
@@ -73,7 +74,6 @@ Map monoPage() {
       String firstEmptyKey = indexToCustomScene.findAll{it.value == 'TBD'}.keySet().first()
       LinkedHashMap<String, String> needsValue = indexToCustomScene.findAll{ it.key == firstEmptyKey }
       LinkedHashMap<String, String> customScenes = needsValue + haveValues.sort()
-      //-- paragraph "X: ${X}<br/>Y: ${Y}<br/>Z: ${Z}"
       paragraph '<b>Create some/all ad hoc scene names:</b>'
       customScenes.eachWithIndex{ settingName, settingValue, index ->
         input(
@@ -87,8 +87,7 @@ Map monoPage() {
         )
       }
       paragraph '<b>Select Scenes for Automation Modes:</b>'
-      List<String> scenes = (settings.modesAsScenes ?: []) + (indexToCustomScene.findAll{it.value != 'TBD'} ?: [])
-      //--DEBUG-> paragraph "scenes: ${scenes}"
+      List<String> scenes = (settings.modesAsScenes ?: []) + (indexToCustomScene.findAll{it.value != 'TBD'}.collect{it.value} ?: [])
       modes.each{mode ->
         Boolean modeNameIsSceneName = scenes.find{it == mode.name} ? true : false
         input(
@@ -103,17 +102,38 @@ Map monoPage() {
           defaultValue: modeNameIsSceneName ? mode.name : ''
         )
       }
-      List<DeviceWrapper> mainRepeaters = parent.getMainRepeaters()
+      //----> Keypad Buttons that Trigger Scenes
+      // Use a picklist to narrow the required keypads
       List<DeviceWrapper> keypads = parent.getKeypads()
-      List<DeviceWrapper> leds = parent.getLedDevices()
-      List<DeviceWrapper> lutronDevices = parent.getLutronDevices(assignedRoom)
-      List<DeviceWrapper> nonLutronDevices = parent.getNonLutronDevices(assignedRoom)
-      paragraph "assignedRoom: ${assignedRoom}"
-      paragraph "mainRepeaters: ${mainRepeaters}"
       paragraph "keypads: ${keypads}"
-      paragraph "leds: ${leds}"
-      paragraph "lutronDevices: ${lutronDevices}"
+
+      //----> Non-Lutron Devices with per-Scene levels
+      List<DeviceWrapper> nonLutronDevices = parent.getNonLutronDevices(assignedRoom)
       paragraph "nonLutronDevices: ${nonLutronDevices}"
+
+      //----> Main Repeater Buttons that Realize Scenes
+      List<DeviceWrapper> mainRepeaters = parent.getMainRepeaters()
+      paragraph "mainRepeaters: ${mainRepeaters}"
+
+      //----> LEDs that are Set on Scene Activaton
+      // https://community.hubitat.com/t/bug-report-lutron-ra2-main-repeater-not-reporting-led-status-correctly/63317/7`
+      // It appears that your suggestion about subtracting 80 for LED numbers less
+      // than 100 and subtracting 100 from those above 100 will work with the
+      // outcome of LED number being the same as button number.
+      // ----------
+      // NOTE: The required keypads likely match the scene-triggering buttons
+      List<DeviceWrapper> leds = parent.getLedDevices()
+      paragraph "leds: ${leds}"
+
+      //----> Lutron Devices that Potentially Disrupt Scenes
+      //----> NOTE: REP LEDs MAY BE A PREFERABLE MECHANIS
+      List<DeviceWrapper> lutronDevices = parent.getLutronDevices(assignedRoom)
+      paragraph "lutronDevices: ${lutronDevices}"
+
+      //---->
+      // R E V I E W   D A T A
+      paragraph "scenes: ${scenes}"
+      paragraph "assignedRoom: ${assignedRoom}"
       ////
       //// EXIT
       ////
@@ -234,6 +254,13 @@ void updated() {
   initialize()
 }
 
+void initialize() {
+  if (settings.LOG) log.trace 'initialize()'
+  //--enforceMutualExclusion()
+  //--enforceDefault()
+  //--logSettingsAndState('initialize() about to enable subscription(s)')
+}
+
 /*
 void addScenesToSettings (String heading) {
   paragraph emphasis(heading)
@@ -289,10 +316,3 @@ void addModeIdToSceneToSettings (String heading) {
 }
 */
 
-void initialize() {
-  if (settings.LOG) log.trace 'initialize()'
-  //--enforceMutualExclusion()
-  //--enforceDefault()
-  //--logSettingsAndState('initialize() about to enable subscription(s)')
-  //--subscribe(settings.swGroup, 'switch', buttonHandler)
-}

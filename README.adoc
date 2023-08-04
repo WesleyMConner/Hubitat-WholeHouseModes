@@ -20,3 +20,29 @@
  * iterator() method to get an iterator over the set. Finally, you can use the
  * next() method to get the first entry in the Map.
 */
+
+  // https://docs2.hubitat.com/developer/app/app-object
+  //   void subscribe(
+  //     devices,           // DeviceWrapperList
+  //     handlerMethod,     // String
+  //     options = null     // Map
+  //   )
+  //   void subscribe(
+  //     devices,           // DeviceWrapperList
+  //     attributeName,     // String
+  //     handlerMethod,     // String
+  //     options = null     // Map
+  //   )
+  //   void unsubscribe(
+  //     deviceList         // List<DeviceWrapper>
+  //   )
+  //   void unsubscribe(
+  //     deviceList,        // List<DeviceWrapper>
+  //     attributeName      // String
+  //   )
+  //   void unsubscribe(
+  //     deviceList,        // List<DeviceWrapper>
+  //     attributeName,     // String
+  //     handlerMethod      // String
+  //   )
+

@@ -1,0 +1,8 @@
+How do custom applications subscribe to **Main Repeater** LED on/off events?
+
+My system has two Main Repeaters
+
+Name          Value  Unit   Description                 Source  Type  Produced by
+------------  -----  -----  --------------------------  ------  ----  -------------
+buttonLed-88  on     REP1  (01) led 88 was turned on   DEVICE        Lutron Telnet
+buttonLed-88  off    REP1  (01) led 88 was turned off  DEVICE        Lutron Telnet

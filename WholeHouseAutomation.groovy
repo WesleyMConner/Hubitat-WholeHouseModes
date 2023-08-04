@@ -45,21 +45,6 @@ definition(
   singleInstance: true
 )
 
-String assignChildAppRoomName (Long childAppId) {
-  List<String> roomNames = settings.roomNames
-  List<InstalledAppWrapper> kidApps = getChildApps()
-  Map<String, String> kidIdToRoomName = \
-    kidApps.collectEntries{ kid ->
-      [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
-    }
-  Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
-  kidIdToRoomName.each{ kidId, roomName ->
-    if (roomName) roomNameToKidId[roomName] = kidId
-  }
-  return result = kidIdToRoomName[childAppId.toString()]
-                  ?: roomNameToKidId.findAll{!it.value}.keySet().first()
-}
-
 // -------------------------------
 // C L I E N T   I N T E R F A C E
 // -------------------------------
@@ -89,6 +74,13 @@ Map monoPage() {
           type: 'enum',
           title: 'Select the Participating Rooms',
           options: roomPicklist
+        )
+        collapsibleInput (
+          blockLabel: "Lutron Telnet Device (for LED events)",
+          name: 'lutronTelnet',
+          title: 'Identify Lutron Telnet Device<br/>' \
+            + "${comment('Used to invoke in-kind Lutron scenes.')}",
+          type: 'device.LutronTelnet'
         )
         collapsibleInput (
           blockLabel: "Prospective Lutron 'Main Repeaters'",
@@ -142,22 +134,6 @@ Map monoPage() {
           )
         }
       }
-
-      //paragraph "<b>Main Repeaters:</b> ${getMainRepeaters().collect{it.displayName}.join(', ')}"
-      //paragraph "<b>Keypads:</b> ${getKeypads().collect{it.displayName}.join(', ')}"
-      //app.getRooms().collect{it.name}.each{ r ->
-      //  paragraph "<b>${r}</b>"
-      //  paragraph bullet('<b>devicesForRoom: </b>' + getDevicesForRoom(r, settings.switches).join(', '))
-      //  paragraph bullet('<b>Lutron Devices: </b>' + getLutronDevices(r).join(', '))
-      //  paragraph bullet('<b>LED Devices: </b>' + getLedDevices(r).join(', '))
-      //  paragraph bullet('<b>Non-Lutron Devices: </b>' + getNonLutronDevices(r).join(', '))
-      //}
-
-//mapDeviceIdAsStringToRoomName()
-//      paragraph partial
-//&nbsp;&nbsp;<b>LED Devices:</b> "${getLedDevices(r).collect{it.displayName}.join(', ')}"
-//&nbsp;&nbsp;<b>Non-Lutron Devices:</b> "${getNonLutronDevices(r).collect{it.displayName}.join(', ')}"
-//"""
       paragraph comment("""Whole House Automation - @wesmc, \
         <a href='https://github.com/WesleyMConner/Hubitat-WholeHouseAutomation' \
         target='_blank'> <br/>Click for more information</a>""")
@@ -168,6 +144,21 @@ Map monoPage() {
 // -------------------------------------
 // M E T H O D S   O N   S E T T I N G S
 // -------------------------------------
+String assignChildAppRoomName (Long childAppId) {
+  List<String> roomNames = settings.roomNames
+  List<InstalledAppWrapper> kidApps = getChildApps()
+  Map<String, String> kidIdToRoomName = \
+    kidApps.collectEntries{ kid ->
+      [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
+    }
+  Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
+  kidIdToRoomName.each{ kidId, roomName ->
+    if (roomName) roomNameToKidId[roomName] = kidId
+  }
+  return result = kidIdToRoomName[childAppId.toString()]
+                  ?: roomNameToKidId.findAll{!it.value}.keySet().first()
+}
+
 List<DeviceWrapper> getMainRepeaters () {
   return settings?.lutronRepeaters
 }
@@ -196,21 +187,119 @@ List<DeviceWrapper> getNonLutronDevices (String room) {
 // I N I T I A L I Z A T I O N   &   O P E R A T I O N
 // ---------------------------------------------------
 void installed() {
-  if (settings.LOG) log.trace 'installed()'
+  log.trace 'WHA installed()'
   initialize()
 }
 
 void updated() {
-  if (settings.LOG) log.trace 'updated()'
+  log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
+void testHandler (Event e) {
+  // SAMPLE 1
+  //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
+  //          deviceId  5686
+  //       displayName  (lutron-80) TV Wall KPAD
+  log.trace "WHA testHandler() w/ event: ${e}"
+  logEventDetails(e, false)
+}
+
+void initialize() {
+  log.trace "WHA initialize()"
+  log.trace "WHA subscribing to lutronTelnet >${settings.lutronTelnet}<"
+  //subscribe(settings.lutronTelnet, "switch", testHandler)
+  settings.lutronTelnet.each{ d ->
+    DeviceWrapper device = d
+    log.trace "WHA subscribe ${device.displayName} ${device.id}"
+    subscribe(device, testHandler, ['filterEvents': false])
+  }
+  log.trace "WHA subscribing to lutronRepeaters >${settings.lutronRepeaters}<"
+  //subscribe(settings.lutronRepeaters, "switch", testHandler)
+  settings.lutronRepeaters.each{ d ->
+    DeviceWrapper device = d
+    log.trace "WHA subscribe ${device.displayName} ${device.id}"
+    subscribe(device, testHandler, ['filterEvents': false])
+  }
+  log.trace "WHA subscribing to lutronKeypads >${settings.lutronKeypads}<"
+  //subscribe(settings.lutronKeypads, "switch", testHandler)
+  settings.lutronKeypads.each{ d ->
+    DeviceWrapper device = d
+    log.trace "WHA subscribe ${device.displayName} ${device.id}"
+    subscribe(device, testHandler, ['filterEvents': false])
+  }
+}
+
+// ========================================
+// 3:41 ISSUE
+// ========================================
+// PMdebugsendMsg:?monitoring,1
+//-------------------> PMtracemissing device id:4, msg:OUTPUT,4,1,0.00
+// PMinforcvd: OUTPUT,4,1,0.00
+// PMinfo(lutron-44) Garage KPAD LED 3 was turned off
+// PMinforcvd: DEVICE,44,83,9,0
+// PMinfo(lutron-80) TV Wall KPAD LED 1 was turned off
+// PMinforcvd: DEVICE,80,81,9,0
+//-------------------> PMtracemissing device id:1, msg:DEVICE,1,129,9,0
+// PMinforcvd: DEVICE,1,129,9,0
+//-------------------> PMtracemissing device id:1, msg:DEVICE,1,124,9,1
+// PMinforcvd: DEVICE,1,124,9,1
+//-------------------> PMtracemissing device id:1, msg:DEVICE,1,122,9,1
+// PMinforcvd: DEVICE,1,122,9,1
+// PMinfo(lutron-65) Kitchen Counters was turned off [physical]
+// PMinforcvd: OUTPUT,65,1,0.00
+// PMinfo(lutron-61) Kitchen Cans was turned off [physical]
+// PMinforcvd: OUTPUT,61,1,0.00
+//-------------------> PMtracemissing device id:1, msg:DEVICE,1,125,9,1
+// PMinforcvd: DEVICE,1,125,9,1
+//-------------------> PMtracemissing device id:1, msg:DEVICE,1,25,3
+// PMinforcvd: DEVICE,1,25,3
+// PMdebugsendMsg:#device,1,25,3
+// PMtraceWHA initialize() [Lutron Telnet] subscribing.
+
+// ========================================
+// FOCUS ON DEVICE 1 ... LATEST TO EARLIEST
+// ========================================
+// PMinforcvd: DEVICE,1,125,9,0 -----------------> buttonLed-25 (Kitchen Off) turned OFF
+// PMinforcvd: DEVICE,1,124,9,0 ---------------> buttonLed-24 (Kitchen Night) turned OFF
+// PMinforcvd: DEVICE,1,122,9,0 -----------------> buttonLed-22 (Kitchen Day) turned OFF
+// PMinforcvd: DEVICE,1,129,9,1 -------------------------> buttonLed-29 (COOK) turned ON
+// [Enabled the COOK scene via REP 1 button 29]
+// PMinforcvd: DEVICE,1,129,9,0 ------------------------> buttonLed-29 (COOK) turned OFF
+// PMinforcvd: DEVICE,1,124,9,1 ----------------> buttonLed-24 (Kitchen Night) turned ON
+// PMinforcvd: DEVICE,1,122,9,1 ------------------> buttonLed-22 (Kitchen Day) turned ON
+// PMinforcvd: DEVICE,1,125,9,1 ------------------> buttonLed-25 (Kitchen Off) turned ON
+// PMinforcvd: DEVICE,1,25,3
+// [Enabled the Kitchen Off scene via REP 1 button 25]
+// PMtraceRoomScenes.initialize() [Lutron Telnet] subscribing.
+
+// ISSUE as of 3p THURSDAY
+// app 1135 is WHA
+// den 1179-1182 are children (their legacy subscription?!)
+
+
+// -----
+// T B D
+// -----
+
+// -------------------------------
+// P R E S E R V E D   S C R A P S
+// -------------------------------
+
+// groovy.lang.MissingMethodException:
+//   - No signature of method: user_app_wesmc_WholeHouseAutomation_332.subscribe()
+//     is applicable for argument
+//       - types: (java.util.LinkedHashMap)
+//       - values: [[devices:[(lutron-01) REP 1, (lutron-83) REP 2],
+//       - handlerMethod:testHandler, ...]] Possible solutions: subscribe(java.lang.Object, java.lang.String, groovy.lang.MetaMethod), subscribe(java.lang.Object, java.lang.String, java.lang.String), subscribe(java.lang.Object, java.lang.String, groovy.lang.MetaMethod, java.util.Map), subscribe(java.lang.Object, java.lang.String, java.lang.String, java.util.Map) on line 260 (method updated)
+
+
+/*
 void initialize() {
   //??--log.info """initialize() with ${childApps.size()} Automation Groups<br/>
   //??--  ${childApps.each({ child -> "&#x2022;&nbsp;${child.label}" })}
   //??--"""
-  /*
   state.deviceIdToRoomName = mapDeviceIdAsStringToRoomName()
   identifyParticipatingDevices('Identify Participating Devices')
 
@@ -243,17 +332,10 @@ void initialize() {
   }
   if (state.roomScenes) {
   }
-  */
 }
+*/
 
-// -----
-// T B D
-// -----
-
-
-
-
-
+/*
 Map<String, List<DeviceWrapper>> getRoomToSwitches() {
   Map<String, List<DeviceWrapper>> roomToSwitches = [:]
   app.getRooms().each{ room -> roomToSwitches[room.name] = [] }
@@ -264,7 +346,7 @@ Map<String, List<DeviceWrapper>> getRoomToSwitches() {
   }
   return roomToSwitches
 }
-
+*/
 
 /*
 void addRoomToDeviceMapsToState() {
@@ -323,13 +405,3 @@ void showDevicesByRoom (String label, Map<String, List<DeviceWrapper>> roomToDev
   paragraph "<b>${label}:</b><br/>${summary}"
 }
 */
-
-
-
-
-
-
-
-
-
-
