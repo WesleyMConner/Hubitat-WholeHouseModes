@@ -23,46 +23,93 @@
 //   - An instance of this quasi-application's state footprint exists
 //     under a single key in the enclosing application's state.
 // ---------------------------------------------------------------------------------
+import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
 import com.hubitat.app.DeviceWrapper as DeviceWrapper
-import com.hubitat.app.DeviceWrapperList as DeviceWrapperList // YUCK!!!
+import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
 import com.hubitat.hub.domain.Event as Event
+
+
+library (
+ name: 'PBSG',
+ namespace: 'wesmc',
+ author: 'WesleyMConner',
+ description: 'PBSG is a headless version of Pushbutton Switch Group',
+ category: 'general purpose',
+ documentationLink: '',
+ importUrl: ''
+)
+
+ChildDeviceWrapper createChildVsw (String name) {
+   // Simplify child device creation (see below).
+   // Perform DUP checking here to avoid noise.
+}
 
 // -------------------------------------
 // I N S T A N C E   M A N A G E M E N T
 // -------------------------------------
-Map< createPBSG ((Map args = [:]) {
-  Map _args = [
+Map createPBSG (Map args = [:]) {
+  def _args = [
               name: "Expected 'name' (String)",
        switchNames: "Expected 'switchNames' (List<String>)",
     dfltSwitchName: "Expected 'dfltSwitchName' (String)",
   ] << args
-) {
   log.trace "createPBSG() Creating ${_args.name}<"
-  self = state.[_args.name]
-  if (self) {
+  if (state[_args.name]) {
     log.error "createPBSG() '${_args.name}' instance already exists."
-  } else if (_args.dfltSwitchName != 'None' && \
-             ! _args.switchNames.contains(_args.dfltSwitchName)) {
-    log.error "createPBSG() dfltSwitchName (${d_args.dfltSwitchName}) " \
+  } else if (_args.dfltSwitchName != 'None'
+             && ! _args.switchNames.contains(_args.dfltSwitchName)) {
+    log.error "createPBSG() dfltSwitchName (${_args.dfltSwitchName}) "
       + "not found in switchNames (${_args.switchNames})."
   } else {
     // Popuate initial instance data
-    self = _args
-    // Create required Virtual Switch children
-    self.vsws: [:]
-    self.switchNames.each{ swName ->
-      self.vsws += addChildDevice(
-        namespace: 'wesmc',
-        typeName: 'VirtualSwitch',
-        deviceNetworkId: "pbsg-${self.name}-${swName}"
+    state[_args.name] = _args
+    log.trace "pbsg: ${state[_args.name]}"
+    // Create required Virtual Switch children (NEED TO CHECK FOR DUPS)
+    List<ChildDeviceWrapper> vsws = []
+    pbsg.switchNames.each{ swName ->
+      // groovy.lang.MissingMethodException:
+      // No signature of method: user_app_wesmc_WholeHouseAutomation_332.
+      // addChildDevice() is applicable for argument types:
+      // (java.util.LinkedHashMap) values: [[
+      //   namespace:wesmc, typeName:VirtualSwitch,
+      //   deviceNetworkId:pbsg-pbsg-modes-Day]]
+      vsws += addChildDevice(
+        'hubitat',                      // namespace
+        'Virtual Switch',               // typeName
+        "pbsg-${pbsg.name}-${swName}",  // deviceNetworkId
+        [isComponent: true, name: "pbsg-${pbsg.name}-${swName}"]
       )
+        //namespace: 'wesmc',
+        //typeName: 'VirtualSwitch',
+        //deviceNetworkId: "pbsg-${pbsg.name}-${swName}"
     }
-    self.handler: { event ->
-      log.trace "Placeholder handler with ${event}."
-    }
-    //subscribe(self.vsws, "switch", self.&handler)
+    state[_args.name].vsws = vsws
+    // At #82 Cannot cast object '[pbsg-pbsg-modes-Day, ... pbsg-pbsg-modes-Night]'
+    // with class 'java.util.ArrayList' to class 'java.util.Map'
+    // YOU ARE HERE ---->2023-08-05 02:48:23.319 PMerrororg.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object 'user_app_wesmc_WholeHouseAutomation_332$_createPBSG_closure20@181a9e' with class 'user_app_wesmc_WholeHouseAutomation_332$_createPBSG_closure20' to class 'java.util.Map' on line 504 (method updated) (library wesmc.PBSG, line 78)
+    //-- NOT READY -> SEE TEST BELOW
+    //-- NOT READY -> pbsg.handler = { event ->
+    //-- NOT READY ->   log.trace "Placeholder handler with ${event}."
+    //-- NOT READY -> }
+    //-- NOT READY -> subscribe(pbsg.vsws, "switch", pbsg.&handler)
   }
 }
+
+  // T E S T   B E G I N ==================================================
+  /*
+  Closure handlerFactory = { e, pbsgInst ->
+    "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
+  }
+  def pbsgA = [
+    a: "This is a string",
+    b: "another string,"
+  ]
+  log.trace "pbsgA: ${pbsgA}"
+  def handler = { e -> handlerFactory.call(e, pbsgA) }
+  log.trace "handler('puppies'): ${handler('puppies')}"
+  */
+  // T E S T   E N D ======================================================
+
 
 List<DeviceWrapper> getOnSwitches() {
   DeviceWrapperList devices = state[stateName]
@@ -74,7 +121,7 @@ void deletePBSG (String name) {
   String stateName = "pbsg-${name}"
   if (state[stateName]) {
     unsubscribe(state[stateName].vsws)
-    state[stateName].vsws.each( device-> deleteChildDevice(device.deviceNetworkId) )
+    state[stateName].vsws.each{ device-> deleteChildDevice(device.deviceNetworkId) }
     state[stateName] = null
   } else {
     log.error "deletePBSG() no state data for '${stateName}'."
@@ -108,7 +155,7 @@ void deletePBSG (String name) {
 // ---------------------------------------------------
 // S T A T I C   M E T H O D S
 // ---------------------------------------------------
-
+/*
 String extractSwitchState(DeviceWrapper d) {
   // What's best here? NOT exhaustively tested.
   //   - stateValues = d.collect({ it.currentStates.value }).flatten()
@@ -121,51 +168,10 @@ String extractSwitchState(DeviceWrapper d) {
         : 'unknown'
 }
 
-/*
-String showSwitchInfoWithState(
-  String delimiter = ', ',
-  DeviceWrapperList devices = null  // settings.swGroup is only available in fn body ?!
-) {
-  if (!devices) devices = settings.swGroup
-  return devices.collect({
-    "${deviceTag(it)} ${emphasizeOn(extractSwitchState(it))}"
-  }).sort().join(delimiter) ?: 'N/A'
-}
-*/
-
 DeviceWrapper getSwitchById(String id) {
   DeviceWrapperList devices = settings.swGroup
   return devices?.find({ it.id == id })
 }
-
-/*
-void logSettingsAndState(String calledBy) {
-  if (settings.LOG) log.trace """logSettingsAndState() from ${calledBy}:<br/>
-    <table>
-      <tr>
-        <th align='right'>LOG:</th>
-        <td>${settings.LOG}</td>
-      </tr>
-      <tr>
-        <th align='right'>swGroupName:</th>
-        <td>${settings.swGroupName}</td>
-      </tr>
-      <tr>
-        <th align='right'>Switch State:</th>
-        <td>${showSwitchInfoWithState(', ')}</td>
-      </tr>
-      <tr>
-        <th align='right'>Default Switch:</th>
-        <td>${settings.useDefault
-                ? deviceTag(getSwitchById(settings.dfltSwitchNameId))
-                : 'N/A'
-            }
-        </td>
-      </tr>
-    </table>
-  """
-}
-*/
 
 void enforceDefault() {
   if (settings.LOG) log.trace 'enforceDefault()'
@@ -302,3 +308,4 @@ void uninstalled() {
   // Nothing to do. Subscruptions are automatically dropped.
   // This may matter if devices are captured by a switch group in the future.
 }
+*/

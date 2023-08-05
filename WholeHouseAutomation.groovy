@@ -31,6 +31,7 @@ import com.hubitat.app.InstalledAppWrapper as InstalledAppWrapper
 //import com.hubitat.hub.domain.Location as Location
 //import com.hubitat.hub.domain.State as State
 #include wesmc.DeviceLibrary
+#include wesmc.PBSG
 #include wesmc.UtilsLibrary
 
 definition(
@@ -229,18 +230,26 @@ void initialize() {
     subscribe(device, testHandler, ['filterEvents': false])
   }
 
-  // T E S T   B E G I N ==================================================
-  Closure handlerFactory = { e, pbsgInst ->
-    "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
-  }
-  def pbsgA = [
-    a: "This is a string",
-    b: "another string,"
-  ]
-  log.trace "pbsgA: ${pbsgA}"
-  def handler = { e -> handlerFactory.call(e, pbsgA) }
-  log.trace "handler('puppies'): ${handler('puppies')}"
-  // T E S T   E N D ======================================================
+  //===== T E S T   B E G I N =============================================
+  //===== Closure handlerFactory = { e, pbsgInst ->
+  //=====   "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
+  //===== }
+  //===== def pbsgA = [
+  //=====   a: "This is a string",
+  //=====   b: "another string,"
+  //===== ]
+  //===== log.trace "pbsgA: ${pbsgA}"
+  //===== def handler = { e -> handlerFactory.call(e, pbsgA) }
+  //===== log.trace "handler('puppies'): ${handler('puppies')}"
+  //===== T E S T   E N D =================================================
+
+  ArrayList<LinkedHashMap> modes = location.getModes()
+
+  createPBSG(
+    name: 'pbsg-modes',
+    switchNames: modes.collect{it.name},
+    dfltSwitchName: 'Day'
+  )
 }
 
 
