@@ -233,20 +233,13 @@ void initialize() {
   Closure handlerFactory = { e, pbsgInst ->
     "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
   }
-
   def pbsgA = [
     a: "This is a string",
     b: "another string,"
   ]
-
-  log.trace "-A-"
   log.trace "pbsgA: ${pbsgA}"
-  log.trace "-B-"
   def handler = { e -> handlerFactory.call(e, pbsgA) }
-  log.trace handler
-  log.trace "-C-"
-  log.trace handler('puppies')
-  log.trace "-D-"
+  log.trace "handler('puppies'): ${handler('puppies')}"
   // T E S T   E N D ======================================================
 }
 
