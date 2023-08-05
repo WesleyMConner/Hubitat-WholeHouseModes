@@ -19,6 +19,10 @@ library (
  importUrl: ''
 )
 
+String deviceTag(DeviceWrapper device) {
+  return "${device.displayName} (${device.id})"
+}
+
 List<String> deviceIdsForRoom (String room) {
   return app.getRooms().findAll{it.name == room}.collect{it.deviceIds}.flatten().collect{it.toString()}
 }

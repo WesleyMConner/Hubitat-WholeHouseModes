@@ -76,49 +76,48 @@ Map monoPage() {
           options: roomPicklist
         )
         collapsibleInput (
-          blockLabel: "Lutron Telnet Device (for LED events)",
+          blockLabel: "Lutron Telnet Device </em>",
           name: 'lutronTelnet',
-          title: 'Identify Lutron Telnet Device<br/>' \
-            + "${comment('Used to invoke in-kind Lutron scenes.')}",
+          title: 'Confirm Lutron Telnet Device<br/>' \
+            + "${comment('used to detect Main Repeater LED state changes')}",
           type: 'device.LutronTelnet'
         )
         collapsibleInput (
-          blockLabel: "Prospective Lutron 'Main Repeaters'",
+          blockLabel: "Lutron Main Repeaters",
           name: 'lutronRepeaters',
-          title: 'Identify Lutron Main Repeaters<br/>' \
-            + "${comment('Used to invoke in-kind Lutron scenes.')}",
+          title: 'Identify Lutron Main Repeater(s)<br/>' \
+            + "${comment('used to invoke in-kind Lutron scenes')}",
           type: 'device.LutronKeypad'
         )
         collapsibleInput (
-          blockLabel: "Prospective Lutron 'Miscellaneous Keypads'",
-          name: 'lutronNonRepeaters',
-          title: 'Identify Non-Repeater Lutron Devices<br/>' \
-            + "${comment('Used to trigger room scenes.')}",
+          blockLabel: "Lutron Miscellaneous Keypads",
+          name: 'lutronMiscKeypads',
+          title: 'Identify Lutron Miscellaneous Devices<br/>' \
+            + "${comment('used to trigger room scenes')}",
           type: 'device.LutronKeypad'
         )
         collapsibleInput (
-          blockLabel: "Probable 'Lutron Keypads'",
-          name: 'lutronKeypads',
+          blockLabel: "Lutron SeeTouch Keypads",
+          name: 'lutronSeeTouchKeypads',
           title: 'Identify Lutron SeeTouch Keypads<br/>' \
-            + "${comment('Used to trigger room scenes.')}",
+            + "${comment('used to trigger room scenes.')}",
           type: 'device.LutronSeeTouchKeypad'
         )
         collapsibleInput (
-          blockLabel: "Probable 'Lutron Picos'",
+          blockLabel: "Lutron Picos",
           name: 'lutronPicos',
           title: 'Identify Lutron Picos<br/>' \
-            + "${comment('Used to trigger room scenes and/or devices.')}",
+            + "${comment('used to trigger room scenes')}",
           type: 'device.LutronFastPico'
         )
         collapsibleInput (
-          blockLabel: 'Switches/Dimmers',
+          blockLabel: 'Lutron LEDs and Non-Lutron Devices',
           name: 'switches',
-          title: 'Identify Lutron AND Non-Lutron Switches/Dimmers<br/>' \
-            + "${comment( \
-                'Non-Lutron device levels are set by Room Scenes.<br/>'\
-                + 'Lutron device level facilitate MANUAL override of scenes.<br/>' \
-                + 'Exclude VSWs (virtual switches).' \
-              )}",
+          title: 'Identify Lutron LEDs and Non-Lutron switches and dimmers' \
+            + comment('<br/>Lutron LEDs are set to reflect the current scene.') \
+            + comment('<br/>Non-Lutron device levels are set per room scenes.') \
+            + comment('<br/>Non-LED Lutron devices can be skipped.') \
+            + comment('<br/>VSWs (virtual switches) can be skipped.'),
           type: 'capability.switch'
         )
         if (settings.roomNames) {
@@ -127,9 +126,8 @@ Map monoPage() {
             appName: 'RoomScenes',
             namespace: 'wesmc',
             parent: 'WholeHouseAutomation',
-            title: """<b>Add Rooms</b> ${comment(
-              'New instances are automatically assigned a Room Name from available <em>Participating Rooms</em>.'
-            )}""",
+            title: '<b>Add Rooms</b>' \
+              + comment('Room names are automatically assigned.'),
             multiple: true
           )
         }
@@ -164,8 +162,8 @@ List<DeviceWrapper> getMainRepeaters () {
 }
 
 List<DeviceWrapper> getKeypads() {
-  return (settings?.lutronNonRepeaters ?: []) \
-         + (settings?.lutronKeypads ?: []) \
+  return (settings?.lutronMiscKeypads ?: []) \
+         + (settings?.lutronSeeTouchKeypads ?: []) \
          + (settings?.lutronPicos ?: [])
 }
 
@@ -173,9 +171,10 @@ List<DeviceWrapper> getLedDevices () {
   return settings?.switches.findAll{ it?.displayName.toString().contains('LED') }
 }
 
-List<DeviceWrapper> getLutronDevices (String room) {
-  return getDevicesForRoom(room, settings?.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
-}
+//--xx-- Main Repeater LEDs will be used to detect Manual overrides.
+//--xx-- List<DeviceWrapper> getLutronDevices (String room) {
+//--xx--   return getDevicesForRoom(room, settings?.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
+//--xx-- }
 
 List<DeviceWrapper> getNonLutronDevices (String room) {
   return getDevicesForRoom(room, settings?.switches).findAll{
@@ -208,76 +207,48 @@ void testHandler (Event e) {
 
 void initialize() {
   log.trace "WHA initialize()"
-  log.trace "WHA subscribing to lutronTelnet >${settings.lutronTelnet}<"
+  log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   //subscribe(settings.lutronTelnet, "switch", testHandler)
   settings.lutronTelnet.each{ d ->
     DeviceWrapper device = d
-    log.trace "WHA subscribe ${device.displayName} ${device.id}"
+    log.trace "WHA subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  log.trace "WHA subscribing to lutronRepeaters >${settings.lutronRepeaters}<"
+  log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   //subscribe(settings.lutronRepeaters, "switch", testHandler)
   settings.lutronRepeaters.each{ d ->
     DeviceWrapper device = d
-    log.trace "WHA subscribe ${device.displayName} ${device.id}"
+    log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  log.trace "WHA subscribing to lutronKeypads >${settings.lutronKeypads}<"
-  //subscribe(settings.lutronKeypads, "switch", testHandler)
-  settings.lutronKeypads.each{ d ->
+  log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.lutronSeeTouchKeypads}<"
+  //subscribe(settings.lutronSeeTouchKeypads, "switch", testHandler)
+  settings.lutronSeeTouchKeypads.each{ d ->
     DeviceWrapper device = d
-    log.trace "WHA subscribe ${device.displayName} ${device.id}"
+    log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
+
+  Closure x = { e, y -> log.trace "Arg '${e}', '${y.a}' and '${y.b}'." }
+
+  Map YYY = [
+    a: "This is a string",
+    b: "another string,",
+    handler: { e -> x.call(e, YYY) }
+  ]
+  log.trace "-A-"
+  log.trace YYY.a
+  log.trace "-B-"
+  log.trace YYY.handler('birds')
+  log.trace "YYY.handler('birds'): >${YYY.getAt['handler'].call('birds')}<"
+  log.trace "-C-"
 }
 
-// ========================================
-// 3:41 ISSUE
-// ========================================
-// PMdebugsendMsg:?monitoring,1
-//-------------------> PMtracemissing device id:4, msg:OUTPUT,4,1,0.00
-// PMinforcvd: OUTPUT,4,1,0.00
-// PMinfo(lutron-44) Garage KPAD LED 3 was turned off
-// PMinforcvd: DEVICE,44,83,9,0
-// PMinfo(lutron-80) TV Wall KPAD LED 1 was turned off
-// PMinforcvd: DEVICE,80,81,9,0
-//-------------------> PMtracemissing device id:1, msg:DEVICE,1,129,9,0
-// PMinforcvd: DEVICE,1,129,9,0
-//-------------------> PMtracemissing device id:1, msg:DEVICE,1,124,9,1
-// PMinforcvd: DEVICE,1,124,9,1
-//-------------------> PMtracemissing device id:1, msg:DEVICE,1,122,9,1
-// PMinforcvd: DEVICE,1,122,9,1
-// PMinfo(lutron-65) Kitchen Counters was turned off [physical]
-// PMinforcvd: OUTPUT,65,1,0.00
-// PMinfo(lutron-61) Kitchen Cans was turned off [physical]
-// PMinforcvd: OUTPUT,61,1,0.00
-//-------------------> PMtracemissing device id:1, msg:DEVICE,1,125,9,1
-// PMinforcvd: DEVICE,1,125,9,1
-//-------------------> PMtracemissing device id:1, msg:DEVICE,1,25,3
-// PMinforcvd: DEVICE,1,25,3
-// PMdebugsendMsg:#device,1,25,3
-// PMtraceWHA initialize() [Lutron Telnet] subscribing.
-
-// ========================================
-// FOCUS ON DEVICE 1 ... LATEST TO EARLIEST
-// ========================================
-// PMinforcvd: DEVICE,1,125,9,0 -----------------> buttonLed-25 (Kitchen Off) turned OFF
-// PMinforcvd: DEVICE,1,124,9,0 ---------------> buttonLed-24 (Kitchen Night) turned OFF
-// PMinforcvd: DEVICE,1,122,9,0 -----------------> buttonLed-22 (Kitchen Day) turned OFF
-// PMinforcvd: DEVICE,1,129,9,1 -------------------------> buttonLed-29 (COOK) turned ON
-// [Enabled the COOK scene via REP 1 button 29]
-// PMinforcvd: DEVICE,1,129,9,0 ------------------------> buttonLed-29 (COOK) turned OFF
-// PMinforcvd: DEVICE,1,124,9,1 ----------------> buttonLed-24 (Kitchen Night) turned ON
-// PMinforcvd: DEVICE,1,122,9,1 ------------------> buttonLed-22 (Kitchen Day) turned ON
-// PMinforcvd: DEVICE,1,125,9,1 ------------------> buttonLed-25 (Kitchen Off) turned ON
-// PMinforcvd: DEVICE,1,25,3
-// [Enabled the Kitchen Off scene via REP 1 button 25]
-// PMtraceRoomScenes.initialize() [Lutron Telnet] subscribing.
-
-// ISSUE as of 3p THURSDAY
-// app 1135 is WHA
-// den 1179-1182 are children (their legacy subscription?!)
-
+// groovy.lang.MissingMethodException: No signature of method:
+// user_app_wesmc_WholeHouseAutomation_332$_initialize_closure12.doCall()
+// is applicable for argument types: () values: [] Possible solutions:
+// doCall(java.lang.Object, java.lang.Object), isCase(java.lang.Object),
+// isCase(java.lang.Object), findAll(), findAll(), findAll(groovy.lang.Closure) (updated)
 
 // -----
 // T B D
@@ -306,7 +277,7 @@ void initialize() {
   if (settings.lutronRepeaters) {
     state.repeaterIds = settings.lutronRepeaters.collect{it.id}
   }
-  if (settings.lutronNonRepeaters && settings.lutronKeypads && settings.lutronPicos) {
+  if (settings.lutronMiscKeypads && settings.lutronSeeTouchKeypads && settings.lutronPicos) {
     addKeypadsToState()
   }
   if (settings.switches) {
