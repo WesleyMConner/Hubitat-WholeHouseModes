@@ -252,6 +252,11 @@ void logEventDetails (Event e, Boolean errorMode = false) {
 //   fn: { arg1, arg2 -> ... }
 // As needed
 //   myMap.getAt('fn').call('val1', 'val2')
+//
+// https://freecontent.manning.com/wp-content/uploads/declaring-and-using-closures.pdf
+// In Groovy, Closure's curry method returns a clone of the current closure,
+// having bound one or more parameters to a given value.
+// PAGE 7 Top DIAGRAM
 
 void buttonHandler (Event e) {
   if (e.isStateChange) {
