@@ -229,20 +229,27 @@ void initialize() {
     subscribe(device, testHandler, ['filterEvents': false])
   }
 
-  Closure x = { e, y -> log.trace "Arg '${e}', '${y.a}' and '${y.b}'." }
+  // T E S T   B E G I N ==================================================
+  Closure handlerFactory = { e, pbsgInst ->
+    "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
+  }
 
-  Map YYY = [
+  def pbsgA = [
     a: "This is a string",
-    b: "another string,",
-    handler: { e -> x.call(e, YYY) }
+    b: "another string,"
   ]
+
   log.trace "-A-"
-  log.trace YYY.a
+  log.trace "pbsgA: ${pbsgA}"
   log.trace "-B-"
-  log.trace YYY.handler('birds')
-  log.trace "YYY.handler('birds'): >${YYY.getAt['handler'].call('birds')}<"
+  def handler = { e -> handlerFactory.call(e, pbsgA) }
+  log.trace handler
   log.trace "-C-"
+  log.trace handler('puppies')
+  log.trace "-D-"
+  // T E S T   E N D ======================================================
 }
+
 
 // groovy.lang.MissingMethodException: No signature of method:
 // user_app_wesmc_WholeHouseAutomation_332$_initialize_closure12.doCall()
