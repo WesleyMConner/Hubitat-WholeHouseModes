@@ -56,6 +56,7 @@ preferences {
 Map monoPage() {
   return dynamicPage(name: 'monoPage') {
     section {
+      app.updateLabel('Whole House Automation')
       if (app.getInstallationState() != 'COMPLETE') {
         paragraph heading('Whole House Automation')
         paragraph emphasis('Before you can create <b>Room Scene(s)</b> ...')
@@ -67,7 +68,13 @@ Map monoPage() {
         paragraph heading('Whole House Automation') \
           + comment('<br/>The "settings" solicited here are at '\
               + '"parent-scope" and are available to Child applications.')
-        List<String> roomPicklist = app.getRooms().collect{it.name}.sort()
+        input (
+          name: 'LOG',
+          type: 'bool',
+          title: 'Enable logging?',
+          defaultValue: true
+        )
+        roomPicklist = app.getRooms().collect{it.name}.sort()
         //--paragraph "roomPicklist: >${roomPicklist}<"
         collapsibleInput(
           blockLabel: 'Participating Rooms',
@@ -187,12 +194,12 @@ List<DeviceWrapper> getNonLutronDevices (String room) {
 // I N I T I A L I Z A T I O N   &   O P E R A T I O N
 // ---------------------------------------------------
 void installed() {
-  log.trace 'WHA installed()'
+  if (settings.LOG) log.trace 'WHA installed()'
   initialize()
 }
 
 void updated() {
-  log.trace 'WHA updated()'
+  if (settings.LOG) log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
@@ -202,31 +209,31 @@ void testHandler (Event e) {
   //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
   //          deviceId  5686
   //       displayName  (lutron-80) TV Wall KPAD
-  log.trace "WHA testHandler() w/ event: ${e}"
-  logEventDetails(e, false)
+  if (settings.LOG) log.trace "WHA testHandler() w/ event: ${e}"
+  if (settings.LOG) logEventDetails(e, false)
 }
 
 void initialize() {
-  log.trace "WHA initialize()"
-  log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  if (settings.LOG) log.trace "WHA initialize()"
+  if (settings.LOG) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   //subscribe(settings.lutronTelnet, "switch", testHandler)
   settings.lutronTelnet.each{ d ->
     DeviceWrapper device = d
-    log.trace "WHA subscribing ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "WHA subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (settings.LOG) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   //subscribe(settings.lutronRepeaters, "switch", testHandler)
   settings.lutronRepeaters.each{ d ->
     DeviceWrapper device = d
-    log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.lutronSeeTouchKeypads}<"
+  if (settings.LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.lutronSeeTouchKeypads}<"
   //subscribe(settings.lutronSeeTouchKeypads, "switch", testHandler)
   settings.lutronSeeTouchKeypads.each{ d ->
     DeviceWrapper device = d
-    log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
 
@@ -244,11 +251,11 @@ void initialize() {
   //===== T E S T   E N D =================================================
 
   ArrayList<LinkedHashMap> modes = location.getModes()
-
+  if (state['pbsg-modes']) { deletePBSG('pbsg-modes') }
   createPBSG(
     name: 'pbsg-modes',
-    switchNames: modes.collect{it.name},
-    dfltSwitchName: 'Day'
+    sceneNames: modes.collect{it.name},
+    defaultScene: 'Day'
   )
 }
 

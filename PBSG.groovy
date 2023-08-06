@@ -22,6 +22,7 @@
 //   - An intermediate device would not be able to process events.
 //   - An instance of this quasi-application's state footprint exists
 //     under a single key in the enclosing application's state.
+//   - The parent App must have settings.LOG == TRUE for non-error logging.
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
 import com.hubitat.app.DeviceWrapper as DeviceWrapper
@@ -39,58 +40,75 @@ library (
  importUrl: ''
 )
 
-ChildDeviceWrapper createChildVsw (String name) {
-   // Simplify child device creation (see below).
-   // Perform DUP checking here to avoid noise.
+Map<String, ChildDeviceWrapper> createChildVsws (
+  Map<String, DeviceWrapper> scene2Vsw,
+  String deviceIdPrefix
+) {
+  // Ensure every scene is mapped to a VSW with no extra child VSWs.
+  Map<String, ChildDeviceWrapper> result = scene2Vsw.collectEntries{ scene, vsw ->
+    String deviceNetworkId = "${deviceIdPrefix}-${scene}"
+    ChildDeviceWrapper existingDevice = getChildDevice(deviceNetworkId)
+    if (existingDevice) {
+      if (settings.LOG) log.trace "createChildVsws() scene (${scene}) found (${existingDevice})"
+      [scene, existingDevice]
+    } else {
+      ChildDeviceWrapper newChild = addChildDevice(
+        'hubitat',         // namespace
+        'Virtual Switch',  // typeName
+        deviceNetworkId,   // deviceNetworkId
+        [isComponent: true, name: deviceNetworkId]
+      )
+      if (settings.LOG) log.trace "createChildVsws() scene (${scene}) created vsw (${newChild})"
+      [scene, newChild]
+    }
+  }
+  // Find and drop child VSWs NOT tied to a scene.
+  List<ChildDeviceWrapper> childDevices = getAllChildDevices()
+  //--log.trace "#66: createChildVsws()<br/>childDevices: ${childDevices}<br/>result: ${result}"
+  childDevices.each{ childDevice ->
+    def scenes = result.findAll{
+      scene, sceneVsw -> sceneVsw?.deviceNetworkId == childDevice.deviceNetworkId
+    }
+    if (scenes) {
+      if (settings.LOG) log.trace "createChildVsws() keeping ${childDevice.deviceNetworkId} with scenes: ${scenes}"
+    } else {
+      if (settings.LOG) log.trace "createChildVsws() dropping ${childDevice.deviceNetworkId}"
+      deleteChildDevice(childDevice.deviceNetworkId)
+    }
+  }
+  return result
 }
 
 // -------------------------------------
 // I N S T A N C E   M A N A G E M E N T
 // -------------------------------------
 Map createPBSG (Map args = [:]) {
+  // Add default arguments here.
   def _args = [
-              name: "Expected 'name' (String)",
-       switchNames: "Expected 'switchNames' (List<String>)",
-    dfltSwitchName: "Expected 'dfltSwitchName' (String)",
+    enclosingApp: app.getLabel()
   ] << args
-  log.trace "createPBSG() Creating ${_args.name}<"
-  if (state[_args.name]) {
+  if (!args.name || !args.sceneNames || !args.defaultScene) {
+    log.error([
+      'createPBSG() expects arguments:<br/>',
+      '          name: ... (String)<br/>',
+      '    sceneNames: ... (List&lt;String&gt;)<br/>',
+      '  defaultScene: ... (String)'
+    ].join())
+    app.updateLabel("${_args.enclosingApp ?: app.getLabel()} - BROKEN")
+  } else if (state[_args.name]) {
     log.error "createPBSG() '${_args.name}' instance already exists."
-  } else if (_args.dfltSwitchName != 'None'
-             && ! _args.switchNames.contains(_args.dfltSwitchName)) {
-    log.error "createPBSG() dfltSwitchName (${_args.dfltSwitchName}) "
-      + "not found in switchNames (${_args.switchNames})."
+    app.updateLabel("${_args.enclosingApp} - BROKEN}")
+  } else if (_args.defaultScene && ! _args.sceneNames.contains(_args.defaultScene)) {
+    log.error "createPBSG() '${_args.defaultScene}' not found in '${_args.sceneNames}'."
+    app.updateLabel("${_args.enclosingApp} - BROKEN}")
   } else {
     // Popuate initial instance data
     state[_args.name] = _args
-    log.trace "pbsg: ${state[_args.name]}"
-    // Create required Virtual Switch children (NEED TO CHECK FOR DUPS)
-    List<ChildDeviceWrapper> vsws = []
-    pbsg.switchNames.each{ swName ->
-      // groovy.lang.MissingMethodException:
-      // No signature of method: user_app_wesmc_WholeHouseAutomation_332.
-      // addChildDevice() is applicable for argument types:
-      // (java.util.LinkedHashMap) values: [[
-      //   namespace:wesmc, typeName:VirtualSwitch,
-      //   deviceNetworkId:pbsg-pbsg-modes-Day]]
-      vsws += addChildDevice(
-        'hubitat',                      // namespace
-        'Virtual Switch',               // typeName
-        "pbsg-${pbsg.name}-${swName}",  // deviceNetworkId
-        [isComponent: true, name: "pbsg-${pbsg.name}-${swName}"]
-      )
-        //namespace: 'wesmc',
-        //typeName: 'VirtualSwitch',
-        //deviceNetworkId: "pbsg-${pbsg.name}-${swName}"
-    }
-    state[_args.name].vsws = vsws
-    // At #82 Cannot cast object '[pbsg-pbsg-modes-Day, ... pbsg-pbsg-modes-Night]'
-    // with class 'java.util.ArrayList' to class 'java.util.Map'
-    // YOU ARE HERE ---->2023-08-05 02:48:23.319 PMerrororg.codehaus.groovy.runtime.typehandling.GroovyCastException: Cannot cast object 'user_app_wesmc_WholeHouseAutomation_332$_createPBSG_closure20@181a9e' with class 'user_app_wesmc_WholeHouseAutomation_332$_createPBSG_closure20' to class 'java.util.Map' on line 504 (method updated) (library wesmc.PBSG, line 78)
-    //-- NOT READY -> SEE TEST BELOW
-    //-- NOT READY -> pbsg.handler = { event ->
-    //-- NOT READY ->   log.trace "Placeholder handler with ${event}."
-    //-- NOT READY -> }
+    state[_args.name].scene2Vsw = createChildVsws(
+      _args.sceneNames.collectEntries{ switchName -> [ switchName, null ] },
+      _args.name
+    )
+    if (settings.LOG) log.trace "pbsg: instantiated ${state[_args.name]}"
     //-- NOT READY -> subscribe(pbsg.vsws, "switch", pbsg.&handler)
   }
 }
@@ -116,15 +134,14 @@ List<DeviceWrapper> getOnSwitches() {
   return devices?.findAll({ extractSwitchState(it) == 'on' })
 }
 
-
-void deletePBSG (String name) {
-  String stateName = "pbsg-${name}"
-  if (state[stateName]) {
-    unsubscribe(state[stateName].vsws)
-    state[stateName].vsws.each{ device-> deleteChildDevice(device.deviceNetworkId) }
-    state[stateName] = null
+void deletePBSG (String instanceName) {
+  if (state[instanceName]) {
+    //--TODO-> unsubscribe(state[instanceName].vsws)
+    //--TODO-> state[instanceName].vsws.each{ device-> deleteChildDevice(device.deviceNetworkId) }
+    state[instanceName] = null
   } else {
-    log.error "deletePBSG() no state data for '${stateName}'."
+    log.error "deletePBSG() no state to delete for '${instanceName}'."
+    app.updateLabel("${state[instanceName].enclosingApp} - BROKEN}")
   }
 }
 
@@ -175,13 +192,13 @@ DeviceWrapper getSwitchById(String id) {
 
 void enforceDefault() {
   if (settings.LOG) log.trace 'enforceDefault()'
-  if (settings.dfltSwitchNameId) {
+  if (settings.defaultSceneId) {
     List<DeviceWrapper> onDevices = getOnSwitches()
     if (onDevices.size() == 0) {
       //--x-- logSettingsAndState('enforceDefault() triggered IN')
-      DeviceWrapper dfltSwitchName = getSwitchById(settings.dfltSwitchNameId)
-      if (settings.LOG) log.trace "enforceDefault() turning on ${deviceTag(dfltSwitchName)}."
-      dfltSwitchName.on()
+      DeviceWrapper defaultScene = getSwitchById(settings.defaultSceneId)
+      if (settings.LOG) log.trace "enforceDefault() turning on ${deviceTag(defaultScene)}."
+      defaultScene.on()
       //--x-- logSettingsAndState('enforceDefault() triggered OUT')
     }
   }
