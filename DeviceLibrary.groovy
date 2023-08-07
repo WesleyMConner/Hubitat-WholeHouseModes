@@ -23,15 +23,17 @@ String deviceTag(DeviceWrapper device) {
   return "${device.displayName} (${device.id})"
 }
 
-List<String> deviceIdsForRoom (String room) {
-  return app.getRooms().findAll{it.name == room}.collect{it.deviceIds}.flatten().collect{it.toString()}
-}
 
-List<DeviceWrapper> getDevicesForRoom (String room, DeviceWrapperList devices) {
-  // This function excludes devices that are not associated with any room.
-  List<String> deviceIdsForRoom = app.getRooms()
-                                  .findAll{it.name == room}
-                                  .collect{it.deviceIds.collect{it.toString()}}
-                                  .flatten()
-  return devices.findAll{ deviceIdsForRoom.contains(it.id.toString()) }
-}
+
+// List<String> deviceIdsForRoom (String room) {
+//   return app.getRooms().findAll{it.name == room}.collect{it.deviceIds}.flatten().collect{it.toString()}
+// }
+
+// List<DeviceWrapper> getDevicesForRoom (String room, DeviceWrapperList devices) {
+//   // This function excludes devices that are not associated with any room.
+//   List<String> deviceIdsForRoom = app.getRooms()
+//                                   .findAll{it.name == room}
+//                                   .collect{it.deviceIds.collect{it.toString()}}
+//                                   .flatten()
+//   return devices.findAll{ deviceIdsForRoom.contains(it.id.toString()) }
+// }

@@ -12,6 +12,15 @@
       //                     \-> nonLutronSwitches -> nonLutronSwitches
       // ------------------      -------------------- -----------------
 
+//import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
+//import com.hubitat.app.EventSubscriptionWrapper as EventSubscriptionWrapper
+//import com.hubitat.app.ParentDeviceWrapper as ParentDeviceWrapper
+//import com.hubitat.hub.domain.Event as Event
+//import com.hubitat.hub.domain.Event as Event
+//import com.hubitat.hub.domain.Hub as Hub
+//import com.hubitat.hub.domain.Location as Location
+//import com.hubitat.hub.domain.State as State
+
 
 /*
  * FOR LATER:
@@ -46,3 +55,135 @@
   //     handlerMethod      // String
   //   )
 
+.Abandoned
+----
+/*
+void addRoomToDeviceMapsToState() {
+  // Design Note:
+  //   - Use "device.displayName.toString().contains('...')".
+  //   - The use of "toString()" is critical for proper parsing.
+  Map<String, List<DeviceWrapper>> roomToSwitches = getRoomToSwitches()
+  //Map<String, List<DeviceWrapper>> den = roomToSwitches.findAll{it.key == 'Den'}
+  Map<String, List<DeviceWrapper>> zzz = roomToSwitches.findAll{['UNKNOWN', 'Den'].contains(it.key)}
+// (room2switches) ${roomToSwitches}
+//--DEBUG--  paragraph """DEBUG:
+//--DEBUG--(raw) ${zzz}
+//--DEBUG--(led) ${zzz.collectEntries{r, dlist ->
+//--DEBUG--  [r, keepLED(dList)]
+//--DEBUG--}}
+//--DEBUG--(non-lutron) ${zzz.collectEntries{r, dlist ->
+//--DEBUG--  [r, keepNonLutron(dList)]
+//--DEBUG--}}
+//--DEBUG--(lutron) ${zzz.collectEntries{r, dList ->
+//--DEBUG--  [r, keepLutron(dList)]
+//--DEBUG--}}
+"""
+//==>  Map<String, List<DeviceWrapper>> roomToLutronDevice = roomToSwitches.findAll{ r, dList ->
+//==>    dList.findAll{ d -> d.displayName.toString().contains('lutron') }
+//==>  }
+
+//==>String testString = '(lutron-100 something with LED)'
+//==>paragraph """EXPLORE \
+//==>${testString.contains('lutron')} \
+//==>${testString.contains('lutron') && !testString.contains('LED')} \
+//==>${!testString.contains('lutron')}"""
+
+//  paragraph """DEBUG:
+//<b>original:</b> ${roomToSwitches}
+//<b>roomToLutronDevice:</b> ${roomToSwitches.findAll{ r, dList -> keepLutron(dList)}}
+//"""
+//==>    (it.value.displayName.toString().contains('lutron') && !it.value.displayName.toString().contains('LED'))
+//==>  }
+  state.roomToLutronDevice = roomToLutronDevice
+  Map<String, List<DeviceWrapper>> roomToLutronLED = roomToSwitches.findAll{
+    it.value.displayName.toString().contains('LED')
+  }
+  state.roomToLutronLED = roomToLutronLED
+  Map<String, List<DeviceWrapper>> roomToNonLutron = roomToSwitches.findAll{
+    !it.value.displayName.toString().contains('lutron')
+  }
+  state.roomToNonLutron = roomToNonLutron
+}
+*/
+
+/*
+void showDevicesByRoom (String label, Map<String, List<DeviceWrapper>> roomToDevice) {
+  String summary = roomToDevice.collect{ r, dList ->
+    bullet("<b>${r}</b>: ${dList.collect{it.displayName}.join(', ')}")
+  }.join('<br/>')
+  paragraph "<b>${label}:</b><br/>${summary}"
+}
+*/
+----
+
+.Abandoned Approach to Event Handlers using Layered Closures
+----
+// ------------------------------------------------------------------------
+// C L O S U R E S   ( I N S T A N C E   M E T H O D S )
+//   Methods, written as closures, operate on the state data produced by
+//   createPBSG().
+// ------------------------------------------------------------------------
+
+PRIOR_pbsgVswEventHandler = { event, pbsgInst ->
+  // ----------------------------------------------------------------------
+  // DO I NEED TO REFRESH THE DEVICES IN PBSG TO GET ACCURATE SWITCH DATA?
+  // PRESUMABLY, EVERYTHING WOULD BE ACCURATE DUE TO PRIOR EVENT HANDLING.
+  // ----------------------------------------------------------------------
+  // event.displayName
+  if (event.isStateChange) {
+    switch(event.value) {
+      case 'on':
+        if (settings.LOG) log.trace "pbsgVswEventHandler() ${event.displayName}"
+          + 'turned "ON". Turning off switch group peers.'
+        pbsgInst.scene2Vsw.each{ scene, vsw ->
+          // No harm in turning off a VSW that might already be off.
+          if (vsw.deviceNetworkId != event.displayName) vsw.off()
+        }
+        break
+      case 'off':
+        //-- PENDING -> enforceDefault()
+        break
+      default:
+        log.error  'pbsgVswEventHandler() expected 'on' or 'off'; but, '
+          + "received '${event.value}'."
+        app.updateLabel("${_args.enclosingApp} - BROKEN")
+    }
+  } else {
+    log.error 'pbsgVswEventHandler() received an unexpected event:<br/>'
+      + logEventDetails(event)
+  }
+}
+
+  //===== T E S T   B E G I N =============================================
+  //===== Closure handlerFactory = { e, pbsgInst ->
+  //=====   "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
+  //===== }
+  //===== def pbsgA = [
+  //=====   a: "This is a string",
+  //=====   b: "another string,"
+  //===== ]
+  //===== if (settings.LOG) log.trace "pbsgA: ${pbsgA}"
+  //===== def handler = { e -> handlerFactory.call(e, pbsgA) }
+  //===== if (settings.LOG) log.trace "handler('puppies'): ${handler('puppies')}"
+  //===== T E S T   E N D =================================================
+
+
+    // --------------------------------------------------------------------
+    // D E V I C E   C A L L B A C K   W E I R D N E S S
+    //   Device event subscriptions are problematic:
+    //     - Per-device subscriptions are utilized to avoid the conflict
+    //       between types 'DeviceWrapperList' and 'List<DeviceWrapper>'.
+    //     - No device event signature accepts an actual handler function.
+    //       All device options require the name (String) of the callback.
+    //     - void subscribe(DeviceWrapper device, String handlerMethod, Map options = null)
+    // --------------------------------------------------------------------
+    //--take1->String callbackFn = "{ e -> pbsgVswEventHandler.call(e, '${pbsg.name}') }"
+    //--take1->if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
+    //--take1->pbsg.scene2Vsw.each{ scene, vsw ->
+    //--take1->  subscribe(
+    //--take1->    vsw,                     // DeviceWrapper
+    //--take1->    callbackFn,              // String
+    //--take1->    [ filterEvents: false ]  // Map (of subsription options)
+    //--take1->  )
+    //--take1->}
+----

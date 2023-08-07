@@ -39,60 +39,6 @@ library (
   importUrl: ''
 )
 
-void logEventDetailsDUP (Event e, Boolean errorMode = false) {
-  //if (settings.LOG || errorMode) {
-    String rows = """
-      <tr>
-        <th align='right'>descriptionText</th>
-        <td>${e.descriptionText}</td>
-      </tr>
-      <tr>
-        <th align='right'>deviceId</th>
-        <td>${e.deviceId}</td>
-      </tr>
-      <tr>
-        <th align='right'>displayName</th>
-        <td>${e.displayName}</td>
-      </tr>
-    """
-    if (errorMode) {
-      rows += """
-        <tr>
-          <th align='right'>isStateChange</th>
-          <td>${e.isStateChange}</td>
-        </tr>
-        <tr>
-          <th align='right'>date</th>
-          <td>${e.date}</td>
-        </tr>
-        <tr>
-          <th align='right'>class</th>
-          <td>${e.class}</td>
-        </tr>
-        <tr>
-          <th align='right'>unixTime</th>
-          <td>${e.unixTime}</td>
-        </tr>
-        <tr>
-          <th align='right'>name</th>
-          <td>${e.name}</td>
-        </tr>
-        <tr>
-          <th align='right'>value</th>
-          <td>${e.value}</td>
-        </tr>
-      """
-      log.error """Unexpected event in ${calledBy}:<br/>
-        Received an event that IS NOT a state change.<br/>
-        <table>${rows}</table>
-      """
-    } else {
-      log.trace """Event highlights from ${calledBy}:<br/>
-      <table>${rows}</table>"""
-    }
-  //}
-}
-
 // ----------------------------------------------------------------------------------
 // S T A N D - A L O N E   M E T H O D S
 // ----------------------------------------------------------------------------------
@@ -102,10 +48,10 @@ String extractSwitchState(DeviceWrapper d) {
   //   - stateValues = d.currentStates.value
   List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
   return stateValues.contains('on')
-    ? 'on'
-    : stateValues.contains('off')
-      ? 'off'
-      : 'unknown'
+      ? 'on'
+      : stateValues.contains('off')
+        ? 'off'
+        : 'unknown'
 }
 
 List<DeviceWrapper> getOnSwitches(DeviceWrapperList devices) {
@@ -159,38 +105,27 @@ Map<String, ChildDeviceWrapper> createChildVsws (
   return result
 }
 
-LinkedHashMap getPbswDevices (Long targetDeviceId) {
-  // Leverage the targetDeviceId to locate the device AND its PBSW siblings:
-  //   Option 1 (current): Start with all App child devices and narrow.
-  //   Option 2: Identify 'prefix' (see below) to look up state[pbsgName].
-  LinkedHashMap result = [:]
-  List<ChildDeviceWrapper> appChildDevices = getAllChildDevices()
-  result.targetDevice = appChildDevices.findAll{ device ->
-    device.getId() == targetDeviceId.toString()
-  }?.first()
-  String targetNetworkId = result.targetDevice.deviceNetworkId
-  Integer prefixEnd = targetNetworkId.lastIndexOf('-') + 1
-  result.prefix = targetNetworkId.substring(0, prefixEnd)
-  result.siblingDevices = appChildDevices.findAll{ device ->
-    device.getId() != targetDeviceId.toString() && device.deviceNetworkId.substring(0, prefixEnd) == result.prefix
-  } ?: []
-  if (settings.LOG) log.trace "getPbswDevices() result: ${result}"
-  return result
-}
-
-void pbsgVswEventHandler (event) {
-  // Events operating on a PBSG VSW impacts peer PBSG VSWs by definition.
-  LinkedHashMap pbswDevices = getPbswDevices(event.deviceId)
+// ------------------------------------------------------------------------
+// C L O S U R E S   ( I N S T A N C E   M E T H O D S )
+//   Methods, written as closures, operate on the state data produced by
+//   createPBSG().
+// ------------------------------------------------------------------------
+/*
+PRIOR_pbsgVswEventHandler = { event, pbsgInst ->
+  // ----------------------------------------------------------------------
+  // DO I NEED TO REFRESH THE DEVICES IN PBSG TO GET ACCURATE SWITCH DATA?
+  // PRESUMABLY, EVERYTHING WOULD BE ACCURATE DUE TO PRIOR EVENT HANDLING.
+  // ----------------------------------------------------------------------
+  // event.displayName
   if (event.isStateChange) {
     switch(event.value) {
       case 'on':
-        if (settings.LOG) {
-          log.trace """[
-            "pbsgVswEventHandler() ${event.displayName} turned 'ON'.",
-            'Turning off PBSW peers.'
-          ].join('<br/>')"""
+        if (settings.LOG) log.trace "pbsgVswEventHandler() ${event.displayName}"
+          + 'turned "ON". Turning off switch group peers.'
+        pbsgInst.scene2Vsw.each{ scene, vsw ->
+          // No harm in turning off a VSW that might already be off.
+          if (vsw.deviceNetworkId != event.displayName) vsw.off()
         }
-        pbswDevices.siblingDevices.each{ vsw -> vsw.off()}
         break
       case 'off':
         //-- PENDING -> enforceDefault()
@@ -198,25 +133,47 @@ void pbsgVswEventHandler (event) {
       default:
         log.error  'pbsgVswEventHandler() expected 'on' or 'off'; but, '
           + "received '${event.value}'."
-        //app.updateLabel("${pbsg.enclosingApp} - BROKEN")
+        app.updateLabel("${_args.enclosingApp} - BROKEN")
     }
   } else {
-    // From inspection, this "else" condition typically arises when a switch
-    // is turned 'off' even though it's already actually 'off'. Do, the
-    // event is functionally just a state update.
-    //   Example:
-    //     descriptionText  pbsg-modes-Night is off
-    //            deviceId  6053
-    //         displayName  pbsg-modes-Night
-    //       isStateChange  false
-    //                date  Mon Aug 07 17:38:28 EDT 2023
-    //               class  class com.hubitat.hub.domain.Event
-    //            unixTime  1691444308516
-    //                name  switch
-    //               value  off
-    // log.error "pbsgVswEventHandler() w/ unexpected event:<br/>${logEventDetailsDUP(event, true)}"
-    // app.updateLabel("${pbsg.enclosingApp} - BROKEN")
+    log.error 'pbsgVswEventHandler() received an unexpected event:<br/>'
+      + logEventDetails(event)
   }
+}
+*/
+
+void pbsgVswEventHandler (event) {
+  // ----------------------------------------------------------------------
+  // DO I NEED TO REFRESH THE DEVICES IN PBSG TO GET ACCURATE SWITCH DATA?
+  // PRESUMABLY, EVERYTHING WOULD BE ACCURATE DUE TO PRIOR EVENT HANDLING.
+  // ----------------------------------------------------------------------
+  // event.displayName
+  if (settings.LOG) log.trace "pbsgVswEventHandler() w/ parent App: '${event.deviceId.getParentAppId()}'."
+  /*
+  pbsg = state[pbsgName]
+  if (event.isStateChange) {
+    switch(event.value) {
+      case 'on':
+        if (settings.LOG) log.trace "pbsgVswEventHandler() ${event.displayName}"
+          + 'turned "ON". Turning off switch group peers.'
+        pbsg.scene2Vsw.each{ scene, vsw ->
+          // No harm in turning off a VSW that might already be off.
+          if (vsw.deviceNetworkId != event.displayName) vsw.off()
+        }
+        break
+      case 'off':
+        //-- PENDING -> enforceDefault()
+        break
+      default:
+        log.error  'pbsgVswEventHandler() expected 'on' or 'off'; but, '
+          + "received '${event.value}'."
+        app.updateLabel("${pbsg.enclosingApp} - BROKEN")
+    }
+  } else {
+    log.error 'pbsgVswEventHandler() received an unexpected event:<br/>'
+      + logEventDetails(event)
+  }
+  */
 }
 
 // -------------------------------------
@@ -257,6 +214,25 @@ Map createPBSG (Map args = [:]) {
 
     if (settings.LOG) log.trace "pbsg: instantiated ${state[_args.name]}"
 
+    // --------------------------------------------------------------------
+    // D E V I C E   C A L L B A C K   W E I R D N E S S
+    //   Device event subscriptions are problematic:
+    //     - Per-device subscriptions are utilized to avoid the conflict
+    //       between types 'DeviceWrapperList' and 'List<DeviceWrapper>'.
+    //     - No device event signature accepts an actual handler function.
+    //       All device options require the name (String) of the callback.
+    //     - void subscribe(DeviceWrapper device, String handlerMethod, Map options = null)
+    // --------------------------------------------------------------------
+    //--take1->String callbackFn = "{ e -> pbsgVswEventHandler.call(e, '${pbsg.name}') }"
+    //--take1->if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
+    //--take1->pbsg.scene2Vsw.each{ scene, vsw ->
+    //--take1->  subscribe(
+    //--take1->    vsw,                     // DeviceWrapper
+    //--take1->    callbackFn,              // String
+    //--take1->    [ filterEvents: false ]  // Map (of subsription options)
+    //--take1->  )
+    //--take1->}
+
     //String callbackFn = "state['${pbsg.name}'].eventHandler"
     //--if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
     pbsg.scene2Vsw.each{ scene, vsw ->
@@ -269,6 +245,20 @@ Map createPBSG (Map args = [:]) {
 
   }
 }
+
+  //===== T E S T   B E G I N =============================================
+  //===== Closure handlerFactory = { e, pbsgInst ->
+  //=====   "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
+  //===== }
+  //===== def pbsgA = [
+  //=====   a: "This is a string",
+  //=====   b: "another string,"
+  //===== ]
+  //===== if (settings.LOG) log.trace "pbsgA: ${pbsgA}"
+  //===== def handler = { e -> handlerFactory.call(e, pbsgA) }
+  //===== if (settings.LOG) log.trace "handler('puppies'): ${handler('puppies')}"
+  //===== T E S T   E N D =================================================
+
 
 void deletePBSG (Map args = [:]) {
   // Add default arguments here.
