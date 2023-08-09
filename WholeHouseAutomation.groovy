@@ -40,8 +40,137 @@ definition(
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
-  page name: 'monoPage', title: '', install: true, uninstall: true
+  page(name: 'monoPage', title: '', install: true, uninstall: true)
+  page(name: 'callablePage', title: '', install: true, uninstall: true)
 }
+
+def callablePage (params) {
+  dynamicPage(name: 'callablePage') {
+    section {
+      paragraph "callablePage with params: >${params}<."
+    }
+  }
+}
+
+void solictfocalRooms () {
+  roomPicklist = app.getRooms().collect{it.name}.sort()
+  //->paragraph "roomPicklist: >${roomPicklist}<"
+  collapsibleInput(
+    blockLabel: 'Focal Rooms',
+    name: 'focalRooms',
+    type: 'enum',
+    title: 'Select the Focal Rooms',
+    options: roomPicklist
+  )
+}
+
+void solicitLutronTelnetDevice () {
+  collapsibleInput (
+    blockLabel: 'Lutron Telnet Device',
+    name: 'lutronTelnet',
+    title: 'Confirm Lutron Telnet Device<br/>' \
+      + comment('used to detect Main Repeater LED state changes'),
+    type: 'device.lutronTelnet'
+  )
+}
+
+void solicitLutronMainRepeaters () {
+  collapsibleInput (
+    blockLabel: 'Lutron Main Repeaters',
+    name: 'lutronRepeaters',
+    title: 'Identify Lutron Main Repeater(s)<br/>' \
+      + comment('used to invoke in-kind Lutron scenes'),
+    type: 'device.LutronKeypad'
+  )
+}
+
+void solicitLutronMiscellaneousKeypads () {
+  collapsibleInput (
+    blockLabel: 'Lutron Miscellaneous Keypads',
+    name: 'lutronMiscKeypads',
+    title: 'Identify Lutron Miscellaneous Devices<br/>' \
+      + comment('used to trigger room scenes'),
+    type: 'device.LutronKeypad'
+  )
+}
+
+void solicitSeeTouchKeypads () {
+  collapsibleInput (
+    blockLabel: 'Lutron SeeTouch Keypads',
+    name: 'seeTouchKeypad',
+    title: 'Identify Lutron SeeTouch Keypads<br/>' \
+      + comment('used to trigger room scenes.'),
+    type: 'device.SeeTouchKeypad'
+  )
+}
+
+void solicitLutronPicos () {
+  collapsibleInput (
+    blockLabel: 'Lutron Picos',
+    name: 'lutronPicos',
+    title: 'Identify Lutron Picos<br/>' \
+      + comment('used to trigger room scenes'),
+    type: 'device.LutronFastPico'
+  )
+}
+
+void solicitSwitches () {
+  collapsibleInput (
+    blockLabel: 'Lutron LEDs and Non-Lutron Devices',
+    name: 'switches',
+    title: 'Identify Lutron LEDs and Non-Lutron switches and dimmers' \
+      + comment('<br/>Lutron LEDs are set to reflect the current scene.') \
+      + comment('<br/>Non-Lutron device levels are set per room scenes.') \
+      + comment('<br/>Non-LED Lutron devices can be skipped.') \
+      + comment('<br/>VSWs (virtual switches) can be skipped.'),
+    type: 'capability.switch'
+ )
+}
+
+LinkedHashMap<String, InstalledAppWrapper> getAllChildAppsByLabel () {
+  return getAllChildApps().collectEntries{
+    childApp -> [ childApp.getLabel(), childApp ]
+  }
+}
+
+//->TBD Type Data
+LinkedHashMap groupChildApps () {
+  // Start with all child apps (and whittle the list down)
+  LinkedHashMap<String, InstalledAppWrapper> \
+    childAppsByLabel = getAllChildAppsByLabel()
+  // Account for Room Scene child apps
+  LinkedHashMap<String, InstalledAppWrapper> roomAppsByName \
+    = settings.focalRooms?.collectEntries{ room ->
+      InstalledAppWrapper roomSceneApp = childAppsByLabel.getAt(room)
+      if (roomSceneApp) {
+        childAppsByLabel.remove(room)
+        [room, roomSceneApp]
+      } else {
+        InstalledAppWrapper newChild = addChildApp('wesmc', 'RoomScenes', room)
+        [room, addChildApp]
+      }
+    }
+  if (settings.LOG) log.trace(
+    "groupChildApps() <b>roomAppsByName:</b> ${roomAppsByName.keySet()}"
+  )
+  // Account for PBSG child app(s)
+  InstalledAppWrapper pbsgModeApp = childAppsByLabel.getAt('pbsg-mode')
+  if (pbsgModeApp) childAppsByLabel.remove('pbsg-mode')
+  if (settings.LOG) log.trace(
+    "groupChildApps() <b>pbsgModeApp:</b> ${pbsgModeApp}"
+  )
+  // Remove remaining (ungrouped) child apps.
+  childAppsByLabel.each{ label, childApp ->
+    if (settings.LOG) "Deleting un-grouped Child App ${name} (${childApp.getId()})"
+    deleteChildApp(childApp.getId())
+  }
+  return [
+    'roomAppsByName': roomAppsByName,
+    'pbsgModeApp': pbsgModeApp
+  ]
+}
+
+// """ ... """.stripIndent()
 
 Map monoPage() {
   return dynamicPage(name: 'monoPage') {
@@ -64,75 +193,92 @@ Map monoPage() {
           title: 'Enable logging?',
           defaultValue: true
         )
-        roomPicklist = app.getRooms().collect{it.name}.sort()
-        //--paragraph "roomPicklist: >${roomPicklist}<"
-        collapsibleInput(
-          blockLabel: 'Participating Rooms',
-          name: 'roomNames',
-          type: 'enum',
-          title: 'Select the Participating Rooms',
-          options: roomPicklist
+        solictfocalRooms()
+//        solicitLutronTelnetDevice()
+//        solicitLutronMainRepeaters()
+//        solicitLutronMiscellaneousKeypads()
+//        solicitSeeTouchKeypads()
+//        solicitLutronPicos()
+//        solicitSwitches()
+        /*
+        LinkedHashMap unpairedChildAppsByName = getChildAppsByName ()
+
+        //->removeUnpairedChildApps ()
+        if (settings.LOG) log.info "childApps: ${childApps.collect{it.getLabel()}.join(', ')}"
+
+        // MapfocalRoomsToRoomSceneApps
+        LinkedHashMap roomAppsByName = settings.focalRooms.collectEntries{
+          room -> [room, unpairedChildIds.contains(room) ?: null]
+        }
+
+        // Prepare to capture the Mode PBSG child app.
+        InstalledAppWrapper pbsgModeApp = null
+
+        // Prepare to remove unused child apps.
+        List<String> unusedDeviceNetworkIds = []
+
+        // Parse existing (discovered) Child Apps, removing unaffiliated children.
+        List<InstalledAppWrapper> childApps = getAllChildApps()
+        //--
+        childApps.each{ childApp ->
+          String childLabel = childApp.getLabel()
+          if (childLabel == 'pbsg-mode') {
+            pbsgModeApp = childApp
+          } else if (settings.focalRooms.contains(childLabel)) {
+            roomAppsByName.putAt(childLabel, child)
+          } else {
+            unusedDeviceNetworkIds << childApp.deviceNetworkId
+          }
+        }
+        unusedDeviceNetworkIds.each{ deviceNetworkId ->
+          if (settings.LOG) log.info "Removing stale childApps ${deviceNetworkId}"
+          deleteChildDevice(deviceNetworkId)
+        }
+
+        // Display PBSG Child
+        //----> P L A C E H O L D E R
+
+        // Display Room Scene Children
+        if (settings.LOG) log.info "roomAppsByName (initial): ${roomAppsByName}"
+        roomAppsByName = roomAppsByName?.collectEntries{ roomName, childApp ->
+          [roomName, childApp ?: addChildApp('wesmc', 'RoomScenes', roomName)]
+        }
+        if (settings.LOG) log.info "roomAppsByName (backfilled): ${roomAppsByName}"
+        */
+
+        href (
+          name: 'TEST PAGE 2',
+          width: 5,
+          page: callablePage,
+          // url: "/installedapp/configure/${childApp?.getId()}/monoPage",
+          style: 'internal',
+          title: "This is a dummy page",
+          state: 'complete',  // null,
+          params: [
+            listA: ['purple', 'green', 'yellow'],
+            mapX: [a: 'apple', b: 'bannana', g: ['grapefruit', 'grape']]
+          ]
         )
-        collapsibleInput (
-          blockLabel: "Lutron Telnet Device </em>",
-          name: 'lutronTelnet',
-          title: 'Confirm Lutron Telnet Device<br/>' \
-            + "${comment('used to detect Main Repeater LED state changes')}",
-          type: 'device.LutronTelnet'
-        )
-        collapsibleInput (
-          blockLabel: "Lutron Main Repeaters",
-          name: 'lutronRepeaters',
-          title: 'Identify Lutron Main Repeater(s)<br/>' \
-            + "${comment('used to invoke in-kind Lutron scenes')}",
-          type: 'device.LutronKeypad'
-        )
-        collapsibleInput (
-          blockLabel: "Lutron Miscellaneous Keypads",
-          name: 'lutronMiscKeypads',
-          title: 'Identify Lutron Miscellaneous Devices<br/>' \
-            + "${comment('used to trigger room scenes')}",
-          type: 'device.LutronKeypad'
-        )
-        collapsibleInput (
-          blockLabel: "Lutron SeeTouch Keypads",
-          name: 'lutronSeeTouchKeypads',
-          title: 'Identify Lutron SeeTouch Keypads<br/>' \
-            + "${comment('used to trigger room scenes.')}",
-          type: 'device.LutronSeeTouchKeypad'
-        )
-        collapsibleInput (
-          blockLabel: "Lutron Picos",
-          name: 'lutronPicos',
-          title: 'Identify Lutron Picos<br/>' \
-            + "${comment('used to trigger room scenes')}",
-          type: 'device.LutronFastPico'
-        )
-        collapsibleInput (
-          blockLabel: 'Lutron LEDs and Non-Lutron Devices',
-          name: 'switches',
-          title: 'Identify Lutron LEDs and Non-Lutron switches and dimmers' \
-            + comment('<br/>Lutron LEDs are set to reflect the current scene.') \
-            + comment('<br/>Non-Lutron device levels are set per room scenes.') \
-            + comment('<br/>Non-LED Lutron devices can be skipped.') \
-            + comment('<br/>VSWs (virtual switches) can be skipped.'),
-          type: 'capability.switch'
-        )
-        if (settings.roomNames) {
-          app(
-            name: 'RoomScenes',
-            appName: 'RoomScenes',
-            namespace: 'wesmc',
-            parent: 'WholeHouseAutomation',
-            title: '<b>Add Rooms</b>' \
-              + comment('Room names are automatically assigned.'),
-            multiple: true
+
+        def m1 = groupChildApps()
+        m1.roomAppsByName.each{ roomName, childApp ->
+          href (
+            name: roomName,
+            width: 2,
+            url: "/installedapp/configure/${childApp?.getId()}/monoPage",
+            style: 'internal',
+            title: "Edit <b>${roomName}</b> Scenes",
+            state: null, //'complete'
+            params: [
+              listA: ['purple', 'green', 'yellow'],
+              mapX: [a: 'apple', b: 'bannana', g: ['grapefruit', 'grape']]
+            ]
           )
         }
+        paragraph comment('Whole House Automation - @wesmc, ' \
+          + '<a href="https://github.com/WesleyMConner/Hubitat-WholeHouseAutomation" ' \
+          + 'target="_blank"><br/>Click for more information</a>')
       }
-      paragraph comment('Whole House Automation - @wesmc, ' \
-        + '<a href="https://github.com/WesleyMConner/Hubitat-WholeHouseAutomation" ' \
-        + 'target="_blank"><br/>Click for more information</a>')
     }
   }
 }
@@ -143,13 +289,13 @@ Map monoPage() {
 //   Parent'settings' when rendering data entry screens.
 // ------------------------------------------------------------------------
 String assignChildAppRoomName (Long childAppId) {
-  List<String> roomNames = settings.roomNames
+  List<String> focalRooms = settings.focalRooms
   List<InstalledAppWrapper> kidApps = getChildApps()
   Map<String, String> kidIdToRoomName =
     kidApps.collectEntries{ kid ->
-      [ kid.id.toString(), roomNames.contains(kid.label) ? kid.label : null ]
-    }
-  Map<String, Boolean> roomNameToKidId = roomNames.collectEntries{[it, false]}
+      [ kid.id.toString(), focalRooms.contains(kid.label) ? kid.label : null ]
+  }
+  Map<String, Boolean> roomNameToKidId = focalRooms.collectEntries{[it, false]}
   kidIdToRoomName.each{ kidId, roomName ->
     if (roomName) roomNameToKidId[roomName] = kidId
   }
@@ -163,7 +309,7 @@ List<DeviceWrapper> getMainRepeaters () {
 
 List<DeviceWrapper> getKeypads() {
   return (settings?.lutronMiscKeypads ?: []) \
-         + (settings?.lutronSeeTouchKeypads ?: []) \
+         + (settings?.seeTouchKeypad ?: []) \
          + (settings?.lutronPicos ?: [])
 }
 
@@ -223,8 +369,8 @@ void initialize() {
     if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.lutronSeeTouchKeypads}<"
-  settings.lutronSeeTouchKeypads.each{ d ->
+  if (settings.LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  settings.seeTouchKeypad.each{ d ->
     DeviceWrapper device = d
     if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])

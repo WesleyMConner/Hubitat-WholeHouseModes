@@ -14,7 +14,6 @@ import com.hubitat.hub.domain.Location as Location
 #include wesmc.DeviceLibrary
 
 definition(
-  // PARENT may not be required since the app is created via addChildApp().
   parent: 'wesmc:WholeHouseAutomation',
   name: 'RoomScenes',
   namespace: 'wesmc',
@@ -37,26 +36,16 @@ definition(
 // -------------------------------
 preferences {
   page(name: 'monoPage', title: '', install: true, uninstall: true)
-  page(name: 'callablePage', title: '', install: true, uninstall: true)
-}
-
-def callablePage (params) {
-  dynamicPage(name: 'callablePage') {
-    section {
-      paragraph "callablePage with params: >${params}<."
-    }
-  }
 }
 
 Map monoPage() {
   return dynamicPage(
     name: 'monoPage',
-    title: ''
+    title: '',
+    install: true,
+    uninstall: true
   ) {
     section {
-      paragraph "What, no docs?..."
-      paragraph "properties: >${properties}<"
-      /*
       String assignedRoom = parent.assignChildAppRoomName(app.id)
       app.updateLabel(assignedRoom)
       paragraph heading(assignedRoom)
@@ -156,7 +145,6 @@ Map monoPage() {
         required: true,
         defaultValue: false
       )
-      */
     }
   }
 }
