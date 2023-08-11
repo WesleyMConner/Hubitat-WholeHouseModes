@@ -12,13 +12,13 @@
       //                     \-> nonLutronSwitches -> nonLutronSwitches
       // ------------------      -------------------- -----------------
 
-//import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
+//import com.hubitat.app.ChildDevW as ChildDevW
 //import com.hubitat.app.EventSubscriptionWrapper as EventSubscriptionWrapper
-//import com.hubitat.app.ParentDeviceWrapper as ParentDeviceWrapper
+//import com.hubitat.app.ParentDevW as ParentDevW
 //import com.hubitat.hub.domain.Event as Event
 //import com.hubitat.hub.domain.Event as Event
 //import com.hubitat.hub.domain.Hub as Hub
-//import com.hubitat.hub.domain.Location as Location
+//import com.hubitat.hub.domain.Location as Loc
 //import com.hubitat.hub.domain.State as State
 
 // Design Notes
@@ -41,25 +41,25 @@
 
   // https://docs2.hubitat.com/developer/app/app-object
   //   void subscribe(
-  //     devices,           // DeviceWrapperList
+  //     devices,           // DevWL
   //     handlerMethod,     // String
   //     options = null     // Map
   //   )
   //   void subscribe(
-  //     devices,           // DeviceWrapperList
+  //     devices,           // DevWL
   //     attributeName,     // String
   //     handlerMethod,     // String
   //     options = null     // Map
   //   )
   //   void unsubscribe(
-  //     deviceList         // List<DeviceWrapper>
+  //     deviceList         // List<DevW>
   //   )
   //   void unsubscribe(
-  //     deviceList,        // List<DeviceWrapper>
+  //     deviceList,        // List<DevW>
   //     attributeName      // String
   //   )
   //   void unsubscribe(
-  //     deviceList,        // List<DeviceWrapper>
+  //     deviceList,        // List<DevW>
   //     attributeName,     // String
   //     handlerMethod      // String
   //   )
@@ -71,9 +71,9 @@ void addRoomToDeviceMapsToState() {
   // Design Note:
   //   - Use "device.displayName.toString().contains('...')".
   //   - The use of "toString()" is critical for proper parsing.
-  Map<String, List<DeviceWrapper>> roomToSwitches = getRoomToSwitches()
-  //Map<String, List<DeviceWrapper>> den = roomToSwitches.findAll{it.key == 'Den'}
-  Map<String, List<DeviceWrapper>> zzz = roomToSwitches.findAll{['UNKNOWN', 'Den'].contains(it.key)}
+  Map<String, List<DevW>> roomToSwitches = getRoomToSwitches()
+  //Map<String, List<DevW>> den = roomToSwitches.findAll{it.key == 'Den'}
+  Map<String, List<DevW>> zzz = roomToSwitches.findAll{['UNKNOWN', 'Den'].contains(it.key)}
 // (room2switches) ${roomToSwitches}
 //--DEBUG--  paragraph """DEBUG:
 //--DEBUG--(raw) ${zzz}
@@ -87,7 +87,7 @@ void addRoomToDeviceMapsToState() {
 //--DEBUG--  [r, keepLutron(dList)]
 //--DEBUG--}}
 """
-//==>  Map<String, List<DeviceWrapper>> roomToLutronDevice = roomToSwitches.findAll{ r, dList ->
+//==>  Map<String, List<DevW>> roomToLutronDevice = roomToSwitches.findAll{ r, dList ->
 //==>    dList.findAll{ d -> d.displayName.toString().contains('lutron') }
 //==>  }
 
@@ -104,11 +104,11 @@ void addRoomToDeviceMapsToState() {
 //==>    (it.value.displayName.toString().contains('lutron') && !it.value.displayName.toString().contains('LED'))
 //==>  }
   state.roomToLutronDevice = roomToLutronDevice
-  Map<String, List<DeviceWrapper>> roomToLutronLED = roomToSwitches.findAll{
+  Map<String, List<DevW>> roomToLutronLED = roomToSwitches.findAll{
     it.value.displayName.toString().contains('LED')
   }
   state.roomToLutronLED = roomToLutronLED
-  Map<String, List<DeviceWrapper>> roomToNonLutron = roomToSwitches.findAll{
+  Map<String, List<DevW>> roomToNonLutron = roomToSwitches.findAll{
     !it.value.displayName.toString().contains('lutron')
   }
   state.roomToNonLutron = roomToNonLutron
@@ -116,7 +116,7 @@ void addRoomToDeviceMapsToState() {
 */
 
 /*
-void showDevicesByRoom (String label, Map<String, List<DeviceWrapper>> roomToDevice) {
+void showDevicesByRoom (String label, Map<String, List<DevW>> roomToDevice) {
   String summary = roomToDevice.collect{ r, dList ->
     bullet("<b>${r}</b>: ${dList.collect{it.displayName}.join(', ')}")
   }.join('<br/>')
@@ -181,16 +181,16 @@ PRIOR_pbsgVswEventHandler = { event, pbsgInst ->
     // D E V I C E   C A L L B A C K   W E I R D N E S S
     //   Device event subscriptions are problematic:
     //     - Per-device subscriptions are utilized to avoid the conflict
-    //       between types 'DeviceWrapperList' and 'List<DeviceWrapper>'.
+    //       between types 'DevWL' and 'List<DevW>'.
     //     - No device event signature accepts an actual handler function.
     //       All device options require the name (String) of the callback.
-    //     - void subscribe(DeviceWrapper device, String handlerMethod, Map options = null)
+    //     - void subscribe(DevW device, String handlerMethod, Map options = null)
     // --------------------------------------------------------------------
     //--take1->String callbackFn = "{ e -> pbsgVswEventHandler.call(e, '${pbsg.name}') }"
     //--take1->if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
     //--take1->pbsg.scene2Vsw.each{ scene, vsw ->
     //--take1->  subscribe(
-    //--take1->    vsw,                     // DeviceWrapper
+    //--take1->    vsw,                     // DevW
     //--take1->    callbackFn,              // String
     //--take1->    [ filterEvents: false ]  // Map (of subsription options)
     //--take1->  )

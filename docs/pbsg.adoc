@@ -16,7 +16,7 @@ each instance.
 ----
 String showSwitchInfoWithState(
   String delimiter = ', ',
-  DeviceWrapperList devices = null  // settings.swGroup is only available in fn body ?!
+  DevWL devices = null  // settings.swGroup is only available in fn body ?!
 ) {
   if (!devices) devices = settings.swGroup
   return devices.collect({

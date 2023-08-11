@@ -14,20 +14,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // ---------------------------------------------------------------------------------
-// Design Notes
-//   - This file (effectively) extends an existing application or existing
-//     child application - allowing it to subscribe to and process events.
-//   - An intermediate application isn't appropriate as there is no user
-//     input to solicit.
-//   - An intermediate device would not be able to process events.
-//   - An instance of this quasi-application's state footprint exists
-//     under a single key in the enclosing application's state.
-//   - The parent App must have settings.LOG == TRUE for non-error logging.
-// ---------------------------------------------------------------------------------
-import com.hubitat.app.ChildDeviceWrapper as ChildDeviceWrapper
-import com.hubitat.app.DeviceWrapper as DeviceWrapper
-import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
+import com.hubitat.app.ChildDevW as ChildDevW
+import com.hubitat.app.DeviceWrapper as DevW
+import com.hubitat.app.DeviceWrapperList as DevWL
 import com.hubitat.hub.domain.Event as Event
+#include wesmc.UtilsLibrary
+#include wesmc.DeviceLibrary
+
+definition(
+  parent: 'wesmc:WholeHouseAutomation',
+  name: 'RoomScenes',
+  namespace: 'wesmc',
+  author: 'Wesley M. Conner',
+  description: 'Define and Execute RA2-aware Scenes for a Hubitat Room',
+  category: '',           // Not supported as of Q3'23
+  iconUrl: '',            // Not supported as of Q3'23
+  iconX2Url: '',          // Not supported as of Q3'23
+  iconX3Url: '',          // Not supported as of Q3'23
+  installOnOpen: false,
+  documentationLink: '',  // TBD
+  videoLink: '',          // TBD
+  importUrl: '',          // TBD
+  oauth: false,           // Even if used, must be manually enabled.
+  singleInstance: false
+)
+
+// -------------------------------
+// C L I E N T   I N T E R F A C E
+// -------------------------------
+preferences {
+  page(name: 'monoPage', title: '', install: true, uninstall: true)
+}
+
+Map monoPage() {
+}
+
+
+
+
 
 library (
   name: 'PBSG',
@@ -96,7 +120,7 @@ void logEventDetailsDUP (Event e, Boolean errorMode = false) {
 // ----------------------------------------------------------------------------------
 // S T A N D - A L O N E   M E T H O D S
 // ----------------------------------------------------------------------------------
-String extractSwitchState(DeviceWrapper d) {
+String extractSwitchState(DevW d) {
   // What's best here? NOT exhaustively tested.
   //   - stateValues = d.collect({ it.currentStates.value }).flatten()
   //   - stateValues = d.currentStates.value
@@ -108,32 +132,32 @@ String extractSwitchState(DeviceWrapper d) {
       : 'unknown'
 }
 
-List<DeviceWrapper> getOnSwitches(DeviceWrapperList devices) {
+List<DevW> getOnSwitches(DevWL devices) {
   return devices?.findAll({ extractSwitchState(it) == 'on' })
 }
 
-void enforceMutualExclusion(DeviceWrapperList devices) {
+void enforceMutualExclusion(DevWL devices) {
   if (settings.LOG) log.trace 'enforceMutualExclusion()'
-  List<DeviceWrapper> onList = getOnSwitches(devices)
+  List<DevW> onList = getOnSwitches(devices)
   while (onList.size() > 1) {
-    DeviceWrapper device = onList.first()
+    DevW device = onList.first()
     if (settings.LOG) log.trace "enforceMutualExclusion() turning off ${deviceTag(device)}."
     device.off()
     onList = onList.drop(1)
   }
 }
 
-Map<String, ChildDeviceWrapper> createChildVsws (
-  Map<String, DeviceWrapper> scene2Vsw, String deviceIdPrefix) {
+Map<String, ChildDevW> createChildVsws (
+  Map<String, DevW> scene2Vsw, String deviceIdPrefix) {
   // Ensure every scene is mapped to a VSW with no extra child VSWs.
-  Map<String, ChildDeviceWrapper> result = scene2Vsw.collectEntries{ scene, vsw ->
+  Map<String, ChildDevW> result = scene2Vsw.collectEntries{ scene, vsw ->
     String deviceNetworkId = "${deviceIdPrefix}-${scene}"
-    ChildDeviceWrapper existingDevice = getChildDevice(deviceNetworkId)
+    ChildDevW existingDevice = getChildDevice(deviceNetworkId)
     if (existingDevice) {
       if (settings.LOG) log.trace "createChildVsws() scene (${scene}) found (${existingDevice})"
       [scene, existingDevice]
     } else {
-      ChildDeviceWrapper newChild = addChildDevice(
+      ChildDevW newChild = addChildDevice(
         'hubitat',         // namespace
         'Virtual Switch',  // typeName
         deviceNetworkId,   // deviceNetworkId
@@ -144,7 +168,7 @@ Map<String, ChildDeviceWrapper> createChildVsws (
     }
   }
   // Find and drop child VSWs NOT tied to a scene.
-  List<ChildDeviceWrapper> childDevices = getAllChildDevices()
+  List<ChildDevW> childDevices = getAllChildDevices()
   childDevices.each{ childDevice ->
     def scenes = result.findAll{
       scene, sceneVsw -> sceneVsw?.deviceNetworkId == childDevice.deviceNetworkId
@@ -164,7 +188,7 @@ LinkedHashMap getPbswDevices (Long targetDeviceId) {
   //   Option 1 (current): Start with all App child devices and narrow.
   //   Option 2: Identify 'prefix' (see below) to look up state[pbsgName].
   LinkedHashMap result = [:]
-  List<ChildDeviceWrapper> appChildDevices = getAllChildDevices()
+  List<ChildDevW> appChildDevices = getAllChildDevices()
   result.targetDevice = appChildDevices.findAll{ device ->
     device.getId() == targetDeviceId.toString()
   }?.first()
@@ -261,7 +285,7 @@ Map createPBSG (Map args = [:]) {
     //--if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
     pbsg.scene2Vsw.each{ scene, vsw ->
       subscribe(
-        vsw,                     // DeviceWrapper
+        vsw,                     // DevW
         'pbsgVswEventHandler',     // callbackFn,              // String
         [ filterEvents: false ]  // Map (of subsription options)
       )
@@ -296,57 +320,14 @@ void deletePBSG (Map args = [:]) {
   }
 }
 
-  // T E S T   B E G I N ==================================================
-  /*
-  Closure handlerFactory = { e, pbsgInst ->
-    "Arg '${e}', '${pbsgInst.a}' and '${pbsgInst.b}'."
-  }
-  def pbsgA = [
-    a: "This is a string",
-    b: "another string,"
-  ]
-  if (settings.LOG) log.trace "pbsgA: ${pbsgA}"
-  def handler = { e -> handlerFactory.call(e, pbsgA) }
-  if (settings.LOG) log.trace "handler('puppies'): ${handler('puppies')}"
-  */
-  // T E S T   E N D ======================================================
-
-
 // ---------------------------------------------------
 // S U P P O R T I N G   M E T H O D S
 // ---------------------------------------------------
 
 /*
 DeviceWrapper getSwitchById(String id) {
-  DeviceWrapperList devices = settings.swGroup
+  DevWL devices = settings.swGroup
   return devices?.find({ it.id == id })
-}
-
-void buttonHandler (Event e) {
-  if (e.isStateChange) {
-    //--x-- logSettingsAndState('buttonHandler()')
-    DeviceWrapper eventDevice = getSwitchById(e.deviceId.toString())
-    switch(e.value) {
-      case 'on':
-        // Turn off peers in switch group.
-        getOnSwitches().each({ sw ->
-          if (sw.id != eventDevice.id) {
-            if (settings.LOG) log.trace "buttonHandler() turning off ${deviceTag(sw)}."
-            sw.off()
-          }
-        })
-        break
-      case 'off':
-        enforceDefault()
-        break
-      default:
-        log.error  "buttonHandler() expected 'on' or 'off'; but, \
-          received '${e.value}'."
-    }
-  } else {
-    // Report this condition as an ERROR and explore further IF it occurs.
-    //--x-- logSettingsAndState('buttonHandler()', true)
-  }
 }
 
 void initialize() {

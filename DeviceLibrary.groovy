@@ -4,8 +4,8 @@
 //   Licensed under the Apache License, Version 2.0
 //   http://www.apache.org/licenses/LICENSE-2.0
 // ------------------------------------------------------------------------
-import com.hubitat.app.DeviceWrapper as DeviceWrapper
-import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
+import com.hubitat.app.DeviceWrapper as DevW
+import com.hubitat.app.DevWL as DevWL
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
 
@@ -13,13 +13,13 @@ library (
  name: 'DeviceLibrary',
  namespace: 'wesmc',
  author: 'WesleyMConner',
- description: 'Methods extending Hubitat DeviceWrapperList and DeviceWrappers',
+ description: 'Methods extending Hubitat DevWL and DevWs',
  category: 'general purpose',
  documentationLink: '',
  importUrl: ''
 )
 
-String deviceTag(DeviceWrapper device) {
+String deviceTag(DevW device) {
   return "${device.displayName} (${device.id})"
 }
 
@@ -29,11 +29,3 @@ String deviceTag(DeviceWrapper device) {
 //   return app.getRooms().findAll{it.name == room}.collect{it.deviceIds}.flatten().collect{it.toString()}
 // }
 
-// List<DeviceWrapper> getDevicesForRoom (String room, DeviceWrapperList devices) {
-//   // This function excludes devices that are not associated with any room.
-//   List<String> deviceIdsForRoom = app.getRooms()
-//                                   .findAll{it.name == room}
-//                                   .collect{it.deviceIds.collect{it.toString()}}
-//                                   .flatten()
-//   return devices.findAll{ deviceIdsForRoom.contains(it.id.toString()) }
-// }

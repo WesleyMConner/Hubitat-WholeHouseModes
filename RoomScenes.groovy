@@ -4,12 +4,12 @@
 //   Licensed under the Apache License, Version 2.0
 //   http://www.apache.org/licenses/LICENSE-2.0
 // ------------------------------------------------------------------------
-import com.hubitat.app.DeviceWrapper as DeviceWrapper
-import com.hubitat.app.DeviceWrapperList as DeviceWrapperList
-import com.hubitat.app.InstalledAppWrapper as InstalledAppWrapper
+import com.hubitat.app.DeviceWrapper as DevW
+import com.hubitat.app.DeviceWrapperList as DevWL
+import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
-import com.hubitat.hub.domain.Location as Location
+import com.hubitat.hub.domain.Location as Loc
 #include wesmc.UtilsLibrary
 #include wesmc.DeviceLibrary
 
@@ -60,7 +60,7 @@ Map monoPage() {
       String assignedRoom = parent.assignChildAppRoomName(app.id)
       app.updateLabel(assignedRoom)
       paragraph heading(assignedRoom)
-      ArrayList<LinkedHashMap> modes = location.getModes()   // Type def for Mode is TBD
+      ArrayList<LinkedHashMap> modes = Loc.getModes()   // Type def for Mode is TBD
       input(
         name: 'modesAsScenes',
         type: 'enum',
@@ -115,15 +115,15 @@ Map monoPage() {
       }
       //----> Keypad Buttons that Trigger Scenes
       // Use a picklist to narrow the required keypads
-      List<DeviceWrapper> keypads = parent.getKeypads()
+      List<DevW> keypads = parent.getKeypads()
       paragraph "keypads: ${keypads}"
 
       //----> Non-Lutron Devices with per-Scene levels
-      List<DeviceWrapper> nonLutronDevices = parent.getNonLutronDevices(assignedRoom)
+      List<DevW> nonLutronDevices = parent.getNonLutronDevices(assignedRoom)
       paragraph "nonLutronDevices: ${nonLutronDevices}"
 
       //----> Main Repeater Buttons that Realize Scenes
-      List<DeviceWrapper> mainRepeaters = parent.getMainRepeaters()
+      List<DevW> mainRepeaters = parent.getMainRepeaters()
       paragraph "mainRepeaters: ${mainRepeaters}"
 
       //----> LEDs that are Set on Scene Activaton
@@ -133,12 +133,12 @@ Map monoPage() {
       // outcome of LED number being the same as button number.
       // ----------
       // NOTE: The required keypads likely match the scene-triggering buttons
-      List<DeviceWrapper> leds = parent.getLedDevices()
+      List<DevW> leds = parent.getLedDevices()
       paragraph "leds: ${leds}"
 
       //----> Lutron Devices that Potentially Disrupt Scenes
       //----> NOTE: REP LEDs MAY BE A PREFERABLE MECHANIS
-      List<DeviceWrapper> lutronDevices = parent.getLutronDevices(assignedRoom)
+      List<DevW> lutronDevices = parent.getLutronDevices(assignedRoom)
       paragraph "lutronDevices: ${lutronDevices}"
 
       //---->
@@ -199,7 +199,7 @@ Map monoPage() {
 */
 
 /*
-void deviceSceneInputs(DeviceWrapper d, List<String> scenes) {
+void deviceSceneInputs(DevW d, List<String> scenes) {
   scenes.collect{scene, index ->
     input(
       name: "${d.id}:${scene}",
@@ -281,9 +281,9 @@ void addScenesToSettings (String heading) {
   // !!! UNKNOWN IMPORT FOR ModeWrapper or ModeWrapperList !!!
   // !!!   Mode appears to have mode.id, mode.name, ...    !!!
   // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  ArrayList<LinkedHashMap> modes = location.modes
+  ArrayList<LinkedHashMap> modes = Loc.modes
   state.modes = modes
-  List<String> locationNamePicklist = state.modes.collect{it.name}
+  List<String> LocNamePicklist = state.modes.collect{it.name}
     for (int i = 1; i<9; i++) {
     input(
       name: "cust${i}",
@@ -316,7 +316,7 @@ void addModeIdToSceneToSettings (String heading) {
   //   - Refresh the mapping if/when site modes are changed.
   paragraph emphasis(heading)
   Map<String, String> modeIdToRoomScene
-  ArrayList<LinkedHashMap> modes = location.modes
+  ArrayList<LinkedHashMap> modes = Loc.modes
   Map<String, String> modeIdToScene = [:]
   modes.each{mode ->
     Boolean modeNameIsSceneName = state.scenes.find{it == mode.name} ? true : false
