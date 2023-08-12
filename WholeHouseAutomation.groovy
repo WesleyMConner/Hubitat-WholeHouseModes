@@ -233,7 +233,8 @@ List<String> getRoomScenes (String roomName) {
     settings["${settingsKeyPrefix}9"],
   ].findAll{it != null}
   scenes << customScenes
-  return scenes.flatten().sort()
+  scenes = scenes.flatten().sort().collect{scene -> "${roomName}-${scene}"}
+  return scenes
 }
 
 void solicitSceneForRoomNameModeName (String roomName) {
@@ -306,6 +307,18 @@ void solicitLedDevicesForRoomScenes (String roomName) {
   )
 }
 
+void solicitKeypadButtonsForScene (String roomName) {
+  getRoomScenes(roomName).each{sceneName ->
+    collapsibleInput (
+      blockLabel: "Keypad Buttons for scene ${sceneName}.",
+      name: "${roomName}-${sceneName}-keypadButtons",
+      title: "Identify Keypad Buttons for ${sceneName}.",
+      type: 'enum',
+      options: settings["${roomName}-leds"]
+    )
+  }
+}
+
 List<DevW> narrowDevicestoRoom (String roomName, DevWL devices) {
   // This function excludes devices that are not associated with any room.
   List<String> deviceIdsForRoom = app.getRooms()
@@ -321,7 +334,6 @@ void solicitNonLutronDevicesForRoomScenes (String roomName) {
                             .findAll{
                               it.displayName.toString().contains('lutron') == false
                             }
-  paragraph """--0-> roomSwitches: ${roomSwitches} <-----"""
   collapsibleInput (
     blockLabel: "Non-Lutron Devices for ${roomName} Scenes",
     name: "${roomName}-nonLutron",
@@ -329,6 +341,45 @@ void solicitNonLutronDevicesForRoomScenes (String roomName) {
     type: 'enum',
     options: roomSwitches.collect{ d -> d.displayName }
   )
+}
+
+void solicitRoomScene (String roomName) {
+  // Display may be full-sized (12-positions) or phone-sized (4-position).
+  // For phone friendliness, work one scene at a time.
+  getRoomScenes(roomName).each{sceneName ->
+    Integer col = 1
+    paragraph("<br/><b>${sceneName} →</b>", width: 1)
+    settings["${roomName}-nonLutron"].each{deviceName ->
+      col += 2
+      input(
+        name: "${sceneName}:${deviceName}",
+        type: 'number',
+        title: "<b>${deviceName}</b><br/>Level 0..100",
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        defaultValue: 0
+      )
+    }
+    settings["${roomName}-repeaters"].each{deviceName ->
+      col += 2
+      input(
+        name: "${sceneName}.${deviceName}",
+        type: 'number',
+        title: "<b>${deviceName}</b><br/>Button #",
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        defaultValue: 0
+      )
+    }
+    // Fill to end of logical row
+    while (col++ % 12) {
+      paragraph('', width: 1)
+    }
+  }
 }
 
 def roomScenesPage (params) {
@@ -350,7 +401,13 @@ def roomScenesPage (params) {
       solicitRepeatersForRoomScenes(roomName)
       solicitKeypadsForRoomScenes(roomName)
       solicitLedDevicesForRoomScenes(roomName)
+
+      solicitKeypadButtonsForScene (roomName)
+
       solicitNonLutronDevicesForRoomScenes(roomName)
+
+
+      solicitRoomScene (roomName)
       paragraph(
         heading('Debug<br/>')
         + "<b>Debug ${roomName} Scenes:</b> ${getRoomScenes(roomName)}<br/>"
@@ -360,38 +417,6 @@ def roomScenesPage (params) {
         + "<b>LED Devices:</b>${settings["${roomName}-leds"]}<br/>"
         + "<b>Non-Lutron Devices:</b> ${settings["${roomName}-nonLutron"]}"
       )
-
-      getRoomScenes(roomName).each{scene ->
-        paragraph "SCENE: ${scene}"
-        /*
-        settings["${roomName}-nonLutron"].each{device ->
-          input(
-            name: "${scene}.${device.id}",
-            type: 'number',
-            title: "<b>${device.displayName}</b><br/>Level 0..100",
-            width: 2,
-            submitOnChange: true,
-            required: true,
-            multiple: false,
-            defaultValue: 0
-          )
-        }
-        */
-        /*
-        settings["${roomName}-repeaters"].each{device ->
-          input(
-            name: "${scene}.${device.id}",
-            type: 'number',
-            title: "<b>${device.displayName}</b><br/>Button #",
-            width: 2,
-            submitOnChange: true,
-            required: true,
-            multiple: false,
-            defaultValue: 0
-          )
-        }
-        */
-      }
       //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
     }
   }
