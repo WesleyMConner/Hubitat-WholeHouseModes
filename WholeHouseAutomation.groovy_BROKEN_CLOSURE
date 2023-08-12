@@ -44,18 +44,7 @@ definition(
 // -------------------------------
 preferences {
   page(name: 'whaPage', title: '', install: true, uninstall: true)
-  page(name: 'roomScenesPage1', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage2', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage3', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage4', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage5', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage6', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage7', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage8', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage9', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage10', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage11', title: '', install: false, uninstall: false)
-  page(name: 'roomScenesPage12', title: '', install: false, uninstall: false)
+  page(name: 'roomScenesPage', title: '', install: false, uninstall: false)
 }
 
 // -----------------------------------
@@ -160,22 +149,31 @@ Map whaPage() {
       solicitLutronPicos()
       solicitSwitches()
       if (app.getInstallationState() == 'COMPLETE') {
-        //settings.focalRooms.eachWithIndex{ roomName, index ->
+          String roomName = 'Den'
+  log.trace "#153: roomScenesPage: >${roomScenesPage}<"
           href (
-            title: "Den Scenes",
-            page: "roomScenesPage1",
+            title: "${roomName} Scenes",
+            page: roomScenesPage,
+            params: [
+              index: roomName,
+              roomName: roomName,
+            ],
             width: 2,
             style: 'internal',
             state: 'incomplete'  // or null,
           )
+          roomName = 'Kitchen'
           href (
-            title: "Kitchen Scenes",
-            page: "roomScenesPage2",
+            title: "${roomName} Scenes",
+            page: roomScenesPage,
+            params: [
+              index: roomName,
+              roomName: roomName,
+            ],
             width: 2,
             style: 'internal',
             state: 'incomplete'  // or null,
           )
-        //}
       }
     }
   }
@@ -246,7 +244,8 @@ List<String> getRoomScenes (String roomName) {
     settings["${settingsKeyPrefix}9"],
   ].findAll{it != null}
   scenes << customScenes
-  return scenes.flatten().sort()
+  scenes = scenes.flatten().sort().collect{scene -> "${roomName}-${scene}"}
+  return scenes
 }
 
 void solicitSceneForRoomNameModeName (String roomName) {
@@ -319,28 +318,33 @@ void solicitLedDevicesForRoomScenes (String roomName) {
   )
 }
 
+void solicitKeypadButtonsForScene (String roomName) {
+  getRoomScenes(roomName).each{sceneName ->
+    collapsibleInput (
+      blockLabel: "Keypad Buttons for scene ${sceneName}.",
+      name: "${roomName}-${sceneName}-keypadButtons",
+      title: "Identify Keypad Buttons for ${sceneName}.",
+      type: 'enum',
+      options: settings["${roomName}-leds"]
+    )
+  }
+}
+
 List<DevW> narrowDevicestoRoom (String roomName, DevWL devices) {
   // This function excludes devices that are not associated with any room.
   List<String> deviceIdsForRoom = app.getRooms()
                                   .findAll{it.name == roomName}
                                   .collect{it.deviceIds.collect{it.toString()}}
                                   .flatten()
-  return devices.findAll{ d ->
-    //--paragraph "d: ${d}, d.id: ${d.id}"
-    deviceIdsForRoom.contains(d.id.toString())
+  return devices.findAll{ d -> deviceIdsForRoom.contains(d.id.toString())
   }
 }
 
-void solicitNonLutronDevicesForRoomScenes (String room) {
-  List<DevW> roomSwitches = narrowDevicestoRoom(room, settings?.switches).findAll{
-    it.displayName.toString().contains('lutron') == false
-  }
-
-  paragraph "roomSwitches: >${roomSwitches}<"
-  //roomSwitches.each{ switch ->
-  //  paragraph "Switch Id: ${switch.id}, Switch Name: ${switch.displayName}"
-  //}
-
+void solicitNonLutronDevicesForRoomScenes (String roomName) {
+  List<DevW> roomSwitches = narrowDevicestoRoom(roomName, settings?.switches)
+                            .findAll{
+                              it.displayName.toString().contains('lutron') == false
+                            }
   collapsibleInput (
     blockLabel: "Non-Lutron Devices for ${roomName} Scenes",
     name: "${roomName}-nonLutron",
@@ -350,11 +354,54 @@ void solicitNonLutronDevicesForRoomScenes (String room) {
   )
 }
 
-Closure roomScenesPage = { prefix ->
-  dynamicPage(name: "${prefix}Page") {
+void solicitRoomScene (String roomName) {
+  // Display may be full-sized (12-positions) or phone-sized (4-position).
+  // For phone friendliness, work one scene at a time.
+  getRoomScenes(roomName).each{sceneName ->
+    Integer col = 1
+    paragraph("<br/><b>${sceneName} →</b>", width: 1)
+    settings["${roomName}-nonLutron"].each{deviceName ->
+      col += 2
+      input(
+        name: "${sceneName}:${deviceName}",
+        type: 'number',
+        title: "<b>${deviceName}</b><br/>Level 0..100",
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        defaultValue: 0
+      )
+    }
+    settings["${roomName}-repeaters"].each{deviceName ->
+      col += 2
+      input(
+        name: "${sceneName}.${deviceName}",
+        type: 'number',
+        title: "<b>${deviceName}</b><br/>Button #",
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        defaultValue: 0
+      )
+    }
+    // Fill to end of logical row
+    while (col++ % 12) {
+      paragraph('', width: 1)
+    }
+  }
+}
+
+Closure roomScenesPageImpl = { params, index ->
+  if (params && index) state[index] = params
+  else params = state[index]
+  dynamicPage(name: 'roomScenesPage') {
     section {
+      paragraph "params.roomName = >${params.roomName}<"
+      String roomName = params.roomName
       paragraph (
-        heading("${prefix} Scenes<br/>")
+        heading("${roomName} Scenes<br/>")
         + comment(
             'Tab to register changes.<br/>'
             + 'If "Error: Cannot get property" appears, click "↻" to reload the page.'
@@ -362,128 +409,66 @@ Closure roomScenesPage = { prefix ->
       )
       // Mode-named scenes appear as a single settings List<String>.
       // 0..9 custom scenes appear individually as settings prefix1..prefix9.
-      solicitModesAsScenes(prefix)
-      solicitCustomScenes (prefix)
-      solicitSceneForprefixModeName (prefix)
-      solicitRepeatersForRoomScenes(prefix)
-      solicitKeypadsForRoomScenes(prefix)
-      solicitLedDevicesForRoomScenes(prefix)
-      solicitNonLutronDevicesForRoomScenes(prefix)
+      solicitModesAsScenes(roomName)
+      solicitCustomScenes (roomName)
+      solicitSceneForRoomNameModeName (roomName)
+      solicitRepeatersForRoomScenes(roomName)
+      solicitKeypadsForRoomScenes(roomName)
+      solicitLedDevicesForRoomScenes(roomName)
 
-      paragraph "<b>Debug ${prefix} Scenes:</b> ${getRoomScenes(prefix)}"
-      paragraph "<b>Debug ${prefix} Mode-to-Scene:</b> ${getModeToScene(prefix)}"
-      paragraph "<b>Repeaters:</b> ${settings["${prefix}-repeaters"]}"
-      paragraph "<b>Keypads:</b> ${settings["${prefix}-keypads"]}"
-      paragraph "<b>LED Devices:</b> ${settings["${prefix}-leds"]}"
-      paragraph "<b>Non-Lutron Devices:</b> ${settings["${prefix}-nonLutron"]}"
+      solicitKeypadButtonsForScene (roomName)
 
-      //----> Keypad Buttons that Trigger Scenes
-      //----> Use a picklist to narrow the required keypads
-      //----> List<DevW> keypads = getKeypads()
-      //----> paragraph "keypads: ${keypads}"
+      solicitNonLutronDevicesForRoomScenes(roomName)
 
-      /*
-      //----> Non-Lutron Devices with per-Scene levels
-      List<DevW> nonLutronDevices = parent.getNonLutronDevices(assignedRoom)
-      paragraph "nonLutronDevices: ${nonLutronDevices}"
 
-      //----> Main Repeater Buttons that Realize Scenes
-      List<DevW> mainRepeaters = parent.getMainRepeaters()
-      paragraph "mainRepeaters: ${mainRepeaters}"
-
-      //----> LEDs that are Set on Scene Activaton
-      // https://community.hubitat.com/t/bug-report-lutron-ra2-main-repeater-not-reporting-led-status-correctly/63317/7`
-      // It appears that your suggestion about subtracting 80 for LED numbers less
-      // than 100 and subtracting 100 from those above 100 will work with the
-      // outcome of LED number being the same as button number.
-      // ----------
-      // NOTE: The required keypads likely match the scene-triggering buttons
-      List<DevW> leds = parent.getLedDevices()
-      paragraph "leds: ${leds}"
-      */
+      solicitRoomScene (roomName)
+      paragraph(
+        heading('Debug<br/>')
+        + "<b>Debug ${roomName} Scenes:</b> ${getRoomScenes(roomName)}<br/>"
+        + "<b>Debug ${roomName} Mode-to-Scene:</b> ${getModeToScene(roomName)}<br/>"
+        + "<b>Repeaters:</b> ${settings["${roomName}-repeaters"]}<br/>"
+        + "<b>Keypads:</b>${settings["${roomName}-keypads"]}<br/>"
+        + "<b>LED Devices:</b>${settings["${roomName}-leds"]}<br/>"
+        + "<b>Non-Lutron Devices:</b> ${settings["${roomName}-nonLutron"]}"
+      )
+      //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
     }
   }
 }
 
-def roomScenesPage1() { roomScenesPage.call('P1') }
-def roomScenesPage2() { roomScenesPage.call('P2') }
-def roomScenesPage3() { roomScenesPage.call('P3') }
-def roomScenesPage4() { roomScenesPage.call('P4') }
-def roomScenesPage5() { roomScenesPage.call('P5') }
-def roomScenesPage6() { roomScenesPage.call('P6') }
-def roomScenesPage7() { roomScenesPage.call('P7') }
-def roomScenesPage8() { roomScenesPage.call('P8') }
-def roomScenesPage9() { roomScenesPage.call('P9') }
-def roomScenesPage10() { roomScenesPage.call('P10') }
-def roomScenesPage11() { roomScenesPage.call('P11') }
-def roomScenesPage12() { roomScenesPage.call('P12') }
+//def calledPage (params) {
+//  if (params) state.XXXXX = params.settingsPrefix
+//  else params.settingsPrefix = state.XXXXX
+//  dynamicPage(name: 'calledPage') {
 
+def roomScenesPage (params) {
+  log.trace "#446: params: >${params}<br/>roomScenesPageImpl: >${roomScenesPageImpl}<"
+  (roomScenesPageImpl as Closure).call(params, params.index)
+}
 
-//LinkedHashMap<String, String>
-
-
-
-
-        /*
-        LinkedHashMap unpairedChildAppsByName = getChildAppsByName ()
-
-        //->removeUnpairedChildApps ()
-        if (settings.LOG) log.info "childApps: ${childApps.collect{it.getLabel()}.join(', ')}"
-
-        // MapfocalRoomsToRoomSceneApps
-        LinkedHashMap roomAppsByName = settings.focalRooms.collectEntries{
-          room -> [room, unpairedChildIds.contains(room) ?: null]
-        }
-
-        // Prepare to capture the Mode PBSG child app.
-        InstAppW pbsgModeApp = null
-
-        // Prepare to remove unused child apps.
-        List<String> unusedDeviceNetworkIds = []
-
-        // Parse existing (discovered) Child Apps, removing unaffiliated children.
-        List<InstAppW> childApps = getAllChildApps()
-        //--
-        childApps.each{ childApp ->
-          String childLabel = childApp.getLabel()
-          if (childLabel == 'pbsg-mode') {
-            pbsgModeApp = childApp
-          } else if (settings.focalRooms.contains(childLabel)) {
-            roomAppsByName.putAt(childLabel, child)
-          } else {
-            unusedDeviceNetworkIds << childApp.deviceNetworkId
-          }
-        }
-        unusedDeviceNetworkIds.each{ deviceNetworkId ->
-          if (settings.LOG) log.info "Removing stale childApps ${deviceNetworkId}"
-          deleteChildDevice(deviceNetworkId)
-        }
-
-        */
-
+// MissingMethodExceptionNoStack:
+// No signature of method: java.lang.String.call() is applicable for argument types:
+// (java.util.HashMap) values: [[index:Den, roomName:Den]]
 
 // ------------------------------------------------------------------------
 // M E T H O D S   B A S E D   O N   S E T T I N G S
 //   Clients can use the following methods (which operate exclusively on
 //   Parent'settings' when rendering data entry screens.
 // ------------------------------------------------------------------------
-/*
-String assignChildAppRoomName (Long childAppId) {
-  List<String> focalRooms = settings.focalRooms
-  List<InstAppW> kidApps = getChildApps()
-  Map<String, String> kidIdToRoomName =
-    kidApps.collectEntries{ kid ->
-      [ kid.id.toString(), focalRooms.contains(kid.label) ? kid.label : null ]
-  }
-  Map<String, Boolean> roomNameToKidId = focalRooms.collectEntries{[it, false]}
-  kidIdToRoomName.each{ kidId, roomName ->
-    if (roomName) roomNameToKidId[roomName] = kidId
-  }
-  return result = kidIdToRoomName[childAppId.toString()]
-                  ?: roomNameToKidId.findAll{!it.value}.keySet().first()
-}
-*/
-
+//--xx-- String assignChildAppRoomName (Long childAppId) {
+//--xx--   List<String> focalRooms = settings.focalRooms
+//--xx--   List<InstAppW> kidApps = getChildApps()
+//--xx--   Map<String, String> kidIdToRoomName =
+//--xx--     kidApps.collectEntries{ kid ->
+//--xx--       [ kid.id.toString(), focalRooms.contains(kid.label) ? kid.label : null ]
+//--xx--   }
+//--xx--   Map<String, Boolean> roomNameToKidId = focalRooms.collectEntries{[it, false]}
+//--xx--   kidIdToRoomName.each{ kidId, roomName ->
+//--xx--     if (roomName) roomNameToKidId[roomName] = kidId
+//--xx--   }
+//--xx--   return result = kidIdToRoomName[childAppId.toString()]
+//--xx--                   ?: roomNameToKidId.findAll{!it.value}.keySet().first()
+//--xx-- }
 
 //--xx-- Main Repeater LEDs will be used in lieu of individual Lutron
 //--xx-- devices to detect Manual overrides.
@@ -491,7 +476,6 @@ String assignChildAppRoomName (Long childAppId) {
 //--xx-- List<DevW> getLutronDevices (String room) {
 //--xx--   return narrowDevicestoRoom(room, settings?.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
 //--xx-- }
-
 
 // -------------------------------
 // S T A T E   M A N A G E M E N T
@@ -569,3 +553,40 @@ void displayCustomScenes () {
       + '</table>'
   )
 }
+
+/*
+  LinkedHashMap unpairedChildAppsByName = getChildAppsByName ()
+
+  //->removeUnpairedChildApps ()
+  if (settings.LOG) log.info "childApps: ${childApps.collect{it.getLabel()}.join(', ')}"
+
+  // MapfocalRoomsToRoomSceneApps
+  LinkedHashMap roomAppsByName = settings.focalRooms.collectEntries{
+    room -> [room, unpairedChildIds.contains(room) ?: null]
+  }
+
+  // Prepare to capture the Mode PBSG child app.
+  InstAppW pbsgModeApp = null
+
+  // Prepare to remove unused child apps.
+  List<String> unusedDeviceNetworkIds = []
+
+  // Parse existing (discovered) Child Apps, removing unaffiliated children.
+  List<InstAppW> childApps = getAllChildApps()
+  //--
+  childApps.each{ childApp ->
+    String childLabel = childApp.getLabel()
+    if (childLabel == 'pbsg-mode') {
+      pbsgModeApp = childApp
+    } else if (settings.focalRooms.contains(childLabel)) {
+      roomAppsByName.putAt(childLabel, child)
+    } else {
+      unusedDeviceNetworkIds << childApp.deviceNetworkId
+    }
+  }
+  unusedDeviceNetworkIds.each{ deviceNetworkId ->
+    if (settings.LOG) log.info "Removing stale childApps ${deviceNetworkId}"
+    deleteChildDevice(deviceNetworkId)
+  }
+*/
+

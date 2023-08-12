@@ -53,12 +53,11 @@ preferences {
 
 void solictfocalRooms () {
   roomPicklist = app.getRooms().collect{it.name}.sort()
-  //->paragraph "roomPicklist: >${roomPicklist}<"
   collapsibleInput(
     blockLabel: 'Focal Rooms',
     name: 'focalRooms',
     type: 'enum',
-    title: 'Select the Focal Rooms',
+    title: 'Select Participating Rooms',
     options: roomPicklist
   )
 }
@@ -68,7 +67,7 @@ void solicitLutronTelnetDevice () {
     blockLabel: 'Lutron Telnet Device',
     name: 'lutronTelnet',
     title: 'Confirm Lutron Telnet Device<br/>' \
-      + comment('used to detect Main Repeater LED state changes'),
+      + comment('Used to detect Main Repeater LED state changes'),
     type: 'device.LutronTelnet'
   )
 }
@@ -78,7 +77,7 @@ void solicitLutronMainRepeaters () {
     blockLabel: 'Lutron Main Repeaters',
     name: 'lutronRepeaters',
     title: 'Identify Lutron Main Repeater(s)<br/>' \
-      + comment('used to invoke in-kind Lutron scenes'),
+      + comment('Used to invoke in-kind Lutron scenes'),
     type: 'device.LutronKeypad'
   )
 }
@@ -87,7 +86,7 @@ void solicitLutronMiscellaneousKeypads () {
   collapsibleInput (
     blockLabel: 'Lutron Miscellaneous Keypads',
     name: 'lutronMiscKeypads',
-    title: 'Identify Lutron Miscellaneous Devices<br/>' \
+    title: 'Identify participating Lutron Miscellaneous Devices<br/>' \
       + comment('used to trigger room scenes'),
     type: 'device.LutronKeypad'
   )
@@ -103,11 +102,21 @@ void solicitSeeTouchKeypads () {
   )
 }
 
+void solicitLutronLEDs () {
+  collapsibleInput (
+    blockLabel: 'Lutron LEDs',
+    name: 'lutronLEDs',
+    title: 'Select participating Lutron LEDs<br/>' \
+      + comment('Used to trigger room scenes.'),
+    type: 'device.LutronComponentSwitch'
+  )
+}
+
 void solicitLutronPicos () {
   collapsibleInput (
     blockLabel: 'Lutron Picos',
     name: 'lutronPicos',
-    title: 'Identify Lutron Picos<br/>' \
+    title: 'Select participating Lutron Picos<br/>' \
       + comment('used to trigger room scenes'),
     type: 'device.LutronFastPico'
   )
@@ -115,13 +124,9 @@ void solicitLutronPicos () {
 
 void solicitSwitches () {
   collapsibleInput (
-    blockLabel: 'Lutron LEDs and Non-Lutron Devices',
+    blockLabel: 'Non-Lutron, Non-VSW Devices',
     name: 'switches',
-    title: 'Identify Lutron LEDs and Non-Lutron switches and dimmers' \
-      + comment('<br/>Lutron LEDs are set to reflect the current scene.') \
-      + comment('<br/>Non-Lutron device levels are set per room scenes.') \
-      + comment('<br/>Non-LED Lutron devices can be skipped.') \
-      + comment('<br/>VSWs (virtual switches) can be skipped.'),
+    title: 'Select participating Non-Lutron, Non-VSW switches and dimmers',
     type: 'capability.switch'
  )
 }
@@ -147,6 +152,7 @@ Map whaPage() {
       solicitLutronMiscellaneousKeypads()
       solicitSeeTouchKeypads()
       solicitLutronPicos()
+      solicitLutronLEDs ()
       solicitSwitches()
       if (app.getInstallationState() == 'COMPLETE') {
         settings.focalRooms.each{ roomName ->
@@ -166,6 +172,24 @@ Map whaPage() {
       }
     }
   }
+}
+
+// -----------------------------
+// " C H I L D "   S U P P O R T
+// -----------------------------
+
+List<DevW> getMainRepeaters () {
+  return settings?.lutronRepeaters
+}
+
+List<DevW> getKeypads() {
+  return (settings?.lutronMiscKeypads ?: []) \
+         + (settings?.seeTouchKeypad ?: []) \
+         + (settings?.lutronPicos ?: [])
+}
+
+List<DevW> getLedDevices () {
+  return settings?.lutronLEDs
 }
 
 // -----------------------------------------------------
@@ -250,7 +274,9 @@ void solicitSceneForRoomNameModeName (String roomName) {
       required: true,
       multiple: false,
       options: roomScenes,
-      defaultValue: roomScenes.find{sceneName -> sceneName == modeName } ?: ''
+      defaultValue: roomScenes.find{
+        sceneName -> sceneName == "${roomName}-${modeName}"
+      } ?: ''
     )
   }
 }
@@ -263,10 +289,6 @@ Map<String, List<String>> getModeToScene (String roomName) {
             }
 }
 
-List<DevW> getMainRepeaters () {
-  return settings?.lutronRepeaters
-}
-
 void solicitRepeatersForRoomScenes (String roomName) {
   collapsibleInput (
     blockLabel: "Repeaters for ${roomName} Scenes",
@@ -277,12 +299,6 @@ void solicitRepeatersForRoomScenes (String roomName) {
   )
 }
 
-List<DevW> getKeypads() {
-  return (settings?.lutronMiscKeypads ?: []) \
-         + (settings?.seeTouchKeypad ?: []) \
-         + (settings?.lutronPicos ?: [])
-}
-
 void solicitKeypadsForRoomScenes (String roomName) {
   collapsibleInput (
     blockLabel: "Keypads for ${roomName} Scenes",
@@ -291,10 +307,6 @@ void solicitKeypadsForRoomScenes (String roomName) {
     type: 'enum',
     options: getKeypads().collect{ d -> d.displayName }
   )
-}
-
-List<DevW> getLedDevices () {
-  return settings?.switches.findAll{ it?.displayName.toString().contains('LED') }
 }
 
 void solicitLedDevicesForRoomScenes (String roomName) {
@@ -308,14 +320,26 @@ void solicitLedDevicesForRoomScenes (String roomName) {
 }
 
 void solicitKeypadButtonsForScene (String roomName) {
-  getRoomScenes(roomName).each{sceneName ->
-    collapsibleInput (
-      blockLabel: "Keypad Buttons for scene ${sceneName}.",
-      name: "${roomName}-${sceneName}-keypadButtons",
-      title: "Identify Keypad Buttons for ${sceneName}.",
-      type: 'enum',
-      options: settings["${roomName}-leds"]
-    )
+  // One slider to collapse all entries in this section.
+  input (
+    name: boolGroup,
+    type: 'bool',
+    title: "${settings[boolGroup] ? 'Hiding' : 'Showing'} Keypad Buttons for Scene",
+    submitOnChange: true,
+    defaultValue: false,
+  )
+  if (!settings[boolSwitchName]) {
+    getRoomScenes(roomName).each{sceneName ->
+      input(
+        name: "${roomName}-${sceneName}-keypadButtons",
+        type: 'enum',
+        title: "Identify Keypad Buttons for ${sceneName}.",
+        submitOnChange: true,
+        required: true,
+        multiple: true,
+        options: settings["${roomName}-leds"]
+      )
+    }
   }
 }
 
