@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// W H O L E   H O U S E   A U T O M A T I O N
+// R O O M   S C E N E S
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -22,174 +22,27 @@ import com.hubitat.app.DeviceWrapperList as DevWL
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-//#include wesmc.PBSG
+#include wesmc.pbsgLibrary
 #include wesmc.UtilsLibrary
 
 definition(
-  name: 'WholeHouseAutomation',
+  parent: 'wesmc:WholeHouseAutomation',
+  name: 'RoomScenes',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'Whole House Automation using Modes, RA2 and Room Overrides',
+  description: 'Manage Room Scenes for Whole House Automation',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
   iconX3Url: '',          // Not supported as of Q3'23
-  singleInstance: true
+  singleInstance: false
 )
-
-// """ ... """.stripIndent()
 
 // -------------------------------
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
-  page(name: 'whaPage', title: '', install: true, uninstall: true)
-  page(name: 'roomScenesPage', title: '', install: false, uninstall: false)
-}
-
-// -----------------------------------
-// W H A   P A G E   &   S U P P O R T
-// -----------------------------------
-
-void solictfocalRooms () {
-  roomPicklist = app.getRooms().collect{it.name}.sort()
-  collapsibleInput(
-    blockLabel: 'Focal Rooms',
-    name: 'focalRooms',
-    type: 'enum',
-    title: 'Select Participating Rooms',
-    options: roomPicklist
-  )
-}
-
-void solicitLutronTelnetDevice () {
-  collapsibleInput (
-    blockLabel: 'Lutron Telnet Device',
-    name: 'lutronTelnet',
-    title: 'Confirm Lutron Telnet Device<br/>' \
-      + comment('Used to detect Main Repeater LED state changes'),
-    type: 'device.LutronTelnet'
-  )
-}
-
-void solicitLutronMainRepeaters () {
-  collapsibleInput (
-    blockLabel: 'Lutron Main Repeaters',
-    name: 'lutronRepeaters',
-    title: 'Identify Lutron Main Repeater(s)<br/>' \
-      + comment('Used to invoke in-kind Lutron scenes'),
-    type: 'device.LutronKeypad'
-  )
-}
-
-void solicitLutronMiscellaneousKeypads () {
-  collapsibleInput (
-    blockLabel: 'Lutron Miscellaneous Keypads',
-    name: 'lutronMiscKeypads',
-    title: 'Identify participating Lutron Miscellaneous Devices<br/>' \
-      + comment('used to trigger room scenes'),
-    type: 'device.LutronKeypad'
-  )
-}
-
-void solicitSeeTouchKeypads () {
-  collapsibleInput (
-    blockLabel: 'Lutron SeeTouch Keypads',
-    name: 'seeTouchKeypad',
-    title: 'Identify Lutron SeeTouch Keypads<br/>' \
-      + comment('used to trigger room scenes.'),
-    type: 'device.LutronSeeTouchKeypad'
-  )
-}
-
-void solicitLutronLEDs () {
-  collapsibleInput (
-    blockLabel: 'Lutron LEDs',
-    name: 'lutronLEDs',
-    title: 'Select participating Lutron LEDs<br/>' \
-      + comment('Used to trigger room scenes.'),
-    type: 'device.LutronComponentSwitch'
-  )
-}
-
-void solicitLutronPicos () {
-  collapsibleInput (
-    blockLabel: 'Lutron Picos',
-    name: 'lutronPicos',
-    title: 'Select participating Lutron Picos<br/>' \
-      + comment('used to trigger room scenes'),
-    type: 'device.LutronFastPico'
-  )
-}
-
-void solicitSwitches () {
-  collapsibleInput (
-    blockLabel: 'Non-Lutron, Non-VSW Devices',
-    name: 'switches',
-    title: 'Select participating Non-Lutron, Non-VSW switches and dimmers',
-    type: 'capability.switch'
- )
-}
-
-Map whaPage() {
-  return dynamicPage(name: 'whaPage') {
-    section {
-      app.updateLabel('Whole House Automation')
-      paragraph heading('Whole House Automation<br/>') \
-        + bullet('Select participating rooms and authorize device access.<br/>') \
-        + bullet('Click <b>Done</b> to proceed to defining <b>Room Scene(s)</b>.')
-      //} else {
-      input (
-        name: 'LOG',
-        type: 'bool',
-        title: 'Enable logging?',
-        defaultValue: true,
-        submitOnChange: true
-      )
-      solictfocalRooms()
-      solicitLutronTelnetDevice()
-      solicitLutronMainRepeaters()
-      solicitLutronMiscellaneousKeypads()
-      solicitSeeTouchKeypads()
-      solicitLutronPicos()
-      solicitLutronLEDs ()
-      solicitSwitches()
-      if (app.getInstallationState() == 'COMPLETE') {
-        settings.focalRooms.each{ roomName ->
-          href (
-            title: "${roomName} Scenes",
-            page: roomScenesPage,
-            params: [
-              roomName: roomName,
-              sample1: 'Just sample parm data',
-              sample2: 123.456
-            ],
-            width: 2,
-            style: 'internal',
-            state: 'incomplete'  // or null,
-          )
-        }
-      }
-    }
-  }
-}
-
-// -----------------------------
-// " C H I L D "   S U P P O R T
-// -----------------------------
-
-List<DevW> getMainRepeaters () {
-  return settings?.lutronRepeaters
-}
-
-List<DevW> getKeypads() {
-  return (settings?.lutronMiscKeypads ?: []) \
-         + (settings?.seeTouchKeypad ?: []) \
-         + (settings?.lutronPicos ?: [])
-}
-
-List<DevW> getLedDevices () {
-  return settings?.lutronLEDs
+  page(name: 'roomScenesPage', title: '', install: true, uninstall: true)
 }
 
 // -----------------------------------------------------
@@ -198,7 +51,7 @@ List<DevW> getLedDevices () {
 
 void solicitModesAsScenes (String roomName) {
   input(
-    name: "${roomName}-modesAsScenes",
+    name: "${roomName}_modesAsScenes",
     type: 'enum',
     title: '<span style="margin-left: 10px;">' \
            + 'Select "Mode Names" to use as "Scene Names" <em>(optional)</em>' \
@@ -211,7 +64,7 @@ void solicitModesAsScenes (String roomName) {
 }
 
 void solicitCustomScenes (String roomName) {
-  String settingsKeyPrefix = "${roomName}-customScene"
+  String settingsKeyPrefix = "${roomName}_customScene"
   LinkedHashMap<String, String> slots = [
     "${settingsKeyPrefix}1": settings["${settingsKeyPrefix}1"],
     "${settingsKeyPrefix}2": settings["${settingsKeyPrefix}2"],
@@ -243,8 +96,8 @@ void solicitCustomScenes (String roomName) {
 }
 
 List<String> getRoomScenes (String roomName) {
-  List<String> scenes = settings["${roomName}-modesAsScenes"]
-  String settingsKeyPrefix = "${roomName}-customScene"
+  List<String> scenes = settings["${roomName}_modesAsScenes"]
+  String settingsKeyPrefix = "${roomName}_customScene"
   List<String> customScenes = [
     settings["${settingsKeyPrefix}1"],
     settings["${settingsKeyPrefix}2"],
@@ -406,9 +259,11 @@ void solicitRoomScene (String roomName) {
   }
 }
 
-def roomScenesPage (params) {
+def roomScenesPage (/* params */) {
   dynamicPage(name: 'roomScenesPage') {
     section {
+      paragraph "You are in the ${app.getLabel()}"
+      /*
       String roomName = params.roomName
       paragraph (
         heading("${roomName} Scenes<br/>")
@@ -442,6 +297,7 @@ def roomScenesPage (params) {
         + "<b>Non-Lutron Devices:</b> ${settings["${roomName}-nonLutron"]}"
       )
       //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
+      */
     }
   }
 }
@@ -477,57 +333,59 @@ def roomScenesPage (params) {
 // S T A T E   M A N A G E M E N T
 // -------------------------------
 
-void installed() {
-  if (settings.LOG) log.trace 'WHA installed()'
+/**********
+void installed(Boolean LOG = false) {
+  if (LOG) log.trace 'WHA installed()'
   initialize()
 }
 
-void updated() {
-  if (settings.LOG) log.trace 'WHA updated()'
+void updated(Boolean LOG = false) {
+  if (LOG) log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
-void testHandler (Event e) {
+void testHandler (Event e, Boolean LOG = false) {
   // SAMPLE 1
   //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
   //          deviceId  5686
   //       displayName  (lutron-80) TV Wall KPAD
-  if (settings.LOG) log.trace "WHA testHandler() w/ event: ${e}"
-  if (settings.LOG) logEventDetails(e, false)
+  if (LOG) log.trace "WHA testHandler() w/ event: ${e}"
+  if (LOG) logEventDetails(e, false)
 }
 
-void initialize() {
-  if (settings.LOG) log.trace "WHA initialize()"
-  if (settings.LOG) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+void initialize(Boolean LOG = false) {
+  if (LOG) log.trace "WHA initialize()"
+  if (LOG) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
-    if (settings.LOG) log.trace "WHA subscribing ${device.displayName} ${device.id}"
+    if (LOG) log.trace "WHA subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.LOG) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (LOG) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
-    if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  if (LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
-    if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
 
   //ArrayList<LinkedHashMap> modes = getModes()
   // Rebuild the PBSG mode instance adjusting (i.e., reusing or dropping)
   // previously-created VSWs to align with current App modes.
-  //if (state['pbsg-modes']) { deletePBSG(name: 'pbsg-modes', dropChildVSWs: false) }
+  //if (state['pbsg_modes']) { deletePBSG(name: 'pbsg_modes', dropChildVSWs: false) }
   //createPBSG(
-  //  name: 'pbsg-modes',
+  //  name: 'pbsg_modes',
   //  sceneNames: modes.collect{it.name},
   //  defaultScene: 'Day'
   //)
 }
+**********/
 
 // -----------
 // U N U S E D
@@ -551,10 +409,10 @@ void displayCustomScenes () {
 }
 
 /*
-  LinkedHashMap unpairedChildAppsByName = getChildAppsByName ()
+  LinkedHashMap unpairedChildAppsByName = getChildAppsByName (Boolean LOG = false)
 
   //->removeUnpairedChildApps ()
-  if (settings.LOG) log.info "childApps: ${childApps.collect{it.getLabel()}.join(', ')}"
+  if (LOG) log.info "childApps: ${childApps.collect{it.getLabel()}.join(', ')}"
 
   // MapfocalRoomsToRoomSceneApps
   LinkedHashMap roomAppsByName = settings.focalRooms.collectEntries{
@@ -581,7 +439,7 @@ void displayCustomScenes () {
     }
   }
   unusedDeviceNetworkIds.each{ deviceNetworkId ->
-    if (settings.LOG) log.info "Removing stale childApps ${deviceNetworkId}"
+    if (LOG) log.info "Removing stale childApps ${deviceNetworkId}"
     deleteChildDevice(deviceNetworkId)
   }
 */

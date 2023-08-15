@@ -525,9 +525,9 @@ void initialize() {
   //ArrayList<LinkedHashMap> modes = getModes()
   // Rebuild the PBSG mode instance adjusting (i.e., reusing or dropping)
   // previously-created VSWs to align with current App modes.
-  //if (state['pbsg-modes']) { deletePBSG(name: 'pbsg-modes', dropChildVSWs: false) }
+  //if (state['pbsg_modes']) { deletePBSG(name: 'pbsg_modes', dropChildVSWs: false) }
   //createPBSG(
-  //  name: 'pbsg-modes',
+  //  name: 'pbsg_modes',
   //  sceneNames: modes.collect{it.name},
   //  defaultScene: 'Day'
   //)
