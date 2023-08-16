@@ -189,7 +189,12 @@ void manageChildApps() {
     'defaultScene', getGlobalVar('defaultMode')
   )
   InstAppW pbsgModesApp = getByLabel(childAppsByLabel, 'pbsg_modes')
-                          ?: addChildApp('wesmc', 'whaPBSG', 'pbsg_modes')
+    ?: addChildApp(
+        'wesmc',
+        'whaPBSG',
+        'pbsg_modes',
+        [x: 'This is a test', y: 'Here is more data']
+      )
   // Purge excess (remaining) Child Apps
   childAppsByLabel.each{ label, app ->
     if (settings.LOG) log.trace(
@@ -270,11 +275,11 @@ Map whaPage() {
       solicitLutronPicos()
       solicitLutronLEDs ()
       solicitSwitches()
-      //->removeAllChildApps(settings.LOG)  // Clean after errant process
+      //->removeAllChildApps()  // Clean after errant process
       paragraph heading('Room Scene Configuration')
-      manageChildApps(settings.LOG)
+      manageChildApps()
       displayRoomNameHrefs()
-      //pruneOrphanedChildApps(settings.LOG)
+      //pruneOrphanedChildApps()
       //displayAppInfoLink()
     }
   }

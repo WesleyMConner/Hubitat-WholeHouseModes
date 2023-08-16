@@ -54,7 +54,7 @@ void solicitModesAsScenes () {
     name: 'modesAsScenes',
     type: 'enum',
     title: '<span style="margin-left: 10px;">' \
-           + 'Select "Mode Names" to use as "Scene Names" <em>(optional)</em>' \
+           + emphasis('Select "Mode Names" to use as "Scene Names" <em>(optional)</em>:') \
            + '</span>',
     submitOnChange: true,
     required: false,
@@ -81,12 +81,12 @@ void solicitCustomScenes () {
   LinkedHashMap<String, String> firstOpen = slots.findAll{!it.value}?.take(1)
   LinkedHashMap<String, String> custom = \
     firstOpen + filled.sort{ a, b -> a.value <=> b.value }
-  paragraph 'Add Custom Scene Names <em>(optional)</em>'
+  paragraph emphasis('Add Custom Scene Names <em>(optional)</em>:')
   custom.each{ key, value ->
     input(
       name: key,
       type: 'text',
-      title: "Custom Scene Name:",
+      title: "<b>Custom Scene Name:</b>",
       width: 2,
       submitOnChange: true,
       required: false,
@@ -97,8 +97,11 @@ void solicitCustomScenes () {
 
 void updateRoomScenes () {
   //-- if (LOG) log.trace "updateRoomScenes() [*]"
-  List<String> scenes = settings.modesAsScenes
-  if (LOG) log.trace "updateRoomScenes() [A] scenes: ${scenes}"
+  List<String> scenes = settings.modesAsScenes ?: []
+log.trace "[001] scenes: >${scenes}<"
+  scenes = scenes.flatten()
+log.trace "[002] scenes: >${scenes}<"
+
   String settingsKeyPrefix = 'customScene'
   List<String> customScenes = [
     settings["${settingsKeyPrefix}1"],
@@ -114,20 +117,24 @@ void updateRoomScenes () {
   if (customScenes) {
     scenes << customScenes
     scenes = scenes.flatten()
-    if (LOG) log.trace "updateRoomScenes() [B] scenes: ${scenes}"
   }
-  List<String> result = scenes?.sort() //.collect{scene -> "${scene}"}
-    if (LOG) log.trace "updateRoomScenes() [C] scenes: ${result}"
-  LinkedHashMap myArg = [:] << Map.of('type', 'List', 'value', result)
-  app.updateSetting('roomScenes', myArg) //settings.roomScenes = result
+  scenes = scenes.sort()
+  state.roomScenes = scenes
 }
 
 void solicitSceneForModeName () {
-//--   if (settings.roomScenes == null) {
-//--     paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
-//--   } else {
-    paragraph 'Select scenes for per-mode automation'
+  if (state.roomScenes == null) {
+    paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
+  } else {
+    paragraph emphasis('Select scenes for per-mode automation:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
+      List<String> defaultValue = state.roomScenes.findAll{ scene ->
+        //assert scene instanceof String
+        //assert modeName instanceof String
+        //(scene.toString() == modeName.toString())
+        (scene == modeName)
+      }
+      log.trace "[018] defaultValue: >${defaultValue}<"
       input(
         name: "${modeName}ToScene",
         type: 'enum',
@@ -136,21 +143,20 @@ void solicitSceneForModeName () {
         submitOnChange: true,
         required: true,
         multiple: false,
-        options: settings.roomScenes,
-        defaultValue: settings.roomScenes?.find{
-          sceneName -> sceneName == modeName
-        } ?: ''
+        options: state.roomScenes,
+        defaultValue: defaultValue
       )
     }
-//--   }
+  }
 }
 
-Map<String, List<String>> getModeToScene () {
-  return getLocation().getModes()
-            .collect{mode -> mode.name}
-            .collectEntries{ modeName ->
-              [modeName, settings["${modeName}ToScene"]]
-            }
+void setModeToScene () {
+  Map<String, List<String>> map = getLocation().getModes()
+    .collect{mode -> mode.name}
+    .collectEntries{ modeName ->
+      [modeName, settings["${modeName}ToScene"]]
+    }
+    app.updateSetting('modeToScene', [type: 'Map', value: map])
 }
 
 void solicitRepeatersForRoomScenes () {
@@ -195,7 +201,7 @@ void solicitKeypadButtonsForScene () {
     defaultValue: false,
   )
   if (!settings[boolSwitchName]) {
-    settings.roomScenes?.each{sceneName ->
+    state.roomScenes?.each{sceneName ->
       input(
         name: "${sceneName}_keypadButtons",
         type: 'enum',
@@ -224,10 +230,13 @@ void solicitNonLutronDevicesForRoomScenes () {
 void solicitRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
-//--   if (settings.roomScenes == null) {
-//--     paragraph red('Identification of Room Scene deetails selection will proceed once scene names exist.')
-//--   } else {
-    settings.roomScenes?.each{ sceneName ->
+if (LOG) log.trace "[010]"
+  if (state.roomScenes == null) {
+    paragraph red('Identification of Room Scene deetails selection will proceed once scene names exist.')
+  } else {
+if (LOG) log.trace "[011] >${state.roomScenes}<"
+    state.roomScenes?.each{ sceneName ->
+if (LOG) log.trace "[012] >${sceneName}<"
       Integer col = 1
       paragraph("<br/><b>${ sceneName } →</b>", width: 1)
       settings.nonLutron?.each{deviceName ->
@@ -261,7 +270,7 @@ void solicitRoomScene () {
         paragraph('', width: 1)
       }
     }
-//--   }
+  }
 }
 
 //-- void appButtonHandler(String buttonName) {
@@ -287,22 +296,20 @@ def roomScenesPage () {
     section {
       paragraph (
         heading("${ state.roomName } Scenes<br/>")
-        + comment(
-            'Tab to register changes.<br/>'
-            //-- + 'If "Error: Cannot get property" appears, click "↻" to reload the page.'
-          )
+        + comment(red('Tab to register changes.'))
       )
       solicitLOG()  // via Utils
-      // Mode-named scenes appear as a single settings List<String>.
-      // 0..9 custom scenes appear individually as settings prefix1..prefix9.
+
       solicitModesAsScenes()
       solicitCustomScenes()
+
+      updateRoomScenes()
       solicitSceneForModeName()
-      solicitRepeatersForRoomScenes()
-      solicitKeypadsForRoomScenes()
-      solicitLedDevicesForRoomScenes()
-      //-> solicitKeypadButtonsForScene ()
-      solicitNonLutronDevicesForRoomScenes()
+      //->solicitRepeatersForRoomScenes()
+      //->solicitKeypadsForRoomScenes()
+      //->solicitLedDevicesForRoomScenes()
+      //->solicitKeypadButtonsForScene ()
+      //->solicitNonLutronDevicesForRoomScenes()
       // Input type button:
       //   - Renders a UI button with the title in the button
       //   - Generates a callback to a method defined in the app called
@@ -318,28 +325,36 @@ def roomScenesPage () {
       //--   title: 'Update Room Scenes',
       //--   submitOnChange: true
       //-- )
-      updateRoomScenes()
-      solicitRoomScene()
+      //->solicitRoomScene()
+      //->setModeToScene()
       paragraph(
         heading('Debug<br/>')
-        + "${ displayState() }<br/>"
-        + "<b>settings.roomScenes</b>: ${settings.roomScenes}<br/>"
-        + "<b>Debug ${ state.roomName } Scenes:</b> ${ settings.roomScenes }<br/>"
-        + "<b>Debug ${ state.roomName } Mode-to-Scene:</b> ${ getModeToScene() }<br/>"
-        + "<b>Repeaters:</b> ${ settings["repeaters"] }<br/>"
-        + "<b>Keypads:</b>${ settings["keypads"] }<br/>"
-        + "<b>LED Devices:</b>${ settings["leds"] }<br/>"
-        + "<b>Non-Lutron Devices:</b> ${ settings["nonLutron"] }"
+        + "${ displaySettings() }<br/>"
+        + "${ displayState() }"
+        //+ "<b>state.roomScenes</b>: ${state.roomScenes}<br/>"
+        //+ "<b>Debug Scenes:</b> ${ state.roomScenes }<br/>"
+        //+ "<b>Debug Mode-to-Scene:</b> ${ getModeToScene() }<br/>"
+        //+ "<b>Repeaters:</b> ${ settings["repeaters"] }<br/>"
+        //+ "<b>Keypads:</b>${ settings["keypads"] }<br/>"
+        //+ "<b>LED Devices:</b>${ settings["leds"] }<br/>"
+        //+ "<b>Non-Lutron Devices:</b> ${ settings["nonLutron"] }"
       )
       //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
     }
   }
 }
 
+String displaySettings() {
+  [
+    '<b>SETTINGS</b>',
+    settings.sort().collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
+  ].join('<br/>')
+}
+
 String displayState() {
   [
     '<b>STATE</b>',
-    state.collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
+    state.sort().collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
   ].join('<br/>')
 }
 
