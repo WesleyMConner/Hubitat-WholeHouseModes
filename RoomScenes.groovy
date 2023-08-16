@@ -51,7 +51,7 @@ preferences {
 
 void solicitModesAsScenes () {
   input(
-    name: 'modesAsScenes',
+    name: 'ModesAsScenes',
     type: 'enum',
     title: '<span style="margin-left: 10px;">' \
            + emphasis('Select "Mode Names" to use as "Scene Names" <em>(optional)</em>:') \
@@ -64,17 +64,17 @@ void solicitModesAsScenes () {
 }
 
 void solicitCustomScenes () {
-  String settingsKeyPrefix = 'customScene'
+  String prefix = 'CustomScene'
   LinkedHashMap<String, String> slots = [
-    "${settingsKeyPrefix}1": settings["${settingsKeyPrefix}1"],
-    "${settingsKeyPrefix}2": settings["${settingsKeyPrefix}2"],
-    "${settingsKeyPrefix}3": settings["${settingsKeyPrefix}3"],
-    "${settingsKeyPrefix}4": settings["${settingsKeyPrefix}4"],
-    "${settingsKeyPrefix}5": settings["${settingsKeyPrefix}5"],
-    "${settingsKeyPrefix}6": settings["${settingsKeyPrefix}6"],
-    "${settingsKeyPrefix}7": settings["${settingsKeyPrefix}7"],
-    "${settingsKeyPrefix}8": settings["${settingsKeyPrefix}8"],
-    "${settingsKeyPrefix}9": settings["${settingsKeyPrefix}9"]
+    "${prefix}1": settings["${prefix}1"],
+    "${prefix}2": settings["${prefix}2"],
+    "${prefix}3": settings["${prefix}3"],
+    "${prefix}4": settings["${prefix}4"],
+    "${prefix}5": settings["${prefix}5"],
+    "${prefix}6": settings["${prefix}6"],
+    "${prefix}7": settings["${prefix}7"],
+    "${prefix}8": settings["${prefix}8"],
+    "${prefix}9": settings["${prefix}9"]
   ]
   LinkedHashMap<String, String> filled = slots.findAll{it.value}
   // Only present 1 empty sceen "slot" at a time.
@@ -97,73 +97,61 @@ void solicitCustomScenes () {
 
 void updateRoomScenes () {
   //-- if (LOG) log.trace "updateRoomScenes() [*]"
-  List<String> scenes = settings.modesAsScenes ?: []
-log.trace "[001] scenes: >${scenes}<"
+  List<String> scenes = settings.ModesAsScenes ?: []
   scenes = scenes.flatten()
-log.trace "[002] scenes: >${scenes}<"
-
-  String settingsKeyPrefix = 'customScene'
-  List<String> customScenes = [
-    settings["${settingsKeyPrefix}1"],
-    settings["${settingsKeyPrefix}2"],
-    settings["${settingsKeyPrefix}3"],
-    settings["${settingsKeyPrefix}4"],
-    settings["${settingsKeyPrefix}5"],
-    settings["${settingsKeyPrefix}6"],
-    settings["${settingsKeyPrefix}7"],
-    settings["${settingsKeyPrefix}8"],
-    settings["${settingsKeyPrefix}9"],
+  String prefix = 'CustomScene'
+  List<String> CustomScenes = [
+    settings["${prefix}1"],
+    settings["${prefix}2"],
+    settings["${prefix}3"],
+    settings["${prefix}4"],
+    settings["${prefix}5"],
+    settings["${prefix}6"],
+    settings["${prefix}7"],
+    settings["${prefix}8"],
+    settings["${prefix}9"],
   ].findAll{it != null}
-  if (customScenes) {
-    scenes << customScenes
+  if (CustomScenes) {
+    scenes << CustomScenes
     scenes = scenes.flatten()
   }
   scenes = scenes.sort()
-  state.roomScenes = scenes
+  state.RoomScenes = scenes
 }
 
 void solicitSceneForModeName () {
-  if (state.roomScenes == null) {
+  if (state.RoomScenes == null) {
     paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
   } else {
     paragraph emphasis('Select scenes for per-mode automation:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
-      List<String> defaultValue = state.roomScenes.findAll{ scene ->
-        //assert scene instanceof String
-        //assert modeName instanceof String
-        //(scene.toString() == modeName.toString())
-        (scene == modeName)
+      //List<String> defaultValue = state.RoomScenes.findAll{ scene ->
+      //  (scene == modeName)
+      //}
+      List<String> defaultValue = state.RoomScenes.each{ scene ->
+        if (scene == modeName) app.updateSetting("ModeToScene^${modeName}", scene)
       }
       log.trace "[018] defaultValue: >${defaultValue}<"
       input(
-        name: "${modeName}ToScene",
+        name: "ModeToScene^${modeName}",
         type: 'enum',
         title: modeName,
         width: 2,
         submitOnChange: true,
         required: true,
         multiple: false,
-        options: state.roomScenes,
+        options: state.RoomScenes,
         defaultValue: defaultValue
       )
     }
   }
 }
 
-void setModeToScene () {
-  Map<String, List<String>> map = getLocation().getModes()
-    .collect{mode -> mode.name}
-    .collectEntries{ modeName ->
-      [modeName, settings["${modeName}ToScene"]]
-    }
-    app.updateSetting('modeToScene', [type: 'Map', value: map])
-}
-
 void solicitRepeatersForRoomScenes () {
   collapsibleInput (
-    blockLabel: "Repeaters for ${state.roomName} Scenes",
-    name: 'repeaters',
-    title: 'Identify Repeater(s) supporting Room Scenes',
+    blockLabel: "Repeaters for ${state.RoomName} Scenes",
+    name: 'DeviceRepeaterNames',
+    title: emphasis('Identify Repeater(s) supporting Room Scenes'),
     type: 'enum',
     options: parent.getMainRepeaters().collect{ d -> d.displayName }?.sort()
   )
@@ -171,9 +159,9 @@ void solicitRepeatersForRoomScenes () {
 
 void solicitKeypadsForRoomScenes () {
   collapsibleInput (
-    blockLabel: "Keypads for ${state.roomName} Scenes",
-    name: 'keypads',
-    title: 'Identify Keypad(s) supporting Room Scenes',
+    blockLabel: "Keypads for ${state.RoomName} Scenes",
+    name: 'DeviceKeypadNames',
+    title: emphasis('Identify Keypad(s) supporting Room Scenes'),
     type: 'enum',
     options: parent.getKeypads().collect{ d -> d.displayName }?.sort()
   )
@@ -181,68 +169,60 @@ void solicitKeypadsForRoomScenes () {
 
 void solicitLedDevicesForRoomScenes () {
   collapsibleInput (
-    blockLabel: "LED Devices for ${state.roomName} Scenes",
-    name: 'leds',
-    title: 'Identify LED Button(s) supporting Room Scenes',
+    blockLabel: "LED Devices for ${state.RoomName} Scenes",
+    name: 'DeviceLedNames',
+    title: emphasis('Identify LED Button(s) supporting Room Scenes'),
     type: 'enum',
     options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
   )
 }
 
-/*
-??? CAN LED DEVICES FUNCTION AS PROXIES ???
-void solicitKeypadButtonsForScene () {
-  // One slider to collapse all entries in this section.
-  input (
-    name: boolGroup,
-    type: 'bool',
-    title: "${settings[boolGroup] ? 'Hiding' : 'Showing'} Keypad Buttons for Scene",
-    submitOnChange: true,
-    defaultValue: false,
-  )
-  if (!settings[boolSwitchName]) {
-    state.roomScenes?.each{sceneName ->
-      input(
-        name: "${sceneName}_keypadButtons",
-        type: 'enum',
-        title: "Identify Keypad Buttons for ${sceneName}.",
-        submitOnChange: true,
-        required: true,
-        multiple: true,
-        options: settings["leds"]?.sort()
-      )
-    }
-  }
-}
-*/
-
 void solicitNonLutronDevicesForRoomScenes () {
-  List<DevW> roomSwitches = parent.getNonLutronDevicesForRoom(state.roomName)
+  List<DevW> roomSwitches = parent.getNonLutronDevicesForRoom(state.RoomName)
   collapsibleInput (
-    blockLabel: "Non-Lutron Devices for ${state.roomName} Scenes",
-    name: 'nonLutron',
-    title: 'Identify Non-Lutron devices supporting Room Scenes',
+    blockLabel: "Non-Lutron Devices for ${state.RoomName} Scenes",
+    name: 'DeviceNonLutronNames',
+    title: emphasis('Identify Non-Lutron devices supporting Room Scenes'),
     type: 'enum',
     options: roomSwitches.collect{ d -> d.displayName }?.sort()
   )
 }
 
+void solicitLedToScene() {
+    if (state.RoomScenes == null) {
+    paragraph red('Identification of LED to Room Scene will proceed once scene names exist.')
+  } else {
+    // Downstream Goal is Map<String, String> ledNameToSceneName = [:]
+    settings.DeviceLedNames.each{ ledName ->
+      input(
+          name: "Led2Scene^${ledName}",
+          type: 'enum',
+          title: emphasis("Scene Name for ${ ledName }"),
+          //width: 2,
+          submitOnChange: true,
+          required: true,
+          multiple: false,
+          options: state.RoomScenes
+        )
+      //paragraph "LED-to-Scene Placeholder .. ${ledName} -> ${state.RoomScenes}"
+    }
+  }
+  // parent.getLedDevices().collect{ d -> d.displayName }?.sort()
+}
+
 void solicitRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
-if (LOG) log.trace "[010]"
-  if (state.roomScenes == null) {
+  if (state.RoomScenes == null) {
     paragraph red('Identification of Room Scene deetails selection will proceed once scene names exist.')
   } else {
-if (LOG) log.trace "[011] >${state.roomScenes}<"
-    state.roomScenes?.each{ sceneName ->
-if (LOG) log.trace "[012] >${sceneName}<"
-      Integer col = 1
-      paragraph("<br/><b>${ sceneName } →</b>", width: 1)
-      settings.nonLutron?.each{deviceName ->
+    state.RoomScenes?.each{ sceneName ->
+      Integer col = 2
+      paragraph("<br/><b>${ sceneName } →</b>", width: 2)
+      settings.DeviceNonLutronNames?.each{deviceName ->
         col += 2
         input(
-          name: "${ sceneName }:${ deviceName }",
+          name: "Scene^${sceneName}^NonLutron^${deviceName}",
           type: 'number',
           title: "<b>${ deviceName }</b><br/>Level 0..100",
           width: 2,
@@ -252,10 +232,10 @@ if (LOG) log.trace "[012] >${sceneName}<"
           defaultValue: 0
         )
       }
-      settings.repeaters?.sort().each{deviceName ->
+      settings.DeviceRepeaterNames?.sort().each{deviceName ->
         col += 2
         input(
-          name: "${ sceneName }.${ deviceName }",
+          name: "Scene^${sceneName}^Repeater^${ deviceName }",
           type: 'number',
           title: "<b>${ deviceName }</b><br/>Button #",
           width: 2,
@@ -273,71 +253,47 @@ if (LOG) log.trace "[012] >${sceneName}<"
   }
 }
 
-//-- void appButtonHandler(String buttonName) {
-//--   if (LOG) log.trace "appButtonHandler() received '${buttonName}'"
-//--   switch (buttonName) {
-//--     case 'updateRoomScenes': { it ->
-//--       if (LOG) log.trace  'appButtonHandler() received "updateRoomScenes"'
-//--       updateRoomScenes()
-//--     }
-//--     break
-//--     default: { it ->
-//--       if (LOG) log.trace 'appButtonHandler() in default section'
-//--     }
-//--   }
-//-- }
-
 def roomScenesPage () {
   // The parent application (Whole House Automation) assigns a unique label
-  // to each Room Scenes instance. Capture app.getLabel() as state.roomName.
+  // to each Room Scenes instance. Capture app.getLabel() as state.RoomName.
   dynamicPage(name: 'roomScenesPage') {
-    state.roomName = app.getLabel()
+    state.RoomName = app.getLabel()
     //state.remove('X')
     section {
       paragraph (
-        heading("${ state.roomName } Scenes<br/>")
+        heading("${ state.RoomName } Scenes<br/>")
         + comment(red('Tab to register changes.'))
       )
       solicitLOG()  // via Utils
 
-      solicitModesAsScenes()
-      solicitCustomScenes()
+      //--LATER->input (
+      //--LATER->  name: adjustSceneNames,
+      //--LATER->  type: 'bool',
+      //--LATER->  title: settings.adjustSceneNames
+      //--LATER->    ? 'Hiding Scene Name Identification'
+      //--LATER->    : 'Showing Scene Name Identification',
+      //--LATER->  submitOnChange: true,
+      //--LATER->  defaultValue: true
+      //--LATER->)
+      //--LATER->if (!settings.adjustSceneNames) {
+        solicitModesAsScenes()
+        solicitCustomScenes()
+      //--LATER->}
 
       updateRoomScenes()
       solicitSceneForModeName()
-      //->solicitRepeatersForRoomScenes()
-      //->solicitKeypadsForRoomScenes()
-      //->solicitLedDevicesForRoomScenes()
-      //->solicitKeypadButtonsForScene ()
-      //->solicitNonLutronDevicesForRoomScenes()
-      // Input type button:
-      //   - Renders a UI button with the title in the button
-      //   - Generates a callback to a method defined in the app called
-      //     'appButtonHandler(String buttonName)', which is passed the
-      //     name of the input (when the UI button is pressed) AND causes
-      //     a page refresh. The callback CANNOT render anything, but can
-      //     set state.
-      // BUTTON GETS TRIGGERED, BUT THE FN THEREIN DOES NOT EXECUTE
-      // AT LEAST NOT IN THE CURRENT MAIN THREAD.
-      //-- input (
-      //--   name: 'updateRoomScenes',
-      //--   type: 'button',
-      //--   title: 'Update Room Scenes',
-      //--   submitOnChange: true
-      //-- )
-      //->solicitRoomScene()
+      solicitRepeatersForRoomScenes()
+      solicitKeypadsForRoomScenes()
+      solicitLedDevicesForRoomScenes()
+      //--HOLD->solicitKeypadButtonsForScene()
+      solicitNonLutronDevicesForRoomScenes()
+      solicitLedToScene()
+      solicitRoomScene()
       //->setModeToScene()
       paragraph(
         heading('Debug<br/>')
         + "${ displaySettings() }<br/>"
         + "${ displayState() }"
-        //+ "<b>state.roomScenes</b>: ${state.roomScenes}<br/>"
-        //+ "<b>Debug Scenes:</b> ${ state.roomScenes }<br/>"
-        //+ "<b>Debug Mode-to-Scene:</b> ${ getModeToScene() }<br/>"
-        //+ "<b>Repeaters:</b> ${ settings["repeaters"] }<br/>"
-        //+ "<b>Keypads:</b>${ settings["keypads"] }<br/>"
-        //+ "<b>LED Devices:</b>${ settings["leds"] }<br/>"
-        //+ "<b>Non-Lutron Devices:</b> ${ settings["nonLutron"] }"
       )
       //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
     }
