@@ -129,7 +129,7 @@ void solicitSwitches () {
  )
 }
 
-void manageChildApps(Boolean LOG = false) {
+void manageChildApps() {
   // Abstract
   //   Manage child applications AND any required initialization data.
   //   Child applications are automatically created and given a "label".
@@ -147,7 +147,7 @@ void manageChildApps(Boolean LOG = false) {
   //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
   //   addChildApp('wesmc', 'RoomScenes', 'Puppies')
   //   addChildApp('wesmc', 'whaPBSG', 'Butterflies')
-  if (LOG) log.trace (
+  if (settings.LOG) log.trace (
     'manageChildApps() on entry getAllChildApps(): '
     + getAllChildApps().sort{ a, b ->
         a.getLabel() <=> b.getLabel() ?: a.getId() <=> b.getId()
@@ -160,7 +160,7 @@ void manageChildApps(Boolean LOG = false) {
   // per App Label.
   LinkedHashMap<String, InstAppW> childAppsByLabel \
     = keepOldestAppObjPerAppLabel(LOG)
-  if (LOG) log.trace (
+  if (settings.LOG) log.trace (
     'manageChildApps() after keepOldestAppObjPerAppLabel(): '
     + childAppsByLabel.collect{label, childObj ->
         "<b>${label}</b> -> ${childObj.getId()}"
@@ -175,7 +175,7 @@ void manageChildApps(Boolean LOG = false) {
           ?: addChildApp('wesmc', 'RoomScenes', roomName)
       ]
     }
-  if (LOG) log.trace (
+  if (settings.LOG) log.trace (
     'manageChildApps() after adding any missing Room Scene apps:'
     + childAppsByRoom.collect{ roomName, roomObj ->
         "<b>${roomName}</b> -> ${roomObj.getId()}"
@@ -192,7 +192,7 @@ void manageChildApps(Boolean LOG = false) {
                           ?: addChildApp('wesmc', 'whaPBSG', 'pbsg_modes')
   // Purge excess (remaining) Child Apps
   childAppsByLabel.each{ label, app ->
-    if (LOG) log.trace(
+    if (settings.LOG) log.trace(
       "manageChildApps() keySet()=${ childAppsByRoom.keySet() }"
       + "has label=${label} ? ${ childAppsByRoom.keySet().findAll{it == label} ? true : false}"
     )
@@ -201,7 +201,7 @@ void manageChildApps(Boolean LOG = false) {
     } else if (label == 'pbsg_modes') {
       // Skip, still in use
     } else {
-      if (LOG) log.trace "Deleting orphaned child app ${label} (${app.getId()})."
+      if (settings.LOG) log.trace "Deleting orphaned child app ${label} (${app.getId()})."
       deleteChildApp(app.getId())
     }
   }
@@ -215,34 +215,34 @@ void displayRoomNameHrefs () {
       width: 2,
       url: "/installedapp/configure/${roomApp?.getId()}/roomScenesPage",
       style: 'internal',
-      title: "Edit <b>${roomName}</b> Scenes (id=${roomApp?.getId()})",
+      title: "Edit <b>${getAppInfo(roomApp)}</b> Scenes",
       state: null, //'complete'
     )
   }
 }
 
-void removeAllChildApps (Boolean LOG = false) {
+void removeAllChildApps () {
   getAllChildApps().each{ child ->
-    if (LOG) log.trace "child: >${child.getId()}< >${child.getLabel()}<"
+    if (settings.LOG) log.trace "child: >${child.getId()}< >${child.getLabel()}<"
     deleteChildApp(child.getId())
   }
 }
 
-void pruneOrphanedChildApps (Boolean LOG = false) {
+void pruneOrphanedChildApps () {
   //Initially, assume InstAppW supports instance equality tests -> values is a problem
   List<InstAppW> kids = getAllChildApps()
-  if (LOG) log.info(
+  if (settings.LOG) log.info(
     "pruneOrphanedChildApps() processing ${kids.collect{it.getLabel()}.join(', ')}"
   )
   List<String> roomNames =
   kids.each{ kid ->
     if (settings.focalRoomNames?.contains(kid)) {
-      if (LOG) log.info "pruneOrphanedChildApps() skipping ${kid.getLabel()} (room)"
+      if (settings.LOG) log.info "pruneOrphanedChildApps() skipping ${kid.getLabel()} (room)"
     // Presently, PBSG IS NOT a child app, it is a contained instance.
     //} else if (kid == state['pbsg_modes'].name) {
-    //  if (LOG) log.info "pruneOrphanedChildApps() skipping ${kid.getLabel()} (pbsg)"
+    //  if (settings.LOG) log.info "pruneOrphanedChildApps() skipping ${kid.getLabel()} (pbsg)"
     } else {
-      if (LOG) log.info "pruneOrphanedChildApps() deleting ${kid.getLabel()} (orphan)"
+      if (settings.LOG) log.info "pruneOrphanedChildApps() deleting ${kid.getLabel()} (orphan)"
       deleteChildApp(kid.getId())
     }
   }
@@ -261,13 +261,7 @@ Map whaPage() {
       paragraph heading('Whole House Automation<br/>') \
         + bullet('Select participating rooms and authorize device access.<br/>') \
         + bullet('Click <b>Done</b> to proceed to defining <b>Room Scene(s)</b>.')
-      input (
-        name: 'LOG',
-        type: 'bool',
-        title: "${settings.LOG ? 'Logging ENABLED' : 'Logging DISABLED'}",
-        defaultValue: true,
-        submitOnChange: true
-      )
+      solicitLOG()  // via Utils
       solictfocalRoomNames()
       solicitLutronTelnetDevice()
       solicitLutronMainRepeaters()
@@ -279,7 +273,7 @@ Map whaPage() {
       //->removeAllChildApps(settings.LOG)  // Clean after errant process
       paragraph heading('Room Scene Configuration')
       manageChildApps(settings.LOG)
-      //displayRoomNameHrefs()
+      displayRoomNameHrefs()
       //pruneOrphanedChildApps(settings.LOG)
       //displayAppInfoLink()
     }
@@ -289,6 +283,16 @@ Map whaPage() {
 // -----------------------------
 // " C H I L D "   S U P P O R T
 // -----------------------------
+
+List<DevW> narrowDevicesToRoom (String roomName, DevWL devices) {
+  // This function excludes devices that are not associated with any room.
+  List<String> deviceIdsForRoom = app.getRooms()
+                                  .findAll{it.name == roomName}
+                                  .collect{it.deviceIds.collect{it.toString()}}
+                                  .flatten()
+  return devices.findAll{ d -> deviceIdsForRoom.contains(d.id.toString())
+  }
+}
 
 List<DevW> getMainRepeaters () {
   return settings.lutronRepeaters
@@ -304,48 +308,55 @@ List<DevW> getLedDevices () {
   return settings.lutronLEDs
 }
 
+List<DevW> getNonLutronDevicesForRoom (String roomName) {
+  List<DevW> roomSwitches = narrowDevicesToRoom(roomName, settings.switches)
+                            .findAll{
+                              it.displayName.toString().contains('lutron') == false
+                            }
+}
+
 // -------------------------------
 // S T A T E   M A N A G E M E N T
 // -------------------------------
 
-void installed(Boolean LOG = false) {
-  if (LOG) log.trace 'WHA installed()'
+void installed() {
+  if (settings.LOG) log.trace 'WHA installed()'
   initialize()
 }
 
-void updated(Boolean LOG = false) {
-  if (LOG) log.trace 'WHA updated()'
+void updated() {
+  if (settings.LOG) log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
-void testHandler (Event e, Boolean LOG = false) {
+void testHandler (Event e) {
   // SAMPLE 1
   //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
   //          deviceId  5686
   //       displayName  (lutron-80) TV Wall KPAD
-  if (LOG) log.trace "WHA testHandler() w/ event: ${e}"
-  if (LOG) logEventDetails(e, false)
+  if (settings.LOG) log.trace "WHA testHandler() w/ event: ${e}"
+  if (settings.LOG) logEventDetails(e, false)
 }
 
-void initialize(Boolean LOG = false) {
-  if (LOG) log.trace "WHA initialize()"
-  if (LOG) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+void initialize() {
+  if (settings.LOG) log.trace "WHA initialize()"
+  if (settings.LOG) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
-    if (LOG) log.trace "WHA subscribing ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "WHA subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (LOG) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (settings.LOG) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
-    if (LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  if (settings.LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
-    if (LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
 }
@@ -386,5 +397,5 @@ void displayCustomScenes () {
 //--xx-- devices to detect Manual overrides.
 //--xx--
 //--xx-- List<DevW> getLutronDevices (String room) {
-//--xx--   return narrowDevicestoRoom(room, settings.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
+//--xx--   return narrowDevicesToRoom(room, settings.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
 //--xx-- }

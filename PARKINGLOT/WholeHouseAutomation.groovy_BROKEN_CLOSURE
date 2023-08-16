@@ -330,7 +330,7 @@ void solicitKeypadButtonsForScene (String roomName) {
   }
 }
 
-List<DevW> narrowDevicestoRoom (String roomName, DevWL devices) {
+List<DevW> narrowDevicesToRoom (String roomName, DevWL devices) {
   // This function excludes devices that are not associated with any room.
   List<String> deviceIdsForRoom = app.getRooms()
                                   .findAll{it.name == roomName}
@@ -341,7 +341,7 @@ List<DevW> narrowDevicestoRoom (String roomName, DevWL devices) {
 }
 
 void solicitNonLutronDevicesForRoomScenes (String roomName) {
-  List<DevW> roomSwitches = narrowDevicestoRoom(roomName, settings?.switches)
+  List<DevW> roomSwitches = narrowDevicesToRoom(roomName, settings?.switches)
                             .findAll{
                               it.displayName.toString().contains('lutron') == false
                             }
@@ -474,7 +474,7 @@ def roomScenesPage (params) {
 //--xx-- devices to detect Manual overrides.
 //--xx--
 //--xx-- List<DevW> getLutronDevices (String room) {
-//--xx--   return narrowDevicestoRoom(room, settings?.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
+//--xx--   return narrowDevicesToRoom(room, settings?.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
 //--xx-- }
 
 // -------------------------------
