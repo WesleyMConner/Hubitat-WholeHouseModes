@@ -31,9 +31,53 @@ library (
 // A P P   I N S T A N C E   M E T H O D S
 // ---------------------------------------
 
-//--xx->void displayPage (String pbsgName) {
-//--xx->  paragraph "You are in the ${app.getLabel()}"
-//--xx->}
+void defaultPage () {
+  section {
+    paragraph(
+      heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
+      + bullet('Push <b>Done</b> to enable subcriptions and return to parent.')
+    )
+    paragraph(
+      heading('Debug<br/>')
+      + "${ displaySettings() }<br/>"
+      + "${ displayState() }"
+    )
+  }
+}
+
+void configure (List<String> switchNames, String defaultSwitch, Boolean log) {
+  app.updateSetting('LOG', log)
+  state.switchNames = switchNames
+  state.defaultSwitch = defaultSwitch
+  createChildVsws()
+}
+
+void initialize() {
+  if (settings.LOG) log.trace 'initialize()'
+  enforceMutualExclusion()
+  //-- PENDING -> enforceDefault()
+  subscribe(settings.swGroup, "switch", buttonHandler)
+}
+
+// #129 no enforceDefault() is applicable for argument types: () values: []
+
+void installed() {
+  if (settings.LOG) log.trace 'WHA installed()'
+  initialize()
+}
+
+void updated() {
+  if (settings.LOG) log.trace 'WHA updated()'
+  unsubscribe()  // Suspend event processing to rebuild state variables.
+  initialize()
+}
+
+void uninstalled() {
+  if (settings.LOG) log.trace 'uninstalled()'
+  // Nothing to do. Subscruptions are automatically dropped.
+  // This may matter if devices are captured by a switch group in the future.
+}
+
 
 void createChildVsws () {
   // FOR TESTING THE REMOVAL OF AN ORPHANED DEVICE, UNCOMMENT THE FOLLOWING:
@@ -77,42 +121,6 @@ void createChildVsws () {
   }
 }
 
-Map createVSWs () {
-  pbsg.scene2Vsw.each{ scene, vsw ->
-    subscribe(
-      vsw,                     // DevW
-      'pbsgVswEventHandler',   // callbackFn as a String
-      [ filterEvents: false ]  // Map (of subsription options)
-    )
-  }
-}
-
-void deletePBSG (Map args = [:]) {
-  // Add default arguments here.
-  def _args = [
-    enclosingApp: app.getLabel(),
-    dropChildVSWs: true
-  ] << args
-  if (!args.name) {
-    log.error([
-      'deletePBSG() expects arguments:<br/>',
-      '  name: ... (String)<br/>'
-    ].join())
-    app.updateLabel("${_args.enclosingApp} - BROKEN")
-  } else if (state[_args.name]) {
-    //--TODO-> unsubscribe(state[_args.name].vsws)
-    if (_args.dropChildVSWs) {
-      state[_args.name].scene2Vsw.each{ scene, vsw ->
-        if (settings.LOG) log.trace "deletePBSG() deleting ${vsw.deviceNetworkId}"
-          deleteChildDevice(vsw.deviceNetworkId)
-      }
-    }
-    state[_args.name] = null
-  } else {
-    log.info "deletePBSG() no state to delete for '${_args.name}'."
-  }
-}
-
 // -----------------------------------------
 // I N T E R N A L - O N L Y   M E T H O D S
 // -----------------------------------------
@@ -135,7 +143,7 @@ List<DevW> getOnSwitches(DevWL devices) {
 void enforceMutualExclusion(DevWL devices) {
   if (settings.LOG) log.trace 'enforceMutualExclusion()'
   List<DevW> onList = getOnSwitches(devices)
-  while (onList.size() > 1) {
+  while (onList?.size() > 1) {
     DevW device = onList.first()
     if (settings.LOG) log.trace "enforceMutualExclusion() turning off ${deviceTag(device)}."
     device.off()
@@ -175,23 +183,6 @@ void pbsgVswEventHandler (event) {
   }
 }
 
-/*
-void initialize() {
-  if (settings.LOG) log.trace 'initialize()'
-  enforceMutualExclusion()
-  enforceDefault()
-  //--x-- logSettingsAndState('initialize() about to enable subscription(s)')
-  subscribe(settings.swGroup, "switch", buttonHandler)
-}
-
 String emphasizeOn(String s) {
   return s == 'on' ? '<b>on</b>' : "<em>${s}</em>"
 }
-
-void uninstalled() {
-  if (settings.LOG) log.trace 'uninstalled()'
-  // Nothing to do. Subscruptions are automatically dropped.
-  // This may matter if devices are captured by a switch group in the future.
-}
-*/
-

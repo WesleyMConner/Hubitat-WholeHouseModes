@@ -22,7 +22,7 @@ import com.hubitat.app.DeviceWrapperList as DevWL
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.pbsgLibrary
+//->#include wesmc.pbsgLibrary
 #include wesmc.UtilsLibrary
 
 definition(
@@ -165,7 +165,7 @@ void manageChildApps() {
   // unique. The following method keeps only the latest (highest) App ID
   // per App Label.
   LinkedHashMap<String, InstAppW> childAppsByLabel \
-    = keepOldestAppObjPerAppLabel(LOG)
+    = keepOldestAppObjPerAppLabel(settings.LOG)
   if (settings.LOG) log.trace (
     'manageChildApps() after keepOldestAppObjPerAppLabel(): '
     + childAppsByLabel.collect{label, childObj ->
@@ -196,38 +196,34 @@ void manageChildApps() {
   // -------------------------
   // Ensure imutable PBSG init data is in place AND instance(s) exist.
   // The PBSG instance manages its own state data locally.
-  //
-  //->state.pbsg_modes = Map.of(
-  //->  'sceneNames', modes.collect{it.name},
-  //->  'defaultScene', getGlobalVar('defaultMode')
-  //->)
+  String pbsgName = 'pbsg_modes'
   state.modeSwitchNames = getLocation().getModes().collect{it.name}
   state.defaultModeSwitchName = getGlobalVar('defaultMode').value
-  InstAppW pbsgModesApp = getAppByLabel(childAppsByLabel, 'pbsg_modes')
-    ?:  addChildApp('wesmc', 'whaPBSG', 'pbsg_modes')
+  InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
+    ?:  addChildApp('wesmc', 'whaPBSG', pbsgName)
   if (settings.LOG) log.trace(
-    'manageChildApps() initializing pbsg_modes with '
+    "manageChildApps() initializing ${pbsgName} with "
     + "<b>modeSwitchNames:</b> ${state.modeSwitchNames}, "
     + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName} "
     + "and logging ${settings.LOG}."
   )
-  pbsgModesApp.configure(
+  pbsgApp.configure(
     state.modeSwitchNames,
     state.defaultModeSwitchName,
     settings.LOG
   )
-  state.pbsg_modes = pbsgModesApp
+  state.pbsg_modes = pbsgApp
   // ---------------------------------------------
   // P U R G E   E X C E S S   C H I L D   A P P S
   // ---------------------------------------------
   childAppsByLabel.each{ label, app ->
     if (childAppsByRoom.keySet().findAll{it == label}) {
       // Skip, still in use
-    } else if (label == 'pbsg_modes') {
+    } else if (label == pbsgName) {
       // Skip, still in use
     } else {
       if (settings.LOG) log.trace(
-        "manageChildApps() deleting orphaned child app ${label} (${app.getId()})."
+        "manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
       )
       deleteChildApp(app.getId())
     }
@@ -369,9 +365,8 @@ void installed() {
 
 def uninstalled() {
   if (settings.LOG) log.trace "WHA uninstalled()"
-  // Ensure child applications are correctly deleted.
+  removeAllChildApps()
 }
-
 
 void updated() {
   if (settings.LOG) log.trace 'WHA updated()'

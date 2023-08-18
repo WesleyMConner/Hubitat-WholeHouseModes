@@ -22,7 +22,7 @@ import com.hubitat.app.DeviceWrapperList as DevWL
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.pbsgLibrary
+//->#include wesmc.pbsgLibrary
 #include wesmc.UtilsLibrary
 
 definition(
@@ -96,7 +96,7 @@ void solicitCustomScenes () {
 }
 
 void updateRoomScenes () {
-  //-- if (LOG) log.trace "updateRoomScenes() [*]"
+  //-- if (settings.LOG) log.trace "updateRoomScenes() [*]"
   List<String> scenes = settings.ModesAsScenes ?: []
   scenes = scenes.flatten()
   String prefix = 'CustomScene'
@@ -253,6 +253,84 @@ void solicitRoomScene () {
   }
 }
 
+void manageChildApps() {
+  // Abstract
+  //   Room Scenes only expects a single, direct child application - an
+  //   rsPBSG instance which manages a virtual child switch per room scene.
+  //   This method is a stripped-down version of the similarly-named
+  //   method in WholeHouseAutomation.groovy.
+  // Design Notes
+  //   Application state data managed by this method is limited to:
+  //     - state.pbsg_<roomName>
+  // ------------------------------------------------
+  // Deliberately create noise for testing dups:
+  //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
+  //   addChildApp('wesmc', 'RoomScenes', 'Den')
+  //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
+  //   addChildApp('wesmc', 'RoomScenes', 'Puppies')
+  //   addChildApp('wesmc', 'whaPBSG', 'Butterflies')
+  // ------------------------------------------------
+  // G E T   A L L   C H I L D   A P P S
+  // ------------------------------------------------
+  if (settings.LOG) log.trace (
+    'manageChildApps() on entry getAllChildApps(): '
+    + getAllChildApps().sort{ a, b ->
+        a.getLabel() <=> b.getLabel() ?: a.getId() <=> b.getId()
+      }.collect{ app ->
+        "<b>${app.getLabel()}</b> -> ${app.getId()}"
+      }?.join(', ')
+  )
+  // -----------------------------------------------
+  // T O S S   S T A L E   A P P S   B Y   L A B E L
+  // -----------------------------------------------
+  // Child apps are managed by App Label, which IS NOT guaranteed to be
+  // unique. The following method keeps only the latest (highest) App ID
+  // per App Label.
+  LinkedHashMap<String, InstAppW> childAppsByLabel \
+    = keepOldestAppObjPerAppLabel(settings.LOG)
+  if (settings.LOG) log.trace (
+    'manageChildApps() after keepOldestAppObjPerAppLabel(): '
+    + childAppsByLabel.collect{label, childObj ->
+        "<b>${label}</b> -> ${childObj.getId()}"
+      }?.join(', ')
+  )
+  // -------------------------
+  // P O P U L A T E   P B S G
+  // -------------------------
+  // Ensure imutable PBSG init data is in place AND instance(s) exist.
+  // The PBSG instance manages its own state data locally.
+  String pbsgName = "pbsg_${state.RoomName}"
+  state.modeSwitchNames = getLocation().getModes().collect{it.name}
+  state.defaultModeSwitchName = getGlobalVar('defaultMode').value
+  InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
+    ?:  addChildApp('wesmc', 'rsPBSG', pbsgName)
+  if (settings.LOG) log.trace(
+    "manageChildApps() initializing ${pbsgName} with "
+    + "<b>modeSwitchNames:</b> ${state.modeSwitchNames}, "
+    + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName} "
+    + "and logging ${settings.LOG}."
+  )
+  pbsgApp.configure(
+    state.modeSwitchNames,
+    state.defaultModeSwitchName,
+    settings.LOG
+  )
+  state.pbsg_modes = pbsgApp
+  // ---------------------------------------------
+  // P U R G E   E X C E S S   C H I L D   A P P S
+  // ---------------------------------------------
+  childAppsByLabel.each{ label, app ->
+    if (label == pbsgName) {
+      // Skip, still in use
+    } else {
+      if (settings.LOG) log.trace(
+        "manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
+      )
+      deleteChildApp(app.getId())
+    }
+  }
+}
+
 def roomScenesPage () {
   // The parent application (Whole House Automation) assigns a unique label
   // to each Room Scenes instance. Capture app.getLabel() as state.RoomName.
@@ -289,7 +367,7 @@ def roomScenesPage () {
       solicitNonLutronDevicesForRoomScenes()
       solicitLedToScene()
       solicitRoomScene()
-      //->setModeToScene()
+      manageChildApps()
       paragraph(
         heading('Debug<br/>')
         + "${ displaySettings() }<br/>"
@@ -304,48 +382,60 @@ def roomScenesPage () {
 // S T A T E   M A N A G E M E N T
 // -------------------------------
 
+void removeAllChildApps () {
+  getAllChildApps().each{ child ->
+    if (settings.LOG) log.trace(
+      "removeAllChildApps removing ${child.getLabel()} (${child.getId()})"
+    )
+    deleteChildApp(child.getId())
+  }
+}
+
 void installed() {
-  if (LOG) log.trace 'RoomScenes installed()'
+  if (settings.LOG) log.trace 'RoomScenes installed()'
   initialize()
 }
 
+def uninstalled() {
+  if (settings.LOG) log.trace "Room Scenes uninstalled()"
+  removeAllChildApps()
+}
+
 void updated() {
-  if (LOG) log.trace 'RoomScenes updated()'
+  if (settings.LOG) log.trace 'RoomScenes updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   // initialize()
 }
 
-/*
 void testHandler (Event e) {
   // SAMPLE 1
   //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
   //          deviceId  5686
   //       displayName  (lutron-80) TV Wall KPAD
-  if (LOG) log.trace "RoomScenes testHandler() w/ event: ${e}"
-  if (LOG) logEventDetails(e, false)
+  if (settings.LOG) log.trace "RoomScenes testHandler() w/ event: ${e}"
+  if (settings.LOG) logEventDetails(e, false)
 }
 
 void initialize() {
-  if (LOG) log.trace "RoomScenes initialize()"
-  if (LOG) log.trace "RoomScenes subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  if (settings.LOG) log.trace "RoomScenes initialize()"
+  if (settings.LOG) log.trace "RoomScenes subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
-    if (LOG) log.trace "RoomScenes subscribing ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "RoomScenes subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (LOG) log.trace "RoomScenes subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (settings.LOG) log.trace "RoomScenes subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
-    if (LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (LOG) log.trace "RoomScenes subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  if (settings.LOG) log.trace "RoomScenes subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
-    if (LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
+    if (settings.LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-
   //ArrayList<LinkedHashMap> modes = getModes()
   // Rebuild the PBSG mode instance adjusting (i.e., reusing or dropping)
   // previously-created VSWs to align with current App modes.
@@ -356,4 +446,3 @@ void initialize() {
   //  defaultScene: 'Day'
   //)
 }
-*/

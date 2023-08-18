@@ -36,55 +36,34 @@ definition(
   singleInstance: false
 )
 
-// ------------------------------------------------------------------------
-// D E S I G N   N O T E S
-//   The PARENT "Whole House Automation" application is expected to create
-//   this child application using:
-//     addChildApp('wesmc', 'whaPGSG', pbsgName)
-//   Once instantiated, this CHILD calls the following PARENT method:
-//     parent.getPbsgMap(String pbsgName)
-//   which supplies the Map:
-//     [
-//         switchNames: ... // a List<String>
-//       defaultSwitch: ... // a String
-//     ]
-//   This CHILD exposes the following functions to the parent.
-//     child.activateSceneForMode(String modeName, Boolean FORCE = false).
-//   When the CHILD is operating in "AUTO" mode, it sets an appropriate
-//   scene for the whole-house mode. If FORCE = true, the child enters
-//   its "AUTO" state, overriding any room-specific scene (or MANUAL mode)
-//   which would otherwise prevail.
-// ------------------------------------------------------------------------
-
-// -------------------------------
-// C L I E N T   I N T E R F A C E
-// -------------------------------
 preferences {
   page(name: 'rsPbsgPage', title: '', install: true, uninstall: true)
 }
 
-Map rsPbsgPage() {
+Map rsPbsgPage () {
   return dynamicPage(name: 'rsPbsgPage') {
-    paragraph heading("${app.getLabel()} Pushbutton Switch Group<br/>") \
-      + bullet('Push "Done" to enable and return to parent.')
-  paragraph "Current State [placeholder only]"
+    defaultPage()
+    /*
+    section {
+      paragraph(
+        heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
+        + bullet('Push <b>Done</b> to enable subcriptions and return to parent.')
+      )
+      paragraph(
+        heading('Debug<br/>')
+        + "${ displaySettings() }<br/>"
+        + "${ displayState() }"
+      )
+    }
+    */
+  }
 }
 
-//--TBD-- void initialize(Boolean LOG = false) {
-//--TBD--   if (LOG) log.trace 'initialize()'
-//--TBD--   LinkedHashMap config = parent.getPbsgMap(String pbsgName)
-//--TBD--   createPBSG(
-//--TBD--     name: app.getLabel(),
-//--TBD--     switchNames: config.switchNames,
-//--TBD--     defaultSwitch: config.defaultSwitch
-//--TBD--   )
-  //->enforceMutualExclusion()
-//--TBD--   enforceDefault()
-//--TBD--   subscribe(settings.swGroup, "switch", buttonHandler)
-//--TBD-- }
-
-void uninstalled() {
-//--TBD--   if (settings.LOG) log.trace 'uninstalled()'
-//--TBD--   // Nothing to do. Subscruptions are automatically dropped.
-//--TBD--   // This may matter if devices are captured by a switch group in the future.
-}
+// ------------------------------------------------------------------------
+// This CHILD exposes the following functions to the parent.
+//   child.activateSceneForMode(String modeName, Boolean FORCE = false).
+// When the CHILD is operating in "AUTO" mode, it sets an appropriate
+// scene for the whole-house mode. If FORCE = true, the child enters
+// its "AUTO" state, overriding any room-specific scene (or MANUAL mode)
+// which would otherwise prevail.
+// ------------------------------------------------------------------------
