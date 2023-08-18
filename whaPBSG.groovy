@@ -86,48 +86,6 @@ void configure (List<String> switchNames, String defaultSwitch, Boolean log) {
   createChildVsws()
 }
 
-void createChildVsws () {
-  // FOR TESTING THE REMOVAL OF AN ORPHANED DEVICE, UNCOMMENT THE FOLLOWING:
-  //-> addChildDevice(
-  //->   'hubitat',         // namespace
-  //->   'Virtual Switch',  // typeName
-  //->   'bogus_device',
-  //->   [isComponent: true, name: 'bogus_device']
-  //-> )
-  // Device creation "errors out" if deviceNetworkId is duplicated.
-  // GET ALL CHILD DEVICES AT ENTRY
-  List<String> childDevices = getAllChildDevices().collect{ d -> d.deviceNetworkId }
-  if (settings.LOG) log.trace(
-    "createChildVsws() devices at entry: ${childDevices}."
-  )
-  // ENSURE GOAL CHILD DEVICES EXIST
-  LinkedHashMap<String, String> scene2VswNetwkId = state.switchNames.collectEntries{
-    swName ->
-      String deviceNetworkId = "${app.getLabel()}_${swName}"
-      String vswNetworkId = childDevices.find{ it == deviceNetworkId }
-        ?: addChildDevice(
-            'hubitat',         // namespace
-            'Virtual Switch',  // typeName
-            deviceNetworkId,
-            [isComponent: true, name: deviceNetworkId]
-           ).deviceNetworkId
-      [swName, vswNetworkId]
-  }
-  state.scene2VswNetwkId = scene2VswNetwkId
-  if (settings.LOG) log.trace(
-    "createChildVsws() scene2VswNetwkId: ${scene2VswNetwkId}."
-  )
-  // DELETE ORPHANED DEVICES
-  List<String> currentChildren = scene2VswNetwkId.collect{ it.value }
-  List<String> orphanedDevices = childDevices.minus(currentChildren)
-  orphanedDevices.each{ deviceNetworkId ->
-    if (settings.LOG) log.trace(
-      "createChildVsws() dropping orphaned device `${deviceNetworkId}`."
-    )
-    deleteChildDevice(deviceNetworkId)
-  }
-}
-
 void initialize() {
   if (settings.LOG) log.trace 'initialize()'
   //->enforceMutualExclusion()
