@@ -367,6 +367,12 @@ void installed() {
   initialize()
 }
 
+def uninstalled() {
+  if (settings.LOG) log.trace "WHA uninstalled()"
+  // Ensure child applications are correctly deleted.
+}
+
+
 void updated() {
   if (settings.LOG) log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
@@ -403,42 +409,3 @@ void initialize() {
     subscribe(device, testHandler, ['filterEvents': false])
   }
 }
-
-// -----------
-// U N U S E D
-// -----------
-
-void displayCustomScenes () {
-  paragraph(
-    '<table>'
-      + params.collect{ k, v -> "<tr><th>${k}</th><td>${v}</td></tr>" }.join()
-      + '</table>'
-  )
-}
-
-//--MISSING->displayParticipatingDevices()
-
-
-
-
-//--xx-- String assignChildAppRoomName (Long childAppId) {
-//--xx--   List<String> focalRooms = settings.focalRoomNames
-//--xx--   List<InstAppW> kidApps = getChildApps()
-//--xx--   Map<String, String> kidIdToRoomName =
-//--xx--     kidApps.collectEntries{ kid ->
-//--xx--       [ kid.id.toString(), focalRooms.contains(kid.label) ? kid.label : null ]
-//--xx--   }
-//--xx--   Map<String, Boolean> roomNameToKidId = focalRooms.collectEntries{[it, false]}
-//--xx--   kidIdToRoomName.each{ kidId, roomName ->
-//--xx--     if (roomName) roomNameToKidId[roomName] = kidId
-//--xx--   }
-//--xx--   return result = kidIdToRoomName[childAppId.toString()]
-//--xx--                   ?: roomNameToKidId.findAll{!it.value}.keySet().first()
-//--xx-- }
-
-//--xx-- Main Repeater LEDs will be used in lieu of individual Lutron
-//--xx-- devices to detect Manual overrides.
-//--xx--
-//--xx-- List<DevW> getLutronDevices (String room) {
-//--xx--   return narrowDevicesToRoom(room, settings.switches).findAll{it.displayName.contains('lutron') && ! it.displayName.contains('LED')}
-//--xx-- }

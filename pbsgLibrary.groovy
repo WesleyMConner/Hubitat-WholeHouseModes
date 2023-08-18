@@ -27,11 +27,6 @@ library (
   importUrl: ''
 )
 
-
-
-
-
-
 // ---------------------------------------
 // A P P   I N S T A N C E   M E T H O D S
 // ---------------------------------------
@@ -86,7 +81,7 @@ Map createVSWs () {
   pbsg.scene2Vsw.each{ scene, vsw ->
     subscribe(
       vsw,                     // DevW
-      'pbsgVswEventHandler',     // callbackFn,              // String
+      'pbsgVswEventHandler',   // callbackFn as a String
       [ filterEvents: false ]  // Map (of subsription options)
     )
   }

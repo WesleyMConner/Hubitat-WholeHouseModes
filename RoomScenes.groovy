@@ -304,45 +304,45 @@ def roomScenesPage () {
 // S T A T E   M A N A G E M E N T
 // -------------------------------
 
-/**********
 void installed() {
-  if (LOG) log.trace 'WHA installed()'
+  if (LOG) log.trace 'RoomScenes installed()'
   initialize()
 }
 
 void updated() {
-  if (LOG) log.trace 'WHA updated()'
+  if (LOG) log.trace 'RoomScenes updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
-  initialize()
+  // initialize()
 }
 
+/*
 void testHandler (Event e) {
   // SAMPLE 1
   //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
   //          deviceId  5686
   //       displayName  (lutron-80) TV Wall KPAD
-  if (LOG) log.trace "WHA testHandler() w/ event: ${e}"
+  if (LOG) log.trace "RoomScenes testHandler() w/ event: ${e}"
   if (LOG) logEventDetails(e, false)
 }
 
 void initialize() {
-  if (LOG) log.trace "WHA initialize()"
-  if (LOG) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  if (LOG) log.trace "RoomScenes initialize()"
+  if (LOG) log.trace "RoomScenes subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
-    if (LOG) log.trace "WHA subscribing ${device.displayName} ${device.id}"
+    if (LOG) log.trace "RoomScenes subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (LOG) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (LOG) log.trace "RoomScenes subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
-    if (LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (LOG) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  if (LOG) log.trace "RoomScenes subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
-    if (LOG) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+    if (LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
 
@@ -356,62 +356,4 @@ void initialize() {
   //  defaultScene: 'Day'
   //)
 }
-**********/
-
-// -----------
-// U N U S E D
-// -----------
-
-//--MISSING->displayParticipatingDevices()
-//--MISSING->displayAppInfoLink()
-
-LinkedHashMap<String, InstAppW> getAllChildAppsByLabel () {
-  return getAllChildApps().collectEntries{
-    childApp -> [ childApp.getLabel(), childApp ]
-  }
-}
-
-void displayCustomScenes () {
-  paragraph(
-    '<table>'
-      + params.collect{ k, v -> "<tr><th>${k}</th><td>${v}</td></tr>" }.join()
-      + '</table>'
-  )
-}
-
-/*
-  LinkedHashMap unpairedChildAppsByName = getChildAppsByName (Boolean LOG = false)
-
-  //->removeUnpairedChildApps ()
-  if (LOG) log.info "childApps: ${childApps.collect{it.getLabel()}.join(', ')}"
-
-  // MapfocalRoomsToRoomSceneApps
-  LinkedHashMap roomAppsByName = settings.focalRooms.collectEntries{
-    room -> [room, unpairedChildIds.contains(room) ?: null]
-  }
-
-  // Prepare to capture the Mode PBSG child app.
-  InstAppW pbsgModeApp = null
-
-  // Prepare to remove unused child apps.
-  List<String> unusedDeviceNetworkIds = []
-
-  // Parse existing (discovered) Child Apps, removing unaffiliated children.
-  List<InstAppW> childApps = getAllChildApps()
-  //--
-  childApps.each{ childApp ->
-    String childLabel = childApp.getLabel()
-    if (childLabel == 'pbsg-mode') {
-      pbsgModeApp = childApp
-    } else if (settings.focalRooms.contains(childLabel)) {
-      roomAppsByName.putAt(childLabel, child)
-    } else {
-      unusedDeviceNetworkIds << childApp.deviceNetworkId
-    }
-  }
-  unusedDeviceNetworkIds.each{ deviceNetworkId ->
-    if (LOG) log.info "Removing stale childApps ${deviceNetworkId}"
-    deleteChildDevice(deviceNetworkId)
-  }
 */
-
