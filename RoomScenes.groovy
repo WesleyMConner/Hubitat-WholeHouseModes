@@ -300,20 +300,6 @@ def roomScenesPage () {
   }
 }
 
-String displaySettings() {
-  [
-    '<b>SETTINGS</b>',
-    settings.sort().collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
-  ].join('<br/>')
-}
-
-String displayState() {
-  [
-    '<b>STATE</b>',
-    state.sort().collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
-  ].join('<br/>')
-}
-
 // -------------------------------
 // S T A T E   M A N A G E M E N T
 // -------------------------------
