@@ -60,31 +60,94 @@ definition(
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
-  page(name: 'pbsgPage', title: '', install: true, uninstall: true)
+  page(name: 'whaPbsgPage', title: '', install: true, uninstall: true)
 }
 
-Map pbsgPage() {
-  paragraph heading("${app.getLabel()} Pushbutton Switch Group<br/>") \
-        + bullet('Push "Done" to enable and return to parent.')
-  paragraph "Current State [placeholder only]"
+Map whaPbsgPage () {
+  return dynamicPage(name: 'whaPbsgPage') {
+    section {
+      paragraph(
+        heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
+        + bullet('Push <b>Done</b> to enable subcriptions and return to parent.')
+      )
+      paragraph(
+        heading('Debug<br/>')
+        + "${ displaySettings() }<br/>"
+        + "${ displayState() }"
+      )
+    }
+  }
 }
 
-//--TBD-- void initialize(Boolean LOG = false) {
-//--TBD--   if (LOG) log.trace 'initialize()'
-//--TBD--   LinkedHashMap config = parent.getPbsgMap(String pbsgName)
-//--TBD--   createPBSG(
-//--TBD--     name: app.getLabel(),
-//--TBD--     switchNames: config.switchNames,
-//--TBD--     defaultSwitch: config.defaultSwitch
-//--TBD--   )
+void configure (List<String> switchNames, String defaultSwitch, Boolean log) {
+  app.updateSetting('LOG', log)
+  state.switchNames = switchNames
+  state.defaultSwitch = defaultSwitch
+  createChildVsws()
+}
+
+void createChildVsws () {
+  // FOR TESTING THE REMOVAL OF AN ORPHANED DEVICE, UNCOMMENT THE FOLLOWING:
+  //-> addChildDevice(
+  //->   'hubitat',         // namespace
+  //->   'Virtual Switch',  // typeName
+  //->   'bogus_device',
+  //->   [isComponent: true, name: 'bogus_device']
+  //-> )
+  // Device creation "errors out" if deviceNetworkId is duplicated.
+  // GET ALL CHILD DEVICES AT ENTRY
+  List<String> childDevices = getAllChildDevices().collect{ d -> d.deviceNetworkId }
+  if (settings.LOG) log.trace(
+    "createChildVsws() devices at entry: ${childDevices}."
+  )
+  // ENSURE GOAL CHILD DEVICES EXIST
+  LinkedHashMap<String, String> scene2VswNetwkId = state.switchNames.collectEntries{
+    swName ->
+      String deviceNetworkId = "${app.getLabel()}_${swName}"
+      String vswNetworkId = childDevices.find{ it == deviceNetworkId }
+        ?: addChildDevice(
+            'hubitat',         // namespace
+            'Virtual Switch',  // typeName
+            deviceNetworkId,
+            [isComponent: true, name: deviceNetworkId]
+           ).deviceNetworkId
+      [swName, vswNetworkId]
+  }
+  state.scene2VswNetwkId = scene2VswNetwkId
+  if (settings.LOG) log.trace(
+    "createChildVsws() scene2VswNetwkId: ${scene2VswNetwkId}."
+  )
+  // DELETE ORPHANED DEVICES
+  List<String> currentChildren = scene2VswNetwkId.collect{ it.value }
+  List<String> orphanedDevices = childDevices.minus(currentChildren)
+  orphanedDevices.each{ deviceNetworkId ->
+    if (settings.LOG) log.trace(
+      "createChildVsws() dropping orphaned device `${deviceNetworkId}`."
+    )
+    deleteChildDevice(deviceNetworkId)
+  }
+}
+
+void initialize() {
+  if (settings.LOG) log.trace 'initialize()'
   //->enforceMutualExclusion()
-//--TBD--   enforceDefault()
-//--TBD--   subscribe(settings.swGroup, "switch", buttonHandler)
-//--TBD-- }
+  //->subscribe(settings.swGroup, "switch", buttonHandler)
+}
+
+void installed() {
+  if (settings.LOG) log.trace 'WHA installed()'
+  initialize()
+}
+
+void updated() {
+  if (settings.LOG) log.trace 'WHA updated()'
+  unsubscribe()  // Suspend event processing to rebuild state variables.
+  initialize()
+}
 
 void uninstalled() {
-//--TBD--   if (settings.LOG) log.trace 'uninstalled()'
-//--TBD--   // Nothing to do. Subscruptions are automatically dropped.
-//--TBD--   // This may matter if devices are captured by a switch group in the future.
+  if (settings.LOG) log.trace 'uninstalled()'
+  // Nothing to do. Subscruptions are automatically dropped.
+  // This may matter if devices are captured by a switch group in the future.
 }
 

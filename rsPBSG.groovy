@@ -60,12 +60,13 @@ definition(
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
-  page(name: 'pbsgPage', title: '', install: true, uninstall: true)
+  page(name: 'rsPbsgPage', title: '', install: true, uninstall: true)
 }
 
-Map pbsgPage() {
-  paragraph heading("${app.getLabel()} Pushbutton Switch Group<br/>") \
-        + bullet('Push "Done" to enable and return to parent.')
+Map rsPbsgPage() {
+  return dynamicPage(name: 'rsPbsgPage') {
+    paragraph heading("${app.getLabel()} Pushbutton Switch Group<br/>") \
+      + bullet('Push "Done" to enable and return to parent.')
   paragraph "Current State [placeholder only]"
 }
 

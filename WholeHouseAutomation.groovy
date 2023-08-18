@@ -42,7 +42,6 @@ definition(
 // -------------------------------
 preferences {
   page(name: 'whaPage', title: '', install: true, uninstall: true)
-  page(name: 'roomScenesPage', title: '', install: false, uninstall: false)
 }
 
 // -----------------------------------
@@ -141,12 +140,16 @@ void manageChildApps() {
   //     - state.childAppsByRoom
   //     - state.<roomName>
   //     - state.pbsg_modes
+  // ------------------------------------------------
   // Deliberately create noise for testing dups:
   //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
   //   addChildApp('wesmc', 'RoomScenes', 'Den')
   //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
   //   addChildApp('wesmc', 'RoomScenes', 'Puppies')
   //   addChildApp('wesmc', 'whaPBSG', 'Butterflies')
+  // ------------------------------------------------
+  // G E T   A L L   C H I L D   A P P S
+  // ------------------------------------------------
   if (settings.LOG) log.trace (
     'manageChildApps() on entry getAllChildApps(): '
     + getAllChildApps().sort{ a, b ->
@@ -155,6 +158,9 @@ void manageChildApps() {
         "<b>${app.getLabel()}</b> -> ${app.getId()}"
       }?.join(', ')
   )
+  // -----------------------------------------------
+  // T O S S   S T A L E   A P P S   B Y   L A B E L
+  // -----------------------------------------------
   // Child apps are managed by App Label, which IS NOT guaranteed to be
   // unique. The following method keeps only the latest (highest) App ID
   // per App Label.
@@ -166,12 +172,15 @@ void manageChildApps() {
         "<b>${label}</b> -> ${childObj.getId()}"
       }?.join(', ')
   )
+  // ---------------------------------------
+  // P O P U L A T E   R O O M   S C E N E S
+  // ---------------------------------------
   // Ensure Room Scenes instances exist (no init data is required).
   LinkedHashMap<String, InstAppW> childAppsByRoom = \
     settings.focalRoomNames?.collectEntries{ roomName ->
       [
         roomName,
-        getByLabel(childAppsByLabel, roomName)
+        getAppByLabel(childAppsByLabel, roomName)
           ?: addChildApp('wesmc', 'RoomScenes', roomName)
       ]
     }
@@ -182,35 +191,47 @@ void manageChildApps() {
       }?.join(', ')
   )
   state.roomNameToRoomScenes = childAppsByRoom
+  // -------------------------
+  // P O P U L A T E   P B S G
+  // -------------------------
   // Ensure imutable PBSG init data is in place AND instance(s) exist.
   // The PBSG instance manages its own state data locally.
-  state.pbsg_modes = Map.of(
-    'sceneNames', modes.collect{it.name},
-    'defaultScene', getGlobalVar('defaultMode')
+  //
+  //->state.pbsg_modes = Map.of(
+  //->  'sceneNames', modes.collect{it.name},
+  //->  'defaultScene', getGlobalVar('defaultMode')
+  //->)
+  state.modeSwitchNames = getLocation().getModes().collect{it.name}
+  state.defaultModeSwitchName = getGlobalVar('defaultMode').value
+  InstAppW pbsgModesApp = getAppByLabel(childAppsByLabel, 'pbsg_modes')
+    ?:  addChildApp('wesmc', 'whaPBSG', 'pbsg_modes')
+  if (settings.LOG) log.trace(
+    'manageChildApps() initializing pbsg_modes with '
+    + "<b>modeSwitchNames:</b> ${state.modeSwitchNames}, "
+    + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName} "
+    + "and logging ${settings.LOG}."
   )
-  InstAppW pbsgModesApp = getByLabel(childAppsByLabel, 'pbsg_modes')
-    ?: addChildApp(
-        'wesmc',
-        'whaPBSG',
-        'pbsg_modes',
-        [x: 'This is a test', y: 'Here is more data']
-      )
-  // Purge excess (remaining) Child Apps
+  pbsgModesApp.configure(
+    state.modeSwitchNames,
+    state.defaultModeSwitchName,
+    settings.LOG
+  )
+  state.pbsg_modes = pbsgModesApp
+  // ---------------------------------------------
+  // P U R G E   E X C E S S   C H I L D   A P P S
+  // ---------------------------------------------
   childAppsByLabel.each{ label, app ->
-    if (settings.LOG) log.trace(
-      "manageChildApps() keySet()=${ childAppsByRoom.keySet() }"
-      + "has label=${label} ? ${ childAppsByRoom.keySet().findAll{it == label} ? true : false}"
-    )
     if (childAppsByRoom.keySet().findAll{it == label}) {
       // Skip, still in use
     } else if (label == 'pbsg_modes') {
       // Skip, still in use
     } else {
-      if (settings.LOG) log.trace "Deleting orphaned child app ${label} (${app.getId()})."
+      if (settings.LOG) log.trace(
+        "manageChildApps() deleting orphaned child app ${label} (${app.getId()})."
+      )
       deleteChildApp(app.getId())
     }
   }
-
 }
 
 void displayRoomNameHrefs () {
@@ -223,6 +244,21 @@ void displayRoomNameHrefs () {
       title: "Edit <b>${getAppInfo(roomApp)}</b> Scenes",
       state: null, //'complete'
     )
+  }
+}
+
+void displayPbsgHref () {
+  if (state.pbsg_modes) {
+    href (
+      name: state.pbsg_modes.getLabel(),
+      width: 2,
+      url: "/installedapp/configure/${state.pbsg_modes.getId()}/whaPbsgPage",
+      style: 'internal',
+      title: "Edit <b>${getAppInfo(state.pbsg_modes)}</b>",
+      state: null, //'complete'
+    )
+  } else {
+    log.error 'displayPbsgHref() called with pbsg_modes missing.'
   }
 }
 
@@ -276,9 +312,11 @@ Map whaPage() {
       solicitLutronLEDs ()
       solicitSwitches()
       //->removeAllChildApps()  // Clean after errant process
-      paragraph heading('Room Scene Configuration')
       manageChildApps()
+      paragraph heading('Room Scene Configuration')
       displayRoomNameHrefs()
+      paragraph heading('PBSG Configuration')
+      displayPbsgHref()
       //pruneOrphanedChildApps()
       //displayAppInfoLink()
     }

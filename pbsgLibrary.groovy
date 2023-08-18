@@ -27,77 +27,26 @@ library (
   importUrl: ''
 )
 
+
+
+
+
+
 // ---------------------------------------
 // A P P   I N S T A N C E   M E T H O D S
 // ---------------------------------------
 
-void displayPage (String pbsgName) {
-  paragraph "You are in the ${app.getLabel()}"
-}
+//--xx->void displayPage (String pbsgName) {
+//--xx->  paragraph "You are in the ${app.getLabel()}"
+//--xx->}
 
-Map createPBSG (Map args = [:]) {
-  // Add default arguments here.
-  def _args = [
-    enclosingApp: app.getLabel()
-  ] << args
-  if (!args.name || !args.sceneNames || !args.defaultScene) {
-    log.error([
-      'createPBSG() expects arguments:<br/>',
-      '          name: ... (String)<br/>',
-      '    sceneNames: ... (List&lt;String&gt;)<br/>',
-      '  defaultScene: ... (String)'
-    ].join())
-    app.updateLabel("${_args.enclosingApp ?: app.getLabel()} - BROKEN")
-  } else if (state[_args.name]) {
-    log.error "createPBSG() '${_args.name}' instance already exists."
-    app.updateLabel("${_args.enclosingApp} - BROKEN}")
-  } else if (_args.defaultScene && ! _args.sceneNames.contains(_args.defaultScene)) {
-    log.error "createPBSG() '${_args.defaultScene}' not found in '${_args.sceneNames}'."
-    app.updateLabel("${_args.enclosingApp} - BROKEN}")
-  } else {
-    // Popuate initial instance data
-    LinkedHashMap pbsg = [:]
-    pbsg << _args
-    pbsg.scene2Vsw = createChildVsws(
-      _args.sceneNames.collectEntries{ switchName -> [ switchName, null ] },
-      _args.name
+Map createVSWs () {
+  pbsg.scene2Vsw.each{ scene, vsw ->
+    subscribe(
+      vsw,                     // DevW
+      'pbsgVswEventHandler',     // callbackFn,              // String
+      [ filterEvents: false ]  // Map (of subsription options)
     )
-    //                         pbsgVswEventHandler
-    //--pbsg.eventHandler = { e -> pbsgVswEventHandler.call(e, pbsg) }
-    //--pbsg.eventHandler = { e -> pbsgVswEventHandler.call(e, pbsg.name) }
-    state[pbsg.name] = pbsg
-
-    if (settings.LOG) log.trace "pbsg: instantiated ${state[_args.name]}"
-
-    // --------------------------------------------------------------------
-    // D E V I C E   C A L L B A C K   W E I R D N E S S
-    //   Device event subscriptions are problematic:
-    //     - Per-device subscriptions are utilized to avoid the conflict
-    //       between types 'DevWL' and 'List<DevW>'.
-    //     - No device event signature accepts an actual handler function.
-    //       All device options require the name (String) of the callback.
-    //     - void subscribe(DevW device, String handlerMethod, Map options = null)
-    // --------------------------------------------------------------------
-    //--take1->String callbackFn = "{ e -> pbsgVswEventHandler.call(e, '${pbsg.name}') }"
-    //--take1->if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
-    //--take1->pbsg.scene2Vsw.each{ scene, vsw ->
-    //--take1->  subscribe(
-    //--take1->    vsw,                     // DevW
-    //--take1->    callbackFn,              // String
-    //--take1->    [ filterEvents: false ]  // Map (of subsription options)
-    //--take1->  )
-    //--take1->}
-
-    //String callbackFn = "state['${pbsg.name}'].eventHandler"
-    //--if (settings.LOG) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
-    pbsg.scene2Vsw.each{ scene, vsw ->
-      subscribe(
-        vsw,                     // DevW
-        'pbsgVswEventHandler',     // callbackFn,              // String
-        [ filterEvents: false ]  // Map (of subsription options)
-      )
-    }
-
   }
 }
 
@@ -155,42 +104,6 @@ void enforceMutualExclusion(DevWL devices) {
     device.off()
     onList = onList.drop(1)
   }
-}
-
-Map<String, ChildDevW> createChildVsws (
-  Map<String, DevW> scene2Vsw, String deviceIdPrefix) {
-  // Ensure every scene is mapped to a VSW with no extra child VSWs.
-  Map<String, ChildDevW> result = scene2Vsw.collectEntries{ scene, vsw ->
-    String deviceNetworkId = "${deviceIdPrefix}-${scene}"
-    ChildDevW existingDevice = getChildDevice(deviceNetworkId)
-    if (existingDevice) {
-      if (settings.LOG) log.trace "createChildVsws() scene (${scene}) found (${existingDevice})"
-      [scene, existingDevice]
-    } else {
-      ChildDevW newChild = addChildDevice(
-        'hubitat',         // namespace
-        'Virtual Switch',  // typeName
-        deviceNetworkId,   // deviceNetworkId
-        [isComponent: true, name: deviceNetworkId]
-      )
-      if (settings.LOG) log.trace "createChildVsws() scene (${scene}) created vsw (${newChild})"
-      [scene, newChild]
-    }
-  }
-  // Find and drop child VSWs NOT tied to a scene.
-  List<ChildDevW> childDevices = getAllChildDevices()
-  childDevices.each{ childDevice ->
-    def scenes = result.findAll{
-      scene, sceneVsw -> sceneVsw?.deviceNetworkId == childDevice.deviceNetworkId
-    }
-    if (scenes) {
-      if (settings.LOG) log.trace "createChildVsws() keeping ${childDevice.deviceNetworkId} with scenes: ${scenes}"
-    } else {
-      if (settings.LOG) log.trace "createChildVsws() dropping ${childDevice.deviceNetworkId}"
-      deleteChildDevice(childDevice.deviceNetworkId)
-    }
-  }
-  return result
 }
 
 void pbsgVswEventHandler (event) {
