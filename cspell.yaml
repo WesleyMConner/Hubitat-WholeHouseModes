@@ -4,5 +4,7 @@ caseSensitive: false
 # Quote entries that include '*' or '**'.
 ignorePaths:
 words:
+  - autowidth
   - hubitat
+  - lutron
   - pbsg

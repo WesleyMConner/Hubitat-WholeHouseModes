@@ -1,5 +1,126 @@
+:table-caption!:
 // cSpell:words kpads picos
 = Whole House Automation
+
+== Sample Received Button Press Events
+
+=== COOK Pushed
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-80) TV Wall KPAD button 1 was pushed [physical]
+|deviceId |5994
+|displayName |(lutron-80) TV Wall KPAD
+|isStateChange |true
+|date |Fri Aug 18 16:12:44 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692389564332
+|name |pushed
+|value |1
+|===
+
+=== Chill (D) Pushed
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-80) TV Wall KPAD button 4 was pushed [physical]
+|deviceId |5994
+|displayName |(lutron-80) TV Wall KPAD
+|isStateChange |true
+|date |Fri Aug 18 16:22:41 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692390161326
+|name |pushed
+|value |4
+|===
+
+== Lutron-tied Button Pressed
+
+=== TV Wall Toggle Pressed
+
+...IN ORDER OR EVENT RECEPTION ...
+
+.NON-STATE CHANGE
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-1) REP 1 led 2 was turned off
+|deviceId |6002
+|displayName |(lutron-1) REP 1
+|isStateChange |true
+|date |Fri Aug 18 16:28:32 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692390512153
+|name |buttonLed-2
+|value |off
+|===
+
+.NON-STATE CHANGE
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-1) REP 1 led 42 was turned off
+|deviceId |6002
+|displayName |(lutron-1) REP 1
+|isStateChange |true
+|date |Fri Aug 18 16:28:32 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692390512244
+|name |buttonLed-42
+|value |off
+|===
+
+.NON-STATE CHANGE
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-1) REP 1 led 44 was turned off
+|deviceId |6002
+|displayName |(lutron-1) REP 1
+|isStateChange |true
+|date |Fri Aug 18 16:28:32 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692390512435
+|name |buttonLed-44
+|value |off
+|===
+
+.NON-STATE CHANGE (REP1.45 => Den Off)
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-1) REP 1 led 45 was turned off
+|deviceId |6002
+|displayName |(lutron-1) REP 1
+|isStateChange |true
+|date |Fri Aug 18 16:28:32 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692390512456
+|name |buttonLed-45
+|value |off
+|===
+
+.NON-STATE CHANGE (REP2.49 => STALE DATA IN RA2)
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-83) REP 2 led 49 was turned off
+|deviceId |5997
+|displayName |(lutron-83) REP 2
+|isStateChange |true
+|date |Fri Aug 18 16:28:32 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692390512558
+|name |buttonLed-49
+|value |off
+|===
+
+.UN-RELATED (REP1.33 => STALE DATA IN RA2)
+[%autowidth, frame="none", grid="none", cols=">30h,<70"]
+|===
+|descriptionText |(lutron-1) REP 1 led 33 was turned on
+|deviceId |6002
+|displayName |(lutron-1) REP 1
+|isStateChange |true
+|date |Fri Aug 18 16:37:35 EDT 2023
+|class |class com.hubitat.hub.domain.Event
+|unixTime |1692391055403
+|name |buttonLed-33
+|value |on
+|===
 
       // ------------------      -------------------- -----------------
       //       SETTINGS              INTERMEDIATE          STATE

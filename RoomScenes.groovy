@@ -157,25 +157,25 @@ void solicitRepeatersForRoomScenes () {
   )
 }
 
-void solicitKeypadsForRoomScenes () {
-  collapsibleInput (
-    blockLabel: "Keypads for ${state.RoomName} Scenes",
-    name: 'DeviceKeypadNames',
-    title: emphasis('Identify Keypad(s) supporting Room Scenes'),
-    type: 'enum',
-    options: parent.getKeypads().collect{ d -> d.displayName }?.sort()
-  )
-}
+//-> void solicitKeypadsForRoomScenes () {
+//->   collapsibleInput (
+//->     blockLabel: "Keypads for ${state.RoomName} Scenes",
+//->     name: 'DeviceKeypadNames',
+//->     title: emphasis('Identify Keypad(s) supporting Room Scenes'),
+//->     type: 'enum',
+//->     options: parent.getKeypads().collect{ d -> d.displayName }?.sort()
+//->   )
+//-> }
 
-void solicitLedDevicesForRoomScenes () {
-  collapsibleInput (
-    blockLabel: "LED Devices for ${state.RoomName} Scenes",
-    name: 'DeviceLedNames',
-    title: emphasis('Identify LED Button(s) supporting Room Scenes'),
-    type: 'enum',
-    options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
-  )
-}
+//-> void solicitLedDevicesForRoomScenes () {
+//->   collapsibleInput (
+//->     blockLabel: "LED Devices for ${state.RoomName} Scenes",
+//->     name: 'DeviceLedNames',
+//->     title: emphasis('Identify LED Button(s) supporting Room Scenes'),
+//->     type: 'enum',
+//->     options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
+//->   )
+//-> }
 
 void solicitNonLutronDevicesForRoomScenes () {
   List<DevW> roomSwitches = parent.getNonLutronDevicesForRoom(state.RoomName)
@@ -188,26 +188,90 @@ void solicitNonLutronDevicesForRoomScenes () {
   )
 }
 
-void solicitLedToScene() {
+//-> void solicitLedToScene() {
+//->     if (state.RoomScenes == null) {
+//->     paragraph red('Identification of LED to Room Scene will proceed once scene names exist.')
+//->   } else {
+//->     // Downstream Goal is Map<String, String> ledNameToSceneName = [:]
+//->     settings.DeviceLedNames.each{ ledName ->
+//->       input(
+//->           name: "Led2Scene^${ledName}",
+//->           type: 'enum',
+//->           title: emphasis("Scene Name for ${ ledName }"),
+//->           //width: 2,
+//->           submitOnChange: true,
+//->           required: true,
+//->           multiple: false,
+//->           options: state.RoomScenes
+//->         )
+//->       //paragraph "LED-to-Scene Placeholder .. ${ledName} -> ${state.RoomScenes}"
+//->     }
+//->   }
+//->   // parent.getLedDevices().collect{ d -> d.displayName }?.sort()
+//-> }
+
+void selectLedsForScene() {
     if (state.RoomScenes == null) {
-    paragraph red('Identification of LED to Room Scene will proceed once scene names exist.')
+    paragraph(red(
+      'Once scene names exist, this section will solicit affiliated Buttons/LEDs.'
+    ))
   } else {
-    // Downstream Goal is Map<String, String> ledNameToSceneName = [:]
-    settings.DeviceLedNames.each{ ledName ->
+    state.RoomScenes.each{ sceneName ->
       input(
-          name: "Led2Scene^${ledName}",
+          name: "${sceneName}_LEDs",
           type: 'enum',
-          title: emphasis("Scene Name for ${ ledName }"),
+          title: emphasis("Buttons/LEDs activating ${state.RoomName} '${sceneName}'."),
           //width: 2,
           submitOnChange: true,
-          required: true,
-          multiple: false,
-          options: state.RoomScenes
+          required: false,
+          multiple: true,
+          //-> options: settings.DeviceLedNames
+          options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
         )
-      //paragraph "LED-to-Scene Placeholder .. ${ledName} -> ${state.RoomScenes}"
     }
   }
-  // parent.getLedDevices().collect{ d -> d.displayName }?.sort()
+}
+
+
+List<String> picoButtons (DevW pico) {
+  String dN = pico.displayName
+  return [
+    "${dN}^1^Top",
+    "${dN}^2^Up",
+    "${dN}^3^Middle",
+    "${dN}^4^Down",
+    "${dN}^5^Bottom"
+  ]
+}
+
+List<String> picoButtonPicklist (List<DevW> picos) {
+  List<String> results = []
+  picos.each{ pico -> results << picoButtons(pico) }
+  results = results.flatten()
+  return results
+}
+
+void selectPicoButtonsForScene() {
+  if (state.RoomScenes == null) {
+    paragraph(red(
+      'Once scene names exist, this section will solicit affiliated pico buttons.'
+    ))
+  } else {
+    List<DevW> picos = parent.getPicoDevices()
+    //log.trace "picos [A]: ${picos}"
+    state.RoomScenes.each{ sceneName ->
+      input(
+          name: "${sceneName}_PicoButtons",
+          type: 'enum',
+          title: emphasis("Pico Buttons activating ${state.RoomName} '${sceneName}'."),
+          //width: 2,
+          submitOnChange: true,
+          required: false,
+          multiple: true,
+          options: picoButtonPicklist(picos)
+        )
+    }
+  }
 }
 
 void solicitRoomScene () {
@@ -343,35 +407,24 @@ def roomScenesPage () {
         + comment(red('Tab to register changes.'))
       )
       solicitLOG()  // via Utils
-
-      //--LATER->input (
-      //--LATER->  name: adjustSceneNames,
-      //--LATER->  type: 'bool',
-      //--LATER->  title: settings.adjustSceneNames
-      //--LATER->    ? 'Hiding Scene Name Identification'
-      //--LATER->    : 'Showing Scene Name Identification',
-      //--LATER->  submitOnChange: true,
-      //--LATER->  defaultValue: true
-      //--LATER->)
-      //--LATER->if (!settings.adjustSceneNames) {
-        solicitModesAsScenes()
-        solicitCustomScenes()
-      //--LATER->}
-
+      solicitModesAsScenes()
+      solicitCustomScenes()
       updateRoomScenes()
       solicitSceneForModeName()
       solicitRepeatersForRoomScenes()
-      solicitKeypadsForRoomScenes()
-      solicitLedDevicesForRoomScenes()
-      //--HOLD->solicitKeypadButtonsForScene()
+      //-> solicitKeypadsForRoomScenes()
+      //-> solicitLedDevicesForRoomScenes()
+      //--HOLD-> solicitKeypadButtonsForScene()
       solicitNonLutronDevicesForRoomScenes()
-      solicitLedToScene()
+      //solicitLedToScene()
+      selectLedsForScene()
+      selectPicoButtonsForScene()
       solicitRoomScene()
       manageChildApps()
       paragraph(
         heading('Debug<br/>')
-        + "${ displaySettings() }<br/>"
-        + "${ displayState() }"
+        + "${ displayState() }<br/>"
+        + "${ displaySettings() }"
       )
       //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
     }
