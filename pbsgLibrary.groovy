@@ -95,9 +95,9 @@ void manageChildDevices () {
 
 String extractSwitchState(DevW d) {
   List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
-  if (settings.LOG) log.trace(
-    "extractSwitchState() w/ stateValues: ${stateValues} for ${d.displayName}"
-  )
+  //-> if (settings.LOG) log.trace(
+  //->   "extractSwitchState() w/ stateValues: ${stateValues} for ${d.displayName}"
+  //-> )
   return stateValues.contains('on')
       ? 'on'
       : stateValues.contains('off')
@@ -129,7 +129,9 @@ void enforcePbsgConstraints() {
     List<DevW> onList = getOnSwitches()
     while (onlist && onList.size() > 1) {
       DevW device = onList?.first()
-      if (settings.LOG) log.trace "enforcePbsgConstraints() turning off ${deviceTag(device)}."
+      if (settings.LOG) log.trace(
+        "enforcePbsgConstraints() turning off ${deviceTag(device)}."
+      )
       device.off()
       onList = onList.drop(1)
     }
@@ -179,38 +181,6 @@ void defaultPage () {
 // I M P L E M E N T   D Y N A M IC   B E H A V I O R
 // --------------------------------------------------
 
-void pbsgEventHandler (event) {
-  if (settings.LOG) log.trace(
-    "pbsgEventHandler() w/ parent App: '${getAppInfo((event.deviceId).parent())}'."
-    + logEventDetails(event, false)
-  )
-  /*
-  pbsg = state[pbsgName]
-  if (event.isStateChange) {
-    switch(event.value) {
-      case 'on':
-        if (settings.LOG) log.trace "pbsgEventHandler() ${event.displayName}"
-          + 'turned "ON". Turning off switch group peers.'
-        pbsg.scene2Vsw.each{ scene, vsw ->
-          // No harm in turning off a VSW that might already be off.
-          if (vsw.deviceNetworkId != event.displayName) vsw.off()
-        }
-        break
-      case 'off':
-        //-- PENDING -> enforceDefault()
-        break
-      default:
-        log.error  'pbsgEventHandler() expected 'on' or 'off'; but, '
-          + "received '${event.value}'."
-        app.updateLabel("${pbsg.enclosingApp} - BROKEN")
-    }
-  } else {
-    log.error 'pbsgEventHandler() received an unexpected event:<br/>'
-      + logEventDetails(event, false)
-  }
-  */
-}
-
 /*
 void buttonHandler (Event e) {
   if (e.isStateChange) {
@@ -240,38 +210,6 @@ void buttonHandler (Event e) {
 }
 */
 
-void initialize() {
-  if (settings.LOG) log.trace 'initialize()'
-  List<DevW> vsws = state.switchNameToVsw.collect{ switchName, vsw -> vsw }
-  if (settings.LOG) {
-    String vswsTags = vsws.collect{ vsw ->
-    LinkedHashMap vswx = vsw as LinkedHashMap
-      deviceTag(vswx)
-    }.join(', ')
-    log.trace "initialize() vsws: ${vswsTags}"
-  }
-  subscribe(vsws, "switch", pbsgEventHandler)
-}
-// groovy.lang.MissingMethodException: No signature of method: java.lang.String.call()
-// is applicable for argument types: (java.util.HashMap)
-// values: [[data:[:], displayName:pbsg_modes_TV, parentAppId:1627, typeName:Virtual Switch, ...]] Possible solutions: wait(), chars(), any(), wait(long), each(groovy.lang.Closure), take(int) on line 307 (method updated) (library wesmc.pbsgLibrary, line 261)
-
-void installed() {
-  if (settings.LOG) log.trace 'WHA installed()'
-  initialize()
-}
-
-void updated() {
-  if (settings.LOG) log.trace 'WHA updated()'
-  unsubscribe()  // Suspend event processing to rebuild state variables.
-  initialize()
-}
-
-void uninstalled() {
-  if (settings.LOG) log.trace 'uninstalled()'
-  // Nothing to do. Subscruptions are automatically dropped.
-  // This may matter if devices are captured by a switch group in the future.
-}
 
 /*
 String emphasizeOn(String s) {
