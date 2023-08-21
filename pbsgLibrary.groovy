@@ -12,7 +12,6 @@
 //     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 //     implied.
 // ---------------------------------------------------------------------------------
-import com.hubitat.app.ChildDeviceWrapper as ChildDevW
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.hub.domain.Event as Event
 
@@ -55,18 +54,18 @@ void manageChildDevices () {
       'manageChildDevices() is pending required state data (switchNames).'
     )
   } else {
-    List<ChildDevW> childDevices = getAllChildDevices()
+    List<DevW> childDevices = getAllChildDevices()
     if (settings.LOG) log.trace(
       'manageChildDevices() at entry <b>devices:</b> '
       + childDevices?.collect{ d -> deviceTag(d) }.join(', ')
       + "<b>state.SwitchNames:</b> ${state.SwitchNames}"
     )
     //=> ENSURE TARGET CHILD DEVICES EXIST
-    LinkedHashMap<String, ChildDevW> switchNameToVsw = state.SwitchNames
+    LinkedHashMap<String, DevW> switchNameToVsw = state.SwitchNames
       .collectEntries{ swName ->
         String deviceNetworkId = "${app.getLabel()}_${swName}"
         //-> if (settings.LOG) log.trace "#69 eexpectedDeviceNetworkId >${deviceNetworkId}<"
-        ChildDevW vsw = childDevices.find{ d -> d.deviceNetworkId == deviceNetworkId }
+        DevW vsw = childDevices.find{ d -> d.deviceNetworkId == deviceNetworkId }
           ?: addChildDevice(
             'hubitat',         // namespace
             'Virtual Switch',  // typeName
@@ -114,7 +113,7 @@ List<DevW> getOnSwitches() {
       'Mutual Exclusion enforcement is pending required data (switchNameToVsw).'
     )
   } else {
-    LinkedHashMap<String, ChildDevW> onList = state.switchNameToVsw.findAll{
+    LinkedHashMap<String, DevW> onList = state.switchNameToVsw.findAll{
        switchName, vsw ->
         // log.trace "#120 switchName: >${switchName}< vsw: >${vsw.displayName}<"
         extractSwitchState(vsw) == 'on'
@@ -141,7 +140,7 @@ void enforcePbsgConstraints() {
     //-> log.trace "#142 state.DefaultSwitch: ${state.DefaultSwitch}, onList: ${onList}"
     //-> log.trace "#143 state.switchNameToVsw.keySet(): ${state.switchNameToVsw.keySet()}"
     if (state.DefaultSwitch && !onList) {
-      ChildDevW dfltSwitch = state.switchNameToVsw[state.DefaultSwitch]
+      DevW dfltSwitch = state.switchNameToVsw[state.DefaultSwitch]
       //-> log.trace "#146 dfltSwitch: ${dfltSwitch}"
       dfltSwitch.on()
     }
@@ -156,7 +155,7 @@ void displaySwitchStates () {
       heading('Current Switch States<br/>')
       + '<table>'
       + state.switchNameToVsw.sort().collect{ switchName, vsw ->
-        ChildDevW d = app.getChildDevice(vsw.deviceNetworkId)
+        DevW d = app.getChildDevice(vsw.deviceNetworkId)
         Boolean dflt = switchName == state.DefaultSwitch
         "<tr><th>${switchName}${dflt ? ' (default)' : ''}:</th><td>${extractSwitchState(d)}</td></tr>"
       }.join('')
@@ -251,7 +250,7 @@ void initialize() {
   if (settings.LOG) log.trace 'initialize()'
   //-> enforcePbsgConstraints()
   //-- PENDING -> enforceDefault()
-  // LinkedHashMap<String, ChildDevW> switchNameToVsw
+  // LinkedHashMap<String, DevW> switchNameToVsw
   // subscribe(DeviceWrapperList devices, String attributeName, handlerMethod, Map options = null)
   List<DevW> vsws = state.switchNameToVsw.collect{ switchName, vsw -> vsw }
   if (settings.LOG) {
