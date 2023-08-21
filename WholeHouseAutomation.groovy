@@ -468,7 +468,7 @@ void installed() {
   initialize()
 }
 
-def uninstalled() {
+void uninstalled() {
   if (settings.LOG) log.trace "WHA uninstalled()"
   removeAllChildApps()
 }

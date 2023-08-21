@@ -397,10 +397,10 @@ void configureRoomPbsg () {
   state.pbsg_mgr.configure(state.SwitchNames, state.DefaultSwitch, settings.LOG )
 }
 
-def roomScenesPage () {
+Map roomScenesPage () {
   // The parent application (Whole House Automation) assigns a unique label
   // to each Room Scenes instance. Capture app.getLabel() as state.RoomName.
-  dynamicPage(name: 'roomScenesPage') {
+  return dynamicPage(name: 'roomScenesPage') {
     state.RoomName = app.getLabel()
     section {
       paragraph (
@@ -450,7 +450,7 @@ void installed() {
   initialize()
 }
 
-def uninstalled() {
+void uninstalled() {
   if (settings.LOG) log.trace "Room Scenes uninstalled()"
   removeAllChildApps()
 }
