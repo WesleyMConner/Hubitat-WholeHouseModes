@@ -280,7 +280,7 @@ PRIOR_pbsgVswEventHandler = { event, pbsgInst ->
     }
   } else {
     log.error 'pbsgVswEventHandler() received an unexpected event:<br/>'
-      + logEventDetails(event)
+      + logEventDetails(event, false)
   }
 }
 

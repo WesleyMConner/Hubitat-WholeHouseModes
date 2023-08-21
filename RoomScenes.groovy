@@ -49,9 +49,9 @@ preferences {
 // R O O M S   S C E N E S   P A G E   &   S U P P O R T
 // -----------------------------------------------------
 
-void solicitModesAsScenes () {
+void solicitModeNamesAsSceneNames () {
   input(
-    name: 'ModesAsScenes',
+    name: 'ModeNamesAsSceneNames',
     type: 'enum',
     title: '<span style="margin-left: 10px;">' \
            + emphasis('Select "Mode Names" to use as "Scene Names" <em>(optional)</em>:') \
@@ -96,8 +96,7 @@ void solicitCustomScenes () {
 }
 
 void updateRoomScenes () {
-  //-- if (settings.LOG) log.trace "updateRoomScenes() [*]"
-  List<String> scenes = settings.ModesAsScenes ?: []
+  List<String> scenes = settings.ModeNamesAsSceneNames ?: []
   scenes = scenes.flatten()
   String prefix = 'CustomScene'
   List<String> CustomScenes = [
@@ -125,15 +124,11 @@ void solicitSceneForModeName () {
   } else {
     paragraph emphasis('Select scenes for per-mode automation:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
-      //List<String> defaultValue = state.RoomScenes.findAll{ scene ->
-      //  (scene == modeName)
-      //}
-      List<String> defaultValue = state.RoomScenes.each{ scene ->
-        if (scene == modeName) app.updateSetting("ModeToScene^${modeName}", scene)
-      }
-      log.trace "[018] defaultValue: >${defaultValue}<"
+      String inputName = "ModeToScene^${modeName}"
+      String defaultValue = settings[inputName]
+        ?: state.RoomScenes.contains(modeName) ? modeName : null
       input(
-        name: "ModeToScene^${modeName}",
+        name: inputName,
         type: 'enum',
         title: modeName,
         width: 2,
@@ -148,12 +143,17 @@ void solicitSceneForModeName () {
 }
 
 void solicitRepeatersForRoomScenes () {
-  collapsibleInput (
-    blockLabel: "Repeaters for ${state.RoomName} Scenes",
+  //collapsibleInput (
+  input(
+    //blockLabel: "Repeaters for ${state.RoomName} Scenes",
     name: 'DeviceRepeaterNames',
-    title: emphasis('Identify Repeater(s) supporting Room Scenes'),
+    title: emphasis('Identify Required Repeater(s)'),
     type: 'enum',
-    options: parent.getMainRepeaters().collect{ d -> d.displayName }?.sort()
+    width: 6,
+    options: parent.getMainRepeaters().collect{ d -> d.displayName }?.sort(),
+    submitOnChange: true,
+    required: false,
+    multiple: true
   )
 }
 
@@ -179,12 +179,17 @@ void solicitRepeatersForRoomScenes () {
 
 void solicitNonLutronDevicesForRoomScenes () {
   List<DevW> roomSwitches = parent.getNonLutronDevicesForRoom(state.RoomName)
-  collapsibleInput (
-    blockLabel: "Non-Lutron Devices for ${state.RoomName} Scenes",
+  //collapsibleInput (
+  input(
+    //blockLabel: "Non-Lutron Devices for ${state.RoomName} Scenes",
     name: 'DeviceNonLutronNames',
-    title: emphasis('Identify Non-Lutron devices supporting Room Scenes'),
+    title: emphasis('Identify Required Non-Lutron Devices'),
     type: 'enum',
-    options: roomSwitches.collect{ d -> d.displayName }?.sort()
+    width: 6,
+    options: roomSwitches.collect{ d -> d.displayName }?.sort(),
+    submitOnChange: true,
+    required: false,
+    multiple: true
   )
 }
 
@@ -217,17 +222,18 @@ void selectLedsForScene() {
     ))
   } else {
     state.RoomScenes.each{ sceneName ->
+      // collapsibleInput(
       input(
-          name: "${sceneName}_LEDs",
-          type: 'enum',
-          title: emphasis("Buttons/LEDs activating ${state.RoomName} '${sceneName}'."),
-          //width: 2,
-          submitOnChange: true,
-          required: false,
-          multiple: true,
-          //-> options: settings.DeviceLedNames
-          options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
-        )
+        ///blockLabel: "Buttons/LEDs activating ${state.RoomName} '${sceneName}'",
+        name: "${sceneName}_LEDs",
+        type: 'enum',
+        width: 6,
+        title: emphasis("Buttons/LEDs activating ${state.RoomName} '${sceneName}'"),
+        submitOnChange: true,
+        required: false,
+        multiple: true,
+        options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
+      )
     }
   }
 }
@@ -264,7 +270,7 @@ void selectPicoButtonsForScene() {
           name: "${sceneName}_PicoButtons",
           type: 'enum',
           title: emphasis("Pico Buttons activating ${state.RoomName} '${sceneName}'."),
-          //width: 2,
+          width: 6,
           submitOnChange: true,
           required: false,
           multiple: true,
@@ -364,22 +370,16 @@ void manageChildApps() {
   // Ensure imutable PBSG init data is in place AND instance(s) exist.
   // The PBSG instance manages its own state data locally.
   String pbsgName = "pbsg_${state.RoomName}"
-  state.modeSwitchNames = getLocation().getModes().collect{it.name}
-  state.defaultModeSwitchName = getGlobalVar('defaultMode').value
+  state.SwitchNames = state.RoomScenes + 'AUTOMATIC' + 'MANUAL'
+  state.DefaultSwitch = 'AUTOMATIC'
   InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
     ?:  addChildApp('wesmc', 'rsPBSG', pbsgName)
   if (settings.LOG) log.trace(
     "manageChildApps() initializing ${pbsgName} with "
-    + "<b>modeSwitchNames:</b> ${state.modeSwitchNames}, "
-    + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName} "
-    + "and logging ${settings.LOG}."
+    + "<b>SwitchNames:</b> ${state.SwitchNames}, and "
+    + "<b>DefaultSwitch:</b> ${state.DefaultSwitch}."
   )
-  pbsgApp.configure(
-    state.modeSwitchNames,
-    state.defaultModeSwitchName,
-    settings.LOG
-  )
-  state.pbsg_modes = pbsgApp
+  state.pbsg_mgr = pbsgApp
   // ---------------------------------------------
   // P U R G E   E X C E S S   C H I L D   A P P S
   // ---------------------------------------------
@@ -395,19 +395,26 @@ void manageChildApps() {
   }
 }
 
+void updateCurrentPbsg(String currentSwitch) {
+  state.currentScene = currentSwitch
+}
+
+void configureRoomPbsg () {
+  state.pbsg_mgr.configure(state.SwitchNames, state.DefaultSwitch, settings.LOG )
+}
+
 def roomScenesPage () {
   // The parent application (Whole House Automation) assigns a unique label
   // to each Room Scenes instance. Capture app.getLabel() as state.RoomName.
   dynamicPage(name: 'roomScenesPage') {
     state.RoomName = app.getLabel()
-    //state.remove('X')
     section {
       paragraph (
         heading("${ state.RoomName } Scenes<br/>")
         + comment(red('Tab to register changes.'))
       )
       solicitLOG()  // via Utils
-      solicitModesAsScenes()
+      solicitModeNamesAsSceneNames()
       solicitCustomScenes()
       updateRoomScenes()
       solicitSceneForModeName()
@@ -421,12 +428,12 @@ def roomScenesPage () {
       selectPicoButtonsForScene()
       solicitRoomScene()
       manageChildApps()
+      configureRoomPbsg()
       paragraph(
         heading('Debug<br/>')
         + "${ displayState() }<br/>"
         + "${ displaySettings() }"
       )
-      //----> Is it necessary to solicit Keypad nuttons that trigger scenes?
     }
   }
 }
@@ -461,10 +468,6 @@ void updated() {
 }
 
 void testHandler (Event e) {
-  // SAMPLE 1
-  //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
-  //          deviceId  5686
-  //       displayName  (lutron-80) TV Wall KPAD
   if (settings.LOG) log.trace "RoomScenes testHandler() w/ event: ${e}"
   if (settings.LOG) logEventDetails(e, false)
 }
@@ -489,13 +492,4 @@ void initialize() {
     if (settings.LOG) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  //ArrayList<LinkedHashMap> modes = getModes()
-  // Rebuild the PBSG mode instance adjusting (i.e., reusing or dropping)
-  // previously-created VSWs to align with current App modes.
-  //if (state['pbsg_modes']) { deletePBSG(name: 'pbsg_modes', dropChildVSWs: false) }
-  //createPBSG(
-  //  name: 'pbsg_modes',
-  //  sceneNames: modes.collect{it.name},
-  //  defaultScene: 'Day'
-  //)
 }

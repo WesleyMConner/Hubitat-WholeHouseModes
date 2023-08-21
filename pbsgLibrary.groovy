@@ -27,16 +27,156 @@ library (
   importUrl: ''
 )
 
-// ---------------------------------------
-// A P P   I N S T A N C E   M E T H O D S
-// ---------------------------------------
+// ---------------------------------------------------------------------
+// C R E A T E   S T A T I C   S T R U C T U R E   &   U I   R E V I E W
+// ---------------------------------------------------------------------
+
+void configure (
+  List<String> switchNames,
+  String defaultSwitch,
+  Boolean log
+  ) {
+  app.updateSetting('LOG', log)
+  state.SwitchNames = switchNames
+  state.DefaultSwitch = defaultSwitch
+}
+
+void manageChildDevices () {
+  // To test orphan device removal, uncomment the following:
+  //--test-> addChildDevice(
+  //--test->   'hubitat',         // namespace
+  //--test->   'Virtual Switch',  // typeName
+  //--test->   'bogus_device',
+  //--test->   [isComponent: true, name: 'bogus_device']
+  //--test-> )
+  // Note: Device creation "errors out" if deviceNetworkId is duplicated.
+  //=> GET ALL CHILD DEVICES AT ENTRY
+  if (!state.SwitchNames) {
+    paragraph red(
+      'manageChildDevices() is pending required state data (switchNames).'
+    )
+  } else {
+    List<ChildDevW> childDevices = getAllChildDevices()
+    if (settings.LOG) log.trace(
+      'manageChildDevices() at entry <b>devices:</b> '
+      + childDevices?.collect{ d -> deviceTag(d) }.join(', ')
+      + "<b>state.SwitchNames:</b> ${state.SwitchNames}"
+    )
+    //=> ENSURE TARGET CHILD DEVICES EXIST
+    LinkedHashMap<String, ChildDevW> switchNameToVsw = state.SwitchNames
+      .collectEntries{ swName ->
+        String deviceNetworkId = "${app.getLabel()}_${swName}"
+        //-> if (settings.LOG) log.trace "#70 eexpectedDeviceNetworkId >${deviceNetworkId}<"
+        ChildDevW vsw = childDevices.find{ d -> d.deviceNetworkId == deviceNetworkId }
+          ?: addChildDevice(
+            'hubitat',         // namespace
+            'Virtual Switch',  // typeName
+            deviceNetworkId,
+            [isComponent: true, name: deviceNetworkId]
+          )
+        [swName, vsw]
+      }
+    state.switchNameToVsw = switchNameToVsw
+    if (settings.LOG) log.trace(
+      "manageChildDevices() switchNameToVsw: ${switchNameToVsw}."
+    )
+    //=> DELETE ORPHANED DEVICES
+    List<String> currentChildren = switchNameToVsw.collect{ switchName, vsw ->
+      vsw.deviceNetworkId
+    }
+    //-> log.trace "#88 currentChildren = >${currentChildren}<"
+    List<String> orphanedDevices = childDevices.collect{ d -> d.deviceNetworkId }
+                                  .minus(currentChildren)
+    orphanedDevices.each{ deviceNetworkId ->
+      if (settings.LOG) log.trace(
+        "manageChildDevices() dropping orphaned device `${deviceNetworkId}`."
+      )
+      assert deviceNetworkId instanceof String
+      deleteChildDevice(deviceNetworkId)
+    }
+  }
+}
+
+String extractSwitchState(DevW d) {
+  List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
+  if (settings.LOG) log.trace(
+    "extractSwitchState() w/ stateValues: ${stateValues} for ${d.displayName}"
+  )
+  return stateValues.contains('on')
+      ? 'on'
+      : stateValues.contains('off')
+        ? 'off'
+        : 'unknown'
+}
+
+List<DevW> getOnSwitches() {
+  if (!state.switchNameToVsw) {
+    paragraph red(
+      'Mutual Exclusion enforcement is pending required data (switchNameToVsw).'
+    )
+  } else {
+    LinkedHashMap<String, ChildDevW> onList = state.switchNameToVsw.findAll{
+       switchName, vsw ->
+        // log.trace "#119 switchName: >${switchName}< vsw: >${vsw.displayName}<"
+        extractSwitchState(vsw) == 'on'
+    }
+    onList.collect{ switchName, vsw -> vsw }
+  }
+}
+
+void enforcePbsgConstraints() {
+  if (!state.switchNameToVsw) {
+    paragraph red(
+      'Mutual Exclusion enforcement is pending required data (switchNameToVsw).'
+    )
+  } else {
+    // Enforce Mutual-Exclusion (not required if 'on' events turn 'off' peers.
+    List<DevW> onList = getOnSwitches()
+    while (onlist && onList.size() > 1) {
+      DevW device = onList?.first()
+      if (settings.LOG) log.trace "enforcePbsgConstraints() turning off ${deviceTag(device)}."
+      device.off()
+      onList = onList.drop(1)
+    }
+    // Enforce Default Switch
+    log.trace "#140 state.DefaultSwitch: ${state.DefaultSwitch}, onList: ${onList}"
+    log.trace "#141 state.switchNameToVsw.keySet(): ${state.switchNameToVsw.keySet()}"
+    if (state.DefaultSwitch && !onList) {
+      ChildDevW dfltSwitch = state.switchNameToVsw[state.DefaultSwitch]
+      log.trace "#144 dfltSwitch: ${dfltSwitch}"
+      dfltSwitch.on()
+    }
+  }
+}
+
+
+
+void displaySwitchStates () {
+  if (!state.switchNameToVsw) {
+    paragraph red('Disply of child switch values is pending required data.')
+  } else {
+    paragraph(
+      heading('Current Switch States<br/>')
+      + '<table>'
+      + state.switchNameToVsw.sort().collect{ switchName, vsw ->
+        ChildDevW d = app.getChildDevice(vsw.deviceNetworkId)
+        Boolean dflt = switchName == state.DefaultSwitch
+        "<tr><th>${switchName}${dflt ? ' (default)' : ''}:</th><td>${extractSwitchState(d)}</td></tr>"
+      }.join('')
+      + '</table>'
+    )
+  }
+}
 
 void defaultPage () {
   section {
     paragraph(
-      heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
-      + bullet('Push <b>Done</b> to enable subcriptions and return to parent.')
+      heading("${app.getLabel()} a PBSG (Pushbutton Switch Group) - ${app.getInstallationState()}<br/>")
+      + bullet('Push <b>Done</b> to return to enable event subcriptions and return to parent.')
     )
+    manageChildDevices()
+    enforcePbsgConstraints()
+    displaySwitchStates()
     paragraph(
       heading('Debug<br/>')
       + "${ displaySettings() }<br/>"
@@ -45,111 +185,18 @@ void defaultPage () {
   }
 }
 
-void configure (List<String> switchNames, String defaultSwitch, Boolean log) {
-  app.updateSetting('LOG', log)
-  state.switchNames = switchNames
-  state.defaultSwitch = defaultSwitch
-  createChildVsws()
-}
-
-void initialize() {
-  if (settings.LOG) log.trace 'initialize()'
-  enforceMutualExclusion()
-  //-- PENDING -> enforceDefault()
-  subscribe(settings.swGroup, "switch", buttonHandler)
-}
-
-// #129 no enforceDefault() is applicable for argument types: () values: []
-
-void installed() {
-  if (settings.LOG) log.trace 'WHA installed()'
-  initialize()
-}
-
-void updated() {
-  if (settings.LOG) log.trace 'WHA updated()'
-  unsubscribe()  // Suspend event processing to rebuild state variables.
-  initialize()
-}
-
-void uninstalled() {
-  if (settings.LOG) log.trace 'uninstalled()'
-  // Nothing to do. Subscruptions are automatically dropped.
-  // This may matter if devices are captured by a switch group in the future.
-}
 
 
-void createChildVsws () {
-  // FOR TESTING THE REMOVAL OF AN ORPHANED DEVICE, UNCOMMENT THE FOLLOWING:
-  //-> addChildDevice(
-  //->   'hubitat',         // namespace
-  //->   'Virtual Switch',  // typeName
-  //->   'bogus_device',
-  //->   [isComponent: true, name: 'bogus_device']
-  //-> )
-  // Device creation "errors out" if deviceNetworkId is duplicated.
-  // GET ALL CHILD DEVICES AT ENTRY
-  List<String> childDevices = getAllChildDevices().collect{ d -> d.deviceNetworkId }
-  if (settings.LOG) log.trace(
-    "createChildVsws() devices at entry: ${childDevices}."
-  )
-  // ENSURE GOAL CHILD DEVICES EXIST
-  LinkedHashMap<String, String> scene2VswNetwkId = state.switchNames.collectEntries{
-    swName ->
-      String deviceNetworkId = "${app.getLabel()}_${swName}"
-      String vswNetworkId = childDevices.find{ it == deviceNetworkId }
-        ?: addChildDevice(
-            'hubitat',         // namespace
-            'Virtual Switch',  // typeName
-            deviceNetworkId,
-            [isComponent: true, name: deviceNetworkId]
-           ).deviceNetworkId
-      [swName, vswNetworkId]
-  }
-  state.scene2VswNetwkId = scene2VswNetwkId
-  if (settings.LOG) log.trace(
-    "createChildVsws() scene2VswNetwkId: ${scene2VswNetwkId}."
-  )
-  // DELETE ORPHANED DEVICES
-  List<String> currentChildren = scene2VswNetwkId.collect{ it.value }
-  List<String> orphanedDevices = childDevices.minus(currentChildren)
-  orphanedDevices.each{ deviceNetworkId ->
-    if (settings.LOG) log.trace(
-      "createChildVsws() dropping orphaned device `${deviceNetworkId}`."
-    )
-    deleteChildDevice(deviceNetworkId)
-  }
-}
+
+
+
 
 // -----------------------------------------
-// I N T E R N A L - O N L Y   M E T H O D S
+// M A N A G E D   C H I L D   D E V I C E S
 // -----------------------------------------
-String extractSwitchState(DevW d) {
-  // What's best here? NOT exhaustively tested.
-  //   - stateValues = d.collect({ it.currentStates.value }).flatten()
-  //   - stateValues = d.currentStates.value
-  List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
-  return stateValues.contains('on')
-      ? 'on'
-      : stateValues.contains('off')
-        ? 'off'
-        : 'unknown'
-}
 
-List<DevW> getOnSwitches(DevWL devices) {
-  return devices?.findAll({ extractSwitchState(it) == 'on' })
-}
 
-void enforceMutualExclusion(DevWL devices) {
-  if (settings.LOG) log.trace 'enforceMutualExclusion()'
-  List<DevW> onList = getOnSwitches(devices)
-  while (onList?.size() > 1) {
-    DevW device = onList.first()
-    if (settings.LOG) log.trace "enforceMutualExclusion() turning off ${deviceTag(device)}."
-    device.off()
-    onList = onList.drop(1)
-  }
-}
+
 
 void pbsgVswEventHandler (event) {
   // ----------------------------------------------------------------------
@@ -179,10 +226,71 @@ void pbsgVswEventHandler (event) {
     }
   } else {
     log.error 'pbsgVswEventHandler() received an unexpected event:<br/>'
-      + logEventDetails(event)
+      + logEventDetails(event, false)
   }
 }
 
+
+
+// -------------------------------
+// S T A T E   M A N A G E M E N T
+// -------------------------------
+
+/*
+void buttonHandler (Event e) {
+  if (e.isStateChange) {
+    logSettingsAndState('buttonHandler()')
+    DevW eventDevice = getSwitchById(e.deviceId.toString())
+    switch(e.value) {
+      case 'on':
+        // Turn off peers in switch group.
+        getOnSwitches().each({ sw ->
+          if (sw.id != eventDevice.id) {
+            if (settings.LOG) log.trace "buttonHandler() turning off ${deviceTag(sw)}."
+            sw.off()
+          }
+        })
+        break
+      case 'off':
+        enforceDefault()
+        break
+      default:
+        log.error  "buttonHandler() expected 'on' or 'off'; but, \
+          received '${e.value}'."
+    }
+  } else {
+    // Report this condition as an ERROR and explore further IF it occurs.
+    logSettingsAndState('buttonHandler()', true)
+  }
+}
+*/
+
+void initialize() {
+  if (settings.LOG) log.trace 'initialize()'
+  //-> enforcePbsgConstraints()
+  //-- PENDING -> enforceDefault()
+  subscribe(settings.swGroup, "switch", pbsgVswEventHandler)
+}
+
+void installed() {
+  if (settings.LOG) log.trace 'WHA installed()'
+  initialize()
+}
+
+void updated() {
+  if (settings.LOG) log.trace 'WHA updated()'
+  unsubscribe()  // Suspend event processing to rebuild state variables.
+  initialize()
+}
+
+void uninstalled() {
+  if (settings.LOG) log.trace 'uninstalled()'
+  // Nothing to do. Subscruptions are automatically dropped.
+  // This may matter if devices are captured by a switch group in the future.
+}
+
+/*
 String emphasizeOn(String s) {
   return s == 'on' ? '<b>on</b>' : "<em>${s}</em>"
 }
+*/

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// P B S G   L I B R A R Y
+// whaPBSG (an instsantiation of pbsgLibrary)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -11,12 +11,9 @@
 //     distributed under the License is distributed on an "AS IS" BASIS,
 //     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 //     implied.
-import com.hubitat.app.ChildDeviceWrapper as ChildDevW
-import com.hubitat.app.DeviceWrapper as DevW
-import com.hubitat.app.DeviceWrapperList as DevWL
-import com.hubitat.hub.domain.Event as Event
+// ---------------------------------------------------------------------------------
 #include wesmc.pbsgLibrary
-#include wesmc.UtilsLibrary
+#include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
 
 definition(
   parent: 'wesmc:WholeHouseAutomation',
@@ -36,26 +33,6 @@ definition(
   singleInstance: false
 )
 
-// ------------------------------------------------------------------------
-// D E S I G N   N O T E S
-//   The PARENT "Whole House Automation" application is expected to create
-//   this child application using:
-//     addChildApp('wesmc', 'whaPGSG', pbsgName)
-//   Once instantiated, this CHILD calls the following PARENT method:
-//     parent.getPbsgMap(String pbsgName)
-//   which supplies the Map:
-//     [
-//         switchNames: ... // a List<String>
-//       defaultSwitch: ... // a String
-//     ]
-//   This CHILD exposes the following functions to the parent.
-//     child.activateSceneForMode(String modeName, Boolean FORCE = false).
-//   When the CHILD is operating in "AUTO" mode, it sets an appropriate
-//   scene for the whole-house mode. If FORCE = true, the child enters
-//   its "AUTO" state, overriding any room-specific scene (or MANUAL mode)
-//   which would otherwise prevail.
-// ------------------------------------------------------------------------
-
 preferences {
   page(name: 'whaPbsgPage', title: '', install: true, uninstall: true)
 }
@@ -63,18 +40,5 @@ preferences {
 Map whaPbsgPage () {
   return dynamicPage(name: 'whaPbsgPage') {
     defaultPage()
-    /*
-    section {
-      paragraph(
-        heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
-        + bullet('Push <b>Done</b> to enable subcriptions and return to parent.')
-      )
-      paragraph(
-        heading('Debug<br/>')
-        + "${ displaySettings() }<br/>"
-        + "${ displayState() }"
-      )
-    }
-    */
   }
 }
