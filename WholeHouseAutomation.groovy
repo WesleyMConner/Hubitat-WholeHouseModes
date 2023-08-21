@@ -300,10 +300,10 @@ void manageChildApps() {
   InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
     ?:  addChildApp('wesmc', 'whaPBSG', pbsgName)
   if (settings.LOG) log.trace(
-    "manageChildApps() initializing ${pbsgName} with "
-    + "<b>modeSwitchNames:</b> ${state.modeSwitchNames}, "
-    + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName} "
-    + "and logging ${settings.LOG}."
+    "manageChildApps() initializing ${pbsgName} with<br/>"
+    + "<b>modeSwitchNames:</b> ${state.modeSwitchNames},<br/>"
+    + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName}<br/>"
+    + "<b>logging:</b> ${settings.LOG}."
   )
   pbsgApp.configure(
     state.modeSwitchNames,
@@ -326,6 +326,12 @@ void manageChildApps() {
       deleteChildApp(app.getId())
     }
   }
+}
+
+void pbsgSwitchActivated(String switchName) {
+  log.trace(
+    "pbsgSwitchActivated() WHA <b>'${switchName}' activation is TBD</b>."
+  )
 }
 
 void displayRoomNameHrefs () {
@@ -480,10 +486,6 @@ void updated() {
 }
 
 void testHandler (Event e) {
-  // SAMPLE 1
-  //   descriptionText  (lutron-80) TV Wall KPAD button 1 was pushed [physical]
-  //          deviceId  5686
-  //       displayName  (lutron-80) TV Wall KPAD
   if (settings.LOG) log.trace(
     "<b>WHA testHandler() w/ event:</b><br/>${logEventDetails(e, false)}"
   )

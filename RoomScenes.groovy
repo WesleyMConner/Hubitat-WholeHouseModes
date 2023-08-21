@@ -365,14 +365,15 @@ void manageChildApps() {
   // The PBSG instance manages its own state data locally.
   String pbsgName = "pbsg_${state.RoomName}"
   state.SwitchNames = state.RoomScenes + 'AUTOMATIC' + 'MANUAL'
-  state.DefaultSwitch = 'AUTOMATIC'
+  state.DefaultSwitchName = 'AUTOMATIC'
   InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
     ?:  addChildApp('wesmc', 'rsPBSG', pbsgName)
   if (settings.LOG) log.trace(
     "manageChildApps() initializing ${pbsgName} with "
     + "<b>SwitchNames:</b> ${state.SwitchNames}, and "
-    + "<b>DefaultSwitch:</b> ${state.DefaultSwitch}."
+    + "<b>DefaultSwitchName:</b> ${state.DefaultSwitchName}."
   )
+  pbsgApp.configure(state.SwitchNames, state.DefaultSwitchName, settings.LOG)
   state.pbsg_mgr = pbsgApp
   // ---------------------------------------------
   // P U R G E   E X C E S S   C H I L D   A P P S
@@ -389,13 +390,27 @@ void manageChildApps() {
   }
 }
 
-void updateCurrentPbsg(String currentSwitch) {
-  state.currentScene = currentSwitch
+void pbsgSwitchActivated(String switchName) {
+  log.trace(
+    "pbsgSwitchActivated() RoomScenes <b>'${switchName}' activation is TBD</b>."
+  )
 }
 
-void configureRoomPbsg () {
-  state.pbsg_mgr.configure(state.SwitchNames, state.DefaultSwitch, settings.LOG )
+void displayPbsgHref () {
+  if (state.pbsg_mgr) {
+    href (
+      name: state.pbsg_mgr.getLabel(),
+      width: 2,
+      url: "/installedapp/configure/${state.pbsg_mgr.getId()}/rsPbsgPage",
+      style: 'internal',
+      title: "Edit <b>${getAppInfo(state.pbsg_mgr)}</b>",
+      state: null, //'complete'
+    )
+  } else {
+    log.error 'displayPbsgHref() called with pbsg_modes missing.'
+  }
 }
+
 
 Map roomScenesPage () {
   // The parent application (Whole House Automation) assigns a unique label
@@ -422,7 +437,8 @@ Map roomScenesPage () {
       selectPicoButtonsForScene()
       solicitRoomScene()
       manageChildApps()
-      configureRoomPbsg()
+      paragraph heading('PBSG Configuration')
+      displayPbsgHref()
       paragraph(
         heading('Debug<br/>')
         + "${ displayState() }<br/>"
