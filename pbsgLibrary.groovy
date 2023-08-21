@@ -64,7 +64,6 @@ void manageChildDevices () {
     LinkedHashMap<String, DevW> switchNameToVsw = state.SwitchNames
       .collectEntries{ swName ->
         String deviceNetworkId = "${app.getLabel()}_${swName}"
-        //-> if (settings.LOG) log.trace "#69 eexpectedDeviceNetworkId >${deviceNetworkId}<"
         DevW vsw = childDevices.find{ d -> d.deviceNetworkId == deviceNetworkId }
           ?: addChildDevice(
             'hubitat',         // namespace
@@ -82,7 +81,6 @@ void manageChildDevices () {
     List<String> currentChildren = switchNameToVsw.collect{ switchName, vsw ->
       vsw.deviceNetworkId
     }
-    //-> log.trace "#87 currentChildren = >${currentChildren}<"
     List<String> orphanedDevices = childDevices.collect{ d -> d.deviceNetworkId }
                                   .minus(currentChildren)
     orphanedDevices.each{ deviceNetworkId ->
@@ -115,7 +113,6 @@ List<DevW> getOnSwitches() {
   } else {
     LinkedHashMap<String, DevW> onList = state.switchNameToVsw.findAll{
        switchName, vsw ->
-        // log.trace "#120 switchName: >${switchName}< vsw: >${vsw.displayName}<"
         extractSwitchState(vsw) == 'on'
     }
     onList.collect{ switchName, vsw -> vsw }
@@ -137,11 +134,8 @@ void enforcePbsgConstraints() {
       onList = onList.drop(1)
     }
     // Enforce Default Switch
-    //-> log.trace "#142 state.DefaultSwitch: ${state.DefaultSwitch}, onList: ${onList}"
-    //-> log.trace "#143 state.switchNameToVsw.keySet(): ${state.switchNameToVsw.keySet()}"
     if (state.DefaultSwitch && !onList) {
       DevW dfltSwitch = state.switchNameToVsw[state.DefaultSwitch]
-      //-> log.trace "#146 dfltSwitch: ${dfltSwitch}"
       dfltSwitch.on()
     }
   }
@@ -248,16 +242,10 @@ void buttonHandler (Event e) {
 
 void initialize() {
   if (settings.LOG) log.trace 'initialize()'
-  //-> enforcePbsgConstraints()
-  //-- PENDING -> enforceDefault()
-  // LinkedHashMap<String, DevW> switchNameToVsw
-  // subscribe(DeviceWrapperList devices, String attributeName, handlerMethod, Map options = null)
   List<DevW> vsws = state.switchNameToVsw.collect{ switchName, vsw -> vsw }
   if (settings.LOG) {
     String vswsTags = vsws.collect{ vsw ->
     LinkedHashMap vswx = vsw as LinkedHashMap
-      //-> log.trace "#261 vswx.displayName: ${vswx.displayName}, vswx.id: ${vswx.id}"
-      //-> log.trace "#262 deviceTag: ${deviceTag(vswx)}"
       deviceTag(vswx)
     }.join(', ')
     log.trace "initialize() vsws: ${vswsTags}"
