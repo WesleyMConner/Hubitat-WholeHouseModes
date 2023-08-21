@@ -11,14 +11,8 @@
 //     distributed under the License is distributed on an "AS IS" BASIS,
 //     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 //     implied.
-//
-//   Design Notes
-//   - Multiple DevWL instances arise due to multiple input() statements.
-//   - Initialization of 'state' includes making immutable copies of DeviveWrapper
-//     instances, gathered from 'settings'.
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
-import com.hubitat.app.DeviceWrapperList as DevWL
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
@@ -430,7 +424,7 @@ Map whaPage() {
 // " C H I L D "   S U P P O R T
 // -----------------------------
 
-List<DevW> narrowDevicesToRoom (String roomName, DevWL devices) {
+List<DevW> narrowDevicesToRoom (String roomName, List<DevW> devices) {
   // This function excludes devices that are not associated with any room.
   List<String> deviceIdsForRoom = app.getRooms()
                                   .findAll{it.name == roomName}

@@ -14,7 +14,6 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.ChildDeviceWrapper as ChildDevW
 import com.hubitat.app.DeviceWrapper as DevW
-import com.hubitat.app.DeviceWrapperList as DevWL
 import com.hubitat.hub.domain.Event as Event
 
 library (
