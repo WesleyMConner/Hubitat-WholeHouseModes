@@ -66,7 +66,7 @@ void manageChildDevices () {
     LinkedHashMap<String, ChildDevW> switchNameToVsw = state.SwitchNames
       .collectEntries{ swName ->
         String deviceNetworkId = "${app.getLabel()}_${swName}"
-        //-> if (settings.LOG) log.trace "#70 eexpectedDeviceNetworkId >${deviceNetworkId}<"
+        //-> if (settings.LOG) log.trace "#69 eexpectedDeviceNetworkId >${deviceNetworkId}<"
         ChildDevW vsw = childDevices.find{ d -> d.deviceNetworkId == deviceNetworkId }
           ?: addChildDevice(
             'hubitat',         // namespace
@@ -84,7 +84,7 @@ void manageChildDevices () {
     List<String> currentChildren = switchNameToVsw.collect{ switchName, vsw ->
       vsw.deviceNetworkId
     }
-    //-> log.trace "#88 currentChildren = >${currentChildren}<"
+    //-> log.trace "#87 currentChildren = >${currentChildren}<"
     List<String> orphanedDevices = childDevices.collect{ d -> d.deviceNetworkId }
                                   .minus(currentChildren)
     orphanedDevices.each{ deviceNetworkId ->
@@ -117,7 +117,7 @@ List<DevW> getOnSwitches() {
   } else {
     LinkedHashMap<String, ChildDevW> onList = state.switchNameToVsw.findAll{
        switchName, vsw ->
-        // log.trace "#119 switchName: >${switchName}< vsw: >${vsw.displayName}<"
+        // log.trace "#120 switchName: >${switchName}< vsw: >${vsw.displayName}<"
         extractSwitchState(vsw) == 'on'
     }
     onList.collect{ switchName, vsw -> vsw }
@@ -139,17 +139,15 @@ void enforcePbsgConstraints() {
       onList = onList.drop(1)
     }
     // Enforce Default Switch
-    log.trace "#140 state.DefaultSwitch: ${state.DefaultSwitch}, onList: ${onList}"
-    log.trace "#141 state.switchNameToVsw.keySet(): ${state.switchNameToVsw.keySet()}"
+    //-> log.trace "#142 state.DefaultSwitch: ${state.DefaultSwitch}, onList: ${onList}"
+    //-> log.trace "#143 state.switchNameToVsw.keySet(): ${state.switchNameToVsw.keySet()}"
     if (state.DefaultSwitch && !onList) {
       ChildDevW dfltSwitch = state.switchNameToVsw[state.DefaultSwitch]
-      log.trace "#144 dfltSwitch: ${dfltSwitch}"
+      //-> log.trace "#146 dfltSwitch: ${dfltSwitch}"
       dfltSwitch.on()
     }
   }
 }
-
-
 
 void displaySwitchStates () {
   if (!state.switchNameToVsw) {
@@ -185,31 +183,21 @@ void defaultPage () {
   }
 }
 
+// --------------------------------------------------
+// I M P L E M E N T   D Y N A M IC   B E H A V I O R
+// --------------------------------------------------
 
-
-
-
-
-
-// -----------------------------------------
-// M A N A G E D   C H I L D   D E V I C E S
-// -----------------------------------------
-
-
-
-
-void pbsgVswEventHandler (event) {
-  // ----------------------------------------------------------------------
-  // DO I NEED TO REFRESH THE DEVICES IN PBSG TO GET ACCURATE SWITCH DATA?
-  // PRESUMABLY, EVERYTHING WOULD BE ACCURATE DUE TO PRIOR EVENT HANDLING.
-  // ----------------------------------------------------------------------
-  // event.displayName
-  if (settings.LOG) log.trace "pbsgVswEventHandler() w/ parent App: '${event.deviceId.getParentAppId()}'."
+void pbsgEventHandler (event) {
+  if (settings.LOG) log.trace(
+    "pbsgEventHandler() w/ parent App: '${getAppInfo((event.deviceId).parent())}'."
+    + logEventDetails(event, false)
+  )
+  /*
   pbsg = state[pbsgName]
   if (event.isStateChange) {
     switch(event.value) {
       case 'on':
-        if (settings.LOG) log.trace "pbsgVswEventHandler() ${event.displayName}"
+        if (settings.LOG) log.trace "pbsgEventHandler() ${event.displayName}"
           + 'turned "ON". Turning off switch group peers.'
         pbsg.scene2Vsw.each{ scene, vsw ->
           // No harm in turning off a VSW that might already be off.
@@ -220,21 +208,16 @@ void pbsgVswEventHandler (event) {
         //-- PENDING -> enforceDefault()
         break
       default:
-        log.error  'pbsgVswEventHandler() expected 'on' or 'off'; but, '
+        log.error  'pbsgEventHandler() expected 'on' or 'off'; but, '
           + "received '${event.value}'."
         app.updateLabel("${pbsg.enclosingApp} - BROKEN")
     }
   } else {
-    log.error 'pbsgVswEventHandler() received an unexpected event:<br/>'
+    log.error 'pbsgEventHandler() received an unexpected event:<br/>'
       + logEventDetails(event, false)
   }
+  */
 }
-
-
-
-// -------------------------------
-// S T A T E   M A N A G E M E N T
-// -------------------------------
 
 /*
 void buttonHandler (Event e) {
@@ -269,8 +252,23 @@ void initialize() {
   if (settings.LOG) log.trace 'initialize()'
   //-> enforcePbsgConstraints()
   //-- PENDING -> enforceDefault()
-  subscribe(settings.swGroup, "switch", pbsgVswEventHandler)
+  // LinkedHashMap<String, ChildDevW> switchNameToVsw
+  // subscribe(DeviceWrapperList devices, String attributeName, handlerMethod, Map options = null)
+  List<DevW> vsws = state.switchNameToVsw.collect{ switchName, vsw -> vsw }
+  if (settings.LOG) {
+    String vswsTags = vsws.collect{ vsw ->
+    LinkedHashMap vswx = vsw as LinkedHashMap
+      //-> log.trace "#261 vswx.displayName: ${vswx.displayName}, vswx.id: ${vswx.id}"
+      //-> log.trace "#262 deviceTag: ${deviceTag(vswx)}"
+      deviceTag(vswx)
+    }.join(', ')
+    log.trace "initialize() vsws: ${vswsTags}"
+  }
+  subscribe(vsws, "switch", pbsgEventHandler)
 }
+// groovy.lang.MissingMethodException: No signature of method: java.lang.String.call()
+// is applicable for argument types: (java.util.HashMap)
+// values: [[data:[:], displayName:pbsg_modes_TV, parentAppId:1627, typeName:Virtual Switch, ...]] Possible solutions: wait(), chars(), any(), wait(long), each(groovy.lang.Closure), take(int) on line 307 (method updated) (library wesmc.pbsgLibrary, line 261)
 
 void installed() {
   if (settings.LOG) log.trace 'WHA installed()'
