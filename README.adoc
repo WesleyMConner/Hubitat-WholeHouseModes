@@ -2,6 +2,15 @@
 // cSpell:words kpads picos
 = Whole House Automation
 
+== KEY DECISIONS
+
+* The WHA-owned PBSG instance (whaPBSG) manages the VSWs which are
+authoritative Hubitat mode. +
+Changes to mode must be via these VSWs exclusively.
+* WHA is exclusively responsible for setting mode as the mode VSWs change.
+* Only WHA should depend on the whaPBSG VSWs. +
+Everything else should respond to mode changes (not the whaPBSG VSWs).
+
 == Sample Received Button Press Events
 
 === COOK Pushed
