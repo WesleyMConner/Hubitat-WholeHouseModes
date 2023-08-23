@@ -35,12 +35,16 @@ definition(
 )
 
 preferences {
-  page(name: 'whaPbsgPage', title: '', install: true, uninstall: true)
+  page(name: 'whaPbsgPage')
 }
 
+
 Map whaPbsgPage () {
-  return dynamicPage(name: 'whaPbsgPage') {
+  return dynamicPage(
+    name: 'whaPbsgPage',
+    install: false,
+    uninstall: false
+  ) {
     defaultPage()
   }
 }
-

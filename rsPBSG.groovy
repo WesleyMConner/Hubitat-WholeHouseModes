@@ -34,11 +34,15 @@ definition(
 )
 
 preferences {
-  page(name: 'rsPbsgPage', title: '', install: true, uninstall: true)
+  page(name: 'rsPbsgPage')
 }
 
 Map rsPbsgPage () {
-  return dynamicPage(name: 'rsPbsgPage') {
+  return dynamicPage(
+    name: 'rsPbsgPage',
+    install: false, //true,
+    uninstall: false
+  ) {
     defaultPage()
   }
 }

@@ -25,6 +25,23 @@ library (
   importUrl: ''
 )
 
+// Include this page content when instantiating PBSG instances.
+void defaultPage () {
+  section {
+    paragraph(
+      heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
+      + emphasis(red('Use the browser back button to return to the parent page.'))
+    )
+    manageChildDevices()
+    paragraph(
+      heading('Debug<br/>')
+      + "${ displaySettings() }<br/>"
+      + "${ displayState() }"
+    )
+  }
+}
+
+
 // ---------------------------------------------------------------------
 // C R E A T E   S T A T I C   S T R U C T U R E   &   U I   R E V I E W
 // ---------------------------------------------------------------------
@@ -34,7 +51,7 @@ String switchNameToDeviceNetworkId (String switchName) {
 }
 
 String deviceNetworkIdToSwitchName (String dni) {
-  log.trace "deviceNetworkIdToSwitchName() ... >${dni}<"
+  log.trace "PBSG-LIB deviceNetworkIdToSwitchName() ... >${dni}<"
   return dni.minus("${app.getLabel()}_")
 }
 
@@ -47,13 +64,15 @@ void configure (
   //   Logging is not advised in this function, which is invoked by a
   //   parent application just after instantiating a new PBSG instance.
   //   The parent should provide pbsgSwitchActivated(String SwitchName).
-  app.updateSetting('LOG', log)
-  state.SwitchNames = switchNames
-  state.SwitchDNIs = switchNames.collect{ switchName ->
+  app.updateSetting('log', log)
+  state.switchNames = switchNames
+  state.switchDNIs = switchNames.collect{ switchName ->
     switchNameToDeviceNetworkId(switchName)
   }
-  state.DefaultSwitchName = defaultSwitch
-  state.DefaultSwitchDNI = switchNameToDeviceNetworkId(defaultSwitch)
+  state.defaultSwitchName = defaultSwitch
+  state.defaultSwitchDNI = switchNameToDeviceNetworkId(defaultSwitch)
+  manageChildDevices()
+  enforcePbsgConstraints()
 }
 
 void addOrphanChild() {
@@ -70,7 +89,7 @@ void manageChildDevices () {
   // Uncomment the following to test orphan child app removal.
   //-> addOrphanChild()
   //=> GET ALL CHILD DEVICES AT ENTRY
-  if (!state.SwitchNames) {
+  if (!state.switchNames) {
     paragraph red(
       'manageChildDevices() is pending required state data (switchNames).'
     )
@@ -78,11 +97,11 @@ void manageChildDevices () {
     List<DevW> entryDNIs = getAllChildDevices().collect{ device ->
       device.deviceNetworkId
     }
-    List<DevW> missingDNIs = (state.SwitchDNIs)?.minus(entryDNIs)
-    List<DevW> orphanDNIs = entryDNIs.minus(state.SwitchDNIs)
-    if (settings.LOG) log.trace(
-      'manageChildDevices()<table>'
-      + "<tr><th>state.SwitchDNIs</th><td>${state.SwitchDNIs}</td></tr>"
+    List<DevW> missingDNIs = (state.switchDNIs)?.minus(entryDNIs)
+    List<DevW> orphanDNIs = entryDNIs.minus(state.switchDNIs)
+    if (settings.log) log.trace(
+      'PBSG-LIB manageChildDevices()<table>'
+      + "<tr><th>state.switchDNIs</th><td>${state.switchDNIs}</td></tr>"
       + "<tr><th>entryDNIs</th><td>${entryDNIs}</td></tr>"
       + "<tr><th>missingDNIs</th><td>${missingDNIs}</td></tr>"
       + "<tr><th>orphanDNIs:</th><td>${orphanDNIs}</td></tr>"
@@ -97,8 +116,9 @@ void manageChildDevices () {
 
 String getSwitchState(DevW d) {
   List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
-  //-> if (settings.LOG) log.trace(
-  //->   "getSwitchState() w/ stateValues: ${stateValues} for ${d.displayName}"
+  //-> if (settings.log) log.trace(
+  //->   "PBSG-LIB getSwitchState() w/ stateValues: ${stateValues} "
+  //->   + "for ${d.displayName}"
   //-> )
   return stateValues.contains('on')
       ? 'on'
@@ -108,7 +128,7 @@ String getSwitchState(DevW d) {
 }
 
 List<DevW> getOnSwitches() {
-  if (!state.SwitchDNIs) {
+  if (!state.switchDNIs) {
     paragraph red(
       'Mutual Exclusion enforcement is pending required data (switchDNIs).'
     )
@@ -116,33 +136,42 @@ List<DevW> getOnSwitches() {
   } else {
     return getAllChildDevices().findAll{ d ->
       (
-        state.SwitchDNIs.contains(d.deviceNetworkId)
+        state.switchDNIs.contains(d.deviceNetworkId)
         && getSwitchState(d) == 'on'
       )
     }
   }
 }
 
+void enforceMutualExclusion() {
+  List<DevW> onList = getOnSwitches()
+  while (onlist && onList.size() > 1) {
+    DevW device = onList?.first()
+    if (settings.log) log.trace(
+      "PBSG-LIB enforcePbsgConstraints() turning off ${deviceTag(device)}."
+    )
+    device.off()
+    onList = onList.drop(1)
+  }
+}
+
+void enforceDefaultSwitch() {
+  // Enforce Default Switch
+  List<DevW> onList = getOnSwitches()
+  if (state.defaultSwitchName && !onList) {
+    getChildDevice(state.defaultSwitchDNI).on()
+  }
+}
+
 void enforcePbsgConstraints() {
-  if (!state.SwitchDNIs) {
+  if (!state.switchDNIs) {
     paragraph red(
       'Mutual Exclusion enforcement is pending required data (switchDNIs).'
     )
   } else {
     // Enforce Mutual-Exclusion (NOT REQUIRED if 'on' events turn 'off' peers)
-    List<DevW> onList = getOnSwitches()
-    while (onlist && onList.size() > 1) {
-      DevW device = onList?.first()
-      if (settings.LOG) log.trace(
-        "enforcePbsgConstraints() turning off ${deviceTag(device)}."
-      )
-      device.off()
-      onList = onList.drop(1)
-    }
-    // Enforce Default Switch
-    if (state.DefaultSwitchName && !onList) {
-      getChildDevice(state.DefaultSwitchDNI).on()
-    }
+    enforceMutualExclusion()
+    enforceDefaultSwitch()
   }
 }
 
@@ -151,37 +180,20 @@ String emphasizeOn(String s) {
 }
 
 void displaySwitchStates () {
-  if (!state.SwitchDNIs) {
+  if (!state.switchDNIs) {
     paragraph red('Disply of child switch values is pending required data.')
   } else {
     paragraph(
       heading('Current Switch States<br/>')
-      + emphasis('Refresh browser (&#x27F3;) for current data<br/>')
+      + emphasis(red('Refresh browser (&#x27F3;) for current data<br/>'))
       + '<table>'
-      + state.SwitchDNIs.sort().collect{ dni ->
+      + state.switchDNIs.sort().collect{ dni ->
         DevW d = app.getChildDevice(dni)
-        Boolean dflt = d.displayName == state.DefaultSwitchDNI
+        Boolean dflt = d.displayName == state.defaultSwitchDNI
         String label = "${d.displayName}${dflt ? ' (default)' : ''}"
         "<tr><th>${label}:</th><td>${emphasizeOn(getSwitchState(d))}</td></tr>"
       }.join('')
       + '</table>'
-    )
-  }
-}
-
-void defaultPage () {
-  section {
-    paragraph(
-      heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
-      + bullet('Push <b>Done</b> to return to enable event subcriptions and return to parent.')
-    )
-    manageChildDevices()
-    enforcePbsgConstraints()
-    displaySwitchStates()
-    paragraph(
-      heading('Debug<br/>')
-      + "${ displaySettings() }<br/>"
-      + "${ displayState() }"
     )
   }
 }
@@ -191,39 +203,44 @@ void defaultPage () {
 // --------------------------------------------------
 
 void turnOffPeers (String callerDNI) {
-  state.SwitchDNIs.findAll{ dni -> dni != callerDNI }.each{ dni ->
+  state.switchDNIs.findAll{ dni -> dni != callerDNI }.each{ dni ->
     getChildDevice(dni).off()
   }
 }
 
 void pbsgEventHandler (Event e) {
-  if (settings.LOG) log.trace "pbsgEventHandler() w/ ${e.descriptionText}"
+  if (settings.log) log.trace "PBSG-LIB pbsgEventHandler() w/ ${e.descriptionText}"
   if (e.value == 'on') {
     turnOffPeers(e.displayName)
     parent.pbsgSwitchActivated(deviceNetworkIdToSwitchName(e.displayName))
+  } else if (e.value == 'off') {
+    enforceDefaultSwitch()
+    parent.pbsgSwitchActivated(deviceNetworkIdToSwitchName(state.defaultSwitchName))
   }
 }
 
 void initialize() {
   app.getAllChildDevices().each{ device ->
-    if (settings.LOG) log.trace "PBSG initialize() subscribing ${deviceTag(device)}..."
+    if (settings.log) log.trace(
+      "PBSG-LIB initialize() subscribing ${deviceTag(device)}..."
+    )
     subscribe(device, "switch", pbsgEventHandler, ['filterEvents': false])
   }
 }
 
 void installed() {
-  if (settings.LOG) log.trace 'PBSG installed()'
+  if (settings.log) log.trace 'PBSG-LIB installed()'
   initialize()
 }
 
 void updated() {
-  if (settings.LOG) log.trace 'PBSG updated()'
+  if (settings.log) log.trace 'PBSG-LIB updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void uninstalled() {
-  if (settings.LOG) log.trace 'PBSG uninstalled(), DELETING CHILD DEVICES'
+  if (settings.log) log.trace 'PBSG-LIB uninstalled(), DELETING CHILD DEVICES'
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)
   }
