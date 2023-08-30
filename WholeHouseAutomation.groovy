@@ -61,6 +61,7 @@ Map whaPage() {
       solicitLutronLEDs ()
       solicitSwitches()
       selectLedsForMode()
+    deriveKpadDNIandButtonToMode()
       manageChildApps()
       paragraph heading('Room Scene Configuration')
       displayRoomNameHrefs()
@@ -264,14 +265,15 @@ void solicitSwitches () {
 }
 
 void selectLedsForMode() {
-    if (state.modeSwitchNames == null || getLedDevices() == null) {
+  // Design Note
+  //   Keypad LEDs are used as a proxy for Keypad buttons.
+  //     - The button's displayName is meaningful to clients.
+  //     - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
+  if (state.modeSwitchNames == null || getLedDevices() == null) {
     paragraph(red(
       'Mode activation buttons are pending pre-requisites above.'
     ))
   } else {
-//    if (settings.log) log.trace (
-//      "#275 -> getLedDevices(): ${getLedDevices()}"
-//    )
     state.modeSwitchNames.each{ msn ->
       input(
         name: "${msn}_LEDs",
@@ -281,9 +283,58 @@ void selectLedsForMode() {
         submitOnChange: true,
         required: false,
         multiple: true,
-        options: getLedDevices().collect{ d -> d.displayName }?.sort()
+        options: getLedDevices().collect{ d ->
+          "${d.displayName}: ${d.deviceNetworkId}"
+        }?.sort()
       )
     }
+  }
+}
+
+void deriveKpadDNIandButtonToMode () {
+  // Design Note
+  //   The Keypad LEDs collected by selectForMode() function as a proxy for
+  //   Keypad button presses. Settings data includes the user-friendly
+  //   LED displayName and the LED device ID, which is comprised of 'Keypad
+  //   Device Id' and 'Button Number', concatenated with a hyphen. This
+  //   method populates "state.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
+  // Sample Settings Data
+  //   key: Day_LEDs, value: [Central KPAD 2 - DAY (5953-2)]
+  //                                                ^KPAD DNI
+  //                                                     ^KPAD Button #
+  settings.each{ key, value ->
+    if (key.contains('_LEDs')) {
+      String mode = key.minus('_LEDs')
+      value.each{ item ->
+        List<String> kpadDniAndButton = item?.tokenize(' ')?.last()?.tokenize('-')
+        log.trace(
+          '====><br/>'
+          + "<b>KPAD DNI:</b> ${kpadDniAndButton[0]}<br/>"
+          + "<b>Button:</b> ${kpadDniAndButton[1]}<br/>"
+          + "<b>mode:</b> ${mode}"
+        )
+        if (kpadDniAndButton.size() == 2 && mode) {
+          if (!state[kpadDniAndButton[0]]) state[kpadDniAndButton[0]] = [:]
+          state[kpadDniAndButton[0]][kpadDniAndButton[1]] = mode
+        }
+        /*
+        log.trace(
+          '====><br/>'
+          + "<b>key:</b> ${key}<br/>"
+          + "<b>mode:</b> ${mode}<br/>"
+          + "<b>value:</b> ${value}}<br/>"
+          + "<b>item:</b> ${item}<br/>"
+          + "<b>Button DNI:</b> ${item?.tokenize(' ')?.last()}<br/>"
+          + "<b>KPAD DNI and Button:</b> ${item?.tokenize(' ')?.last()?.tokenize('-')}"
+        )
+        */
+      }
+
+      //value.each{ ledDevice ->
+      //  ledDevice.id
+      //}
+    }
+    // dni.minus("${app.getLabel()}_")
   }
 }
 
