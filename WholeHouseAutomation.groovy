@@ -302,20 +302,22 @@ void deriveKpadDNIandButtonToMode () {
   //   key: Day_LEDs, value: [Central KPAD 2 - DAY (5953-2)]
   //                                                ^KPAD DNI
   //                                                     ^KPAD Button #
+  //state.remove('KpadButtons')
+  state.kpadButtons = [:]
   settings.each{ key, value ->
     if (key.contains('_LEDs')) {
       String mode = key.minus('_LEDs')
       value.each{ item ->
         List<String> kpadDniAndButton = item?.tokenize(' ')?.last()?.tokenize('-')
-        log.trace(
-          '====><br/>'
-          + "<b>KPAD DNI:</b> ${kpadDniAndButton[0]}<br/>"
-          + "<b>Button:</b> ${kpadDniAndButton[1]}<br/>"
-          + "<b>mode:</b> ${mode}"
-        )
+        //-> log.trace(
+        //->   '====><br/>'
+        //->   + "<b>KPAD DNI:</b> ${kpadDniAndButton[0]}<br/>"
+        //->   + "<b>Button:</b> ${kpadDniAndButton[1]}<br/>"
+        //->   + "<b>mode:</b> ${mode}"
+        //-> )
         if (kpadDniAndButton.size() == 2 && mode) {
-          if (!state[kpadDniAndButton[0]]) state[kpadDniAndButton[0]] = [:]
-          state[kpadDniAndButton[0]][kpadDniAndButton[1]] = mode
+          if (!state.kpadButtons[kpadDniAndButton[0]]) state.kpadButtons[kpadDniAndButton[0]] = [:]
+          state.kpadButtons[kpadDniAndButton[0]][kpadDniAndButton[1]] = mode
         }
         /*
         log.trace(
@@ -609,24 +611,20 @@ void repeaterHandler (Event e) {
 void keypadHandler (Event e) {
   if (e.name == 'pushed') {
     if (settings.log) log.trace(
-      "WHA keypadHandler() <b>displayName:</b> '${e.displayName}'<br/>"
+      "WHA keypadHandler()<br/>"
+      + "<b>displayName:</b> '${e.displayName}'<br/>"
       + "<b>deviceId:</b> '${e.deviceId}'<br/>"
-      //+ "<b>deviceNetworkId:</b> '${e.deviceNetworkId}'<br/>"
       + "<b>button:</b> '${e.value}'<br/>"
-      //+ "<b>parentId:</b> '${getParentDeviceId()}'<br/>"
       + "<b>settings.seeTouchKeypad:</b> ${settings.seeTouchKeypad}<br/>"
-      + "<b>state.modeSwitchNames:</b> ${state.modeSwitchNames}"
-//----> getChildDevice()
-//----> getParentDeviceId()
+      + "<b>state.modeSwitchNames:</b> ${state.modeSwitchNames}<br/>"
+      //+ "<b>CHECKPOINT:</b> ${(state.kpadButtons[e.deviceId])[e.value]}"
     )
     // state.modeSwitchNames
-//----> logEventDetails(e, true)
   } else {
     if (settings.log) log.trace(
       "WHA keypadHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
     )
   }
-  //"${msn}_LEDs"
 }
 
 void initialize() {
