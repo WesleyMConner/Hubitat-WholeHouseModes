@@ -75,8 +75,6 @@ Map whaPage() {
   }
 }
 
-
-
 // -------------------------------------------------
 // R E N A M E   L U T R O N   L E D   B U T T O N S
 // -------------------------------------------------
@@ -271,6 +269,9 @@ void selectLedsForMode() {
       'Mode activation buttons are pending pre-requisites above.'
     ))
   } else {
+//    if (settings.log) log.trace (
+//      "#275 -> getLedDevices(): ${getLedDevices()}"
+//    )
     state.modeSwitchNames.each{ msn ->
       input(
         name: "${msn}_LEDs",
@@ -357,6 +358,11 @@ void manageChildApps() {
       ) ?: 'null'
     */
   state.roomNameToRoomScenes = childAppsByRoom
+  //--xx-> log.trace(
+  //--xx->   'WHA manageChildApps() DEBUG<br/>'
+  //--xx->   + "childAppsByRoom: ${childAppsByRoom}<br/>"
+  //--xx->   + "state.roomNameToRoomScenes: ${state.roomNameToRoomScenes}"
+  //--xx-> )
   // -------------------------
   // P O P U L A T E   P B S G
   // -------------------------
@@ -404,7 +410,7 @@ void pbsgVswTurnedOn(String simpleName) {
 }
 
 void displayRoomNameHrefs () {
-  if (!state.roomNameToRoomScenes) {
+  if (state.roomNameToRoomScenes) {
     state.roomNameToRoomScenes.each{ roomName, roomApp ->
       href (
         name: roomName,
@@ -531,30 +537,69 @@ void updated() {
   initialize()
 }
 
-void testHandler (Event e) {
+//void testHandler (Event e) {
+//  if (settings.log) log.trace(
+//    "WHA <b>testHandler() w/ event: ${e.descriptionText}"
+//  )
+//}
+
+void telnetHandler (Event e) {
   if (settings.log) log.trace(
-    "WHA <b>testHandler() w/ event:</b><br/>${logEventDetails(e, false)}"
+    "WHA <b>telnetHandler() w/ event: ${e.descriptionText}"
   )
 }
 
+void repeaterHandler (Event e) {
+  if (settings.log) log.trace(
+    "WHA <b>repeaterHandler() w/ event: ${e.descriptionText}"
+  )
+}
+
+void keypadHandler (Event e) {
+  if (e.name == 'pushed') {
+    if (settings.log) log.trace(
+      "WHA keypadHandler() <b>displayName:</b> '${e.displayName}'<br/>"
+      + "<b>deviceId:</b> '${e.deviceId}'<br/>"
+      //+ "<b>deviceNetworkId:</b> '${e.deviceNetworkId}'<br/>"
+      + "<b>button:</b> '${e.value}'<br/>"
+      //+ "<b>parentId:</b> '${getParentDeviceId()}'<br/>"
+      + "<b>settings.seeTouchKeypad:</b> ${settings.seeTouchKeypad}<br/>"
+      + "<b>state.modeSwitchNames:</b> ${state.modeSwitchNames}"
+//----> getChildDevice()
+//----> getParentDeviceId()
+    )
+    // state.modeSwitchNames
+//----> logEventDetails(e, true)
+  } else {
+    if (settings.log) log.trace(
+      "WHA keypadHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
+    )
+  }
+  //"${msn}_LEDs"
+}
+
 void initialize() {
+  // TACTICALLY, DROP EVERYTHING
   if (settings.log) log.trace "WHA initialize()"
   if (settings.log) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing ${device.displayName} ${device.id}"
-    subscribe(device, testHandler, ['filterEvents': false])
+    //unsubscribe(d)
+    subscribe(device, telnetHandler, ['filterEvents': false])
   }
   if (settings.log) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, testHandler, ['filterEvents': false])
+    //unsubscribe(d)
+    subscribe(device, repeaterHandler, ['filterEvents': false])
   }
   if (settings.log) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, testHandler, ['filterEvents': false])
+    //unsubscribe(d)
+    subscribe(device, keypadHandler, ['filterEvents': false])
   }
 }
