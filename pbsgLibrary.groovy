@@ -46,31 +46,31 @@ void defaultPage () {
 // C R E A T E   S T A T I C   S T R U C T U R E   &   U I   R E V I E W
 // ---------------------------------------------------------------------
 
-String switchNameToDeviceNetworkId (String switchName) {
+String simpleNameToDNI (String switchName) {
   return "${app.getLabel()}_${switchName}"
 }
 
-String deviceNetworkIdToSwitchName (String dni) {
-  log.trace "PBSG-LIB deviceNetworkIdToSwitchName() ... >${dni}<"
+String dniToSimpleName (String dni) {
+  //-> log.trace "PBSG-LIB dniToSimpleName() ... >${dni}<"
   return dni.minus("${app.getLabel()}_")
 }
 
 void configure (
   List<String> switchNames,
-  String defaultSwitch,
+  String defaultSwitchName,
   Boolean log
   ) {
   // Design Note
-  //   Logging is not advised in this function, which is invoked by a
+  //   LOGGING IS NOT ADVISED IN THIS FUNCTION, which is invoked by a
   //   parent application just after instantiating a new PBSG instance.
-  //   The parent should provide pbsgSwitchActivated(String SwitchName).
+  //   The parent should provide pbsgVswTurnedOn(String simpleName).
   app.updateSetting('log', log)
   state.switchNames = switchNames
   state.switchDNIs = switchNames.collect{ switchName ->
-    switchNameToDeviceNetworkId(switchName)
+    simpleNameToDNI(switchName)
   }
-  state.defaultSwitchName = defaultSwitch
-  state.defaultSwitchDNI = switchNameToDeviceNetworkId(defaultSwitch)
+  state.defaultSwitchName = defaultSwitchName
+  state.defaultSwitchDNI = simpleNameToDNI(defaultSwitchName)
   manageChildDevices()
   enforcePbsgConstraints()
 }
@@ -145,10 +145,12 @@ List<DevW> getOnSwitches() {
 
 void enforceMutualExclusion() {
   List<DevW> onList = getOnSwitches()
-  while (onlist && onList.size() > 1) {
+  while (onList && onList.size() > 1) {
     DevW device = onList?.first()
     if (settings.log) log.trace(
-      "PBSG-LIB enforcePbsgConstraints() turning off ${deviceTag(device)}."
+      'PBSG-LIB enforceMutualExclusion(), <br/>'
+      + "<b>onList:</b> ${onList}, "
+      + " turning off <b>${deviceTag(device)}</b>."
     )
     device.off()
     onList = onList.drop(1)
@@ -159,7 +161,13 @@ void enforceDefaultSwitch() {
   // Enforce Default Switch
   List<DevW> onList = getOnSwitches()
   if (state.defaultSwitchName && !onList) {
+    if (settings.log) log.trace(
+      'PBSG-LIB enforceDefaultSwitch() turning on , '
+      + "<b>state.defaultSwitchName:</b> ${state.defaultSwitchName}"
+    )
     getChildDevice(state.defaultSwitchDNI).on()
+  } else {
+    if (settings.log) log.trace 'PBSG-LIB enforceDefaultSwitch() taking no action.'
   }
 }
 
@@ -209,13 +217,28 @@ void turnOffPeers (String callerDNI) {
 }
 
 void pbsgEventHandler (Event e) {
-  if (settings.log) log.trace "PBSG-LIB pbsgEventHandler() w/ ${e.descriptionText}"
-  if (e.value == 'on') {
-    turnOffPeers(e.displayName)
-    parent.pbsgSwitchActivated(deviceNetworkIdToSwitchName(e.displayName))
-  } else if (e.value == 'off') {
-    enforceDefaultSwitch()
-    parent.pbsgSwitchActivated(deviceNetworkIdToSwitchName(state.defaultSwitchName))
+  if (e.isStateChange) {
+    if (e.value == 'on') {
+      if (settings.log) log.trace(
+        "PBSG-LIB pbsgEventHandler() ${e.descriptionText}, turning off peers ..."
+      )
+      turnOffPeers(e.displayName)
+      parent.pbsgVswTurnedOn(dniToSimpleName(e.displayName))
+    } else if (e.value == 'off') {
+      if (settings.log) log.trace(
+        "PBSG-LIB pbsgEventHandler(), ${e.descriptionText}"
+      )
+      enforceDefaultSwitch()
+    } else {
+      if (settings.log) log.error(
+        "PBSG-LIB pbsgEventHandler(), unexpected value = >${e.value}<"
+      )
+    }
+  } else {
+    //-> if (settings.log) log.trace(
+    //->   "PBSG-LIB pbsgEventHandler() IGNORING ${e.descriptionText}<br/>"
+    //->   + logEventDetails(e)
+    //-> )
   }
 }
 

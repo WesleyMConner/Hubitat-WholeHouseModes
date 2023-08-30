@@ -309,7 +309,7 @@ void manageChildApps() {
   // G E T   A L L   C H I L D   A P P S
   // ------------------------------------------------
   if (settings.log) log.trace (
-    'WHA-manageChildApps() on entry getAllChildApps(): '
+    'WHA manageChildApps() on entry getAllChildApps(): '
     + getAllChildApps().sort{ a, b ->
         a.getLabel() <=> b.getLabel() ?: a.getId() <=> b.getId()
       }.collect{ app ->
@@ -324,7 +324,7 @@ void manageChildApps() {
   // per App Label.
   LinkedHashMap<String, InstAppW> childAppsByLabel = keepOldestAppObjPerAppLabel()
   if (settings.log) log.trace (
-    'WHA-manageChildApps() after keepOldestAppObjPerAppLabel(): '
+    'WHA manageChildApps() after keepOldestAppObjPerAppLabel(): '
     + childAppsByLabel.collect{label, childObj ->
         "<b>${label}</b> -> ${childObj.getId()}"
       }?.join(', ')
@@ -345,7 +345,7 @@ void manageChildApps() {
       "<b>${roomName}</b> -> ${roomObj.getId()}"
     }
     log.trace(
-      'WHA-manageChildApps() after adding any missing Room Scene apps: '
+      'WHA manageChildApps() after adding any missing Room Scene apps: '
       + "${kids ? kids.join(', ') : red('<b>NULL</b>')}"
     )
   }
@@ -368,7 +368,7 @@ void manageChildApps() {
   InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
     ?:  addChildApp('wesmc', 'whaPBSG', pbsgName)
   if (settings.log) log.trace(
-    "WHA-manageChildApps() initializing ${pbsgName} with<br/>"
+    "WHA manageChildApps() initializing ${pbsgName} with<br/>"
     + "<b>modeSwitchNames:</b> ${state.modeSwitchNames},<br/>"
     + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName}<br/>"
     + "<b>logging:</b> ${settings.log}"
@@ -389,23 +389,22 @@ void manageChildApps() {
       // Skip, still in use
     } else {
       if (settings.log) log.trace(
-        "WHA-manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
+        "WHA manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
       )
       deleteChildApp(app.getId())
     }
   }
 }
 
-void pbsgSwitchActivated(String switchName) {
+void pbsgVswTurnedOn(String simpleName) {
   log.trace(
-    "WHA-pbsgSwitchActivated() WHA-<b>'${switchName}' activation is TBD</b>."
+    "WHA pbsgVswTurnedOn() activating mode='<b>${simpleName}</b> [PENDING]'."
   )
+  getLocation().setMode(simpleName)
 }
 
 void displayRoomNameHrefs () {
-//  if (!state.roomNameToRoomScenes) {
-//    paragraph red("No Rooms have been identified yet.")
-//  } else {
+  if (!state.roomNameToRoomScenes) {
     state.roomNameToRoomScenes.each{ roomName, roomApp ->
       href (
         name: roomName,
@@ -416,7 +415,9 @@ void displayRoomNameHrefs () {
         state: null, //'complete'
       )
     }
-//  }
+  } else {
+    paragraph red("No Rooms have been identified yet.")
+  }
 }
 
 void displayPbsgHref () {
@@ -430,14 +431,14 @@ void displayPbsgHref () {
       state: null, //'complete'
     )
   } else {
-    log.error 'WHA-displayPbsgHref() called with pbsg_modes missing.'
+    log.error 'WHA displayPbsgHref() called with pbsg_modes missing.'
   }
 }
 
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
     if (settings.log) log.trace(
-      "WHA-removeAllChildApps() child: >${child.getId()}< >${child.getLabel()}<"
+      "WHA removeAllChildApps() child: >${child.getId()}< >${child.getLabel()}<"
     )
     deleteChildApp(child.getId())
   }
@@ -447,18 +448,18 @@ void pruneOrphanedChildApps () {
   //Initially, assume InstAppW supports instance equality tests -> values is a problem
   List<InstAppW> kids = getAllChildApps()
   if (settings.log) log.info(
-    'WHA-pruneOrphanedChildApps() processing '
+    'WHA pruneOrphanedChildApps() processing '
     + "${kids.collect{it.getLabel()}.join(', ')}"
   )
   List<String> roomNames =
   kids.each{ kid ->
     if (settings.focalRoomNames?.contains(kid)) {
       if (settings.log) log.info(
-        "WHA-pruneOrphanedChildApps() skipping ${kid.getLabel()} (room)"
+        "WHA pruneOrphanedChildApps() skipping ${kid.getLabel()} (room)"
       )
     } else {
       if (settings.log) log.info(
-        "WHA-pruneOrphanedChildApps() deleting ${kid.getLabel()} (orphan)"
+        "WHA pruneOrphanedChildApps() deleting ${kid.getLabel()} (orphan)"
       )
       deleteChildApp(kid.getId())
     }
@@ -515,45 +516,45 @@ List<DevW> getNonLutronDevicesForRoom (String roomName) {
 // -------------------------------
 
 void installed() {
-  if (settings.log) log.trace 'WHA-installed()'
+  if (settings.log) log.trace 'WHA installed()'
   initialize()
 }
 
 void uninstalled() {
-  if (settings.log) log.trace "WHA-uninstalled()"
+  if (settings.log) log.trace "WHA uninstalled()"
   removeAllChildApps()
 }
 
 void updated() {
-  if (settings.log) log.trace 'WHA-updated()'
+  if (settings.log) log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void testHandler (Event e) {
   if (settings.log) log.trace(
-    "WHA-<b>testHandler() w/ event:</b><br/>${logEventDetails(e, false)}"
+    "WHA <b>testHandler() w/ event:</b><br/>${logEventDetails(e, false)}"
   )
 }
 
 void initialize() {
-  if (settings.log) log.trace "WHA-initialize()"
-  if (settings.log) log.trace "WHA-subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  if (settings.log) log.trace "WHA initialize()"
+  if (settings.log) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "WHA-subscribing ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "WHA subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.log) log.trace "WHA-subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (settings.log) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "WHA-subscribing to ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.log) log.trace "WHA-subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  if (settings.log) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "WHA-subscribing to ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
 }

@@ -298,7 +298,7 @@ void selectPicoButtonsForScene() {
     ))
   } else {
     List<DevW> picos = parent.getPicoDevices()
-    //log.trace "picos [A]: ${picos}"
+    //log.trace "RS selectPicoButtonsForScene() picos [A]: ${picos}"
     state.roomScenes.each{ sceneName ->
       input(
           // Head's Up:
@@ -379,7 +379,7 @@ void manageChildApps() {
   // G E T   A L L   C H I L D   A P P S
   // ------------------------------------------------
   if (settings.log) log.trace (
-    'manageChildApps() on entry getAllChildApps(): '
+    'RS manageChildApps() on entry getAllChildApps(): '
     + getAllChildApps().sort{ a, b ->
         a.getLabel() <=> b.getLabel() ?: a.getId() <=> b.getId()
       }.collect{ app ->
@@ -395,7 +395,7 @@ void manageChildApps() {
   LinkedHashMap<String, InstAppW> childAppsByLabel \
     = keepOldestAppObjPerAppLabel()
   if (settings.log) log.trace (
-    'manageChildApps() after keepOldestAppObjPerAppLabel(): '
+    'RS manageChildApps() after keepOldestAppObjPerAppLabel(): '
     + childAppsByLabel.collect{label, childObj ->
         "<b>${label}</b> -> ${childObj.getId()}"
       }?.join(', ')
@@ -411,7 +411,7 @@ void manageChildApps() {
   InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
     ?:  addChildApp('wesmc', 'rsPBSG', pbsgName)
   if (settings.log) log.trace(
-    "manageChildApps() initializing ${pbsgName} with "
+    "RS manageChildApps() initializing ${pbsgName} with "
     + "<b>SwitchNames:</b> ${state.switchNames}, and "
     + "<b>DefaultSwitchName:</b> ${state.defaultSwitchName}."
   )
@@ -425,16 +425,16 @@ void manageChildApps() {
       // Skip, still in use
     } else {
       if (settings.log) log.trace(
-        "manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
+        "RS manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
       )
       deleteChildApp(app.getId())
     }
   }
 }
 
-void pbsgSwitchActivated(String switchName) {
+void pbsgVswTurnedOn(String simpleName) {
   log.trace(
-    "pbsgSwitchActivated() RoomScenes <b>'${switchName}' activation is TBD</b>."
+    "RS pbsgVswTurnedOn() RoomScenes <b>'${simpleName}' activation is TBD</b>."
   )
 }
 
@@ -460,51 +460,51 @@ void displayPbsgHref () {
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
     if (settings.log) log.trace(
-      "removeAllChildApps removing ${child.getLabel()} (${child.getId()})"
+      "RS removeAllChildApps removing ${child.getLabel()} (${child.getId()})"
     )
     deleteChildApp(child.getId())
   }
 }
 
 void installed() {
-  if (settings.log) log.trace 'RoomScenes installed()'
+  if (settings.log) log.trace 'RS installed()'
   initialize()
 }
 
 void uninstalled() {
-  if (settings.log) log.trace "Room Scenes uninstalled()"
+  if (settings.log) log.trace "RS uninstalled()"
   removeAllChildApps()
 }
 
 void updated() {
-  if (settings.log) log.trace 'RoomScenes updated()'
+  if (settings.log) log.trace 'RS updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   // initialize()
 }
 
 void testHandler (Event e) {
-  if (settings.log) log.trace "RoomScenes testHandler() w/ event: ${e}"
+  if (settings.log) log.trace "RS testHandler() w/ event: ${e}"
   if (settings.log) logEventDetails(e, false)
 }
 
 void initialize() {
-  if (settings.log) log.trace "RoomScenes initialize()"
-  if (settings.log) log.trace "RoomScenes subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  if (settings.log) log.trace "RS initialize()"
+  if (settings.log) log.trace "RS subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "RoomScenes subscribing ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "RS subscribing ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.log) log.trace "RoomScenes subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  if (settings.log) log.trace "RS subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "RS subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
-  if (settings.log) log.trace "RoomScenes subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  if (settings.log) log.trace "RS subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "RoomScenes subscribing to ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "RS subscribing to ${device.displayName} ${device.id}"
     subscribe(device, testHandler, ['filterEvents': false])
   }
 }
