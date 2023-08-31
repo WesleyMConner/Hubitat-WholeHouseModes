@@ -609,17 +609,15 @@ void repeaterHandler (Event e) {
 }
 
 void keypadHandler (Event e) {
+  // Design Note
+  //   - The field e.deviceId arrives as a number and must be cast toString().
+  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
   if (e.name == 'pushed') {
+    String nextMode = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
     if (settings.log) log.trace(
-      "WHA keypadHandler()<br/>"
-      + "<b>displayName:</b> '${e.displayName}'<br/>"
-      + "<b>deviceId:</b> '${e.deviceId}'<br/>"
-      + "<b>button:</b> '${e.value}'<br/>"
-      + "<b>settings.seeTouchKeypad:</b> ${settings.seeTouchKeypad}<br/>"
-      + "<b>state.modeSwitchNames:</b> ${state.modeSwitchNames}<br/>"
-      //+ "<b>CHECKPOINT:</b> ${(state.kpadButtons[e.deviceId])[e.value]}"
+      "WHA keypadHandler() <b>Keypad Device Id:</b> ${e.deviceId}, "
+      + "<b>Keypad Button:</b> ${e.value}, <b>Requested Mode:</b> ${nextMode}"
     )
-    // state.modeSwitchNames
   } else {
     if (settings.log) log.trace(
       "WHA keypadHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
