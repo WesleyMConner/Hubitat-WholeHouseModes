@@ -324,6 +324,7 @@ void deriveKpadDNIandButtonToMode () {
           state.kpadButtons[kpadDniAndButton[0]][kpadDniAndButton[1]] = mode
         }
       }
+    }
   }
 }
 
@@ -590,8 +591,7 @@ void keypadHandler (Event e) {
       //+ "<b>getChildDevice(switchShortNameToDNI(nextMode)):</b> ${getChildDevice(switchShortNameToDNI(nextMode))}"
     )
     // Turn on appropriate pbsg-modes-X VSW.
-    //-----> app.getChildDevice(switchShortNameToDNI("pbsg_modes_${nextMode}"))?.on()
-    //-----> turnOnSwitch(nextMode)
+    app.getChildAppByLabel(state.PBSG_CHILD_APP_NAME).turnOnSwitch(nextMode)
   } else {
     if (settings.log) log.trace(
       "WHA keypadHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
