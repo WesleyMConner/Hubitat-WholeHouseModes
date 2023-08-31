@@ -73,14 +73,17 @@ void configure (
   enforcePbsgConstraints()
 }
 
-//void turnOnSwitch(String shortName) {
-//  DevW switch = app.getChildDevice(switchShortNameToDNI(shortName))
-//  if (switch) {
-//    switch.on()
-//  } else {
-//    log.error "PBSG-LIB turnOnSwitch() failed for '${shortName}'."
-//  }
-//}
+void turnOnSwitch (String shortName) {
+  // if (settings.log) log.trace(
+  //   "WHA-PBSG turnOnSwitch() shortName: ${shortName}"
+  // )
+  DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
+  if (sw) {
+    sw.on()
+  } else {
+    log.error "PBSG-LIB turnOnSwitch() failed for '${shortName}'."
+  }
+}
 
 void addOrphanChild() {
   // See manageChildDevices(). This method supports orphan removal testing.

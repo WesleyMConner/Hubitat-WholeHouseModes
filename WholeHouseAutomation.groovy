@@ -46,6 +46,8 @@ Map whaPage() {
     nextPage: 'whaPage'
   ) {
     section {
+      // SAMPLE STATE CLEAN UP
+      //   - state.remove('KpadButtons')
       state.PBSG_CHILD_APP_NAME = 'pbsg_modes'
       app.updateLabel('Whole House Automation')
       paragraph heading('Whole House Automation<br/>') \
@@ -62,7 +64,7 @@ Map whaPage() {
       solicitLutronLEDs ()
       solicitSwitches()
       selectLedsForMode()
-    deriveKpadDNIandButtonToMode()
+      deriveKpadDNIandButtonToMode()
       manageChildApps()
       paragraph heading('Room Scene Configuration')
       displayRoomNameHrefs()
@@ -299,45 +301,29 @@ void deriveKpadDNIandButtonToMode () {
   //   LED displayName and the LED device ID, which is comprised of 'Keypad
   //   Device Id' and 'Button Number', concatenated with a hyphen. This
   //   method populates "state.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
-  // Sample Settings Data
-  //   key: Day_LEDs, value: [Central KPAD 2 - DAY (5953-2)]
-  //                                                ^KPAD DNI
-  //                                                     ^KPAD Button #
-  //state.remove('KpadButtons')
   state.kpadButtons = [:]
+  // Sample Settings Data
+  //     key: Day_LEDs,
+  //   value: [Central KPAD 2 - DAY: 5953-2]
+  //           ^User-Friendly Name
+  //                                 ^Keypad DNI
+  //                                      ^Keypad Button Number
+  // The 'value' is first parsed into a list with two components:
+  //   - User-Friendly Name
+  //   - Button DNI               [The last() item in the parsed list.]
+  // The Button DNI is further parsed into a list with two components:
+  //   - Keypad DNI
+  //   - Keypad Button number
   settings.each{ key, value ->
     if (key.contains('_LEDs')) {
       String mode = key.minus('_LEDs')
       value.each{ item ->
         List<String> kpadDniAndButton = item?.tokenize(' ')?.last()?.tokenize('-')
-        //-> log.trace(
-        //->   '====><br/>'
-        //->   + "<b>KPAD DNI:</b> ${kpadDniAndButton[0]}<br/>"
-        //->   + "<b>Button:</b> ${kpadDniAndButton[1]}<br/>"
-        //->   + "<b>mode:</b> ${mode}"
-        //-> )
         if (kpadDniAndButton.size() == 2 && mode) {
           if (!state.kpadButtons[kpadDniAndButton[0]]) state.kpadButtons[kpadDniAndButton[0]] = [:]
           state.kpadButtons[kpadDniAndButton[0]][kpadDniAndButton[1]] = mode
         }
-        /*
-        log.trace(
-          '====><br/>'
-          + "<b>key:</b> ${key}<br/>"
-          + "<b>mode:</b> ${mode}<br/>"
-          + "<b>value:</b> ${value}}<br/>"
-          + "<b>item:</b> ${item}<br/>"
-          + "<b>Button DNI:</b> ${item?.tokenize(' ')?.last()}<br/>"
-          + "<b>KPAD DNI and Button:</b> ${item?.tokenize(' ')?.last()?.tokenize('-')}"
-        )
-        */
       }
-
-      //value.each{ ledDevice ->
-      //  ledDevice.id
-      //}
-    }
-    // dni.minus("${app.getLabel()}_")
   }
 }
 
@@ -404,19 +390,7 @@ void manageChildApps() {
       + "${kids ? kids.join(', ') : red('<b>NULL</b>')}"
     )
   }
-    /*
-    + (
-        childAppsByRoom.collect{ roomName, roomObj ->
-          "<b>${roomName}</b> -> ${roomObj.getId()}"
-        }?.join(', ')
-      ) ?: 'null'
-    */
   state.roomNameToRoomScenes = childAppsByRoom
-  //--xx-> log.trace(
-  //--xx->   'WHA manageChildApps() DEBUG<br/>'
-  //--xx->   + "childAppsByRoom: ${childAppsByRoom}<br/>"
-  //--xx->   + "state.roomNameToRoomScenes: ${state.roomNameToRoomScenes}"
-  //--xx-> )
   // -------------------------
   // P O P U L A T E   P B S G
   // -------------------------

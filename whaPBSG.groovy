@@ -38,7 +38,6 @@ preferences {
   page(name: 'whaPbsgPage')
 }
 
-
 Map whaPbsgPage () {
   return dynamicPage(
     name: 'whaPbsgPage',
