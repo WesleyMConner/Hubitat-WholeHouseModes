@@ -46,6 +46,7 @@ Map whaPage() {
     nextPage: 'whaPage'
   ) {
     section {
+      state.PBSG_CHILD_APP_NAME = 'pbsg_modes'
       app.updateLabel('Whole House Automation')
       paragraph heading('Whole House Automation<br/>') \
         + bullet('Select participating rooms and authorize device access.<br/>') \
@@ -383,15 +384,15 @@ void manageChildApps() {
         "<b>${label}</b> -> ${childObj.getId()}"
       }?.join(', ')
   )
-  // ---------------------------------------  // P O P U L A T E   R O O M   S C E N E S
+  // ---------------------------------------
+  // P O P U L A T E   R O O M   S C E N E S
   // ---------------------------------------
   // Ensure Room Scenes instances exist (no init data is required).
   LinkedHashMap<String, InstAppW> childAppsByRoom = \
     settings.focalRoomNames?.collectEntries{ roomName ->
       [
         roomName,
-        getAppByLabel(childAppsByLabel, roomName)
-          ?: addChildApp('wesmc', 'RoomScenes', roomName)
+        childAppsByLabel[roomName] ?: addChildApp('wesmc', 'RoomScenes', roomName)
       ]
     }
   if (settings.log) {
@@ -421,13 +422,12 @@ void manageChildApps() {
   // -------------------------
   // Ensure imutable PBSG init data is in place AND instance(s) exist.
   // The PBSG instance manages its own state data locally.
-  String pbsgName = 'pbsg_modes'
   state.modeSwitchNames = getLocation().getModes().collect{it.name}
   state.defaultModeSwitchName = getGlobalVar('defaultMode').value
-  InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
-    ?:  addChildApp('wesmc', 'whaPBSG', pbsgName)
+  InstAppW pbsgApp = childAppsByLabel[state.PBSG_CHILD_APP_NAME]
+    ?:  addChildApp('wesmc', 'whaPBSG', state.PBSG_CHILD_APP_NAME)
   if (settings.log) log.trace(
-    "WHA manageChildApps() initializing ${pbsgName} with<br/>"
+    "WHA manageChildApps() initializing ${state.PBSG_CHILD_APP_NAME} with<br/>"
     + "<b>modeSwitchNames:</b> ${state.modeSwitchNames},<br/>"
     + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName}<br/>"
     + "<b>logging:</b> ${settings.log}"
@@ -444,7 +444,7 @@ void manageChildApps() {
   childAppsByLabel.each{ label, app ->
     if (childAppsByRoom?.keySet().findAll{it == label}) {
       // Skip, still in use
-    } else if (label == pbsgName) {
+    } else if (label == state.PBSG_CHILD_APP_NAME) {
       // Skip, still in use
     } else {
       if (settings.log) log.trace(
@@ -590,12 +590,6 @@ void updated() {
   initialize()
 }
 
-//void testHandler (Event e) {
-//  if (settings.log) log.trace(
-//    "WHA <b>testHandler() w/ event: ${e.descriptionText}"
-//  )
-//}
-
 void telnetHandler (Event e) {
   if (settings.log) log.trace(
     "WHA <b>telnetHandler() w/ event: ${e.descriptionText}"
@@ -612,12 +606,18 @@ void keypadHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
+  //   - Hubitat mode is adjusted via pbsg-modes-X switches exclusivly.
   if (e.name == 'pushed') {
     String nextMode = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
     if (settings.log) log.trace(
       "WHA keypadHandler() <b>Keypad Device Id:</b> ${e.deviceId}, "
       + "<b>Keypad Button:</b> ${e.value}, <b>Requested Mode:</b> ${nextMode}"
+      //+ "<b>switchShortNameToDNI(nextMode):</b> ${switchShortNameToDNI(nextMode)}, "
+      //+ "<b>getChildDevice(switchShortNameToDNI(nextMode)):</b> ${getChildDevice(switchShortNameToDNI(nextMode))}"
     )
+    // Turn on appropriate pbsg-modes-X VSW.
+    //-----> app.getChildDevice(switchShortNameToDNI("pbsg_modes_${nextMode}"))?.on()
+    //-----> turnOnSwitch(nextMode)
   } else {
     if (settings.log) log.trace(
       "WHA keypadHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"

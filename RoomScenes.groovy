@@ -408,7 +408,7 @@ void manageChildApps() {
   String pbsgName = "pbsg_${state.roomName}"
   state.switchNames = state.roomScenes + 'AUTOMATIC' + 'MANUAL'
   state.defaultSwitchName = 'AUTOMATIC'
-  InstAppW pbsgApp = getAppByLabel(childAppsByLabel, pbsgName)
+  InstAppW pbsgApp = childAppsByLabel[pbsgName]
     ?:  addChildApp('wesmc', 'rsPBSG', pbsgName)
   if (settings.log) log.trace(
     "RS manageChildApps() initializing ${pbsgName} with "

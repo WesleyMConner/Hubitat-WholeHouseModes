@@ -41,17 +41,15 @@ void defaultPage () {
   }
 }
 
-
 // ---------------------------------------------------------------------
 // C R E A T E   S T A T I C   S T R U C T U R E   &   U I   R E V I E W
 // ---------------------------------------------------------------------
 
-String simpleNameToDNI (String switchName) {
-  return "${app.getLabel()}_${switchName}"
+String switchShortNameToDNI (String shortName) {
+  return "${app.getLabel()}_${shortName}"
 }
 
-String dniToSimpleName (String dni) {
-  //-> log.trace "PBSG-LIB dniToSimpleName() ... >${dni}<"
+String switchDniToShortName (String dni) {
   return dni.minus("${app.getLabel()}_")
 }
 
@@ -67,13 +65,22 @@ void configure (
   app.updateSetting('log', log)
   state.switchNames = switchNames
   state.switchDNIs = switchNames.collect{ switchName ->
-    simpleNameToDNI(switchName)
+    switchShortNameToDNI(switchName)
   }
   state.defaultSwitchName = defaultSwitchName
-  state.defaultSwitchDNI = simpleNameToDNI(defaultSwitchName)
+  state.defaultSwitchDNI = switchShortNameToDNI(defaultSwitchName)
   manageChildDevices()
   enforcePbsgConstraints()
 }
+
+//void turnOnSwitch(String shortName) {
+//  DevW switch = app.getChildDevice(switchShortNameToDNI(shortName))
+//  if (switch) {
+//    switch.on()
+//  } else {
+//    log.error "PBSG-LIB turnOnSwitch() failed for '${shortName}'."
+//  }
+//}
 
 void addOrphanChild() {
   // See manageChildDevices(). This method supports orphan removal testing.
@@ -165,7 +172,7 @@ void enforceDefaultSwitch() {
       'PBSG-LIB enforceDefaultSwitch() turning on , '
       + "<b>state.defaultSwitchName:</b> ${state.defaultSwitchName}"
     )
-    getChildDevice(state.defaultSwitchDNI).on()
+    app.getChildDevice(state.defaultSwitchDNI).on()
   } else {
     if (settings.log) log.trace 'PBSG-LIB enforceDefaultSwitch() taking no action.'
   }
@@ -212,7 +219,7 @@ void displaySwitchStates () {
 
 void turnOffPeers (String callerDNI) {
   state.switchDNIs.findAll{ dni -> dni != callerDNI }.each{ dni ->
-    getChildDevice(dni).off()
+    app.getChildDevice(dni).off()
   }
 }
 
@@ -223,7 +230,7 @@ void pbsgEventHandler (Event e) {
         "PBSG-LIB pbsgEventHandler() ${e.descriptionText}, turning off peers ..."
       )
       turnOffPeers(e.displayName)
-      parent.pbsgVswTurnedOn(dniToSimpleName(e.displayName))
+      parent.pbsgVswTurnedOn(switchDniToShortName(e.displayName))
     } else if (e.value == 'off') {
       if (settings.log) log.trace(
         "PBSG-LIB pbsgEventHandler(), ${e.descriptionText}"
