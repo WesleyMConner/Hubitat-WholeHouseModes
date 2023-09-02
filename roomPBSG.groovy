@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// rsPBSG (an instsantiation of pbsgLibrary)
+// roomPBSG (an instsantiation of pbsgLibrary)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -16,11 +16,11 @@
 #include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
 
 definition(
-  parent: 'wesmc:RoomScenes',
-  name: 'rsPBSG',
+  parent: 'wesmc:whaRoom',
+  name: 'roomPBSG',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A PBSG (pbsgLibrary instance) rooted in a Room Scenes instance',
+  description: 'A PBSG (pbsgLibrary instance) rooted in a WHA Rooms instance',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -34,12 +34,12 @@ definition(
 )
 
 preferences {
-  page(name: 'rsPbsgPage')
+  page(name: 'roomPbsgPage')
 }
 
-Map rsPbsgPage () {
+Map roomPbsgPage () {
   return dynamicPage(
-    name: 'rsPbsgPage',
+    name: 'roomPbsgPage',
     install: false, //true,
     uninstall: false
   ) {

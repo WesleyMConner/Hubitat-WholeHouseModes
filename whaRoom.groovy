@@ -20,11 +20,11 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.UtilsLibrary
 
 definition(
-  parent: 'wesmc:WholeHouseAutomation',
-  name: 'RoomScenes',
+  parent: 'wesmc:wha',
+  name: 'whaRoom',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'Manage Room Scenes for Whole House Automation',
+  description: 'Manage WHA Rooms for Whole House Automation',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -36,43 +36,49 @@ definition(
 // C L I E N T   I N T E R F A C E
 // -------------------------------
 preferences {
-  page(name: 'roomScenesPage')
+  page(name: 'whaRoomPage')
 }
 
-Map roomScenesPage () {
+Map whaRoomPage () {
   // The parent application (Whole House Automation) assigns a unique label
-  // to each Room Scenes instance. Capture app.getLabel() as state.roomName.
+  // to each WHA Rooms instance. Capture app.getLabel() as state.roomName.
   return dynamicPage(
-    name: 'roomScenesPage',
-    //title: 'Un-Named Room Scenes (RS) Page',
+    name: 'whaRoomPage',
+    title: \
+      heading("${ state.roomName } Scenes<br/>") \
+      + comment('Tab to register changes.'),
     install: true,
     uninstall: true,
     nextPage: 'whaPage',
     // , returnPath: 'list'
   ) {
     state.roomName = app.getLabel()
+    state.SCENE_PBSG_APP_NAME = "pbsg_${state.roomName}"
+    // SAMPLE STATE & SETTINGS CLEAN UP
+    //   - state.remove('X')
+    //   - settings.remove('Y')
     section {
-      paragraph (
-        heading("${ state.roomName } Scenes<br/>")
-        + comment('Tab to register changes.')
-      )
       solicitLog()                          // <- provided by Utils
       solicitModeNamesAsSceneNames()
       solicitCustomScenes()
-      updateRoomScenes()
+      updateScenes()
       solicitSceneForModeName()
-      solicitRepeatersForRoomScenes()
-      //-> solicitKeypadsForRoomScenes()
-      //-> solicitLedDevicesForRoomScenes()
+      solicitRepeatersForWhaRoom()
+      //-> solicitKeypadsForWhaRoom()
+      //-> solicitLedDevicesForWhaRoom()
       //--HOLD-> solicitKeypadButtonsForScene()
-      solicitNonLutronDevicesForRoomScenes()
+      solicitNonLutronDevicesForWhaRoom()
       //solicitLedToScene()
       selectLedsForScene()
+      deriveKpadDNIandButtonToScene()
       selectPicoButtonsForScene()
       solicitRoomScene()
-      manageChildApps()
-      paragraph heading('PBSG Configuration')
-      displayPbsgHref()
+      if (!state.SCENE_PBSG_APP_NAME) {
+        log.error 'state.SCENE_PBSG_APP_NAME is not defined'
+      } else {
+        keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME], false)
+        roomPbsgAppDrilldown()
+      }
       paragraph(
         heading('Debug<br/>')
         + "${ displayState() }<br/>"
@@ -132,7 +138,7 @@ void solicitCustomScenes () {
   }
 }
 
-void updateRoomScenes () {
+void updateScenes () {
   List<String> scenes = settings.modeNamesAsSceneNames ?: []
   scenes = scenes.flatten()
   String prefix = 'customScene'
@@ -152,18 +158,18 @@ void updateRoomScenes () {
     scenes = scenes.flatten()
   }
   scenes = scenes.sort()
-  state.roomScenes = scenes
+  state.scenes = scenes
 }
 
 void solicitSceneForModeName () {
-  if (state.roomScenes == null) {
+  if (state.scenes == null) {
     paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
   } else {
     paragraph emphasis('Select scenes for per-mode automation:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
       String inputName = "modeToScene^${modeName}"
       String defaultValue = settings[inputName]
-        ?: state.roomScenes.contains(modeName) ? modeName : null
+        ?: state.scenes.contains(modeName) ? modeName : null
       input(
         name: inputName,
         type: 'enum',
@@ -172,14 +178,14 @@ void solicitSceneForModeName () {
         submitOnChange: true,
         required: true,
         multiple: false,
-        options: state.roomScenes,
+        options: state.scenes,
         defaultValue: defaultValue
       )
     }
   }
 }
 
-void solicitRepeatersForRoomScenes () {
+void solicitRepeatersForWhaRoom () {
   //collapsibleInput (
   input(
     //blockLabel: "Repeaters for ${state.roomName} Scenes",
@@ -194,27 +200,7 @@ void solicitRepeatersForRoomScenes () {
   )
 }
 
-//-> void solicitKeypadsForRoomScenes () {
-//->   collapsibleInput (
-//->     blockLabel: "Keypads for ${state.roomName} Scenes",
-//->     name: 'deviceKeypadNames',
-//->     title: emphasis('Identify Keypad(s) supporting Room Scenes'),
-//->     type: 'enum',
-//->     options: parent.getKeypads().collect{ d -> d.displayName }?.sort()
-//->   )
-//-> }
-
-//-> void solicitLedDevicesForRoomScenes () {
-//->   collapsibleInput (
-//->     blockLabel: "LED Devices for ${state.roomName} Scenes",
-//->     name: 'deviceLedNames',
-//->     title: emphasis('Identify LED Button(s) supporting Room Scenes'),
-//->     type: 'enum',
-//->     options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
-//->   )
-//-> }
-
-void solicitNonLutronDevicesForRoomScenes () {
+void solicitNonLutronDevicesForWhaRoom () {
   List<DevW> roomSwitches = parent.getNonLutronDevicesForRoom(state.roomName)
   //collapsibleInput (
   input(
@@ -230,47 +216,12 @@ void solicitNonLutronDevicesForRoomScenes () {
   )
 }
 
-//-> void solicitLedToScene() {
-//->     if (state.roomScenes == null) {
-//->     paragraph red('Identification of LED to Room Scene will proceed once scene names exist.')
-//->   } else {
-//->     // Downstream Goal is Map<String, String> ledNameToSceneName = [:]
-//->     settings.deviceLedNames.each{ ledName ->
-//->       input(
-//->           name: "led2Scene^${ledName}",
-//->           type: 'enum',
-//->           title: emphasis("Scene Name for ${ ledName }"),
-//->           //width: 2,
-//->           submitOnChange: true,
-//->           required: true,
-//->           multiple: false,
-//->           options: state.roomScenes
-//->         )
-//->       //paragraph "LED-to-Scene Placeholder .. ${ledName} -> ${state.roomScenes}"
-//->     }
-//->   }
-//->   // parent.getLedDevices().collect{ d -> d.displayName }?.sort()
-//-> }
-
 void selectLedsForScene() {
-    if (state.roomScenes == null) {
-    paragraph(red(
-      'Once scene names exist, this section will solicit affiliated Buttons/LEDs.'
-    ))
-  } else {
-    state.roomScenes.each{ sceneName ->
-      input(
-        name: "${sceneName}_LEDs",
-        type: 'enum',
-        width: 6,
-        title: emphasis("Buttons/LEDs activating ${state.roomName} '${sceneName}'"),
-        submitOnChange: true,
-        required: false,
-        multiple: true,
-        options: parent.getLedDevices().collect{ d -> d.displayName }?.sort()
-      )
-    }
-  }
+  selectLedsForListItems(state.scenes, parent.getLedDevices(), 'sceneButtons')
+}
+
+void deriveKpadDNIandButtonToScene () {
+  mapKpadDNIandButtonToItem('sceneButtons')
 }
 
 List<String> picoButtons (DevW pico) {
@@ -292,14 +243,14 @@ List<String> picoButtonPicklist (List<DevW> picos) {
 }
 
 void selectPicoButtonsForScene() {
-  if (state.roomScenes == null) {
+  if (state.scenes == null) {
     paragraph(red(
       'Once scene names exist, this section will solicit affiliated pico buttons.'
     ))
   } else {
     List<DevW> picos = parent.getPicoDevices()
     //log.trace "RS selectPicoButtonsForScene() picos [A]: ${picos}"
-    state.roomScenes.each{ sceneName ->
+    state.scenes.each{ sceneName ->
       input(
           // Head's Up:
           //   - circa Aug-2023, Hubitat translates settings.Xyz to settings.xyz
@@ -319,10 +270,10 @@ void selectPicoButtonsForScene() {
 void solicitRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
-  if (state.roomScenes == null) {
+  if (state.scenes == null) {
     paragraph red('Identification of Room Scene deetails selection will proceed once scene names exist.')
   } else {
-    state.roomScenes?.each{ sceneName ->
+    state.scenes?.each{ sceneName ->
       Integer col = 2
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.deviceNonLutronNames?.each{deviceName ->
@@ -359,98 +310,31 @@ void solicitRoomScene () {
   }
 }
 
-void manageChildApps() {
-  // Abstract
-  //   Room Scenes only expects a single, direct child application - an
-  //   rsPBSG instance which manages a virtual child switch per room scene.
-  //   This method is a stripped-down version of the similarly-named
-  //   method in WholeHouseAutomation.groovy.
-  // Design Notes
-  //   Application state data managed by this method is limited to:
-  //     - state.pbsg_<roomName>
-  // ------------------------------------------------
-  // Deliberately create noise for testing dups:
-  //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
-  //   addChildApp('wesmc', 'RoomScenes', 'Den')
-  //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
-  //   addChildApp('wesmc', 'RoomScenes', 'Puppies')
-  //   addChildApp('wesmc', 'whaPBSG', 'Butterflies')
-  // ------------------------------------------------
-  // G E T   A L L   C H I L D   A P P S
-  // ------------------------------------------------
-  if (settings.log) log.trace (
-    'RS manageChildApps() on entry getAllChildApps(): '
-    + getAllChildApps().sort{ a, b ->
-        a.getLabel() <=> b.getLabel() ?: a.getId() <=> b.getId()
-      }.collect{ app ->
-        "<b>${app.getLabel()}</b> -> ${app.getId()}"
-      }?.join(', ')
-  )
-  // -----------------------------------------------
-  // T O S S   S T A L E   A P P S   B Y   L A B E L
-  // -----------------------------------------------
-  // Child apps are managed by App Label, which IS NOT guaranteed to be
-  // unique. The following method keeps only the latest (highest) App ID
-  // per App Label.
-  LinkedHashMap<String, InstAppW> childAppsByLabel \
-    = keepOldestAppObjPerAppLabel()
-  if (settings.log) log.trace (
-    'RS manageChildApps() after keepOldestAppObjPerAppLabel(): '
-    + childAppsByLabel.collect{label, childObj ->
-        "<b>${label}</b> -> ${childObj.getId()}"
-      }?.join(', ')
-  )
-  // -------------------------
-  // P O P U L A T E   P B S G
-  // -------------------------
-  // Ensure imutable PBSG init data is in place AND instance(s) exist.
-  // The PBSG instance manages its own state data locally.
-  String pbsgName = "pbsg_${state.roomName}"
-  state.switchNames = state.roomScenes + 'AUTOMATIC' + 'MANUAL'
-  state.defaultSwitchName = 'AUTOMATIC'
-  InstAppW pbsgApp = childAppsByLabel[pbsgName]
-    ?:  addChildApp('wesmc', 'rsPBSG', pbsgName)
-  if (settings.log) log.trace(
-    "RS manageChildApps() initializing ${pbsgName} with "
-    + "<b>SwitchNames:</b> ${state.switchNames}, and "
-    + "<b>DefaultSwitchName:</b> ${state.defaultSwitchName}."
-  )
-  pbsgApp.configure(state.switchNames, state.defaultSwitchName, settings.log)
-  state.pbsg_mgr = pbsgApp
-  // ---------------------------------------------
-  // P U R G E   E X C E S S   C H I L D   A P P S
-  // ---------------------------------------------
-  childAppsByLabel.each{ label, app ->
-    if (label == pbsgName) {
-      // Skip, still in use
-    } else {
-      if (settings.log) log.trace(
-        "RS manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
-      )
-      deleteChildApp(app.getId())
-    }
-  }
-}
-
 void pbsgVswTurnedOn(String simpleName) {
   log.trace(
-    "RS pbsgVswTurnedOn() RoomScenes <b>'${simpleName}' activation is TBD</b>."
+    "RS pbsgVswTurnedOn() WhaRooms <b>'${simpleName}' activation is TBD</b>."
   )
 }
 
-void displayPbsgHref () {
-  if (state.pbsg_mgr) {
-    href (
-      name: state.pbsg_mgr.getLabel(),
-      width: 2,
-      url: "/installedapp/configure/${state.pbsg_mgr.getId()}/rsPbsgPage",
-      style: 'internal',
-      title: "Inspect <b>${getAppInfo(state.pbsg_mgr)}</b>",
-      state: null, //'complete'
+void roomPbsgAppDrilldown() {
+  paragraph heading('Scene PBSG Inspection')
+  InstAppW roomPbsgApp = app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME)
+  if (!roomPbsgApp) {
+    roomPbsgApp = addChildApp('wesmc', 'roomPBSG', state.SCENE_PBSG_APP_NAME)
+    roomPbsgApp.configure(
+      [*state.scenes, 'AUTOMATIC', 'MANUAL'],
+      'AUTOMATIC',
+      settings.log
     )
-  } else {
-    log.error 'displayPbsgHref() called with pbsg_modes missing.'
   }
+  href (
+    name: settings.MODE_PBSG_APP_NAME,
+    width: 2,
+    url: "/installedapp/configure/${roomPbsgApp.getId()}/roomPbsgPage",
+    style: 'internal',
+    title: "Edit <b>${getAppInfo(roomPbsgApp)}</b>",
+    state: null, //'complete'
+  )
 }
 
 // -------------------------------
@@ -467,44 +351,76 @@ void removeAllChildApps () {
 }
 
 void installed() {
-  if (settings.log) log.trace 'RS installed()'
+  if (settings.log) log.trace "RS installed() for '${state.roomName}'."
   initialize()
 }
 
 void uninstalled() {
-  if (settings.log) log.trace "RS uninstalled()"
+  if (settings.log) log.trace "RS uninstalled() for '${state.roomName}'."
   removeAllChildApps()
 }
 
 void updated() {
-  if (settings.log) log.trace 'RS updated()'
+  if (settings.log) log.trace "RS updated() for '${state.roomName}'."
   unsubscribe()  // Suspend event processing to rebuild state variables.
   // initialize()
 }
 
-void testHandler (Event e) {
-  if (settings.log) log.trace "RS testHandler() w/ event: ${e}"
+void telnetHandler (Event e) {
+  if (settings.log) log.trace(
+    "RS testHandler() for '${state.roomName}' w/ event: ${e}"
+  )
   if (settings.log) logEventDetails(e, false)
 }
 
+void repeaterHandler (Event e) {
+  if (settings.log) log.trace(
+    "RS testHandler() for '${state.roomName}' w/ event: ${e}"
+  )
+  if (settings.log) logEventDetails(e, false)
+}
+
+void keypadToVswHandler (Event e) {
+  // Design Note
+  //   - The field e.deviceId arrives as a number and must be cast toString().
+  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
+  //   - Keypad buttons are matched to state data to activate a target VSW.
+  if (e.name == 'pushed') {
+    String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
+    if (settings.log) log.trace(
+      "RS keypadToVswHandler() for '${state.roomName}' "
+      + "<b>Keypad Device Id:</b> ${e.deviceId}, "
+      + "<b>Keypad Button:</b> ${e.value}, "
+      + "<b>Affiliated Switch:</b> ${targetVsw}"
+    )
+    // Turn on appropriate pbsg-modes-X VSW.
+    app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+  } else {
+    if (settings.log) log.trace(
+      "RS keypadToVswHandler() for '${state.roomName}' unexpected event "
+      + "name '${e.name}' for DNI '${e.deviceId}'"
+    )
+  }
+}
+
 void initialize() {
-  if (settings.log) log.trace "RS initialize()"
+  if (settings.log) log.trace "RS initialize() of '${state.roomName}'."
   if (settings.log) log.trace "RS subscribing to Lutron Telnet >${settings.lutronTelnet}<"
   settings.lutronTelnet.each{ d ->
     DevW device = d
     if (settings.log) log.trace "RS subscribing ${device.displayName} ${device.id}"
-    subscribe(device, testHandler, ['filterEvents': false])
+    subscribe(device, telnetHandler, ['filterEvents': false])
   }
   if (settings.log) log.trace "RS subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   settings.lutronRepeaters.each{ d ->
     DevW device = d
     if (settings.log) log.trace "RS subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, testHandler, ['filterEvents': false])
+    subscribe(device, repeaterHandler, ['filterEvents': false])
   }
   if (settings.log) log.trace "RS subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.seeTouchKeypad.each{ d ->
     DevW device = d
     if (settings.log) log.trace "RS subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, testHandler, ['filterEvents': false])
+    subscribe(device, keypadToVswHandler, ['filterEvents': false])
   }
 }

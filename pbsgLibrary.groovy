@@ -75,13 +75,11 @@ void configure (
 
 void turnOnSwitch (String shortName) {
   // if (settings.log) log.trace(
-  //   "WHA-PBSG turnOnSwitch() shortName: ${shortName}"
+  //   "WHA-PBSG turnOnSwitch() w/ shortName: ${shortName}"
   // )
   DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
   if (sw) {
     sw.on()
-  } else {
-    log.error "PBSG-LIB turnOnSwitch() failed for '${shortName}'."
   }
 }
 
@@ -111,8 +109,8 @@ void manageChildDevices () {
     List<DevW> orphanDNIs = entryDNIs.minus(state.switchDNIs)
     if (settings.log) log.trace(
       'PBSG-LIB manageChildDevices()<table>'
-      + "<tr><th>state.switchDNIs</th><td>${state.switchDNIs}</td></tr>"
       + "<tr><th>entryDNIs</th><td>${entryDNIs}</td></tr>"
+      + "<tr><th>state.switchDNIs</th><td>${state.switchDNIs}</td></tr>"
       + "<tr><th>missingDNIs</th><td>${missingDNIs}</td></tr>"
       + "<tr><th>orphanDNIs:</th><td>${orphanDNIs}</td></tr>"
       + '</table>'

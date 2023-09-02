@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// whaPBSG (an instsantiation of pbsgLibrary)
+// modePBSG (an instsantiation of pbsgLibrary)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -17,8 +17,8 @@ import com.hubitat.app.DeviceWrapper as DevW
 #include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
 
 definition(
-  parent: 'wesmc:WholeHouseAutomation',
-  name: 'whaPBSG',
+  parent: 'wesmc:wha',
+  name: 'modePBSG',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A PBSG (pbsgLibrary instance) rooted in Whole House Automation',
@@ -35,12 +35,12 @@ definition(
 )
 
 preferences {
-  page(name: 'whaPbsgPage')
+  page(name: 'modePbsgPage')
 }
 
-Map whaPbsgPage () {
+Map modePbsgPage () {
   return dynamicPage(
-    name: 'whaPbsgPage',
+    name: 'modePbsgPage',
     install: false,
     uninstall: false
   ) {

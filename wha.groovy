@@ -20,7 +20,7 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.UtilsLibrary
 
 definition(
-  name: 'WholeHouseAutomation',
+  name: 'wha',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
@@ -40,36 +40,43 @@ preferences {
 
 Map whaPage() {
   return dynamicPage(
-    name: 'whaPage', title: 'Whole House Automation (WHA)',
+    name: 'whaPage',
+    title: heading('Whole House Automation (WHA)<br/>') \
+      + bullet('Obtain permission to access required Hubitat devices.<br/>') \
+      + bullet('Manage Hubitat Modes via a Pushbutton Switch Group (PBSG).<br/>') \
+      + bullet('Identify Rooms and per-room "Scenes".<br/>') \
+      + bullet('Facilitate drilldown to child applications.'),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
   ) {
+    state.MODE_PBSG_APP_NAME = 'pbsg_modes'
+    state.MODE_SWITCH_NAMES = getLocation().getModes().collect{it.name}
+    state.DEFAULT_MODE_SWITCH_NAME = getGlobalVar('defaultMode').value
+    // SAMPLE STATE & SETTINGS CLEAN UP
+    //   - state.remove('X')
+    //   - settings.remove('Y')
+    // reLabelLeds()
     section {
-      // SAMPLE STATE CLEAN UP
-      //   - state.remove('KpadButtons')
-      state.PBSG_CHILD_APP_NAME = 'pbsg_modes'
       app.updateLabel('Whole House Automation')
-      paragraph heading('Whole House Automation<br/>') \
-        + bullet('Select participating rooms and authorize device access.<br/>') \
-        + bullet('Click <b>Done</b> to proceed to defining <b>Room Scene(s)</b>.')
-      // reLabelLeds()
-      solicitLog()                          // <- provided by Utils
+      solicitLog()                                  // <- provided by Utils
       solictFocalRoomNames()
       solicitLutronTelnetDevice()
       solicitLutronMainRepeaters()
-      solicitLutronMiscellaneousKeypads()
+      //-> solicitLutronMiscellaneousKeypads()
       solicitSeeTouchKeypads()
       solicitLutronPicos()
       solicitLutronLEDs ()
       solicitSwitches()
       selectLedsForMode()
       deriveKpadDNIandButtonToMode()
-      manageChildApps()
-      paragraph heading('Room Scene Configuration')
-      displayRoomNameHrefs()
-      paragraph heading('PBSG Configuration')
-      displayPbsgHref()
+      if (!settings.rooms) {
+        paragraph red('Management of child apps is pending selection of Room Names.')
+      } else {
+        keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME], false)
+        roomAppDrilldown()
+        modePbsgAppDrilldown()
+      }
       paragraph(
         heading('Debug<br/>')
         + "${ displayState() }<br/>"
@@ -191,7 +198,7 @@ void solictFocalRoomNames () {
   roomPicklist = app.getRooms().collect{it.name}.sort()
   collapsibleInput(
     blockLabel: 'Focal Rooms',
-    name: 'focalRoomNames',
+    name: 'rooms',
     type: 'enum',
     title: 'Select Participating Rooms',
     options: roomPicklist
@@ -218,22 +225,23 @@ void solicitLutronMainRepeaters () {
   )
 }
 
-void solicitLutronMiscellaneousKeypads () {
-  collapsibleInput (
-    blockLabel: 'Lutron Miscellaneous Keypads',
-    name: 'lutronMiscKeypads',
-    title: 'Identify participating Lutron Miscellaneous Devices<br/>' \
-      + comment('used to trigger room scenes'),
-    type: 'device.LutronKeypad'
-  )
-}
+//-> NOT REQUIRED IF EVERYTHING IS "SEE TOUCH"
+//-> void solicitLutronMiscellaneousKeypads () {
+//->   collapsibleInput (
+//->     blockLabel: 'Lutron Miscellaneous Keypads',
+//->     name: 'lutronMiscKeypads',
+//->     title: 'Identify participating Lutron Miscellaneous Devices<br/>' \
+//->       + comment('used to trigger WHA Rooms'),
+//->     type: 'device.LutronKeypad'
+//->   )
+//-> }
 
 void solicitSeeTouchKeypads () {
   collapsibleInput (
     blockLabel: 'Lutron SeeTouch Keypads',
     name: 'seeTouchKeypad',
     title: 'Identify Lutron SeeTouch Keypads<br/>' \
-      + comment('used to trigger room scenes.'),
+      + comment('used to trigger WHA Rooms.'),
     type: 'device.LutronSeeTouchKeypad'
   )
 }
@@ -243,7 +251,7 @@ void solicitLutronLEDs () {
     blockLabel: 'Lutron LEDs',
     name: 'lutronLEDs',
     title: 'Select participating Lutron LEDs<br/>' \
-      + comment('Used to trigger room scenes.'),
+      + comment('Used to trigger WHA Rooms.'),
     type: 'device.LutronComponentSwitch'
   )
 }
@@ -253,7 +261,7 @@ void solicitLutronPicos () {
     blockLabel: 'Lutron Picos',
     name: 'lutronPicos',
     title: 'Select participating Lutron Picos<br/>' \
-      + comment('used to trigger room scenes'),
+      + comment('used to trigger WHA Rooms'),
     type: 'device.LutronFastPico'
   )
 }
@@ -268,166 +276,51 @@ void solicitSwitches () {
 }
 
 void selectLedsForMode() {
-  // Design Note
-  //   Keypad LEDs are used as a proxy for Keypad buttons.
-  //     - The button's displayName is meaningful to clients.
-  //     - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
-  if (state.modeSwitchNames == null || getLedDevices() == null) {
-    paragraph(red(
-      'Mode activation buttons are pending pre-requisites above.'
-    ))
-  } else {
-    state.modeSwitchNames.each{ msn ->
-      input(
-        name: "${msn}_LEDs",
-        type: 'enum',
-        width: 6,
-        title: emphasis("Buttons/LEDs activating '${msn}'"),
-        submitOnChange: true,
-        required: false,
-        multiple: true,
-        options: getLedDevices().collect{ d ->
-          "${d.displayName}: ${d.deviceNetworkId}"
-        }?.sort()
-      )
-    }
-  }
+  selectLedsForListItems(state.MODE_SWITCH_NAMES, getLedDevices(), 'ModeButtons')
 }
 
 void deriveKpadDNIandButtonToMode () {
-  // Design Note
-  //   The Keypad LEDs collected by selectForMode() function as a proxy for
-  //   Keypad button presses. Settings data includes the user-friendly
-  //   LED displayName and the LED device ID, which is comprised of 'Keypad
-  //   Device Id' and 'Button Number', concatenated with a hyphen. This
-  //   method populates "state.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
-  state.kpadButtons = [:]
-  // Sample Settings Data
-  //     key: Day_LEDs,
-  //   value: [Central KPAD 2 - DAY: 5953-2]
-  //           ^User-Friendly Name
-  //                                 ^Keypad DNI
-  //                                      ^Keypad Button Number
-  // The 'value' is first parsed into a list with two components:
-  //   - User-Friendly Name
-  //   - Button DNI               [The last() item in the parsed list.]
-  // The Button DNI is further parsed into a list with two components:
-  //   - Keypad DNI
-  //   - Keypad Button number
-  settings.each{ key, value ->
-    if (key.contains('_LEDs')) {
-      String mode = key.minus('_LEDs')
-      value.each{ item ->
-        List<String> kpadDniAndButton = item?.tokenize(' ')?.last()?.tokenize('-')
-        if (kpadDniAndButton.size() == 2 && mode) {
-          if (!state.kpadButtons[kpadDniAndButton[0]]) state.kpadButtons[kpadDniAndButton[0]] = [:]
-          state.kpadButtons[kpadDniAndButton[0]][kpadDniAndButton[1]] = mode
-        }
-      }
+  mapKpadDNIandButtonToItem('ModeButtons')
+}
+
+void roomAppDrilldown() {
+  paragraph heading('Room Scene Configuration')
+  settings.rooms.each{ roomName ->
+    InstAppW roomApp = app.getChildAppByLabel(roomName)
+    if (!roomApp) {
+      if (settings.log) log.trace "WHA addRoomAppsIfMissing() Adding room ${roomName}."
+      roomApp = addChildApp('wesmc', 'whaRoom', roomName)
     }
+    href (
+      name: roomName,
+      width: 2,
+      url: "/installedapp/configure/${roomApp?.getId()}/whaRoomPage",
+      style: 'internal',
+      title: "Edit <b>${getAppInfo(roomApp)}</b> Scenes",
+      state: null, //'complete'
+    )
   }
 }
 
-void manageChildApps() {
-  // Abstract
-  //   Manage child applications AND any required initialization data.
-  //   Child applications are automatically created and given a "label".
-  //   Any required initialization data is stored at state.<label> and
-  //   exposed to child applications via getChildInit(<label>). Child
-  //   applications house their own state data locally.
-  // Design Notes
-  //   Application state data managed by this method includes:
-  //     - state.childAppsByRoom
-  //     - state.<roomName>
-  //     - state.pbsg_modes
-  // ------------------------------------------------
-  // Deliberately create noise for testing dups:
-  //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
-  //   addChildApp('wesmc', 'RoomScenes', 'Den')
-  //   addChildApp('wesmc', 'RoomScenes', 'Kitchen')
-  //   addChildApp('wesmc', 'RoomScenes', 'Puppies')
-  //   addChildApp('wesmc', 'whaPBSG', 'Butterflies')
-  // ------------------------------------------------
-  // G E T   A L L   C H I L D   A P P S
-  // ------------------------------------------------
-  if (settings.log) log.trace (
-    'WHA manageChildApps() on entry getAllChildApps(): '
-    + getAllChildApps().sort{ a, b ->
-        a.getLabel() <=> b.getLabel() ?: a.getId() <=> b.getId()
-      }.collect{ app ->
-        "<b>${app.getLabel()}</b> -> ${app.getId()}"
-      }?.join(', ')
-  )
-  // -----------------------------------------------
-  // T O S S   S T A L E   A P P S   B Y   L A B E L
-  // -----------------------------------------------
-  // Child apps are managed by App Label, which IS NOT guaranteed to be
-  // unique. The following method keeps only the latest (highest) App ID
-  // per App Label.
-  LinkedHashMap<String, InstAppW> childAppsByLabel = keepOldestAppObjPerAppLabel()
-  if (settings.log) log.trace (
-    'WHA manageChildApps() after keepOldestAppObjPerAppLabel(): '
-    + childAppsByLabel.collect{label, childObj ->
-        "<b>${label}</b> -> ${childObj.getId()}"
-      }?.join(', ')
-  )
-  // ---------------------------------------
-  // P O P U L A T E   R O O M   S C E N E S
-  // ---------------------------------------
-  // Ensure Room Scenes instances exist (no init data is required).
-  LinkedHashMap<String, InstAppW> childAppsByRoom = \
-    settings.focalRoomNames?.collectEntries{ roomName ->
-      [
-        roomName,
-        childAppsByLabel[roomName] ?: addChildApp('wesmc', 'RoomScenes', roomName)
-      ]
-    }
-  if (settings.log) {
-    List<String> kids = childAppsByRoom.collect{ roomName, roomObj ->
-      "<b>${roomName}</b> -> ${roomObj.getId()}"
-    }
-    log.trace(
-      'WHA manageChildApps() after adding any missing Room Scene apps: '
-      + "${kids ? kids.join(', ') : red('<b>NULL</b>')}"
+void modePbsgAppDrilldown() {
+  paragraph heading('Mode PBSG Inspection')
+  InstAppW modePbsgApp = app.getChildAppByLabel(settings.MODE_PBSG_APP_NAME)
+  if (!modePbsgApp) {
+    modePbsgApp = addChildApp('wesmc', 'modePBSG', settings.MODE_PBSG_APP_NAME)
+    modePbsgApp.configure(
+      state.MODE_SWITCH_NAMES,
+      state.DEFAULT_MODE_SWITCH_NAME,
+      settings.log
     )
   }
-  state.roomNameToRoomScenes = childAppsByRoom
-  // -------------------------
-  // P O P U L A T E   P B S G
-  // -------------------------
-  // Ensure imutable PBSG init data is in place AND instance(s) exist.
-  // The PBSG instance manages its own state data locally.
-  state.modeSwitchNames = getLocation().getModes().collect{it.name}
-  state.defaultModeSwitchName = getGlobalVar('defaultMode').value
-  InstAppW pbsgApp = childAppsByLabel[state.PBSG_CHILD_APP_NAME]
-    ?:  addChildApp('wesmc', 'whaPBSG', state.PBSG_CHILD_APP_NAME)
-  if (settings.log) log.trace(
-    "WHA manageChildApps() initializing ${state.PBSG_CHILD_APP_NAME} with<br/>"
-    + "<b>modeSwitchNames:</b> ${state.modeSwitchNames},<br/>"
-    + "<b>defaultModeSwitchName:</b> ${state.defaultModeSwitchName}<br/>"
-    + "<b>logging:</b> ${settings.log}"
+  href (
+    name: settings.MODE_PBSG_APP_NAME,
+    width: 2,
+    url: "/installedapp/configure/${modePbsgApp.getId()}/modePbsgPage",
+    style: 'internal',
+    title: "Edit <b>${getAppInfo(modePbsgApp)}</b>",
+    state: null, //'complete'
   )
-  pbsgApp.configure(
-    state.modeSwitchNames,
-    state.defaultModeSwitchName,
-    settings.log
-  )
-  state.pbsg_modes = pbsgApp
-  // ---------------------------------------------
-  // P U R G E   E X C E S S   C H I L D   A P P S
-  // ---------------------------------------------
-  childAppsByLabel.each{ label, app ->
-    if (childAppsByRoom?.keySet().findAll{it == label}) {
-      // Skip, still in use
-    } else if (label == state.PBSG_CHILD_APP_NAME) {
-      // Skip, still in use
-    } else {
-      if (settings.log) log.trace(
-        "WHA manageChildApps() deleting orphaned child app ${getAppInfo(app)}."
-      )
-      deleteChildApp(app.getId())
-    }
-  }
 }
 
 void pbsgVswTurnedOn(String simpleName) {
@@ -435,38 +328,6 @@ void pbsgVswTurnedOn(String simpleName) {
     "WHA pbsgVswTurnedOn() activating mode='<b>${simpleName}</b> [PENDING]'."
   )
   getLocation().setMode(simpleName)
-}
-
-void displayRoomNameHrefs () {
-  if (state.roomNameToRoomScenes) {
-    state.roomNameToRoomScenes.each{ roomName, roomApp ->
-      href (
-        name: roomName,
-        width: 2,
-        url: "/installedapp/configure/${roomApp?.getId()}/roomScenesPage",
-        style: 'internal',
-        title: "Edit <b>${getAppInfo(roomApp)}</b> Scenes",
-        state: null, //'complete'
-      )
-    }
-  } else {
-    paragraph red("No Rooms have been identified yet.")
-  }
-}
-
-void displayPbsgHref () {
-  if (state.pbsg_modes) {
-    href (
-      name: state.pbsg_modes.getLabel(),
-      width: 2,
-      url: "/installedapp/configure/${state.pbsg_modes.getId()}/whaPbsgPage",
-      style: 'internal',
-      title: "Edit <b>${getAppInfo(state.pbsg_modes)}</b>",
-      state: null, //'complete'
-    )
-  } else {
-    log.error 'WHA displayPbsgHref() called with pbsg_modes missing.'
-  }
 }
 
 void removeAllChildApps () {
@@ -487,7 +348,7 @@ void pruneOrphanedChildApps () {
   )
   List<String> roomNames =
   kids.each{ kid ->
-    if (settings.focalRoomNames?.contains(kid)) {
+    if (settings.rooms?.contains(kid)) {
       if (settings.log) log.info(
         "WHA pruneOrphanedChildApps() skipping ${kid.getLabel()} (room)"
       )
@@ -502,7 +363,7 @@ void pruneOrphanedChildApps () {
 
 void displayAppInfoLink () {
   paragraph comment('Whole House Automation - @wesmc, ' \
-    + '<a href="https://github.com/WesleyMConner/Hubitat-WholeHouseAutomation" ' \
+    + '<a href="https://github.com/WesleyMConner/Hubitat-wha" ' \
     + 'target="_blank"><br/>Click for more information</a>')
 }
 
@@ -577,24 +438,24 @@ void repeaterHandler (Event e) {
   )
 }
 
-void keypadHandler (Event e) {
+void keypadToVswHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Hubitat mode is adjusted via pbsg-modes-X switches exclusivly.
+  //   - Keypad buttons are matched to state data to activate a target VSW.
   if (e.name == 'pushed') {
-    String nextMode = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
+    String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
     if (settings.log) log.trace(
-      "WHA keypadHandler() <b>Keypad Device Id:</b> ${e.deviceId}, "
-      + "<b>Keypad Button:</b> ${e.value}, <b>Requested Mode:</b> ${nextMode}"
-      //+ "<b>switchShortNameToDNI(nextMode):</b> ${switchShortNameToDNI(nextMode)}, "
-      //+ "<b>getChildDevice(switchShortNameToDNI(nextMode)):</b> ${getChildDevice(switchShortNameToDNI(nextMode))}"
+      "WHA keypadToVswHandler() "
+      + "<b>Keypad Device Id:</b> ${e.deviceId}, "
+      + "<b>Keypad Button:</b> ${e.value}, "
+      + "<b>Affiliated Switch:</b> ${targetVsw}"
     )
     // Turn on appropriate pbsg-modes-X VSW.
-    app.getChildAppByLabel(state.PBSG_CHILD_APP_NAME).turnOnSwitch(nextMode)
+    app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
-      "WHA keypadHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
+      "WHA keypadToVswHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
     )
   }
 }
@@ -621,6 +482,6 @@ void initialize() {
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     //unsubscribe(d)
-    subscribe(device, keypadHandler, ['filterEvents': false])
+    subscribe(device, keypadToVswHandler, ['filterEvents': false])
   }
 }
