@@ -33,6 +33,7 @@ void defaultPage () {
       + emphasis(red('Use the browser back button to return to the parent page.'))
     )
     manageChildDevices()
+    solicitLog()                                  // <- provided by Utils
     paragraph(
       heading('Debug<br/>')
       + "${ displaySettings() }<br/>"
@@ -58,10 +59,8 @@ void configure (
   String defaultSwitchName,
   Boolean log
   ) {
-  // Design Note
-  //   LOGGING IS NOT ADVISED IN THIS FUNCTION, which is invoked by a
-  //   parent application just after instantiating a new PBSG instance.
-  //   The parent should provide pbsgVswTurnedOn(String simpleName).
+  // !!! DO NOT ATTEMPT ANY LOGGING IN THIS METHOD !!!
+  // Invoked by a parent application just after instantiating a new PBSG.
   app.updateSetting('log', log)
   state.switchNames = switchNames
   state.switchDNIs = switchNames.collect{ switchName ->
@@ -74,9 +73,9 @@ void configure (
 }
 
 void turnOnSwitch (String shortName) {
-  // if (settings.log) log.trace(
-  //   "WHA-PBSG turnOnSwitch() w/ shortName: ${shortName}"
-  // )
+  if (settings.log) log.trace(
+    "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"
+  )
   DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
   if (sw) {
     sw.on()
@@ -115,9 +114,13 @@ void manageChildDevices () {
       + "<tr><th>orphanDNIs:</th><td>${orphanDNIs}</td></tr>"
       + '</table>'
     )
-    missingDNIs.each{ dni -> addChildDevice(
-      'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
-    )}
+    missingDNIs.each{ dni ->
+      if (settings.log) log.trace(
+        "PBSG-LIB manageChildDevices() adding child for DNI: '${dni}'"
+      )
+      addChildDevice(
+        'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
+      )}
     orphanDNIs.each{ dni -> deleteChildDevice(dni) }
   }
 }

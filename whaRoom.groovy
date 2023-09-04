@@ -52,6 +52,9 @@ Map whaRoomPage () {
     nextPage: 'whaPage',
     // , returnPath: 'list'
   ) {
+    // SAMPLE STATE & SETTINGS CLEAN UP
+    //   - state.remove('X')
+    //   - settings.remove('Y')
     state.roomName = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.roomName}"
     // SAMPLE STATE & SETTINGS CLEAN UP
@@ -189,6 +192,24 @@ void solicitRepeatersForWhaRoom () {
   //collapsibleInput (
   input(
     //blockLabel: "Repeaters for ${state.roomName} Scenes",
+    name: 'repeaters',
+    title: emphasis('Identify Required Repeater(s)'),
+    type: 'enum',
+    width: 6,
+    options: parent.getMainRepeaters().collectEntries{ d ->
+      [d, d.displayName]
+    },  //.collect{ d -> d.displayName }?.sort(),
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+/*
+void solicitRepeatersForWhaRoom () {
+  //collapsibleInput (
+  input(
+    //blockLabel: "Repeaters for ${state.roomName} Scenes",
     name: 'deviceRepeaterNames',
     title: emphasis('Identify Required Repeater(s)'),
     type: 'enum',
@@ -199,22 +220,46 @@ void solicitRepeatersForWhaRoom () {
     multiple: true
   )
 }
+*/
 
 void solicitNonLutronDevicesForWhaRoom () {
-  List<DevW> roomSwitches = parent.getNonLutronDevicesForRoom(state.roomName)
-  //collapsibleInput (
   input(
-    //blockLabel: "Non-Lutron Devices for ${state.roomName} Scenes",
-    name: 'deviceNonLutronNames',
+    name: 'nonLutronDevices',
     title: emphasis('Identify Required Non-Lutron Devices'),
     type: 'enum',
     width: 6,
-    options: roomSwitches.collect{ d -> d.displayName }?.sort(),
+    options: parent.getNonLutronDevicesForRoom(state.roomName).collectEntries{ d ->
+      [d, d.displayName]
+    },
     submitOnChange: true,
     required: false,
     multiple: true
   )
 }
+
+/*
+void solicitNonLutronDevicesForWhaRoom () {
+  // The parent (wha.groovy) solicits the non-lutron device objects.
+  // This solicitation isolates select data from these objects:
+  //   "<displayName>^dni^switch|dimmer"
+  // which is used subsequently to capture and execute per-scene values.
+  List<String> plist = (parent.getNonLutronDevicesForRoom(state.roomName)).collect{
+    d -> """${d.getName()}^${d.getDeviceNetworkId()}^${
+      d.getSupportedCommands().contains('setLevel') ? 'dimmer' : 'switch'
+    }"""
+  }
+  input(
+    name: 'nonLutronDevices',
+    title: emphasis('Identify Required Non-Lutron Devices'),
+    type: 'enum',
+    width: 6,
+    options: plist, //roomSwitches.collect{ d -> d.displayName }?.sort(),
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+*/
 
 void selectLedsForScene() {
   selectLedsForListItems(state.scenes, parent.getLedDevices(), 'sceneButtons')
@@ -276,12 +321,12 @@ void solicitRoomScene () {
     state.scenes?.each{ sceneName ->
       Integer col = 2
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
-      settings.deviceNonLutronNames?.each{deviceName ->
+      settings.nonLutronDevices?.each{ d ->
         col += 2
         input(
-          name: "scene^${sceneName}^NonLutron^${deviceName}",
+          name: "scene^${sceneName}^NonLutron^${d.deviceName}",
           type: 'number',
-          title: "<b>${ deviceName }</b><br/>Level 0..100",
+          title: "<b>${ d.deviceName }</b><br/>Level 0..100",
           width: 2,
           submitOnChange: true,
           required: true,
@@ -289,12 +334,14 @@ void solicitRoomScene () {
           defaultValue: 0
         )
       }
-      settings.deviceRepeaterNames?.sort().each{deviceName ->
+      // ?.sort{ d -> d.getLabel() }
+      settings.repeaters?.each{d ->
+        log.trace "---------->${d}"
         col += 2
         input(
-          name: "scene^${sceneName}^Repeater^${ deviceName }",
+          name: "scene^${sceneName}^Repeater^${ d.name }",
           type: 'number',
-          title: "<b>${ deviceName }</b><br/>Button #",
+          title: "<b>${ d.name }</b><br/>Button #",
           width: 2,
           submitOnChange: true,
           required: true,
@@ -335,6 +382,35 @@ void roomPbsgAppDrilldown() {
     title: "Edit <b>${getAppInfo(roomPbsgApp)}</b>",
     state: null, //'complete'
   )
+}
+
+void deriveSceneToRepeater(String sceneName) {
+  // Push appropriate Repeater buttons for sceneName
+  // Process
+  //   - scene^Chill^Repeater^(lutron-1) REP 1 → 41
+  // Into
+  //   - state.sceneToRepeater[scene: [repeaterDni, button], ...]
+}
+
+void deriveSceneToNonLutronDevice(String sceneName) {
+  // Set dimmer level or switch on/off for sceneName.
+  // Process
+  //   - scene^Chill^NonLutron^Fireplace Lighting → 100
+  // Into
+  //   - Need to differentiate switch from dimmer
+  //       - DEVICE: String getDeviceNetworkId()
+  //       - DEVICE: List<Command> getSupportedCommands()
+  //       - DEVICE: List<Capability> getCapabilities()
+  //       - DEVICE: List<State> getCurrentStates()
+  //       - DEVICE: Boolean hasCapability(String capability)
+  //       - DEVICE: Boolean hasAttribute(String attribute)
+  //       - DEVICE: Boolean hasCommand(String command)
+  //       - DEVICE: void updateSetting(String name, Map options)
+  //--
+  //       - DRIVER: void updateDataValue(String name, String value)
+  //       - DRIVER: String getDataValue(String name)
+  //   - state.sceneToNonLutronSwitch[scene: [deviceDni, on/off], ...]
+  //   - state.sceneToNonLutronDimmer[scene: [deviceDni, level], ...]
 }
 
 // -------------------------------

@@ -18,6 +18,7 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.UtilsLibrary
+#include wesmc.ra2Library
 
 definition(
   name: 'wha',
@@ -42,7 +43,7 @@ Map whaPage() {
   return dynamicPage(
     name: 'whaPage',
     title: heading('Whole House Automation (WHA)<br/>') \
-      + bullet('Obtain permission to access required Hubitat devices.<br/>') \
+      + bullet('Obtain permission to access select Hubitat keypad devices.<br/>') \
       + bullet('Manage Hubitat Modes via a Pushbutton Switch Group (PBSG).<br/>') \
       + bullet('Identify Rooms and per-room "Scenes".<br/>') \
       + bullet('Facilitate drilldown to child applications.'),
@@ -50,6 +51,7 @@ Map whaPage() {
     uninstall: true,
     nextPage: 'whaPage'
   ) {
+    app.updateLabel('Whole House Automation')
     state.MODE_PBSG_APP_NAME = 'pbsg_modes'
     state.MODE_SWITCH_NAMES = getLocation().getModes().collect{it.name}
     state.DEFAULT_MODE_SWITCH_NAME = getGlobalVar('defaultMode').value
@@ -58,17 +60,35 @@ Map whaPage() {
     //   - settings.remove('Y')
     // reLabelLeds()
     section {
-      app.updateLabel('Whole House Automation')
       solicitLog()                                  // <- provided by Utils
+      solicitSeeTouchKeypads (
+        'lutronSeeTouchKeypads',
+        'Identify <b>ALL Keypads</b> with buttons that impact Hubitat mode selection.'
+      )
+      solicitLutronLEDs(
+        'lutronModeButtons',
+        'Identify <b>All LEDs/Buttons</b> that enable Hubitat mode changes.'
+      )
+      if (state.MODE_SWITCH_NAMES == null || settings?.lutronModeButtons == null) {
+        paragraph(red('Mode activation buttons are pending pre-requisites above.'))
+      } else {
+        selectLedsForListItems(
+          state.MODE_SWITCH_NAMES,
+          settings.lutronModeButtons,
+          'modeButton'
+        )
+      }
       solictFocalRoomNames()
-      solicitLutronTelnetDevice()
-      solicitLutronMainRepeaters()
-      //-> solicitLutronMiscellaneousKeypads()
-      solicitSeeTouchKeypads()
-      solicitLutronPicos()
-      solicitLutronLEDs ()
-      solicitSwitches()
-      selectLedsForMode()
+      //solicitLutronLEDs('modeLeds')
+      //-> solicitLutronTelnetDevice()
+      //-> solicitLutronMainRepeaters()
+      //---> solicitLutronMiscellaneousKeypads()
+      //-> Note Hubitat's RA2 Keypads DO NOT support getChildDevices().
+      //-> settings.keypads?.each{ kp ->
+      //->   paragraph "device ${kp.getLabel()}"
+      //-> }
+      //-> solicitLutronPicos()
+      //-> solicitSwitches()
       deriveKpadDNIandButtonToMode()
       if (!settings.rooms) {
         paragraph red('Management of child apps is pending selection of Room Names.')
@@ -86,109 +106,40 @@ Map whaPage() {
   }
 }
 
-// -------------------------------------------------
-// R E N A M E   L U T R O N   L E D   B U T T O N S
-// -------------------------------------------------
-void newLedLabel (String deviceName, String newDeviceLabel) {
-  DevW d = settings.lutronLEDs.findAll{it.name == deviceName}?.first()
-  d.setLabel(newDeviceLabel)
+/*
+List<DevW> getMainRepeaters () {
+  return settings.lutronRepeaters
 }
+*/
 
-void reLabelLeds () {
-  // -----------------------------------------------------------------
-  // I M P O R T A N T - Permission must be granted to individual LEDs
-  //                     BEFORE they can be relabled.
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-44) Garage KPAD LED 1','Garage KPAD 1 - ALL AUTO')
-  //newLedLabel('(lutron-44) Garage KPAD LED 2','Garage KPAD 2 - AWAY')
-  //newLedLabel('(lutron-44) Garage KPAD LED 3','Garage KPAD 3 - Den Party')
-  //newLedLabel('(lutron-44) Garage KPAD LED 4','Garage KPAD 4 - Den Chill')
-  //newLedLabel('(lutron-44) Garage KPAD LED 5','Garage KPAD 5 - Den TV')
-  //newLedLabel('(lutron-44) Garage KPAD LED 6','Garage KPAD 6 - Hall')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-80) TV Wall KPAD LED 1 - COOK O/O','TV KPAD 1 - COOK')
-  //newLedLabel('(lutron-80) TV Wall KPAD LED 2','TV KPAD 2 - Den Chill')
-  //newLedLabel('(lutron-80) TV Wall KPAD LED 3','TV KPAD 3 - Den TV')
-  //newLedLabel('(lutron-80) TV Wall KPAD LED 4 - Chill (D)','TV KPAD 4 - Guest High')
-  //newLedLabel('(lutron-80) TV Wall KPAD LED 5 - Theater (D)','TV KPAD 5 - Guest Low')
-  //newLedLabel('(lutron-80) TV Wall KPAD LED 6','TV KPAD 6 - Accent')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-41) Kit Slider KPAD LED 1','K Slider KPAD 1 - Lanai Party')
-  //newLedLabel('(lutron-41) Kit Slider KPAD LED 2','K Slider KPAD 2 - Lanai Play')
-  //newLedLabel('(lutron-41) Kit Slider KPAD LED 3','K Slider KPAD 3 - Lanai Chill')
-  //newLedLabel('(lutron-41) Kit Slider KPAD LED 4','K Slider KPAD 4 - Lanai TV')
-  //newLedLabel('(lutron-41) Kit Slider KPAD LED 5','K Slider KPAD 5 - Dining')
-  //newLedLabel('(lutron-41) Kit Slider KPAD LED 6','K Slider KPAD 6 - Seating')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-82) Visor CTRL LED 1','Visor KPAD 1 - ')
-  //newLedLabel('(lutron-82) Visor CTRL LED 2','Visor KPAD 2 - ')
-  //newLedLabel('(lutron-82) Visor CTRL LED 3','Visor KPAD 3 - ')
-  //newLedLabel('(lutron-82) Visor CTRL LED 4','Visor KPAD 4 - ')
-  //newLedLabel('(lutron-82) Visor CTRL LED 5','Visor KPAD 5 - ')
-  //newLedLabel('(lutron-82) Visor CTRL LED 6','Visor KPAD 6 - ')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-38) Dining KPAD LED 1','Dining KPAD 1 - COOK')
-  //newLedLabel('(lutron-38) Dining KPAD LED 2','Dining KPAD 2 - Entry Party')
-  //newLedLabel('(lutron-38) Dining KPAD LED 3','Dining KPAD 3 - Entry Play')
-  //newLedLabel('(lutron-38) Dining KPAD LED 4','Dining KPAD 4 - Entry Chill')
-  //newLedLabel('(lutron-38) Dining KPAD LED 5','Dining KPAD 5 - Entry TV')
-  //newLedLabel('(lutron-38) Dining KPAD LED 6','Dining KPAD 6 - Niche')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-29) Entry LHS KPAD LED 1','EntryL KPAD 1 - ALL AUTO')
-  //newLedLabel('(lutron-29) Entry LHS KPAD LED 2','EntryL KPAD 2 - AWAY')
-  //newLedLabel('(lutron-29) Entry LHS KPAD LED 3','EntryL KPAD 3 - Yard High')
-  //newLedLabel('(lutron-29) Entry LHS KPAD LED 4','EntryL KPAD 4 - Yard Low')
-  //newLedLabel('(lutron-29) Entry LHS KPAD LED 5','EntryL KPAD 5 - Yard Off')
-  //newLedLabel('(lutron-29) Entry LHS KPAD LED 6','EntryL KPAD 6 - Porch')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-10) Entry RHS KPAD LED 1 - ALL AUTO','EntryR KPAD 1 - FLASH')
-  //newLedLabel('(lutron-10) Entry RHS KPAD LED 2','EntryR KPAD 2 - Entry Party')
-  //newLedLabel('(lutron-10) Entry RHS KPAD LED 3','EntryR KPAD 3 - Entry Play')
-  //newLedLabel('(lutron-10) Entry RHS KPAD LED 4','EntryR KPAD 4 - Entry Chill')
-  //newLedLabel('(lutron-10) Entry RHS KPAD LED 5','EntryR KPAD 5 - Entry TV')
-  //newLedLabel('(lutron-10) Entry RHS KPAD LED 6','EntryR KPAD 6 - Foyer')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-32) Central KPAD LED 1','Central KPAD 1 - CLEANING')
-  //newLedLabel('(lutron-32) Central KPAD LED 2','Central KPAD 2 - DAY')
-  //newLedLabel('(lutron-32) Central KPAD LED 3','Central KPAD 3 - NIGHT')
-  //newLedLabel('(lutron-32) Central KPAD LED 4','Central KPAD 4 - PARTY')
-  //newLedLabel('(lutron-32) Central KPAD LED 5','Central KPAD 5 - CHILL')
-  //newLedLabel('(lutron-32) Central KPAD LED 6','Central KPAD 6 - TV')
-  //newLedLabel('(lutron-32) Central KPAD LED 7','Central KPAD 7 - ALL OFF')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-20) Mstr Entry KPAD LED 1','Master KPAD 1 - Master High')
-  //newLedLabel('(lutron-20) Mstr Entry KPAD LED 2','Master KPAD 2 - Master Low')
-  //newLedLabel('(lutron-20) Mstr Entry KPAD LED 3','Master KPAD 3 - Master Off')
-  //newLedLabel('(lutron-20) Mstr Entry KPAD LED 4','Master KPAD 4 - Bath High')
-  //newLedLabel('(lutron-20) Mstr Entry KPAD LED 5','Master KPAD 5 - Bath Off')
-  //newLedLabel('(lutron-20) Mstr Entry KPAD LED 6','Master KPAD 6 - Lamps')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-46) Mstr Slider KPAD LED 1','M Slider KPAD 1 - Master High')
-  //newLedLabel('(lutron-46) Mstr Slider KPAD LED 2','M Slider KPAD 2 - Master Low')
-  //newLedLabel('(lutron-46) Mstr Slider KPAD LED 3','M Slider KPAD 3 - Master Off')
-  //newLedLabel('(lutron-46) Mstr Slider KPAD LED 4','M Slider KPAD 4 - Lanai Chill')
-  //newLedLabel('(lutron-46) Mstr Slider KPAD LED 5','M Slider KPAD 5 - Lanai TV')
-  //newLedLabel('(lutron-46) Mstr Slider KPAD LED 6','M Slider KPAD 6 - Spots')
-  // -----------------------------------------------------------------
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 1','T-Top KPAD 1 - AWAY')
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 2','T-Top KPAD 2 - CHILL')
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 3','T-Top KPAD 3 - THEATER')
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 4','T-Top KPAD 4 - NIGHT')
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 5','T-Top KPAD 5 - Floor Lamp')
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 6','T-Top KPAD 6 - Den+ Auto')
-  //newLedLabel('(lutron-73) Tabletop KPAD LED 7','T-Top KPAD 7 - Guest+ Auto')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 8','T-Top KPAD 8 - Main+ Auto')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 9','T-Top KPAD 9 - Master_ Auto')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 10','T-Top KPAD 10 - Yard Auto')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 11','T-Top KPAD 11 - Mute Doors')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 12','T-Top KPAD 12 - Mute Sliders')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 13','T-Top KPAD 13 - A L A R M')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 14','T-Top KPAD 14 - P A N I C')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 15','T-Top KPAD 15 - Q U I E T')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 16','T-Top KPAD 16 - ALL ON')
-  //-->newLedLabel('(lutron-73) Tabletop KPAD LED 17','T-Top KPAD 17 - ALL OFF')
-  // -----------------------------------------------------------------
+/*
+List<DevW> getKeypads() {
+  return (settings.lutronMiscKeypads ?: [])
+         + (settings.seeTouchKeypad ?: [])
+         + (settings.lutronPicos ?: [])
 }
+*/
+
+/*
+List<DevW> getLedDevices() {
+  return settings.lutronLEDs
+}
+*/
+
+/*
+List<DevW> getPicoDevices() {
+  return settings.lutronPicos
+}
+*/
+
+/*
+List<DevW> getNonLutronDevicesForRoom (String roomName) {
+  List<DevW> roomSwitches = narrowDevicesToRoom(roomName, settings.switches)
+                            .findAll{
+                              it.displayName.toString().contains('lutron') == false
+                            }
+}
+*/
 
 // -----------------------------------
 // W H A   P A G E   &   S U P P O R T
@@ -205,82 +156,8 @@ void solictFocalRoomNames () {
   )
 }
 
-void solicitLutronTelnetDevice () {
-  collapsibleInput (
-    blockLabel: 'Lutron Telnet Device',
-    name: 'lutronTelnet',
-    title: 'Confirm Lutron Telnet Device<br/>' \
-      + comment('Used to detect Main Repeater LED state changes'),
-    type: 'device.LutronTelnet'
-  )
-}
-
-void solicitLutronMainRepeaters () {
-  collapsibleInput (
-    blockLabel: 'Lutron Main Repeaters',
-    name: 'lutronRepeaters',
-    title: 'Identify Lutron Main Repeater(s)<br/>' \
-      + comment('Used to invoke in-kind Lutron scenes'),
-    type: 'device.LutronKeypad'
-  )
-}
-
-//-> NOT REQUIRED IF EVERYTHING IS "SEE TOUCH"
-//-> void solicitLutronMiscellaneousKeypads () {
-//->   collapsibleInput (
-//->     blockLabel: 'Lutron Miscellaneous Keypads',
-//->     name: 'lutronMiscKeypads',
-//->     title: 'Identify participating Lutron Miscellaneous Devices<br/>' \
-//->       + comment('used to trigger WHA Rooms'),
-//->     type: 'device.LutronKeypad'
-//->   )
-//-> }
-
-void solicitSeeTouchKeypads () {
-  collapsibleInput (
-    blockLabel: 'Lutron SeeTouch Keypads',
-    name: 'seeTouchKeypad',
-    title: 'Identify Lutron SeeTouch Keypads<br/>' \
-      + comment('used to trigger WHA Rooms.'),
-    type: 'device.LutronSeeTouchKeypad'
-  )
-}
-
-void solicitLutronLEDs () {
-  collapsibleInput (
-    blockLabel: 'Lutron LEDs',
-    name: 'lutronLEDs',
-    title: 'Select participating Lutron LEDs<br/>' \
-      + comment('Used to trigger WHA Rooms.'),
-    type: 'device.LutronComponentSwitch'
-  )
-}
-
-void solicitLutronPicos () {
-  collapsibleInput (
-    blockLabel: 'Lutron Picos',
-    name: 'lutronPicos',
-    title: 'Select participating Lutron Picos<br/>' \
-      + comment('used to trigger WHA Rooms'),
-    type: 'device.LutronFastPico'
-  )
-}
-
-void solicitSwitches () {
-  collapsibleInput (
-    blockLabel: 'Non-Lutron, Non-VSW Devices',
-    name: 'switches',
-    title: 'Select participating Non-Lutron, Non-VSW switches and dimmers',
-    type: 'capability.switch'
- )
-}
-
-void selectLedsForMode() {
-  selectLedsForListItems(state.MODE_SWITCH_NAMES, getLedDevices(), 'ModeButtons')
-}
-
 void deriveKpadDNIandButtonToMode () {
-  mapKpadDNIandButtonToItem('ModeButtons')
+  mapKpadDNIandButtonToItem('modeButton')
 }
 
 void roomAppDrilldown() {
@@ -304,9 +181,9 @@ void roomAppDrilldown() {
 
 void modePbsgAppDrilldown() {
   paragraph heading('Mode PBSG Inspection')
-  InstAppW modePbsgApp = app.getChildAppByLabel(settings.MODE_PBSG_APP_NAME)
+  InstAppW modePbsgApp = app.getChildAppByLabel(state.MODE_PBSG_APP_NAME)
   if (!modePbsgApp) {
-    modePbsgApp = addChildApp('wesmc', 'modePBSG', settings.MODE_PBSG_APP_NAME)
+    modePbsgApp = addChildApp('wesmc', 'modePBSG', state.MODE_PBSG_APP_NAME)
     modePbsgApp.configure(
       state.MODE_SWITCH_NAMES,
       state.DEFAULT_MODE_SWITCH_NAME,
@@ -367,45 +244,6 @@ void displayAppInfoLink () {
     + 'target="_blank"><br/>Click for more information</a>')
 }
 
-// -----------------------------
-// " C H I L D "   S U P P O R T
-// -----------------------------
-
-List<DevW> narrowDevicesToRoom (String roomName, List<DevW> devices) {
-  // This function excludes devices that are not associated with any room.
-  List<String> deviceIdsForRoom = app.getRooms()
-                                  .findAll{it.name == roomName}
-                                  .collect{it.deviceIds.collect{it.toString()}}
-                                  .flatten()
-  return devices.findAll{ d -> deviceIdsForRoom.contains(d.id.toString())
-  }
-}
-
-List<DevW> getMainRepeaters () {
-  return settings.lutronRepeaters
-}
-
-List<DevW> getKeypads() {
-  return (settings.lutronMiscKeypads ?: []) \
-         + (settings.seeTouchKeypad ?: []) \
-         + (settings.lutronPicos ?: [])
-}
-
-List<DevW> getLedDevices() {
-  return settings.lutronLEDs
-}
-
-List<DevW> getPicoDevices() {
-  return settings.lutronPicos
-}
-
-List<DevW> getNonLutronDevicesForRoom (String roomName) {
-  List<DevW> roomSwitches = narrowDevicesToRoom(roomName, settings.Switches)
-                            .findAll{
-                              it.displayName.toString().contains('lutron') == false
-                            }
-}
-
 // -------------------------------
 // S T A T E   M A N A G E M E N T
 // -------------------------------
@@ -449,10 +287,14 @@ void keypadToVswHandler (Event e) {
       "WHA keypadToVswHandler() "
       + "<b>Keypad Device Id:</b> ${e.deviceId}, "
       + "<b>Keypad Button:</b> ${e.value}, "
-      + "<b>Affiliated Switch:</b> ${targetVsw}"
+      + "<b>Affiliated Switch Name:</b> ${targetVsw}"
     )
     // Turn on appropriate pbsg-modes-X VSW.
-    app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+    InstAppW pbsgApp = app.getChildAppByLabel(state.MODE_PBSG_APP_NAME)
+    if (settings.log) log.trace(
+      "WHA keypadToVswHandler() pbsgApp '${pbsgApp}'"
+    )
+    pbsgApp.turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
       "WHA keypadToVswHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
@@ -463,22 +305,22 @@ void keypadToVswHandler (Event e) {
 void initialize() {
   // TACTICALLY, DROP EVERYTHING
   if (settings.log) log.trace "WHA initialize()"
-  if (settings.log) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
-  settings.lutronTelnet.each{ d ->
-    DevW device = d
-    if (settings.log) log.trace "WHA subscribing ${device.displayName} ${device.id}"
-    //unsubscribe(d)
-    subscribe(device, telnetHandler, ['filterEvents': false])
-  }
-  if (settings.log) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
-  settings.lutronRepeaters.each{ d ->
-    DevW device = d
-    if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-    //unsubscribe(d)
-    subscribe(device, repeaterHandler, ['filterEvents': false])
-  }
-  if (settings.log) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
-  settings.seeTouchKeypad.each{ d ->
+  //-> if (settings.log) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  //-> settings.lutronTelnet.each{ d ->
+  //->   DevW device = d
+  //->   if (settings.log) log.trace "WHA subscribing ${device.displayName} ${device.id}"
+  //->   //unsubscribe(d)
+  //->   subscribe(device, telnetHandler, ['filterEvents': false])
+  //-> }
+  //-> if (settings.log) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  //-> settings.lutronRepeaters.each{ d ->
+  //->   DevW device = d
+  //->   if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
+  //->   //unsubscribe(d)
+  //->   subscribe(device, repeaterHandler, ['filterEvents': false])
+  //-> }
+  //-> if (settings.log) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  settings.lutronSeeTouchKeypads.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
     //unsubscribe(d)
