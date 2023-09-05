@@ -415,7 +415,7 @@ void keypadToVswHandler (Event e) {
       + "<b>Affiliated Switch:</b> ${targetVsw}"
     )
     // Turn on appropriate pbsg-modes-X VSW.
-    app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+    if (targetVsw) app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "

@@ -218,11 +218,7 @@ void keypadToVswHandler (Event e) {
       + "<b>Affiliated Switch Name:</b> ${targetVsw}"
     )
     // Turn on appropriate pbsg-modes-X VSW.
-    InstAppW pbsgApp = app.getChildAppByLabel(state.MODE_PBSG_APP_NAME)
-    if (settings.log) log.trace(
-      "WHA keypadToVswHandler() pbsgApp '${pbsgApp}'"
-    )
-    pbsgApp.turnOnSwitch(targetVsw)
+    if (targetVsw) app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
       "WHA keypadToVswHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
