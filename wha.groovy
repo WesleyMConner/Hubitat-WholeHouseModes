@@ -136,7 +136,7 @@ void roomAppDrilldown() {
 
 void pbsgVswTurnedOn(String simpleName) {
   log.trace(
-    "WHA pbsgVswTurnedOn() activating mode='<b>${simpleName}</b> [PENDING]'."
+    "WHA pbsgVswTurnedOn() activating mode='<b>${simpleName}</b>'."
   )
   getLocation().setMode(simpleName)
 }

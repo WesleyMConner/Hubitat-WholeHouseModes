@@ -122,6 +122,7 @@ void manageChildDevices () {
         'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
       )}
     orphanDNIs.each{ dni -> deleteChildDevice(dni) }
+    initialize()
   }
 }
 
@@ -171,6 +172,7 @@ void enforceMutualExclusion() {
 void enforceDefaultSwitch() {
   // Enforce Default Switch
   List<DevW> onList = getOnSwitches()
+log.trace "#175 >>>>> state.defaultSwitchName: ${state.defaultSwitchName}, onList: ${onList} <<<<<"
   if (state.defaultSwitchName && !onList) {
     if (settings.log) log.trace(
       'PBSG-LIB enforceDefaultSwitch() turning on , '

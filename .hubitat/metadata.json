@@ -4,7 +4,7 @@
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/pbsgLibrary.groovy",
       "codeType": "library",
       "id": 10,
-      "version": 306
+      "version": 308
     },
     {
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/roomPBSG.groovy",
