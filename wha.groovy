@@ -87,8 +87,7 @@ Map whaPage() {
           'modePBSG',
           'modePbsgPage',
           state.MODE_SWITCH_NAMES,
-          state.DEFAULT_MODE_SWITCH_NAME,
-          settings.log
+          state.DEFAULT_MODE_SWITCH_NAME
         )
       }
       paragraph(
@@ -199,12 +198,6 @@ void updated() {
   initialize()
 }
 
-void telnetHandler (Event e) {
-  if (settings.log) log.trace(
-    "WHA <b>telnetHandler() w/ event: ${e.descriptionText}"
-  )
-}
-
 void repeaterHandler (Event e) {
   if (settings.log) log.trace(
     "WHA <b>repeaterHandler() w/ event: ${e.descriptionText}"
@@ -240,13 +233,6 @@ void keypadToVswHandler (Event e) {
 void initialize() {
   // TACTICALLY, DROP EVERYTHING
   if (settings.log) log.trace "WHA initialize()"
-  //-> if (settings.log) log.trace "WHA subscribing to Lutron Telnet >${settings.lutronTelnet}<"
-  //-> settings.lutronTelnet.each{ d ->
-  //->   DevW device = d
-  //->   if (settings.log) log.trace "WHA subscribing ${device.displayName} ${device.id}"
-  //->   //unsubscribe(d)
-  //->   subscribe(device, telnetHandler, ['filterEvents': false])
-  //-> }
   //-> if (settings.log) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
   //-> settings.lutronRepeaters.each{ d ->
   //->   DevW device = d

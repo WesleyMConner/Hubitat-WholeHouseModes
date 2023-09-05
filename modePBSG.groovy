@@ -39,7 +39,7 @@ preferences {
 }
 
 Map modePbsgPage () {
-  return dynamicPage(
+  return dynamicPage (
     name: 'modePbsgPage',
     install: false,
     uninstall: false

@@ -274,7 +274,6 @@ void updated() {
 }
 
 void uninstalled() {
-  log.error 'WHO IS CALLING UNINSTALLED AND WHY ?????'
   if (settings.log) log.trace 'PBSG-LIB uninstalled(), DELETING CHILD DEVICES'
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)

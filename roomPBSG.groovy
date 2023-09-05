@@ -39,7 +39,7 @@ preferences {
 }
 
 Map roomPbsgPage () {
-  return dynamicPage(
+  return dynamicPage (
     name: 'roomPbsgPage',
     install: false, //true,
     uninstall: false
