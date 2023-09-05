@@ -61,6 +61,7 @@ Map whaRoomPage () {
       solicitModeNamesAsSceneNames()
       solicitCustomScenes()
       updateScenes()
+      solicitSceneForModeName()
       solicitSeeTouchKeypads (
         'lutronSeeTouchKeypads',
         'Identify <b>ALL Keypads</b> with buttons that impact <b>Room scenes</b>.'
@@ -210,6 +211,30 @@ void solicitNonLutronDevicesForWhaRoom () {
     required: false,
     multiple: true
   )
+}
+
+void solicitSceneForModeName () {
+  if (state.scenes == null) {
+    paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
+  } else {
+    paragraph emphasis('Select scenes for per-mode automation:')
+    getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
+      String inputName = "modeToScene^${modeName}"
+      String defaultValue = settings[inputName]
+        ?: state.scenes.contains(modeName) ? modeName : null
+      input(
+        name: inputName,
+        type: 'enum',
+        title: modeName,
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        options: state.scenes,
+        defaultValue: defaultValue
+      )
+    }
+  }
 }
 
 List<String> picoButtons (DevW pico) {
