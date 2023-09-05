@@ -43,10 +43,7 @@ Map whaPage() {
   return dynamicPage(
     name: 'whaPage',
     title: heading('Whole House Automation (WHA)<br/>') \
-      + bullet('Obtain permission to access select Hubitat keypad devices.<br/>') \
-      + bullet('Manage Hubitat Modes via a Pushbutton Switch Group (PBSG).<br/>') \
-      + bullet('Identify Rooms and per-room "Scenes".<br/>') \
-      + bullet('Facilitate drilldown to child applications.'),
+      + bullet("Press ${red('<b>Done</b>')} to ensure event subscriptions update!"),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
@@ -63,39 +60,36 @@ Map whaPage() {
       solicitLog()                                  // <- provided by Utils
       solicitSeeTouchKeypads (
         'lutronSeeTouchKeypads',
-        'Identify <b>ALL Keypads</b> with buttons that impact Hubitat mode selection.'
+        'Identify <b>ALL Keypads</b> with buttons that impact Hubitat <b>mode changes</b>.'
       )
       solicitLutronLEDs(
         'lutronModeButtons',
-        'Identify <b>All LEDs/Buttons</b> that enable Hubitat mode changes.'
+        'Identify <b>All LEDs/Buttons</b> that enable Hubitat <b>mode changes</b>.'
       )
       if (state.MODE_SWITCH_NAMES == null || settings?.lutronModeButtons == null) {
-        paragraph(red('Mode activation buttons are pending pre-requisites above.'))
+        paragraph(red('Mode activation buttons are pending pre-requisites.'))
       } else {
         selectLedsForListItems(
           state.MODE_SWITCH_NAMES,
           settings.lutronModeButtons,
           'modeButton'
         )
+        mapKpadDNIandButtonToItem('modeButton')
       }
       solictFocalRoomNames()
-      //solicitLutronLEDs('modeLeds')
-      //-> solicitLutronTelnetDevice()
-      //-> solicitLutronMainRepeaters()
-      //---> solicitLutronMiscellaneousKeypads()
-      //-> Note Hubitat's RA2 Keypads DO NOT support getChildDevices().
-      //-> settings.keypads?.each{ kp ->
-      //->   paragraph "device ${kp.getLabel()}"
-      //-> }
-      //-> solicitLutronPicos()
-      //-> solicitSwitches()
-      deriveKpadDNIandButtonToMode()
       if (!settings.rooms) {
         paragraph red('Management of child apps is pending selection of Room Names.')
       } else {
         keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME], false)
         roomAppDrilldown()
-        modePbsgAppDrilldown()
+        pbsgChildAppDrilldown(
+          state.MODE_PBSG_APP_NAME,
+          'modePBSG',
+          'modePbsgPage',
+          state.MODE_SWITCH_NAMES,
+          state.DEFAULT_MODE_SWITCH_NAME,
+          settings.log
+        )
       }
       paragraph(
         heading('Debug<br/>')
@@ -106,40 +100,6 @@ Map whaPage() {
   }
 }
 
-/*
-List<DevW> getMainRepeaters () {
-  return settings.lutronRepeaters
-}
-*/
-
-/*
-List<DevW> getKeypads() {
-  return (settings.lutronMiscKeypads ?: [])
-         + (settings.seeTouchKeypad ?: [])
-         + (settings.lutronPicos ?: [])
-}
-*/
-
-/*
-List<DevW> getLedDevices() {
-  return settings.lutronLEDs
-}
-*/
-
-/*
-List<DevW> getPicoDevices() {
-  return settings.lutronPicos
-}
-*/
-
-/*
-List<DevW> getNonLutronDevicesForRoom (String roomName) {
-  List<DevW> roomSwitches = narrowDevicesToRoom(roomName, settings.switches)
-                            .findAll{
-                              it.displayName.toString().contains('lutron') == false
-                            }
-}
-*/
 
 // -----------------------------------
 // W H A   P A G E   &   S U P P O R T
@@ -154,10 +114,6 @@ void solictFocalRoomNames () {
     title: 'Select Participating Rooms',
     options: roomPicklist
   )
-}
-
-void deriveKpadDNIandButtonToMode () {
-  mapKpadDNIandButtonToItem('modeButton')
 }
 
 void roomAppDrilldown() {
@@ -177,27 +133,6 @@ void roomAppDrilldown() {
       state: null, //'complete'
     )
   }
-}
-
-void modePbsgAppDrilldown() {
-  paragraph heading('Mode PBSG Inspection')
-  InstAppW modePbsgApp = app.getChildAppByLabel(state.MODE_PBSG_APP_NAME)
-  if (!modePbsgApp) {
-    modePbsgApp = addChildApp('wesmc', 'modePBSG', state.MODE_PBSG_APP_NAME)
-    modePbsgApp.configure(
-      state.MODE_SWITCH_NAMES,
-      state.DEFAULT_MODE_SWITCH_NAME,
-      settings.log
-    )
-  }
-  href (
-    name: settings.MODE_PBSG_APP_NAME,
-    width: 2,
-    url: "/installedapp/configure/${modePbsgApp.getId()}/modePbsgPage",
-    style: 'internal',
-    title: "Edit <b>${getAppInfo(modePbsgApp)}</b>",
-    state: null, //'complete'
-  )
 }
 
 void pbsgVswTurnedOn(String simpleName) {

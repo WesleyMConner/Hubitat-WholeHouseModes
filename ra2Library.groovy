@@ -89,87 +89,108 @@ void collapsibleInput (Map args = [:]) {
 
 void solicitLutronTelnetDevice (
   String settingsKey = 'lutronTelnet',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   collapsibleInput (
-    blockLabel: "${settingsKey} Device",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'device.LutronTelnet'
+    [
+      blockLabel: "${settingsKey} Device",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'device.LutronTelnet'
+    ] << args
   )
 }
 
 void solicitLutronMainRepeaters (
   String settingsKey = 'lutronMainRepeaters',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   collapsibleInput (
-    blockLabel: "${settingsKey} Devices",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'device.LutronKeypad'
+    [
+      blockLabel: "${settingsKey} Devices",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'device.LutronKeypad'
+    ] << args
   )
 }
 
 void solicitLutronMiscellaneousKeypads (
   String settingsKey = 'lutronMiscKeypads',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   // This function IS NOT REQUIRED when miscellaneous devices are manually
   // converted to Lutron SeeTouch device types.
   collapsibleInput (
-    blockLabel: "${settingsKey} Devices",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'device.LutronKeypad'
+    [
+      blockLabel: "${settingsKey} Devices",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'device.LutronKeypad'
+    ] << args
    )
 }
 
 void solicitSeeTouchKeypads (
   String settingsKey = 'lutronSeeTouchKeypads',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   collapsibleInput (
-    blockLabel: "${settingsKey} Devices",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'device.LutronSeeTouchKeypad'
+    [
+      blockLabel: "${settingsKey} Devices",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'device.LutronSeeTouchKeypad'
+    ] << args
   )
 }
 
 void solicitLutronLEDs (
   String settingsKey = 'lutronKeypadButtons',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   collapsibleInput (
-    blockLabel: "${settingsKey} Devices",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'device.LutronComponentSwitch'
+    [
+      blockLabel: "${settingsKey} Devices",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'device.LutronComponentSwitch'
+    ] << args
   )
 }
 
 void solicitLutronPicos (
   String settingsKey = 'lutronPicos',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   collapsibleInput (
-    blockLabel: "${settingsKey} Devices",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'device.LutronFastPico'
+    [
+      blockLabel: "${settingsKey} Devices",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'device.LutronFastPico'
+    ] << args
   )
 }
 
 void solicitSwitches (
   String settingsKey = 'switches',
-  String note = ''
+  String note = '',
+  Map args = [:]
   ) {
   collapsibleInput (
-    blockLabel: "${settingsKey} Devices",
-    name: settingsKey,
-    title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-    type: 'capability.switch'
+    [
+      blockLabel: "${settingsKey} Devices",
+      name: settingsKey,
+      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      type: 'capability.switch'
+    ] << args
  )
 }
 
@@ -182,7 +203,16 @@ void selectLedsForListItems(
   //   Keypad LEDs are used as a proxy for Keypad buttons.
   //     - The button's displayName is meaningful to clients.
   //     - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
+  log.trace(
+    "selectLedsForListItems() "
+    + "<b>list:</b> ${list}, "
+    + "<b>ledDevices:</b> ${ledDevices}, "
+    + "<b>prefix:</b> ${prefix}, "
+  )
   list.each{ item ->
+    log.trace(
+      "selectLedsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
+    )
     input(
       name: "${prefix}_${item}",
       type: 'enum',
@@ -192,7 +222,7 @@ void selectLedsForListItems(
       required: false,
       multiple: true,
       options: ledDevices.collect{ d ->
-        "${d.displayName}: ${d.deviceNetworkId}"
+        "${d.getLabel()}: ${d.getDeviceNetworkId()}"
       }?.sort()
     )
   }
