@@ -204,14 +204,14 @@ void selectLedsForListItems(
   //     - The button's displayName is meaningful to clients.
   //     - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
   log.trace(
-    "selectLedsForListItems() "
+    "RA2 selectLedsForListItems() "
     + "<b>list:</b> ${list}, "
     + "<b>ledDevices:</b> ${ledDevices}, "
     + "<b>prefix:</b> ${prefix}, "
   )
   list.each{ item ->
     log.trace(
-      "selectLedsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
+      "RA2 selectLedsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
     )
     input(
       name: "${prefix}_${item}",

@@ -397,7 +397,7 @@ void selectPicoButtonsForScene() {
     ))
   } else {
     List<DevW> picos = parent.getPicoDevices()
-    //log.trace "RS selectPicoButtonsForScene() picos [A]: ${picos}"
+    //log.trace "R_${state.ROOM_NAME} selectPicoButtonsForScene() picos [A]: ${picos}"
     state.scenes.each{ sceneName ->
       input(
           // Head's Up:
@@ -425,8 +425,10 @@ void solicitRoomScene () {
       Integer col = 2
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.independentDevices?.each{ d ->
-      String inputName = "scene^${sceneName}^indepenent^${d.getLabel()}"
-log.trace "#419 inputName: >${inputName}<"
+        String inputName = "scene^${sceneName}^indepenent^${d.getLabel()}"
+        if (settings.log) log.trace(
+          "R_${state.ROOM_NAME} solicitRoomScene() [INDEPENDENT] inputName: >${inputName}<"
+        )
         col += 2
         input(
           name: inputName,
@@ -442,7 +444,9 @@ log.trace "#419 inputName: >${inputName}<"
       // ?.sort{ d -> d.getLabel() }
       settings.lutronMainRepeaters?.each{d ->
       String inputName = "scene^${sceneName}^repeater^${d.getLabel()}"
-log.trace "#436 inputName: >${inputName}<"
+        if (settings.log) log.trace(
+          "R_${state.ROOM_NAME} solicitRoomScene() [REPEATERS] inputName: >${inputName}<"
+        )
         col += 2
         input(
           name: inputName,
@@ -465,7 +469,7 @@ log.trace "#436 inputName: >${inputName}<"
 
 void pbsgVswTurnedOn(String simpleName) {
   log.trace(
-    "RS pbsgVswTurnedOn() WhaRooms <b>'${simpleName}' activation is TBD</b>."
+    "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms <b>'${simpleName}' activation is TBD</b>."
   )
 }
 
@@ -526,38 +530,31 @@ void deriveSceneToNonLutronDevice(String sceneName) {
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
     if (settings.log) log.trace(
-      "RS removeAllChildApps removing ${child.getLabel()} (${child.getId()})"
+      "R_${state.ROOM_NAME} removeAllChildApps removing ${child.getLabel()} (${child.getId()})"
     )
     deleteChildApp(child.getId())
   }
 }
 
 void installed() {
-  if (settings.log) log.trace "RS installed() for '${state.ROOM_NAME}'."
+  if (settings.log) log.trace "R_${state.ROOM_NAME} installed() for '${state.ROOM_NAME}'."
   initialize()
 }
 
 void uninstalled() {
-  if (settings.log) log.trace "RS uninstalled() for '${state.ROOM_NAME}'."
+  if (settings.log) log.trace "R_${state.ROOM_NAME} uninstalled() for '${state.ROOM_NAME}'."
   removeAllChildApps()
 }
 
 void updated() {
-  if (settings.log) log.trace "RS updated() for '${state.ROOM_NAME}'."
+  if (settings.log) log.trace "R_${state.ROOM_NAME} updated() for '${state.ROOM_NAME}'."
   unsubscribe()  // Suspend event processing to rebuild state variables.
-  // initialize()
-}
-
-void telnetHandler (Event e) {
-  if (settings.log) log.trace(
-    "RS testHandler() for '${state.ROOM_NAME}' w/ event: ${e}"
-  )
-  if (settings.log) logEventDetails(e, false)
+  initialize()
 }
 
 void repeaterHandler (Event e) {
   if (settings.log) log.trace(
-    "RS testHandler() for '${state.ROOM_NAME}' w/ event: ${e}"
+    "R_${state.ROOM_NAME} testHandler() for '${state.ROOM_NAME}' w/ event: ${e}"
   )
   if (settings.log) logEventDetails(e, false)
 }
@@ -570,7 +567,7 @@ void keypadToVswHandler (Event e) {
   if (e.name == 'pushed') {
     String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
     if (settings.log) log.trace(
-      "RS keypadToVswHandler() for '${state.ROOM_NAME}' "
+      "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' "
       + "<b>Keypad Device Id:</b> ${e.deviceId}, "
       + "<b>Keypad Button:</b> ${e.value}, "
       + "<b>Affiliated Switch:</b> ${targetVsw}"
@@ -579,30 +576,25 @@ void keypadToVswHandler (Event e) {
     app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
-      "RS keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "
+      "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "
       + "name '${e.name}' for DNI '${e.deviceId}'"
     )
   }
 }
 
 void initialize() {
-  if (settings.log) log.trace "RS initialize() of '${state.ROOM_NAME}'."
-  if (settings.log) log.trace "RS subscribing to Lutron Telnet >${settings.lutronTelnet}<"
-  settings.lutronTelnet.each{ d ->
+  if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
+  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to Lutron Telnet >${settings.lutronTelnet}<"
+  //if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
+  //settings.lutronMainRepeaters.each{ d ->
+  //  DevW device = d
+  //  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to ${device.displayName} ${device.id}"
+  //  subscribe(device, repeaterHandler, ['filterEvents': false])
+  //}
+  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
+  settings.lutronSeeTouchKeypads.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "RS subscribing ${device.displayName} ${device.id}"
-    subscribe(device, telnetHandler, ['filterEvents': false])
-  }
-  if (settings.log) log.trace "RS subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
-  settings.lutronRepeaters.each{ d ->
-    DevW device = d
-    if (settings.log) log.trace "RS subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, repeaterHandler, ['filterEvents': false])
-  }
-  if (settings.log) log.trace "RS subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
-  settings.seeTouchKeypad.each{ d ->
-    DevW device = d
-    if (settings.log) log.trace "RS subscribing to ${device.displayName} ${device.id}"
+    if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to ${device.displayName} ${device.id}"
     subscribe(device, keypadToVswHandler, ['filterEvents': false])
   }
 }
