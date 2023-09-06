@@ -80,6 +80,7 @@ Map whaRoomPage () {
           'sceneButton'
         )
         mapKpadDNIandButtonToItem('sceneButton')
+        ledDniToScene()
       }
       //-----> TBD START
       //solicitLutronPicos(
@@ -333,11 +334,39 @@ void solicitRoomScene () {
   }
 }
 
-void pbsgVswTurnedOn (String scene) {
+void ledDniToScene () {
+  Map<String, String> result = [:]
+  state.kpadButtons.collect{ kpadDni, buttonMap ->
+    buttonMap.each{ buttonNumber, targetScene ->
+      result["${kpadDni}-${buttonNumber}"] = targetScene
+    }
+  }
+  state.kpadButtonDniToTargetScene = result
+}
+
+void updateLeds (String currScene) {
+  settings.lutronSceneButtons.each{ ledObj ->
+    String dni = ledObj.getDeviceNetworkId()
+    log.trace "=====> dni: ${dni} <====="
+    String sceneTarget = state.kpadButtonDniToTargetScene[dni]
+    log.trace "=====> sceneTarget: ${sceneTarget} <====="
+    // Note: If sceneTarget is null, all ledObj's are turned off.
+    if (currScene == sceneTarget) {
+      ledObj.on()
+    } else {
+      ledObj.off()
+    }
+  }
+}
+
+// #349 Cannot get property '6859-3' on null object on line 349 (method pbsgVswTurnedOn)
+
+void pbsgVswTurnedOn (String currentScene) {
   log.trace(
-    "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms scene: <b>'${scene}'</b> activated."
+    "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms scene: <b>'${currentScene}'</b> activated."
   )
-  state.currentScene = scene
+  state.currentScene = currentScene
+  updateLeds(currentScene)
 }
 
 void activateScene (String scene) {
@@ -464,7 +493,7 @@ void keypadToVswHandler (Event e) {
       + "<b>Affiliated Switch:</b> ${targetVsw}"
     )
     // Turn on appropriate pbsg-modes-X VSW.
-    if (targetVsw) app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+    if (targetVsw) app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "

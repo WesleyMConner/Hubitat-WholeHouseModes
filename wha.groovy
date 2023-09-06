@@ -72,7 +72,7 @@ Map whaPage() {
           'modeButton'
         )
         mapKpadDNIandButtonToItem('modeButton')
-        ledDniToModej()
+        ledDniToMode()
       }
       solictFocalRoomNames()
       if (!settings.rooms) {
@@ -127,46 +127,7 @@ void roomAppDrilldown() {
   }
 }
 
-/* HOLD IN RESERVE -->
-List<String> getLedDNIsForMode (String mode) {
-  return settings["modeButton_${mode}"]?.collect{ encoded ->
-    encoded.tokenize(' ').last()
-  }
-}
-
-List<DevW> getLedObjs (String ledDni) {
-  List<DevW> results = []
-  //--DEBUG-> log.trace "-----> #153 ledDni=<b>${ledDni}</b>"
-  settings.lutronModeButtons.each{ buttonObj ->
-    //--DEBUG-> log.trace "-----> #155 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}"
-    String dni = buttonObj.getDeviceNetworkId()
-    if (dni == ledDni) results += buttonObj
-    //--DEBUG-> log.trace "-----> #158 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}, dni=${dni}, results=${results}"
-  }
-  return results
-}
-
-void updateLeds (String currMode) {
-  state.MODE_SWITCH_NAMES.each{ mode ->
-    //--DEBUG-> log.trace "---> #165 mode=<b>${mode}</b>"
-    getLedDNIsForMode(mode).each{ ledDni ->
-      //--DEBUG-> log.trace "---> #167 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>"
-      getLedObjs(ledDni).each{ ledObj ->
-        //--DEBUG-> log.trace "---> #169 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>, ledObj=<b>${ledObj}</b>"
-        if (mode == currMode) {
-          //--DEBUG-> log.trace "---> WHA updateLeds() turning on LED DNI <b>${ledDni}</b>."
-          ledObj.on()
-        } else {
-          //--DEBUG-> log.trace "---> WHA updateLeds() turning off LED DNI <b>${ledDni}</b>."
-          ledObj.off()
-        }
-      }
-    }
-  }
-}
-// kpadButtons → [6848:[2:Day, 5:Chill, 4:Party, 6:TV, 3:Night]]
-
-void ledDniToModej () {
+void ledDniToMode () {
   Map<String, String> result = [:]
   state.kpadButtons.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetMode ->
@@ -175,24 +136,17 @@ void ledDniToModej () {
   }
   state.kpadButtonDniToTargetMode = result
 }
-HOLD IN RESERVE --> */
 
-void updateLedsV2 (String currMode) {
+void updateLeds (String currMode) {
   settings.lutronModeButtons.each{ ledObj ->
-  //--DEBUG-> log.trace "#180 ledObj: ${ledObj}"
     String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
-    //--DEBUG-> log.trace "#182 modeTarget: ${modeTarget}"
     if (currMode == modeTarget) {
-      //--DEBUG-> log.trace "#184 Turn on ledObj: ${ledObj}"
       ledObj.on()
     } else {
-      //--DEBUG-> log.trace "#187 Turn off ledObj: ${ledObj}"
       ledObj.off()
     }
   }
 }
-
-// updateLedsv2() is applicable for argument types: (java.lang.String) values: [TV] Possible solutions: updateLedsV2(java.lang.String), updateLeds(java.lang.String) on line 205 (method pbsgVswTurnedOn)
 
 void pbsgVswTurnedOn(String currMode) {
   // Design Notes
@@ -206,7 +160,7 @@ void pbsgVswTurnedOn(String currMode) {
     "WHA pbsgVswTurnedOn() activating <b>mode = ${currMode}</b>."
   )
   getLocation().setMode(currMode)
-  updateLedsV2(currMode)
+  updateLeds(currMode)
 }
 
 void removeAllChildApps () {

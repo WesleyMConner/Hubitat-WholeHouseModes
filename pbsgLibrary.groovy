@@ -91,11 +91,11 @@ void toggleSwitch (String shortName) {
       )
       sw.on()
       break;
-    default:
-      log.error(
-        "PBSG-LIB toggleSwitch() switch with shortName '${shortName}' "
-        + "has state '${switchState}'."
-      )
+//--ignore->?    default:
+//--ignore->?      log.error(
+//--ignore->?        "PBSG-LIB toggleSwitch() switch with shortName '${shortName}' "
+//--ignore->?        + "has state '${switchState}'."
+//--ignore->?      )
   }
 }
 
