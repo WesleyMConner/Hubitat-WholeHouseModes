@@ -32,9 +32,6 @@ definition(
   singleInstance: true
 )
 
-// -------------------------------
-// C L I E N T   I N T E R F A C E
-// -------------------------------
 preferences {
   page(name: 'whaPage')
 }
@@ -98,11 +95,6 @@ Map whaPage() {
     }
   }
 }
-
-
-// -----------------------------------
-// W H A   P A G E   &   S U P P O R T
-// -----------------------------------
 
 void solictFocalRoomNames () {
   roomPicklist = app.getRooms().collect{it.name}.sort()
@@ -178,10 +170,6 @@ void displayAppInfoLink () {
     + 'target="_blank"><br/>Click for more information</a>')
 }
 
-// -------------------------------
-// S T A T E   M A N A G E M E N T
-// -------------------------------
-
 void installed() {
   if (settings.log) log.trace 'WHA installed()'
   initialize()
@@ -198,12 +186,6 @@ void updated() {
   initialize()
 }
 
-void repeaterHandler (Event e) {
-  if (settings.log) log.trace(
-    "WHA <b>repeaterHandler() w/ event: ${e.descriptionText}"
-  )
-}
-
 void keypadToVswHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
@@ -217,7 +199,7 @@ void keypadToVswHandler (Event e) {
       + "<b>Keypad Button:</b> ${e.value}, "
       + "<b>Affiliated Switch Name:</b> ${targetVsw}"
     )
-    // Turn on appropriate pbsg-modes-X VSW.
+    // All mode changes are made by turning on a corresponding VSW.
     if (targetVsw) app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
@@ -227,20 +209,10 @@ void keypadToVswHandler (Event e) {
 }
 
 void initialize() {
-  // TACTICALLY, DROP EVERYTHING
   if (settings.log) log.trace "WHA initialize()"
-  //-> if (settings.log) log.trace "WHA subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
-  //-> settings.lutronRepeaters.each{ d ->
-  //->   DevW device = d
-  //->   if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-  //->   //unsubscribe(d)
-  //->   subscribe(device, repeaterHandler, ['filterEvents': false])
-  //-> }
-  //-> if (settings.log) log.trace "WHA subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.lutronSeeTouchKeypads.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-    //unsubscribe(d)
     subscribe(device, keypadToVswHandler, ['filterEvents': false])
   }
 }
