@@ -126,12 +126,142 @@ void roomAppDrilldown() {
   }
 }
 
-void pbsgVswTurnedOn(String simpleName) {
-  log.trace(
-    "WHA pbsgVswTurnedOn() activating mode='<b>${simpleName}</b>'."
-  )
-  getLocation().setMode(simpleName)
+
+
+//void updateKeypadLeds (String activeMode) {
+//  state.MODE_SWITCH_NAMES.each{ mode ->
+//    settings["modeButtons_${mode}"].each{ buttonString ->
+//      String buttonDni = buttonStrings.tokenize(' ').last()
+//      settings.lutronModeButtons.findAll{ buttonObj ->
+//        buttonObj.getDeviceNetworkId() == buttonDni
+//      }.each{ buttonObj ->
+//
+//      }
+//    buttonDNIs.each{ }
+//
+//  }
+//}
+
+List<String> getLedDNIsForMode (String mode) {
+  return settings["modeButton_${mode}"]?.collect{ encoded ->
+    encoded.tokenize(' ').last()
+  }
 }
+
+List<DevW> getLedObjs (String ledDni) {
+  List<DevW> results = []
+  log.trace "-----> #153 ledDni=<b>${ledDni}</b>"
+  settings.lutronModeButtons.each{ buttonObj ->
+    log.trace "-----> #155 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}"
+    String dni = buttonObj.getDeviceNetworkId()
+    if (dni == ledDni) results += buttonObj
+    log.trace "-----> #158 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}, dni=${dni}, results=${results}"
+  }
+  return results
+}
+
+void updateLeds (String currMode) {
+  state.MODE_SWITCH_NAMES.each{ mode ->
+    log.trace "---> #165 mode=<b>${mode}</b>"
+    getLedDNIsForMode(mode).each{ ledDni ->
+      log.trace "---> #167 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>"
+      getLedObjs(ledDni).each{ ledObj ->
+        log.trace "---> #169 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>, ledObj=<b>${ledObj}</b>"
+        if (mode == currMode) {
+          log.trace "---> WHA updateLeds() turning on LED DNI <b>${ledDni}</b>."
+          ledObj.on()
+        } else {
+          log.trace "---> WHA updateLeds() turning off LED DNI <b>${ledDni}</b>."
+          ledObj.off()
+        }
+      }
+    }
+  }
+}
+// kpadButtons → [6848:[2:Day, 5:Chill, 4:Party, 6:TV, 3:Night]]
+
+void pbsgVswTurnedOn(String currMode) {
+  // Design Notes
+  //   - The modePbsg instance calls this method to reflect a state change.
+  //   - When a PBSG-managed switch turns on, its peers can be presumed to be off.
+  //   - This function's response includes setting mode Keypad LEDs on/off.
+  //   - SeeTouch Keypad LEDs are switches that respond to on/off.
+  //   - Access to LEDs is approved via a per-scene list of LEDs:
+  //       modeButton_<scene> → ["<description>: <LED DNI>", ...]
+  log.trace(
+    "WHA pbsgVswTurnedOn() activating <b>mode = ${currMode}</b>."
+  )
+  getLocation().setMode(currMode)
+  updateLeds(currMode)
+}
+
+/* * * * * * * * * * * * * * * * * * * * *
+  state.kpadButtons.each{ kpadDni, ledList ->
+    ledList.each{ ledNumber, targetMode ->
+      String calcLedDni = "${kpadDni}-${ledNumber}"
+
+     List<String> ledsForMode = settings["modeButton_${mode}"]
+      state.MODE_SWITCH_NAMES.each{ }
+
+      ledsForMode.
+
+      if (mode == targetMode) {
+
+  // Adjust (authorized) Keypad Mode LEDs/Buttons to reflect the current mode.
+
+  setting.lutronModeButtons.each{ ledObj ->
+    if (ledObj.getDeviceNetworkId() == ledDni) {
+      log.trace "WHA pbsgVswTurnedOn() enabling LED ${ledDni}"
+      ledObj.on()
+      settings.lutronModeButtons[]
+    } else {
+      log.trace "WHA pbsgVswTurnedOn() disabling LED ${ledDni}"
+      ledObj.off()
+    }
+  }
+
+   settings["modeButton_${modeSwitch}"]
+  }
+
+  settings.lutronModeButtons.each{ ledObj ->
+    led.getLabel()
+
+•  modeButton_Chill → [5 Chill: 6848-5]
+•  modeButton_Day → [2 Day: 6848-2]
+•  modeButton_Night → [3 Night: 6848-3]
+•  modeButton_Party → [4 Party: 6848-4]
+•  modeButton_TV → [6 TV: 6848-6]
+
+  }
+// So, need to use this list w/ .findAll to find LEDs that match some criteria.
+
+// settings.lutronModeButtons,
+// 'modeButton'
+
+  state.MODE_SWITCH_NAMES.each{ modeSwitch ->
+    settings["modeButton_${modeSwitch}"].each{ ledSetting ->
+      String ledDni = ledSetting?.tokenize(' ')?.last()
+      DevW led = app.getChildDevice(ledDni)
+      log.trace(
+        'WHA pbsgVswTurnedOn() '
+        + "<b>mode:</b> ${mode}, "
+        + "<b>ledSetting:</b> ${ledSetting}, "
+        + "<b>ledDni:</b> ${ledDni}, "
+        + "<b>led:</b> ${led}"
+      )
+      if (modeSwitch == mode) {
+log.trace "WHA pbsgVswTurnedOn() enabling LED ${ledDni}"
+        led?.on()
+      } else {
+log.trace "WHA pbsgVswTurnedOn() disabling LED ${ledDni}"
+        led?.off()
+      }
+    }
+  }
+}
+
+// #144 Cannot cast object '2' [String] to List
+* * * * * * * * * * * * * * * * * * * * */
 
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
@@ -186,6 +316,7 @@ void updated() {
   initialize()
 }
 
+
 void keypadToVswHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
@@ -199,7 +330,7 @@ void keypadToVswHandler (Event e) {
       + "<b>Keypad Button:</b> ${e.value}, "
       + "<b>Affiliated Switch Name:</b> ${targetVsw}"
     )
-    // All mode changes are made by turning on a corresponding VSW.
+    // Turn on the appropriate PBSG VSW for the pushed Keypad Led/Button.
     if (targetVsw) app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(

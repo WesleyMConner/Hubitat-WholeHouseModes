@@ -34,6 +34,9 @@ void defaultPage () {
     )
     manageChildDevices()
     solicitLog()                                  // <- provided by Utils
+    //--info-> app.getChildDevices().each{ d ->
+    //--info->   paragraph "Child Device ${d.getName()} supports ${d.getSupportedCommands()}"
+    //--info-> }
     paragraph(
       heading('Debug<br/>')
       + "${ displaySettings() }<br/>"

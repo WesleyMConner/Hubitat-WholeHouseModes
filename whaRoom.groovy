@@ -45,8 +45,9 @@ Map whaRoomPage () {
   return dynamicPage(
     name: 'whaRoomPage',
     title: \
-      heading("${ app.getLabel() } Scenes<br/>") \
-      + comment('Tab to register changes.'),
+      heading("${app.getLabel()} Scenes<br/>") \
+        + comment("Click <b>${red('Done')}</b> to enable subscriptions.<br/>") \
+        + comment('Tab to register changes.'),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
@@ -332,10 +333,33 @@ void solicitRoomScene () {
   }
 }
 
-void pbsgVswTurnedOn(String simpleName) {
+void pbsgVswTurnedOn (String scene) {
   log.trace(
-    "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms <b>'${simpleName}' activation is TBD</b>."
+    "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms scene: <b>'${scene}'</b> activated."
   )
+  state.currentScene = scene
+}
+
+void activateScene (String scene) {
+  switch(scene) {
+    case 'AUTOMATIC':
+      // Execute scene per current Hubitat mode.
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} activateScene() execution of <b>AUTOMATIC</b> is TBD."
+      )
+      break;
+    case 'MANUAL':
+      // Do nothing, a manual scene override has been detected.
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} activateScene() no action due to <b>MANUAL</b> override."
+      )
+      break;
+    default:
+      // Push repeater buttons and execute independent switch/dimmer levels.
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} activateScene() execution of <b>${scene}</b> is TBD."
+      )
+  }
 }
 
 /*
@@ -449,6 +473,14 @@ void keypadToVswHandler (Event e) {
   }
 }
 
+void modeHandler (Event e) {
+  if (e.name == 'mode') {
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} modeHandler() detected <b>mode = ${e.value}</b>."
+    )
+  }
+}
+
 void initialize() {
   if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
   if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to Lutron Telnet >${settings.lutronTelnet}<"
@@ -464,4 +496,6 @@ void initialize() {
     if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to ${device.displayName} ${device.id}"
     subscribe(device, keypadToVswHandler, ['filterEvents': false])
   }
+  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to modeHandler"
+  subscribe(location, "mode", modeHandler)
 }
