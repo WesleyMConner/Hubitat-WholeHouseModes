@@ -75,6 +75,30 @@ void configure (
   enforcePbsgConstraints()
 }
 
+void toggleSwitch (String shortName) {
+  DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
+  String switchState = getSwitchState(sw)
+  switch (switchState) {
+    case 'on':
+      if (settings.log) log.trace(
+        "PBSG-LIB toggleSwitch() w/ shortName: ${shortName} on() -> off()"
+      )
+      sw.off()
+      break;
+    case 'off':
+      if (settings.log) log.trace(
+        "PBSG-LIB toggleSwitch() w/ shortName: ${shortName} off() -> on()"
+      )
+      sw.on()
+      break;
+    default:
+      log.error(
+        "PBSG-LIB toggleSwitch() switch with shortName '${shortName}' "
+        + "has state '${switchState}'."
+      )
+  }
+}
+
 void turnOnSwitch (String shortName) {
   if (settings.log) log.trace(
     "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"

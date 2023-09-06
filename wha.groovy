@@ -276,7 +276,7 @@ void keypadToVswHandler (Event e) {
       + "<b>Affiliated Switch Name:</b> ${targetVsw}"
     )
     // Turn on the appropriate PBSG VSW for the pushed Keypad Led/Button.
-    if (targetVsw) app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+    if (targetVsw) app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).toggleSwitch(targetVsw)
   } else {
     if (settings.log) log.trace(
       "WHA keypadToVswHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
