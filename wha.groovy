@@ -72,6 +72,7 @@ Map whaPage() {
           'modeButton'
         )
         mapKpadDNIandButtonToItem('modeButton')
+        ledDniToModej()
       }
       solictFocalRoomNames()
       if (!settings.rooms) {
@@ -126,22 +127,7 @@ void roomAppDrilldown() {
   }
 }
 
-
-
-//void updateKeypadLeds (String activeMode) {
-//  state.MODE_SWITCH_NAMES.each{ mode ->
-//    settings["modeButtons_${mode}"].each{ buttonString ->
-//      String buttonDni = buttonStrings.tokenize(' ').last()
-//      settings.lutronModeButtons.findAll{ buttonObj ->
-//        buttonObj.getDeviceNetworkId() == buttonDni
-//      }.each{ buttonObj ->
-//
-//      }
-//    buttonDNIs.each{ }
-//
-//  }
-//}
-
+/* HOLD IN RESERVE -->
 List<String> getLedDNIsForMode (String mode) {
   return settings["modeButton_${mode}"]?.collect{ encoded ->
     encoded.tokenize(' ').last()
@@ -150,28 +136,28 @@ List<String> getLedDNIsForMode (String mode) {
 
 List<DevW> getLedObjs (String ledDni) {
   List<DevW> results = []
-  log.trace "-----> #153 ledDni=<b>${ledDni}</b>"
+  //--DEBUG-> log.trace "-----> #153 ledDni=<b>${ledDni}</b>"
   settings.lutronModeButtons.each{ buttonObj ->
-    log.trace "-----> #155 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}"
+    //--DEBUG-> log.trace "-----> #155 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}"
     String dni = buttonObj.getDeviceNetworkId()
     if (dni == ledDni) results += buttonObj
-    log.trace "-----> #158 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}, dni=${dni}, results=${results}"
+    //--DEBUG-> log.trace "-----> #158 ledDni=<b>${ledDni}</b>, buttonObj=${buttonObj}, dni=${dni}, results=${results}"
   }
   return results
 }
 
 void updateLeds (String currMode) {
   state.MODE_SWITCH_NAMES.each{ mode ->
-    log.trace "---> #165 mode=<b>${mode}</b>"
+    //--DEBUG-> log.trace "---> #165 mode=<b>${mode}</b>"
     getLedDNIsForMode(mode).each{ ledDni ->
-      log.trace "---> #167 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>"
+      //--DEBUG-> log.trace "---> #167 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>"
       getLedObjs(ledDni).each{ ledObj ->
-        log.trace "---> #169 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>, ledObj=<b>${ledObj}</b>"
+        //--DEBUG-> log.trace "---> #169 mode=<b>${mode}</b>, ledDni=<b>${ledDni}</b>, ledObj=<b>${ledObj}</b>"
         if (mode == currMode) {
-          log.trace "---> WHA updateLeds() turning on LED DNI <b>${ledDni}</b>."
+          //--DEBUG-> log.trace "---> WHA updateLeds() turning on LED DNI <b>${ledDni}</b>."
           ledObj.on()
         } else {
-          log.trace "---> WHA updateLeds() turning off LED DNI <b>${ledDni}</b>."
+          //--DEBUG-> log.trace "---> WHA updateLeds() turning off LED DNI <b>${ledDni}</b>."
           ledObj.off()
         }
       }
@@ -179,6 +165,34 @@ void updateLeds (String currMode) {
   }
 }
 // kpadButtons → [6848:[2:Day, 5:Chill, 4:Party, 6:TV, 3:Night]]
+
+void ledDniToModej () {
+  Map<String, String> result = [:]
+  state.kpadButtons.collect{ kpadDni, buttonMap ->
+    buttonMap.each{ buttonNumber, targetMode ->
+      result["${kpadDni}-${buttonNumber}"] = targetMode
+    }
+  }
+  state.kpadButtonDniToTargetMode = result
+}
+HOLD IN RESERVE --> */
+
+void updateLedsV2 (String currMode) {
+  settings.lutronModeButtons.each{ ledObj ->
+  //--DEBUG-> log.trace "#180 ledObj: ${ledObj}"
+    String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
+    //--DEBUG-> log.trace "#182 modeTarget: ${modeTarget}"
+    if (currMode == modeTarget) {
+      //--DEBUG-> log.trace "#184 Turn on ledObj: ${ledObj}"
+      ledObj.on()
+    } else {
+      //--DEBUG-> log.trace "#187 Turn off ledObj: ${ledObj}"
+      ledObj.off()
+    }
+  }
+}
+
+// updateLedsv2() is applicable for argument types: (java.lang.String) values: [TV] Possible solutions: updateLedsV2(java.lang.String), updateLeds(java.lang.String) on line 205 (method pbsgVswTurnedOn)
 
 void pbsgVswTurnedOn(String currMode) {
   // Design Notes
@@ -192,76 +206,8 @@ void pbsgVswTurnedOn(String currMode) {
     "WHA pbsgVswTurnedOn() activating <b>mode = ${currMode}</b>."
   )
   getLocation().setMode(currMode)
-  updateLeds(currMode)
+  updateLedsV2(currMode)
 }
-
-/* * * * * * * * * * * * * * * * * * * * *
-  state.kpadButtons.each{ kpadDni, ledList ->
-    ledList.each{ ledNumber, targetMode ->
-      String calcLedDni = "${kpadDni}-${ledNumber}"
-
-     List<String> ledsForMode = settings["modeButton_${mode}"]
-      state.MODE_SWITCH_NAMES.each{ }
-
-      ledsForMode.
-
-      if (mode == targetMode) {
-
-  // Adjust (authorized) Keypad Mode LEDs/Buttons to reflect the current mode.
-
-  setting.lutronModeButtons.each{ ledObj ->
-    if (ledObj.getDeviceNetworkId() == ledDni) {
-      log.trace "WHA pbsgVswTurnedOn() enabling LED ${ledDni}"
-      ledObj.on()
-      settings.lutronModeButtons[]
-    } else {
-      log.trace "WHA pbsgVswTurnedOn() disabling LED ${ledDni}"
-      ledObj.off()
-    }
-  }
-
-   settings["modeButton_${modeSwitch}"]
-  }
-
-  settings.lutronModeButtons.each{ ledObj ->
-    led.getLabel()
-
-•  modeButton_Chill → [5 Chill: 6848-5]
-•  modeButton_Day → [2 Day: 6848-2]
-•  modeButton_Night → [3 Night: 6848-3]
-•  modeButton_Party → [4 Party: 6848-4]
-•  modeButton_TV → [6 TV: 6848-6]
-
-  }
-// So, need to use this list w/ .findAll to find LEDs that match some criteria.
-
-// settings.lutronModeButtons,
-// 'modeButton'
-
-  state.MODE_SWITCH_NAMES.each{ modeSwitch ->
-    settings["modeButton_${modeSwitch}"].each{ ledSetting ->
-      String ledDni = ledSetting?.tokenize(' ')?.last()
-      DevW led = app.getChildDevice(ledDni)
-      log.trace(
-        'WHA pbsgVswTurnedOn() '
-        + "<b>mode:</b> ${mode}, "
-        + "<b>ledSetting:</b> ${ledSetting}, "
-        + "<b>ledDni:</b> ${ledDni}, "
-        + "<b>led:</b> ${led}"
-      )
-      if (modeSwitch == mode) {
-log.trace "WHA pbsgVswTurnedOn() enabling LED ${ledDni}"
-        led?.on()
-      } else {
-log.trace "WHA pbsgVswTurnedOn() disabling LED ${ledDni}"
-        led?.off()
-      }
-    }
-  }
-}
-
-// #144 Cannot cast object '2' [String] to List
-* * * * * * * * * * * * * * * * * * * * */
 
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
@@ -315,7 +261,6 @@ void updated() {
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
-
 
 void keypadToVswHandler (Event e) {
   // Design Note
