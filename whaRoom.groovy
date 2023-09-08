@@ -108,8 +108,10 @@ Map whaRoomPage () {
       if (state.scenes == null) {
         paragraph red('Management of child apps is pending selection of Room scenes.')
       } else {
+log.trace "#111-----> state.scenes: >${state.scenes}<"
         keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME], settings.log)
         ArrayList switchNames = [*state.scenes, 'AUTOMATIC', 'MANUAL']
+log.trace "#114-----> switchNames: >${switchNames}<"
         pbsgChildAppDrilldown(
           state.SCENE_PBSG_APP_NAME,
           'roomPBSG',
@@ -180,6 +182,7 @@ void solicitCustomScenes () {
 void updateScenes () {
   List<String> scenes = settings.modeNamesAsSceneNames ?: []
   scenes = scenes.flatten()
+log.trace "#185-----> scenes: >${scenes}<"
   String prefix = 'customScene'
   List<String> customScenes = [
     settings["${prefix}1"],
@@ -192,12 +195,17 @@ void updateScenes () {
     settings["${prefix}8"],
     settings["${prefix}9"],
   ].findAll{it != null}
+log.trace "#198-----> customScenes: >${customScenes}<"
   if (customScenes) {
     scenes << customScenes
+log.trace "#201-----> scenes: >${scenes}<"
     scenes = scenes.flatten()
+log.trace "#203-----> scenes: >${scenes}<"
   }
   scenes = scenes.sort()
+log.trace "#206-----> scenes: >${scenes}<"
   state.scenes = scenes.size() > 0 ? scenes : null
+log.trace "#208-----> state.scenes: >${state.scenes}<"
 }
 
 void solicitNonLutronDevicesForWhaRoom () {
