@@ -108,10 +108,8 @@ Map whaRoomPage () {
       if (state.scenes == null) {
         paragraph red('Management of child apps is pending selection of Room scenes.')
       } else {
-log.trace "#111-----> state.scenes: >${state.scenes}<"
         keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME], settings.log)
         ArrayList switchNames = [*state.scenes, 'AUTOMATIC', 'MANUAL']
-log.trace "#114-----> switchNames: >${switchNames}<"
         pbsgChildAppDrilldown(
           state.SCENE_PBSG_APP_NAME,
           'roomPBSG',
@@ -182,7 +180,6 @@ void solicitCustomScenes () {
 void updateScenes () {
   List<String> scenes = settings.modeNamesAsSceneNames ?: []
   scenes = scenes.flatten()
-log.trace "#185-----> scenes: >${scenes}<"
   String prefix = 'customScene'
   List<String> customScenes = [
     settings["${prefix}1"],
@@ -195,17 +192,12 @@ log.trace "#185-----> scenes: >${scenes}<"
     settings["${prefix}8"],
     settings["${prefix}9"],
   ].findAll{it != null}
-log.trace "#198-----> customScenes: >${customScenes}<"
   if (customScenes) {
     scenes << customScenes
-log.trace "#201-----> scenes: >${scenes}<"
     scenes = scenes.flatten()
-log.trace "#203-----> scenes: >${scenes}<"
   }
   scenes = scenes.sort()
-log.trace "#206-----> scenes: >${scenes}<"
   state.scenes = scenes.size() > 0 ? scenes : null
-log.trace "#208-----> state.scenes: >${state.scenes}<"
 }
 
 void solicitNonLutronDevicesForWhaRoom () {
@@ -355,19 +347,21 @@ void ledDniToScene () {
 void updateLeds (String currScene) {
   settings.lutronSceneButtons.each{ ledObj ->
     String dni = ledObj.getDeviceNetworkId()
-    log.trace "=====> dni: ${dni} <====="
     String sceneTarget = state.kpadButtonDniToTargetScene[dni]
-    log.trace "=====> sceneTarget: ${sceneTarget} <====="
     // Note: If sceneTarget is null, all ledObj's are turned off.
     if (currScene == sceneTarget) {
+      if (settings.log) log.trace(
+        "Turning on LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}."
+      )
       ledObj.on()
     } else {
+      if (settings.log) log.trace(
+        "Turning off LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}."
+      )
       ledObj.off()
     }
   }
 }
-
-// #349 Cannot get property '6859-3' on null object on line 349 (method pbsgVswTurnedOn)
 
 void pbsgVswTurnedOn (String currentScene) {
   log.trace(
@@ -375,52 +369,34 @@ void pbsgVswTurnedOn (String currentScene) {
   )
   state.currentScene = currentScene
   updateLeds(currentScene)
+  log.info "Invoking activateScene(${currentScene}) due to pbsgVswTurnedOn()."
+  activateScene(currentScene)
 }
 
 void activateScene (String scene) {
   switch(scene) {
     case 'AUTOMATIC':
       // Execute scene per current Hubitat mode.
+      // B R O K E N - P R O D U C I N G 'null'
+
+      String targetScene = settings["modeToScene^${getLocation().getMode()}"]
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} activateScene() execution of <b>AUTOMATIC</b> is TBD."
+        "R_${state.ROOM_NAME} activateScene() for 'AUTOMATIC' activating (${targetScene}) is <b>TBD</b>."
       )
       break;
     case 'MANUAL':
       // Do nothing, a manual scene override has been detected.
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} activateScene() no action due to <b>MANUAL</b> override."
+        "R_${state.ROOM_NAME} activateScene() for 'MANUAL' is taking no action."
       )
       break;
     default:
       // Push repeater buttons and execute independent switch/dimmer levels.
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} activateScene() execution of <b>${scene}</b> is TBD."
+        "R_${state.ROOM_NAME} activateScene() activating ${scene} is <b>TBD</b>."
       )
   }
 }
-
-/*
-void roomPbsgAppDrilldown() {
-  paragraph heading('Scene PBSG Inspection')
-  InstAppW roomPbsgApp = app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME)
-  if (!roomPbsgApp) {
-    roomPbsgApp = addChildApp('wesmc', 'roomPBSG', state.SCENE_PBSG_APP_NAME)
-    roomPbsgApp.configure(
-      [*state.scenes, 'AUTOMATIC', 'MANUAL'],
-      'AUTOMATIC',
-      settings.log
-    )
-  }
-  href (
-    name: settings.MODE_PBSG_APP_NAME,
-    width: 2,
-    url: "/installedapp/configure/${roomPbsgApp.getId()}/roomPbsgPage",
-    style: 'internal',
-    title: "Edit <b>${getAppInfo(roomPbsgApp)}</b>",
-    state: null, //'complete'
-  )
-}
-*/
 
 void deriveSceneToRepeater(String sceneName) {
   // Push appropriate Repeater buttons for sceneName
@@ -513,8 +489,16 @@ void keypadToVswHandler (Event e) {
 void modeHandler (Event e) {
   if (e.name == 'mode') {
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} modeHandler() detected <b>mode = ${e.value}</b>."
+      "R_${state.ROOM_NAME} modeHandler() received <b>mode = ${e.value}</b> "
+      + "with currentScene = ${state.currentScene}."
     )
+    if (state.currentScene == 'AUTOMATIC') {
+      String targetScene = settings["modeToScene^${e.value}"]
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} modeHandler() invoking activateScene(${targetScene})."
+      )
+      activateScene(targetScene)
+    }
   }
 }
 
