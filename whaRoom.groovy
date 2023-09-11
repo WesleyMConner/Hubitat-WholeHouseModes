@@ -87,7 +87,7 @@ Map whaRoomPage () {
       //)
       //-> Process Picos similar to Leds above ?!
       //-----> TBD END
-      solicitLutronMainRepeaters(
+      solicitLutronMainRepeater(
         'lutronMainRepeaters',
         'Identify Repeaters that host integration buttons for <b>Room scenes</b>.'
       )
@@ -382,20 +382,53 @@ void pbsgVswTurnedOnCallback (String currentScene) {
   }
 }
 
+void populateSceneToDeviceValues() {
+  // Reset state for the Repeater/Independent per-scene device values.
+  state['sceneToRepeater'] = [:]
+  state['sceneToIndependent'] = [:]
+  settings.each{ key, value ->
+    //  key w/ delimited data "scene^Night^Independent^Ra2D-59-1848"
+    //                               sceneName
+    //                                     deviceType
+    //                                                 deviceDni
+    List<String> parsedKey = key.tokenize('^')
+    // Only process settings keys with the "scene" prefix.
+    if (parsedKey[0] == 'scene') {
+      // Circa 2023-Sep, no object destructuring syntax in Grooy.
+      String sceneName = parsedKey[1]
+      String deviceType = parsedKey[2]
+      String deviceDNI = parsedKey[3]
+      // If missing, create an empty map for the scene's deviceDNI->value data.
+      // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
+      String stateKey = "sceneTo${deviceType}"
+      if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
+      // Populate the current deviceDNI->value data.
+      state[stateKey][sceneName][deviceDNI] = value
+    }
+  }
+}
+
 void activateScene (String scene) {
   // Push Repeater buttons and execute Independent switch/dimmer levels.
   if (settings.log) log.trace "R_${state.ROOM_NAME} activateScene('${scene}') "
   // Values are expected at ...
   //   state.sceneToRepeater[sceneName][dni]
   //   state.sceneToIndependent[sceneName][dni]
+  // THIS APPLICATION ALLOWS A SINGLE LUTRON MAIN REPEATER PER ROOM
   state.sceneToRepeater[scene].each{ repeaterDni, buttonNumber ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} activateScene('${scene}') repeater: ${repeaterDni}, "
       + "button: ${buttonNumber}"
     )
-    settings.lutronMainRepeaters.findAll{ repeater ->
+    // Note: The repeater's Id (not DNI) and button are required to track the scene's
+    //       LED on the Main Repeater.
+    //-> state.currentRepeaterDeviceNetworkId = repeaterDni
+    state.currentSceneRepeaterLED = buttonNumber
+    DevW matchedRepeater = settings.lutronMainRepeaters.findAll{ repeater ->
       repeater.getDeviceNetworkId() == repeaterDni
-    }.first().push(buttonNumber)                 // There should be one match by DNI.
+    }.first()
+    state.currentSceneRepeaterDeviceId = matchedRepeater.getId()
+    matchedRepeater.push(buttonNumber)
   }
   state.sceneToIndependent[scene].each{ deviceDni, level ->
     if (settings.log) log.trace(
@@ -413,32 +446,6 @@ void activateScene (String scene) {
       } else {
         matchedDevice.off()
       }
-    }
-  }
-}
-
-void populateSceneToDeviceValues() {
-  // Reset state for the Repeater/Independent per-scene device values.
-  state['sceneToRepeater'] = [:]
-  state['sceneToIndependent'] = [:]
-  settings.each{ key, value ->
-    //  key w/ delimited data "scene^Night^Independent^Ra2D-59-1848"
-    //                               sceneName
-    //                                     deviceType
-    //                                                 deviceDni
-    List<String> parsedKey = key.tokenize('^')
-    // Only process settiings keys with the "scene" prefix.
-    if (parsedKey[0] == 'scene') {
-      // Circa 2023-Sep, no object destructuring syntax in Grooy.
-      String sceneName = parsedKey[1]
-      String deviceType = parsedKey[2]
-      String deviceDNI = parsedKey[3]
-      // If missing, create an empty map for the scene's deviceDNI->value data.
-      // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
-      String stateKey = "sceneTo${deviceType}"
-      if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
-      // Populate the current deviceDNI->value data.
-      state[stateKey][sceneName][deviceDNI] = value
     }
   }
 }
@@ -468,38 +475,25 @@ void updated() {
   initialize()
 }
 
-void repeaterHandler (Event e) {
-  if (settings.log) log.trace(
-    "R_${state.ROOM_NAME} testHandler() for '${state.ROOM_NAME}' w/ event: ${e}"
-  )
-  if (settings.log) logEventDetails(e, false)
-}
-
-void keypadToVswHandler (Event e) {
-  // Design Note
+void repeaterLedHandler (Event e) {
+  // Only track events where the current room scene's LED (on the main repeater)
+  // has turned off. Such a transition suggests a room scene MANUAL override
+  // has  occurred.
   //   - The field e.deviceId arrives as a number and must be cast toString().
-  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Keypad buttons are matched to state data to activate a target VSW.
-  if (e.name == 'pushed') {
-    String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
+  if (
+       (e.deviceId.toString() == state.currentSceneRepeaterDeviceId)
+       && (e.name == "buttonLed-${state.currentSceneRepeaterLED}")
+       && (e.isStateChange == true)
+       && (e.value == 'off')
+  ) {
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' "
-      + "<b>Keypad Device Id:</b> ${e.deviceId}, "
-      + "<b>Keypad Button:</b> ${e.value}, "
-      + "<b>Affiliated Switch:</b> ${targetVsw}"
+      "R_${state.ROOM_NAME} repeaterLedHandler() has detected a MANUAL override."
     )
-    // Turn on appropriate pbsg-modes-X VSW.
-    if (targetVsw) app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
-  } else {
-    if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "
-      + "name '${e.name}' for DNI '${e.deviceId}'"
-    )
+    app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch('MANUAL')
   }
 }
 
 void modeHandler (Event e) {
-  logEventDetails(e)
   //log.error('debug Event e at line #496 !!!')
   if (e.name == 'mode') {
     switch(e.value) {
@@ -518,15 +512,47 @@ void modeHandler (Event e) {
   }
 }
 
+void keypadToVswHandler (Event e) {
+  // Design Note
+  //   - The field e.deviceId arrives as a number and must be cast toString().
+  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
+  //   - Keypad buttons are matched to state data to activate a target VSW.
+  if (e.name == 'pushed') {
+    String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
+    //-> if (settings.log) log.trace(
+    //->   "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' "
+    //->   + "<b>Keypad Device Id:</b> ${e.deviceId}, "
+    //->   + "<b>Keypad Button:</b> ${e.value}, "
+    //->   + "<b>Affiliated Switch:</b> ${targetVsw}"
+    //-> )
+    // Turn on appropriate pbsg-modes-X VSW.
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}."
+    )
+    if (targetVsw) app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
+  } else {
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "
+      + "name '${e.name}' for DNI '${e.deviceId}'"
+    )
+  }
+}
+
 void initialize() {
   if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
-  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to Lutron Telnet >${settings.lutronTelnet}<"
-  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
-  settings.lutronSeeTouchKeypads.each{ d ->
-    DevW device = d
-    if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, keypadToVswHandler, ['filterEvents': false])
-  }
   if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to modeHandler"
   subscribe(location, "mode", modeHandler)
+  settings.lutronSeeTouchKeypads.each{ device ->
+    //DevW device = d
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} subscribing to Keypad ${deviceTag(device)}."
+    )
+    subscribe(device, keypadToVswHandler, ['filterEvents': false])
+  }
+  settings.lutronMainRepeaters.each{ device ->
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} subscribing to Repeater ${deviceTag(device)}"
+    )
+    subscribe(device, repeaterLedHandler, ['filterEvents': false])
+  }
 }

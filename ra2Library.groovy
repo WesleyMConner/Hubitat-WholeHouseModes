@@ -95,7 +95,12 @@ void solicitLutronTelnetDevice (
   )
 }
 
-void solicitLutronMainRepeaters (
+void solicitLutronMainRepeater (
+  // - A WHA application can utilize multiple Lutron Main Repeaters.
+  // - Each room, however, is constrained to a single Repeater.
+  // - If the LED associated with a room scene's repeater activation button
+  //   transitions from on-to-off unexpectedly, a MANUAL override is
+  //   assumed.
   String settingsKey = 'lutronMainRepeaters',
   String note = '',
   Map args = [:]
@@ -105,7 +110,8 @@ void solicitLutronMainRepeaters (
       blockLabel: "${settingsKey} Devices",
       name: settingsKey,
       title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-      type: 'device.LutronKeypad'
+      type: 'device.LutronKeypad',
+      multiple: false
     ] << args
   )
 }

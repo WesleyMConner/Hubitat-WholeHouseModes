@@ -88,15 +88,15 @@ void toggleSwitch (String shortName) {
   }
 }
 
-//--unused-> void turnOnSwitch (String shortName) {
-//--unused->   if (settings.log) log.trace(
-//--unused->     "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"
-//--unused->   )
-//--unused->   DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
-//--unused->   if (sw) {
-//--unused->     sw.on()
-//--unused->   }
-//--unused-> }
+void turnOnSwitch (String shortName) {
+  if (settings.log) log.trace(
+    "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"
+  )
+  DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
+  if (sw) {
+    sw.on()
+  }
+}
 
 void addOrphanChild() {
   // This method supports orphan removal testing. See manageChildDevices().
@@ -256,7 +256,7 @@ void pbsgEventHandler (Event e) {
   } else {
     //-> if (settings.log) log.trace(
     //->   "PBSG-LIB pbsgEventHandler() IGNORING ${e.descriptionText}<br/>"
-    //->   + logEventDetails(e)
+    //->   + eventDetails(e)
     //-> )
   }
 }
