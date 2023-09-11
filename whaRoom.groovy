@@ -414,21 +414,17 @@ void pbsgVswTurnedOn (String currentScene) {
   //)
   state.currentScene = currentScene
   updateLeds(currentScene)
-log.trace "DEBUG #380"
   switch(currentScene) {
     case 'AUTOMATIC':
       if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() processing AUTOMATIC"
-log.trace "DEBUG #384"
       activateScene(getSceneForMode())
       break;
     case 'MANUAL':
       if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() ignoring MANUAL"
-log.trace "DEBUG #389"
       // DO NOTHING
       break;
     default:
       if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() processing '${currentScene}'"
-log.trace "DEBUG #394"
       activateScene(currentScene)
   }
 }
