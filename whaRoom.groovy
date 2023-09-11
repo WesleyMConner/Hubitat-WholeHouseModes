@@ -57,6 +57,41 @@ Map whaRoomPage () {
     //   - settings.remove('Y')
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
+/*
+settings.remove('scene^Chill^indepenent^02')
+settings.remove('scene^41^independent^02')
+settings.remove('scene^41^repeater^Ra2K-1-1848')
+settings.remove('scene^Chill^independent^02')
+settings.remove('scene^Chill^independent^Ra2D-59-1848')
+settings.remove('scene^Chill^repeater^Ra2K-1-1848')
+settings.remove('scene^Day^independent^02')
+settings.remove('scene^Day^independent^Ra2D-59-1848')
+settings.remove('scene^Day^repeater^Ra2K-1-1848')
+settings.remove('scene^Night^independent^02')
+settings.remove('scene^Night^independent^Ra2D-59-1848')
+settings.remove('scene^Night^repeater^Ra2K-1-1848')
+settings.remove('scene^Party^independent^02')
+settings.remove('scene^Party^independent^Ra2D-59-1848')
+settings.remove('scene^Party^repeater^Ra2K-1-1848')
+settings.remove('scene^Supplement^independent^02')
+settings.remove('scene^Supplement^independent^Ra2D-59-1848')
+settings.remove('scene^Supplement^repeater^Ra2K-1-1848')
+settings.remove('scene^TV^independent^02')
+settings.remove('scene^TV^independent^Ra2D-59-1848')
+settings.remove('scene^TV^repeater^Ra2K-1-1848')
+settings.remove('scene^Cook^repeater^Ra2K-1-1848')
+settings.remove('scene^Off^repeater^Ra2K-1-1848')
+settings.remove('scene^Chill^repeater^Ra2K-1-1848')
+settings.remove('scene^Cook^repeater^Ra2K-1-1848')
+settings.remove('scene^Day^repeater^Ra2K-1-1848')
+settings.remove('scene^Night^repeater^Ra2K-1-1848')
+settings.remove('scene^Off^repeater^Ra2K-1-1848')
+settings.remove('scene^Party^repeater^Ra2K-1-1848')
+settings.remove('scene^Supplement^repeater^Ra2K-1-1848')
+settings.remove('scene^TV^repeater^Ra2K-1-1848')
+*/
+
+
     section {
       solicitLog()                          // <- provided by Utils
       solicitModeNamesAsSceneNames()
@@ -92,7 +127,7 @@ Map whaRoomPage () {
       //-----> TBD END
       solicitLutronMainRepeaters(
         'lutronMainRepeaters',
-        'Identify repeaters that host integration buttons for <b>Room scenes</b>.'
+        'Identify Repeaters that host integration buttons for <b>Room scenes</b>.'
       )
       solicitSwitches(
         'independentDevices',
@@ -102,6 +137,7 @@ Map whaRoomPage () {
 
       if (state.scenes && (settings.independentDevices || settings.lutronMainRepeaters)) {
         solicitRoomScene()
+        processRoomScenes()
       } else {
         paragraph red('Soliciation of Room scenes is pending pre-requisite data.')
       }
@@ -292,10 +328,11 @@ void solicitRoomScene () {
       Integer col = 2
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.independentDevices?.each{ d ->
-        String inputName = "scene^${sceneName}^indepenent^${d.getLabel()}"
-        if (settings.log) log.trace(
-          "R_${state.ROOM_NAME} solicitRoomScene() [INDEPENDENT] inputName: >${inputName}<"
-        )
+        String inputName = "scene^${sceneName}^Independent^${d.getDeviceNetworkId()}"
+        //if (settings.log) log.trace(
+        //  "R_${state.ROOM_NAME} solicitRoomScene() [INDEPENDENT] inputName: >${inputName}<"
+        //  + ", getLabel(): ${red(d.getLabel())}, getDeviceNetworkId(): ${red(d.getDeviceNetworkId())}"
+        //)
         col += 2
         input(
           name: inputName,
@@ -310,10 +347,10 @@ void solicitRoomScene () {
       }
       // ?.sort{ d -> d.getLabel() }
       settings.lutronMainRepeaters?.each{d ->
-      String inputName = "scene^${sceneName}^repeater^${d.getLabel()}"
-        if (settings.log) log.trace(
-          "R_${state.ROOM_NAME} solicitRoomScene() [REPEATERS] inputName: >${inputName}<"
-        )
+      String inputName = "scene^${sceneName}^Repeater^${d.getDeviceNetworkId()}"
+        //if (settings.log) log.trace(
+        //  "R_${state.ROOM_NAME} solicitRoomScene() [REPEATERS] inputName: >${inputName}<"
+        //)
         col += 2
         input(
           name: inputName,
@@ -363,68 +400,83 @@ void updateLeds (String currScene) {
   }
 }
 
-void pbsgVswTurnedOn (String currentScene) {
-  log.trace(
-    "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms scene: <b>'${currentScene}'</b> activated."
-  )
-  state.currentScene = currentScene
-  updateLeds(currentScene)
-  log.info "Invoking activateScene(${currentScene}) due to pbsgVswTurnedOn()."
-  activateScene(currentScene)
+String getSceneForMode(String mode = getLocation().getMode()) {
+  String result = settings["modeToScene^${mode}"]
+  if (settings.log) {
+    log.trace "R_${state.ROOM_NAME} getSceneForMode() <b>${mode} -> ${result}</b>"
+  }
+  return result
 }
 
-void activateScene (String scene) {
-  switch(scene) {
+void pbsgVswTurnedOn (String currentScene) {
+  //log.trace(
+  //  "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms scene: <b>'${currentScene}'</b> activated."
+  //)
+  state.currentScene = currentScene
+  updateLeds(currentScene)
+log.trace "DEBUG #380"
+  switch(currentScene) {
     case 'AUTOMATIC':
-      // Execute scene per current Hubitat mode.
-      // B R O K E N - P R O D U C I N G 'null'
-
-      String targetScene = settings["modeToScene^${getLocation().getMode()}"]
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} activateScene() for 'AUTOMATIC' activating (${targetScene}) is <b>TBD</b>."
-      )
+      if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() processing AUTOMATIC"
+log.trace "DEBUG #384"
+      activateScene(getSceneForMode())
       break;
     case 'MANUAL':
-      // Do nothing, a manual scene override has been detected.
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} activateScene() for 'MANUAL' is taking no action."
-      )
+      if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() ignoring MANUAL"
+log.trace "DEBUG #389"
+      // DO NOTHING
       break;
     default:
-      // Push repeater buttons and execute independent switch/dimmer levels.
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} activateScene() activating ${scene} is <b>TBD</b>."
-      )
+      if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() processing '${currentScene}'"
+log.trace "DEBUG #394"
+      activateScene(currentScene)
   }
 }
 
-void deriveSceneToRepeater(String sceneName) {
-  // Push appropriate Repeater buttons for sceneName
-  // Process
-  //   - scene^Chill^Repeater^(lutron-1) REP 1 → 41
-  // Into
-  //   - state.sceneToRepeater[scene: [repeaterDni, button], ...]
+void activateScene (String scene) {
+  // Push Repeater buttons and execute Independent switch/dimmer levels.
+  if (settings.log) log.trace "R_${state.ROOM_NAME} activateScene('${scene}') "
+  // Values are found at ...
+  //   state.sceneToRepeater[sceneName][dni]
+  //   state.sceneToIndependent[sceneName][dni]
+  state.sceneToRepeater[scene].each{ repeaterDni, buttonNumber ->
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} activateScene('${scene}') repeater: ${repeaterDni}, "
+      + "button: ${buttonNumber}"
+    )
+  }
+  state.sceneToIndependent[scene].each{ deviceDni, level ->
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} activateScene('${scene}') device: ${deviceDni}, "
+      + "level: ${level}"
+    )
+  }
 }
 
-void deriveSceneToNonLutronDevice(String sceneName) {
-  // Set dimmer level or switch on/off for sceneName.
-  // Process
-  //   - scene^Chill^NonLutron^Fireplace Lighting → 100
-  // Into
-  //   - Need to differentiate switch from dimmer
-  //       - DEVICE: String getDeviceNetworkId()
-  //       - DEVICE: List<Command> getSupportedCommands()
-  //       - DEVICE: List<Capability> getCapabilities()
-  //       - DEVICE: List<State> getCurrentStates()
-  //       - DEVICE: Boolean hasCapability(String capability)
-  //       - DEVICE: Boolean hasAttribute(String attribute)
-  //       - DEVICE: Boolean hasCommand(String command)
-  //       - DEVICE: void updateSetting(String name, Map options)
-  //--
-  //       - DRIVER: void updateDataValue(String name, String value)
-  //       - DRIVER: String getDataValue(String name)
-  //   - state.sceneToNonLutronSwitch[scene: [deviceDni, on/off], ...]
-  //   - state.sceneToNonLutronDimmer[scene: [deviceDni, level], ...]
+void processRoomScenes() {
+  // Reset state for the Repeater/Independent per-scene device values.
+  state['sceneToRepeater'] = [:]
+  state['sceneToIndependent'] = [:]
+  settings.each{ key, value ->
+    //  key w/ delimited data "scene^Night^Independent^Ra2D-59-1848"
+    //                               sceneName
+    //                                     deviceType
+    //                                                 deviceDni
+    List<String> parsedKey = key.tokenize('^')
+    // Only process settiings keys with the "scene" prefix.
+    if (parsedKey[0] == 'scene') {
+      // Circa 2023-Sep, no object destructuring syntax in Grooy.
+      String sceneName = parsedKey[1]
+      String deviceType = parsedKey[2]
+      String deviceDNI = parsedKey[3]
+      // If missing, create an empty map for the scene's deviceDNI->value data.
+      // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
+      String stateKey = "sceneTo${deviceType}"
+      if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
+      // Populate the current deviceDNI->value data.
+      state[stateKey][sceneName][deviceDNI] = value
+    }
+  }
 }
 
 // -------------------------------
@@ -487,17 +539,21 @@ void keypadToVswHandler (Event e) {
 }
 
 void modeHandler (Event e) {
+  logEventDetails(e)
+  //log.error('debug Event e at line #496 !!!')
   if (e.name == 'mode') {
-    if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} modeHandler() received <b>mode = ${e.value}</b> "
-      + "with currentScene = ${state.currentScene}."
-    )
-    if (state.currentScene == 'AUTOMATIC') {
-      String targetScene = settings["modeToScene^${e.value}"]
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} modeHandler() invoking activateScene(${targetScene})."
-      )
-      activateScene(targetScene)
+    switch(e.value) {
+      case 'AUTOMATIC':
+        if (settings.log) log.trace "R_${state.ROOM_NAME} modeHandler() processing AUTOMATIC"
+        activateScene(getSceneForMode())
+        break;
+      case 'MANUAL':
+        if (settings.log) log.trace "R_${state.ROOM_NAME} modeHandler() ignoring MANUAL"
+        // DO NOTHING
+        break;
+      default:
+        if (settings.log) log.trace "R_${state.ROOM_NAME} modeHandler() processing '${e.value}'"
+        activateScene(e.value)
     }
   }
 }
