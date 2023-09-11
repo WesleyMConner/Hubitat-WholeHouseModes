@@ -440,12 +440,27 @@ void activateScene (String scene) {
       "R_${state.ROOM_NAME} activateScene('${scene}') repeater: ${repeaterDni}, "
       + "button: ${buttonNumber}"
     )
+    settings.lutronMainRepeaters.findAll{ repeater ->
+      repeater.getDeviceNetworkId() == repeaterDni
+    }.first().push(buttonNumber)                 // There should be one match by DNI.
   }
   state.sceneToIndependent[scene].each{ deviceDni, level ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} activateScene('${scene}') device: ${deviceDni}, "
       + "level: ${level}"
     )
+    DevW matchedDevice = settings.independentDevices.findAll{ device ->
+      device.getDeviceNetworkId() == deviceDni
+    }.first()                                    // There should be one match by DNI.
+    if (matchedDevice.hasCommand('setLevel')) {          // Treat device as a dimmer.
+      matchedDevice.setLevel(level)                  // Assume on()/off() is handled.
+    } else {                                             // Treat device as a switch.
+      if (level == 100) {
+        matchedDevice.on()
+      } else {
+        matchedDevice.off()
+      }
+    }
   }
 }
 
