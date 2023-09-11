@@ -32,9 +32,6 @@ definition(
   singleInstance: false
 )
 
-// -------------------------------
-// C L I E N T   I N T E R F A C E
-// -------------------------------
 preferences {
   page(name: 'whaRoomPage')
 }
@@ -57,46 +54,11 @@ Map whaRoomPage () {
     //   - settings.remove('Y')
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
-/*
-settings.remove('scene^Chill^indepenent^02')
-settings.remove('scene^41^independent^02')
-settings.remove('scene^41^repeater^Ra2K-1-1848')
-settings.remove('scene^Chill^independent^02')
-settings.remove('scene^Chill^independent^Ra2D-59-1848')
-settings.remove('scene^Chill^repeater^Ra2K-1-1848')
-settings.remove('scene^Day^independent^02')
-settings.remove('scene^Day^independent^Ra2D-59-1848')
-settings.remove('scene^Day^repeater^Ra2K-1-1848')
-settings.remove('scene^Night^independent^02')
-settings.remove('scene^Night^independent^Ra2D-59-1848')
-settings.remove('scene^Night^repeater^Ra2K-1-1848')
-settings.remove('scene^Party^independent^02')
-settings.remove('scene^Party^independent^Ra2D-59-1848')
-settings.remove('scene^Party^repeater^Ra2K-1-1848')
-settings.remove('scene^Supplement^independent^02')
-settings.remove('scene^Supplement^independent^Ra2D-59-1848')
-settings.remove('scene^Supplement^repeater^Ra2K-1-1848')
-settings.remove('scene^TV^independent^02')
-settings.remove('scene^TV^independent^Ra2D-59-1848')
-settings.remove('scene^TV^repeater^Ra2K-1-1848')
-settings.remove('scene^Cook^repeater^Ra2K-1-1848')
-settings.remove('scene^Off^repeater^Ra2K-1-1848')
-settings.remove('scene^Chill^repeater^Ra2K-1-1848')
-settings.remove('scene^Cook^repeater^Ra2K-1-1848')
-settings.remove('scene^Day^repeater^Ra2K-1-1848')
-settings.remove('scene^Night^repeater^Ra2K-1-1848')
-settings.remove('scene^Off^repeater^Ra2K-1-1848')
-settings.remove('scene^Party^repeater^Ra2K-1-1848')
-settings.remove('scene^Supplement^repeater^Ra2K-1-1848')
-settings.remove('scene^TV^repeater^Ra2K-1-1848')
-*/
-
-
     section {
       solicitLog()                          // <- provided by Utils
       solicitModeNamesAsSceneNames()
       solicitCustomScenes()
-      updateScenes()
+      populateStateScenes()
       solicitSceneForModeName()
       solicitSeeTouchKeypads (
         'lutronSeeTouchKeypads',
@@ -114,12 +76,12 @@ settings.remove('scene^TV^repeater^Ra2K-1-1848')
           settings.lutronSceneButtons,
           'sceneButton'
         )
-        mapKpadDNIandButtonToItem('sceneButton')
-        ledDniToScene()
+        populateKpadButtons('sceneButton')
+        populateKpadButtonDniToTargetScene()
       }
       //-----> TBD START
       //solicitLutronPicos(
-      //  'lutronPicoButtons',
+      //  'lutronnamePicoButtons',
       //  'W I P -> Identify <b>Picos</b> and <b>Pico Buttons</b> that enable <b>Room scenes</b>.',
       //  [ required: false ]
       //)
@@ -137,7 +99,7 @@ settings.remove('scene^TV^repeater^Ra2K-1-1848')
 
       if (state.scenes && (settings.independentDevices || settings.lutronMainRepeaters)) {
         solicitRoomScene()
-        processRoomScenes()
+        populateSceneToDeviceValues()
       } else {
         paragraph red('Soliciation of Room scenes is pending pre-requisite data.')
       }
@@ -150,7 +112,7 @@ settings.remove('scene^TV^repeater^Ra2K-1-1848')
           state.SCENE_PBSG_APP_NAME,
           'roomPBSG',
           'roomPbsgPage',
-          switchNames,      // [*state.scenes, 'AUTOMATIC', 'MANUAL'],
+          switchNames,
           'AUTOMATIC'
         )
       }
@@ -162,10 +124,6 @@ settings.remove('scene^TV^repeater^Ra2K-1-1848')
     }
   }
 }
-
-// -----------------------------------------------------
-// R O O M S   S C E N E S   P A G E   &   S U P P O R T
-// -----------------------------------------------------
 
 void solicitModeNamesAsSceneNames () {
   input(
@@ -213,7 +171,7 @@ void solicitCustomScenes () {
   }
 }
 
-void updateScenes () {
+void populateStateScenes () {
   List<String> scenes = settings.modeNamesAsSceneNames ?: []
   scenes = scenes.flatten()
   String prefix = 'customScene'
@@ -275,7 +233,7 @@ void solicitSceneForModeName () {
   }
 }
 
-List<String> picoButtons (DevW pico) {
+List<String> namePicoButtons (DevW pico) {
   String dN = pico.displayName
   return [
     "${dN}^1^Top",
@@ -288,7 +246,7 @@ List<String> picoButtons (DevW pico) {
 
 List<String> picoButtonPicklist (List<DevW> picos) {
   List<String> results = []
-  picos.each{ pico -> results << picoButtons(pico) }
+  picos.each{ pico -> results << namePicoButtons(pico) }
   results = results.flatten()
   return results
 }
@@ -305,7 +263,7 @@ void selectPicoButtonsForScene() {
       input(
           // Head's Up:
           //   - circa Aug-2023, Hubitat translates settings.Xyz to settings.xyz
-          name: "${sceneName}_PicoButtons",
+          name: "${sceneName}_namePicoButtons",
           type: 'enum',
           title: emphasis("Pico Buttons activating ${state.ROOM_NAME} '${sceneName}'."),
           width: 6,
@@ -329,10 +287,6 @@ void solicitRoomScene () {
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.independentDevices?.each{ d ->
         String inputName = "scene^${sceneName}^Independent^${d.getDeviceNetworkId()}"
-        //if (settings.log) log.trace(
-        //  "R_${state.ROOM_NAME} solicitRoomScene() [INDEPENDENT] inputName: >${inputName}<"
-        //  + ", getLabel(): ${red(d.getLabel())}, getDeviceNetworkId(): ${red(d.getDeviceNetworkId())}"
-        //)
         col += 2
         input(
           name: inputName,
@@ -345,12 +299,8 @@ void solicitRoomScene () {
           defaultValue: 0
         )
       }
-      // ?.sort{ d -> d.getLabel() }
       settings.lutronMainRepeaters?.each{d ->
       String inputName = "scene^${sceneName}^Repeater^${d.getDeviceNetworkId()}"
-        //if (settings.log) log.trace(
-        //  "R_${state.ROOM_NAME} solicitRoomScene() [REPEATERS] inputName: >${inputName}<"
-        //)
         col += 2
         input(
           name: inputName,
@@ -371,7 +321,7 @@ void solicitRoomScene () {
   }
 }
 
-void ledDniToScene () {
+void populateKpadButtonDniToTargetScene () {
   Map<String, String> result = [:]
   state.kpadButtons.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetScene ->
@@ -381,7 +331,7 @@ void ledDniToScene () {
   state.kpadButtonDniToTargetScene = result
 }
 
-void updateLeds (String currScene) {
+void updateLutronKpadLeds (String currScene) {
   settings.lutronSceneButtons.each{ ledObj ->
     String dni = ledObj.getDeviceNetworkId()
     String sceneTarget = state.kpadButtonDniToTargetScene[dni]
@@ -408,23 +358,26 @@ String getSceneForMode(String mode = getLocation().getMode()) {
   return result
 }
 
-void pbsgVswTurnedOn (String currentScene) {
-  //log.trace(
-  //  "R_${state.ROOM_NAME} pbsgVswTurnedOn() WhaRooms scene: <b>'${currentScene}'</b> activated."
-  //)
+void pbsgVswTurnedOnCallback (String currentScene) {
   state.currentScene = currentScene
-  updateLeds(currentScene)
+  updateLutronKpadLeds(currentScene)
   switch(currentScene) {
     case 'AUTOMATIC':
-      if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() processing AUTOMATIC"
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC"
+      )
       activateScene(getSceneForMode())
       break;
     case 'MANUAL':
-      if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() ignoring MANUAL"
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() ignoring MANUAL"
+      )
       // DO NOTHING
       break;
     default:
-      if (settings.log) log.trace "R_${state.ROOM_NAME} pbsgVswTurnedOn() processing '${currentScene}'"
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing '${currentScene}'"
+      )
       activateScene(currentScene)
   }
 }
@@ -432,7 +385,7 @@ void pbsgVswTurnedOn (String currentScene) {
 void activateScene (String scene) {
   // Push Repeater buttons and execute Independent switch/dimmer levels.
   if (settings.log) log.trace "R_${state.ROOM_NAME} activateScene('${scene}') "
-  // Values are found at ...
+  // Values are expected at ...
   //   state.sceneToRepeater[sceneName][dni]
   //   state.sceneToIndependent[sceneName][dni]
   state.sceneToRepeater[scene].each{ repeaterDni, buttonNumber ->
@@ -464,7 +417,7 @@ void activateScene (String scene) {
   }
 }
 
-void processRoomScenes() {
+void populateSceneToDeviceValues() {
   // Reset state for the Repeater/Independent per-scene device values.
   state['sceneToRepeater'] = [:]
   state['sceneToIndependent'] = [:]
@@ -489,10 +442,6 @@ void processRoomScenes() {
     }
   }
 }
-
-// -------------------------------
-// S T A T E   M A N A G E M E N T
-// -------------------------------
 
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
@@ -572,12 +521,6 @@ void modeHandler (Event e) {
 void initialize() {
   if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
   if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to Lutron Telnet >${settings.lutronTelnet}<"
-  //if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to Lutron Repeaters >${settings.lutronRepeaters}<"
-  //settings.lutronMainRepeaters.each{ d ->
-  //  DevW device = d
-  //  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to ${device.displayName} ${device.id}"
-  //  subscribe(device, repeaterHandler, ['filterEvents': false])
-  //}
   if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to lutron SeeTouch Keypads >${settings.seeTouchKeypad}<"
   settings.lutronSeeTouchKeypads.each{ d ->
     DevW device = d

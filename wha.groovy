@@ -71,15 +71,15 @@ Map whaPage() {
           settings.lutronModeButtons,
           'modeButton'
         )
-        mapKpadDNIandButtonToItem('modeButton')
-        ledDniToMode()
+        populateKpadButtons('modeButton')
+        populateKpadButtonDniToTargetMode()
       }
       solictFocalRoomNames()
       if (!settings.rooms) {
         paragraph red('Management of child apps is pending selection of Room Names.')
       } else {
         keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME], false)
-        roomAppDrilldown()
+        displayRoomAppDrilldown()
         pbsgChildAppDrilldown(
           state.MODE_PBSG_APP_NAME,
           'modePBSG',
@@ -108,7 +108,7 @@ void solictFocalRoomNames () {
   )
 }
 
-void roomAppDrilldown() {
+void displayRoomAppDrilldown() {
   paragraph heading('Room Scene Configuration')
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
@@ -127,7 +127,7 @@ void roomAppDrilldown() {
   }
 }
 
-void ledDniToMode () {
+void populateKpadButtonDniToTargetMode () {
   Map<String, String> result = [:]
   state.kpadButtons.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetMode ->
@@ -137,7 +137,7 @@ void ledDniToMode () {
   state.kpadButtonDniToTargetMode = result
 }
 
-void updateLeds (String currMode) {
+void updateLutronKpadLeds (String currMode) {
   settings.lutronModeButtons.each{ ledObj ->
     String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
     if (currMode == modeTarget) {
@@ -148,7 +148,7 @@ void updateLeds (String currMode) {
   }
 }
 
-void pbsgVswTurnedOn(String currMode) {
+void pbsgVswTurnedOnCallback(String currMode) {
   // Design Notes
   //   - The modePbsg instance calls this method to reflect a state change.
   //   - When a PBSG-managed switch turns on, its peers can be presumed to be off.
@@ -157,10 +157,10 @@ void pbsgVswTurnedOn(String currMode) {
   //   - Access to LEDs is approved via a per-scene list of LEDs:
   //       modeButton_<scene> → ["<description>: <LED DNI>", ...]
   log.trace(
-    "WHA pbsgVswTurnedOn() activating <b>mode = ${currMode}</b>."
+    "WHA pbsgVswTurnedOnCallback() activating <b>mode = ${currMode}</b>."
   )
   getLocation().setMode(currMode)
-  updateLeds(currMode)
+  updateLutronKpadLeds(currMode)
 }
 
 void removeAllChildApps () {

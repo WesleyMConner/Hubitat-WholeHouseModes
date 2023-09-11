@@ -25,7 +25,8 @@ library (
   importUrl: ''
 )
 
-// Include this page content when instantiating PBSG instances.
+// Include this page content when instantiating PBSG instances, then call
+// configure() - see below - to complete device configuration.
 void defaultPage () {
   section {
     paragraph(
@@ -34,9 +35,6 @@ void defaultPage () {
     )
     manageChildDevices()
     solicitLog()                                  // <- provided by Utils
-    //--info-> app.getChildDevices().each{ d ->
-    //--info->   paragraph "Child Device ${d.getName()} supports ${d.getSupportedCommands()}"
-    //--info-> }
     paragraph(
       heading('Debug<br/>')
       + "${ displaySettings() }<br/>"
@@ -44,10 +42,6 @@ void defaultPage () {
     )
   }
 }
-
-// ---------------------------------------------------------------------
-// C R E A T E   S T A T I C   S T R U C T U R E   &   U I   R E V I E W
-// ---------------------------------------------------------------------
 
 String switchShortNameToDNI (String shortName) {
   return "${app.getLabel()}_${shortName}"
@@ -91,26 +85,21 @@ void toggleSwitch (String shortName) {
       )
       sw.on()
       break;
-//--ignore->?    default:
-//--ignore->?      log.error(
-//--ignore->?        "PBSG-LIB toggleSwitch() switch with shortName '${shortName}' "
-//--ignore->?        + "has state '${switchState}'."
-//--ignore->?      )
   }
 }
 
-void turnOnSwitch (String shortName) {
-  if (settings.log) log.trace(
-    "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"
-  )
-  DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
-  if (sw) {
-    sw.on()
-  }
-}
+//--unused-> void turnOnSwitch (String shortName) {
+//--unused->   if (settings.log) log.trace(
+//--unused->     "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"
+//--unused->   )
+//--unused->   DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
+//--unused->   if (sw) {
+//--unused->     sw.on()
+//--unused->   }
+//--unused-> }
 
 void addOrphanChild() {
-  // See manageChildDevices(). This method supports orphan removal testing.
+  // This method supports orphan removal testing. See manageChildDevices().
   addChildDevice(
     'hubitat',         // namespace
     'Virtual Switch',  // typeName
@@ -155,10 +144,6 @@ void manageChildDevices () {
 
 String getSwitchState(DevW d) {
   List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
-  //-> if (settings.log) log.trace(
-  //->   "PBSG-LIB getSwitchState() w/ stateValues: ${stateValues} "
-  //->   + "for ${d.displayName}"
-  //-> )
   return stateValues.contains('on')
       ? 'on'
       : stateValues.contains('off')
@@ -197,7 +182,6 @@ void enforceMutualExclusion() {
 }
 
 void enforceDefaultSwitch() {
-  // Enforce Default Switch
   List<DevW> onList = getOnSwitches()
   if (state.defaultSwitchName && !onList) {
     if (settings.log) log.trace(
@@ -216,7 +200,7 @@ void enforcePbsgConstraints() {
       'Mutual Exclusion enforcement is pending required data (switchDNIs).'
     )
   } else {
-    // Enforce Mutual-Exclusion (NOT REQUIRED if 'on' events turn 'off' peers)
+    // Enforce Mutual-Exclusion is NOT REQUIRED if 'on' events turn off peers
     enforceMutualExclusion()
     enforceDefaultSwitch()
   }
@@ -245,10 +229,6 @@ void displaySwitchStates () {
   }
 }
 
-// --------------------------------------------------
-// I M P L E M E N T   D Y N A M IC   B E H A V I O R
-// --------------------------------------------------
-
 void turnOffPeers (String callerDNI) {
   state.switchDNIs.findAll{ dni -> dni != callerDNI }.each{ dni ->
     app.getChildDevice(dni).off()
@@ -262,7 +242,7 @@ void pbsgEventHandler (Event e) {
         "PBSG-LIB pbsgEventHandler() ${e.descriptionText}, turning off peers ..."
       )
       turnOffPeers(e.displayName)
-      parent.pbsgVswTurnedOn(switchDniToShortName(e.displayName))
+      parent.pbsgVswTurnedOnCallback(switchDniToShortName(e.displayName))
     } else if (e.value == 'off') {
       if (settings.log) log.trace(
         "PBSG-LIB pbsgEventHandler(), ${e.descriptionText}"

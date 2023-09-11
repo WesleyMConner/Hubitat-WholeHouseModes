@@ -25,10 +25,7 @@ library (
   importUrl: ''
 )
 
-// -------------------------------------------------
-// R E N A M E   L U T R O N   L E D   B U T T O N S
-// -------------------------------------------------
-void newLedLabel (String deviceName, String newDeviceLabel) {
+void changeDeviceLabel (String deviceName, String newDeviceLabel) {
   // -----------------------------------------------------------------
   // I M P O R T A N T - Permission must be granted to individual LEDs
   //                     BEFORE they can be relabled.
@@ -36,7 +33,6 @@ void newLedLabel (String deviceName, String newDeviceLabel) {
   DevW d = settings.lutronLEDs.findAll{it.name == deviceName}?.first()
   d.setLabel(newDeviceLabel)
 }
-//-> newLedLabel('(lutron-44) Garage KPAD LED 1','Garage KPAD 1 - ALL AUTO')
 
 // -------------------------------------------------------------------
 // C O L L A P S I B L E   I N P U T
@@ -58,14 +54,12 @@ void collapsibleInput (Map args = [:]) {
            options: null
   ] << args
   String boolHideInput = "hide${_args.name}"
-  //String toggleTitle =
   String devices = settings[_args.name]
     ? "(devices=${settings[_args.name].size()})"
     : ''
   input (
     name: boolHideInput,
     type: 'bool',
-    // width: settings[boolHideInput] ? 12 : 6,
     title: settings[boolHideInput]
       ? "Hiding ${_args.blockLabel} ${devices}"
       : "Showing ${_args.blockLabel}",
@@ -76,7 +70,6 @@ void collapsibleInput (Map args = [:]) {
     input (
       name: _args.name,
       type: _args.type,
-      // width: 6,
       title: _args.title,
       submitOnChange: _args.submitOnChange,
       required: _args.required,
@@ -199,10 +192,9 @@ void selectLedsForListItems(
   List<DevW> ledDevices,
   String prefix
   ) {
-  // Design Note
-  //   Keypad LEDs are used as a proxy for Keypad buttons.
-  //     - The button's displayName is meaningful to clients.
-  //     - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
+  // Keypad LEDs are used as a proxy for Keypad buttons.
+  //   - The button's displayName is meaningful to clients.
+  //   - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
   log.trace(
     "RA2 selectLedsForListItems() "
     + "<b>list:</b> ${list}, "
@@ -225,15 +217,5 @@ void selectLedsForListItems(
         "${d.getLabel()}: ${d.getDeviceNetworkId()}"
       }?.sort()
     )
-  }
-}
-
-List<DevW> narrowDevicesToRoom (String roomName, List<DevW> devices) {
-  // This function excludes devices that are not associated with any room.
-  List<String> deviceIdsForRoom = app.getRooms()
-                                  .findAll{it.name == roomName}
-                                  .collect{it.deviceIds.collect{it.toString()}}
-                                  .flatten()
-  return devices.findAll{ d -> deviceIdsForRoom.contains(d.id.toString())
   }
 }
