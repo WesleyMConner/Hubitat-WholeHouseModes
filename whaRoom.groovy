@@ -60,6 +60,8 @@ settings.remove('picoButtons_Automatic')
 */
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
+    state.MANUAL_OVERRIDE = false
+    //-> state.MANUAL_OVERRIDE = state.MANUAL_OVERRIDE ?: false
     section {
       configureLogging()                          // <- provided by Utils
       selectModeNamesAsSceneNames()
@@ -140,7 +142,7 @@ settings.remove('picoButtons_Automatic')
         paragraph red('Management of child apps is pending selection of Room scenes.')
       } else {
         keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME], settings.log)
-        ArrayList switchNames = [*state.scenes, 'AUTOMATIC', 'MANUAL']
+        ArrayList switchNames = [*state.scenes, 'AUTOMATIC']
         displayInstantiatedPbsgHref(
           state.SCENE_PBSG_APP_NAME,
           'roomPBSG',
@@ -433,20 +435,24 @@ String getSceneForMode(String mode = getLocation().getMode()) {
 }
 
 void pbsgVswTurnedOnCallback (String currentScene) {
+  if (settings.log) log.trace(
+    "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() received ${currentScene}"
+  )
+  if (state.MANUAL_OVERRIDE == true) {
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() releasing MANUAL_OVERRIDE"
+    )
+    state.MANUAL_OVERRIDE = false
+  }
   state.currentScene = currentScene
   updateLutronKpadLeds(currentScene)
   switch(currentScene) {
     case 'AUTOMATIC':
+      String targetScene = getSceneForMode()
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC"
+        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC (${targetScene})"
       )
-      activateScene(getSceneForMode())
-      break;
-    case 'MANUAL':
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() ignoring MANUAL"
-      )
-      // DO NOTHING
+      activateScene(targetScene)
       break;
     default:
       if (settings.log) log.trace(
@@ -558,39 +564,44 @@ void updated() {
 }
 
 void repeaterLedHandler (Event e) {
-  // Only track events where the current room scene's LED (on the main repeater)
-  // has turned off. Such a transition suggests a room scene MANUAL override
-  // has  occurred.
+  // DESIGN NOTES
+  // - Each room scene SHOULD HAVE a corresponding Main Repeater integration button
+  //   and LED.
+  // - If the current scene's Button LED turns off unexpectedly, a MANUAL_OVERRIDE
+  //   is presumed.
+  // - If the current scene's LED turns back on, the MANUAL_OVERRIDE is presumed
+  //   to be overridden.
   //   - The field e.deviceId arrives as a number and must be cast toString().
   if (
        (e.deviceId.toString() == state.currentSceneRepeaterDeviceId)
        && (e.name == "buttonLed-${state.currentSceneRepeaterLED}")
        && (e.isStateChange == true)
-       && (e.value == 'off')
   ) {
-    if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} repeaterLedHandler() has detected a MANUAL override."
-    )
-    app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch('MANUAL')
+    if (e.value == 'off') {
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} repeaterLedHandler() activating a MANUAL_OVERRIDE."
+      )
+      state.MANUAL_OVERRIDE = true
+    } else if (e.value == 'on') {
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} repeaterLedHandler() deactivating a MANUAL_OVERRIDE."
+      )
+      state.MANUAL_OVERRIDE = false
+    }
   }
 }
 
 void modeHandler (Event e) {
-  //log.error('debug Event e at line #496 !!!')
-  if (e.name == 'mode') {
-    switch(e.value) {
-      case 'AUTOMATIC':
-        if (settings.log) log.trace "R_${state.ROOM_NAME} modeHandler() processing AUTOMATIC"
-        activateScene(getSceneForMode())
-        break;
-      case 'MANUAL':
-        if (settings.log) log.trace "R_${state.ROOM_NAME} modeHandler() ignoring MANUAL"
-        // DO NOTHING
-        break;
-      default:
-        if (settings.log) log.trace "R_${state.ROOM_NAME} modeHandler() processing '${e.value}'"
-        activateScene(e.value)
-    }
+  if (
+    e.name == 'mode'
+    && state.MANUAL_OVERRIDE == false
+    && state.currentScene == 'AUTOMATIC'
+  ) {
+    String targetScene = getSceneForMode(e.value)
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} modeHandler() processing AUTOMATIC (${targetScene})"
+    )
+    activateScene(targetScene)
   }
 }
 

@@ -190,16 +190,16 @@ void identifyLedButtonsForListItems(
   // Keypad LEDs are used as a proxy for Keypad buttons.
   //   - The button's displayName is meaningful to clients.
   //   - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
-  log.trace(
-    "RA2 identifyLedButtonsForListItems() "
-    + "<b>list:</b> ${list}, "
-    + "<b>ledDevices:</b> ${ledDevices}, "
-    + "<b>prefix:</b> ${prefix}, "
-  )
+  //-> log.trace(
+  //->   "RA2 identifyLedButtonsForListItems() "
+  //->   + "<b>list:</b> ${list}, "
+  //->   + "<b>ledDevices:</b> ${ledDevices}, "
+  //->   + "<b>prefix:</b> ${prefix}, "
+  //-> )
   list.each{ item ->
-    log.trace(
-      "RA2 identifyLedButtonsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
-    )
+    //-> log.trace(
+    //->   "RA2 identifyLedButtonsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
+    //-> )
     input(
       name: "${prefix}_${item}",
       type: 'enum',
