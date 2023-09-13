@@ -64,6 +64,16 @@ settings.remove('picoButtons_Automatic')
     //-> state.MANUAL_OVERRIDE = state.MANUAL_OVERRIDE ?: false
     section {
       configureLogging()                          // <- provided by Utils
+      input(
+        name: 'motionSensor',
+        title: 'motionSensor<br/>' \
+          + comment('Identify one Motion Sensor if desired<br/>.') \
+          + comment('The Custom Scene "<b>Off</b>" is automatically added below.'),
+        type: 'device.LutronMotionSensor',
+        submitOnChange: true,
+        required: false,
+        multiple: false
+      )
       selectModeNamesAsSceneNames()
       identifyCustomScenes()
       populateStateScenes()
@@ -161,6 +171,7 @@ settings.remove('picoButtons_Automatic')
 }
 
 void selectModeNamesAsSceneNames () {
+  List<String> sceneNames = getLocation().getModes().collect{ mode -> mode.name }
   input(
     name: 'modeNamesAsSceneNames',
     type: 'enum',
@@ -170,14 +181,14 @@ void selectModeNamesAsSceneNames () {
     submitOnChange: true,
     required: false,
     multiple: true,
-    options: getLocation().getModes().collect{ mode -> mode.name }?.sort()
+    options: sceneNames.sort()
   )
 }
 
 void identifyCustomScenes () {
   String prefix = 'customScene'
   LinkedHashMap<String, String> slots = [
-    "${prefix}1": settings["${prefix}1"],
+    "${prefix}1": settings.motionSensor ? 'Off' : settings["${prefix}1"],
     "${prefix}2": settings["${prefix}2"],
     "${prefix}3": settings["${prefix}3"],
     "${prefix}4": settings["${prefix}4"],
@@ -223,7 +234,7 @@ void populateStateScenes () {
   ].findAll{it != null}
   if (customScenes) {
     scenes << customScenes
-    scenes = scenes.flatten()
+    scenes = scenes.flatten().toUnique()
   }
   scenes = scenes.sort()
   state.scenes = scenes.size() > 0 ? scenes : null
@@ -438,13 +449,13 @@ void pbsgVswTurnedOnCallback (String currentScene) {
   if (settings.log) log.trace(
     "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() received ${currentScene}"
   )
+  state.currentScene = currentScene
   if (state.MANUAL_OVERRIDE == true) {
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() releasing MANUAL_OVERRIDE"
     )
     state.MANUAL_OVERRIDE = false
   }
-  state.currentScene = currentScene
   updateLutronKpadLeds(currentScene)
   switch(currentScene) {
     case 'AUTOMATIC':
@@ -452,13 +463,13 @@ void pbsgVswTurnedOnCallback (String currentScene) {
       if (settings.log) log.trace(
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC (${targetScene})"
       )
-      activateScene(targetScene)
+      if (settings.motionSensor == false) activateScene(targetScene)
       break;
     default:
       if (settings.log) log.trace(
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing '${currentScene}'"
       )
-      activateScene(currentScene)
+      if (settings.motionSensor == false) activateScene(currentScene)
   }
 }
 
@@ -601,7 +612,7 @@ void modeHandler (Event e) {
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} modeHandler() processing AUTOMATIC (${targetScene})"
     )
-    activateScene(targetScene)
+    if (settings.motionSensor == false) activateScene(targetScene)
   }
 }
 
@@ -655,6 +666,22 @@ void picoHandler (Event e) {
   }
 }
 
+void motionSensorHandler (Event e) {
+//->log.trace "DEBUG motionSensorHandler -><br/>${eventDetails(e)}"
+  if (e.name == 'motion' && e.isStateChange == true) {
+//->log.trace "DEBUG motionSensorHandler PROCEEDING"
+    if (e.value == 'active') {
+      String targetScene = (state.currentScene == 'AUTOMATIC')
+        ? getSceneForMode() : state.currentScene
+log.trace "DEBUG motionSensorHandler ACTIVE -> >${targetScene}<"
+      activateScene(targetScene)
+    } else if (e.value == 'inactive') {
+log.trace "DEBUG motionSensorHandler INACTIVE -> 'Off'<br/>"
+      activateScene('Off')
+    }
+  }
+}
+
 void initialize() {
   if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
   if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to modeHandler"
@@ -672,6 +699,15 @@ void initialize() {
     subscribe(device, repeaterLedHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} subscribing to Pico ${deviceTag(device)}."
+    )
     subscribe(device, picoHandler, ['filterEvents': true])
+  }
+  settings.motionSensor.each{ device ->
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} subscribing to Motion Sensor ${deviceTag(device)}."
+    )
+    subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
 }
