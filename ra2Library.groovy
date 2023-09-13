@@ -30,7 +30,7 @@ void changeDeviceLabel (String deviceName, String newDeviceLabel) {
   // I M P O R T A N T - Permission must be granted to individual LEDs
   //                     BEFORE they can be relabled.
   // -----------------------------------------------------------------
-  DevW d = settings.lutronLEDs.findAll{it.name == deviceName}?.first()
+  DevW d = settings.lutronLEDs?.findAll{it.name == deviceName}?.first()
   d.setLabel(newDeviceLabel)
 }
 
@@ -44,9 +44,8 @@ void changeDeviceLabel (String deviceName, String newDeviceLabel) {
 // -------------------------------------------------------------------
 void collapsibleInput (Map args = [:]) {
   Map _args = [
-        blockLabel: "E R R O R: Missing 'blockLabel'",
-              name: "E R R O R: Missing 'name'",
-             title: "E R R O R: Missing 'title'",
+       settingsKey: "E R R O R: Missing 'settingsKey'",
+//             title: "E R R O R: Missing 'title'",
               type: "E R R O R: Missing 'type'",
     submitOnChange: true,
           required: true,
@@ -54,23 +53,29 @@ void collapsibleInput (Map args = [:]) {
            options: null
   ] << args
   String boolHideInput = "hide${_args.name}"
-  String devices = settings[_args.name]
-    ? "(devices=${settings[_args.name].size()})"
-    : ''
+  //String devices = settings[_args.name]
+  String devices = settings[settingsKey]
+  //  ? "(devices=${settings[settingsKey]?.size()})"
+  //  : '(devices=0)'
+  String title = settings[boolHideInput]
+      ? "Hiding ${_args.settingsKey} >${devices}<"
+      : "Showing ${_args.settingsKey}"
   input (
     name: boolHideInput,
     type: 'bool',
-    title: settings[boolHideInput]
-      ? "Hiding ${_args.blockLabel} ${devices}"
-      : "Showing ${_args.blockLabel}",
+    title: title,
+//    title: settings[boolHideInput]
+//      ? "Hiding ${_args.settingsKey} ${devices}"
+//      : "Showing ${_args.settingsKey}",
     submitOnChange: true,
     defaultValue: false,
   )
   if (!settings[boolHideInput]) {
     input (
-      name: _args.name,
+      name: _args.settingsKey,
       type: _args.type,
-      title: _args.title,
+      title: title,
+//      title: _args.title,
       submitOnChange: _args.submitOnChange,
       required: _args.required,
       multiple: _args.multiple,
@@ -87,29 +92,25 @@ void solicitLutronTelnetDevice (
   ) {
   collapsibleInput (
     [
-      blockLabel: "${settingsKey} Device",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      title: settingsKey + (note ? comment("<br/>${note}") : ''),
       type: 'device.LutronTelnet'
     ] << args
   )
 }
 
-void solicitLutronMainRepeater (
+void authorizeMainRepeater (
   // - A WHA application can utilize multiple Lutron Main Repeaters.
   // - Each room, however, is constrained to a single Repeater.
   // - If the LED associated with a room scene's repeater activation button
   //   transitions from on-to-off unexpectedly, a MANUAL override is
   //   assumed.
-  String settingsKey = 'lutronMainRepeaters',
+  String settingsKey = 'mainRepeater',
   String note = '',
   Map args = [:]
   ) {
   collapsibleInput (
     [
-      blockLabel: "${settingsKey} Devices",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      title: settingsKey + (note ? comment("<br/>${note}") : ''),
       type: 'device.LutronKeypad',
       multiple: false
     ] << args
@@ -119,45 +120,37 @@ void solicitLutronMainRepeater (
 void solicitLutronMiscellaneousKeypads (
   String settingsKey = 'lutronMiscKeypads',
   String note = '',
-  Map args = [:]
+  Map args = [:],
+  String deviceType = 'device.LutronKeypad'
   ) {
   // This function IS NOT REQUIRED when miscellaneous devices are manually
   // converted to Lutron SeeTouch device types.
-  collapsibleInput (
-    [
-      blockLabel: "${settingsKey} Devices",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-      type: 'device.LutronKeypad'
-    ] << args
-   )
+  collapsibleInput ([
+    title: settingsKey + (note ? comment("<br/>${note}") : ''),
+    type: deviceType
+  ] << args)
 }
 
-void solicitSeeTouchKeypads (
-  String settingsKey = 'lutronSeeTouchKeypads',
+void authorizeSeeTouchKeypads (
+  String settingsKey,
   String note = '',
-  Map args = [:]
+  Map args = [:],
+  String deviceType = 'device.LutronSeeTouchKeypad'
   ) {
-  collapsibleInput (
-    [
-      blockLabel: "${settingsKey} Devices",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
-      type: 'device.LutronSeeTouchKeypad'
-    ] << args
-  )
+  collapsibleInput ([
+    title: settingsKey + (note ? comment("<br/>${note}") : ''),
+    type: deviceType
+  ] << args)
 }
 
-void solicitLutronLEDs (
+void authorizeLedButtons (
   String settingsKey = 'lutronKeypadButtons',
   String note = '',
   Map args = [:]
   ) {
   collapsibleInput (
     [
-      blockLabel: "${settingsKey} Devices",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      title: settingsKey + (note ? comment("<br/>${note}") : ''),
       type: 'device.LutronComponentSwitch'
     ] << args
   )
@@ -170,30 +163,26 @@ void solicitLutronPicos (
   ) {
   collapsibleInput (
     [
-      blockLabel: "${settingsKey} Devices",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      title: settingsKey + (note ? comment("<br/>${note}") : ''),
       type: 'device.LutronFastPico'
     ] << args
   )
 }
 
-void solicitSwitches (
+void authorizeSwitches (
   String settingsKey = 'switches',
   String note = '',
   Map args = [:]
   ) {
   collapsibleInput (
     [
-      blockLabel: "${settingsKey} Devices",
-      name: settingsKey,
-      title: "Identify ${settingsKey} Devices" + (note ? comment("<br/>${note}") : ''),
+      title: settingsKey + (note ? comment("<br/>${note}") : ''),
       type: 'capability.switch'
     ] << args
  )
 }
 
-void selectLedsForListItems(
+void identifyLedButtonsForListItems(
   List<String> list,
   List<DevW> ledDevices,
   String prefix
@@ -202,20 +191,20 @@ void selectLedsForListItems(
   //   - The button's displayName is meaningful to clients.
   //   - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
   log.trace(
-    "RA2 selectLedsForListItems() "
+    "RA2 identifyLedButtonsForListItems() "
     + "<b>list:</b> ${list}, "
     + "<b>ledDevices:</b> ${ledDevices}, "
     + "<b>prefix:</b> ${prefix}, "
   )
   list.each{ item ->
     log.trace(
-      "RA2 selectLedsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
+      "RA2 identifyLedButtonsForListItems() Processing <b>prefix:</b> ${prefix}, <b>item:</b> ${item}."
     )
     input(
       name: "${prefix}_${item}",
       type: 'enum',
       width: 6,
-      title: emphasis("Buttons/LEDs activating '${item}'"),
+      title: emphasis("Identify LEDs/Buttons for <b>${item}</b>"),
       submitOnChange: true,
       required: false,
       multiple: true,

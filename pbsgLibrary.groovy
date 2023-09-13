@@ -34,7 +34,7 @@ void defaultPage () {
       + emphasis(red('Use the browser back button to return to the parent page.'))
     )
     manageChildDevices()
-    solicitLog()                                  // <- provided by Utils
+    configureLogging()                                  // <- provided by Utils
     paragraph(
       heading('Debug<br/>')
       + "${ displaySettings() }<br/>"
@@ -158,7 +158,7 @@ List<DevW> getOnSwitches() {
     )
     return null
   } else {
-    return getAllChildDevices().findAll{ d ->
+    return getAllChildDevices()?.findAll{ d ->
       (
         state.switchDNIs.contains(d.deviceNetworkId)
         && getSwitchState(d) == 'on'
@@ -171,13 +171,20 @@ void enforceMutualExclusion() {
   List<DevW> onList = getOnSwitches()
   while (onList && onList.size() > 1) {
     DevW device = onList?.first()
-    if (settings.log) log.trace(
-      'PBSG-LIB enforceMutualExclusion(), <br/>'
-      + "<b>onList:</b> ${onList}, "
-      + " turning off <b>${deviceTag(device)}</b>."
-    )
-    device.off()
-    onList = onList.drop(1)
+    if (device) {
+      if (settings.log) log.trace(
+        'PBSG-LIB enforceMutualExclusion(), <br/>'
+        + "<b>onList:</b> ${onList}, "
+        + " turning off <b>${deviceTag(device)}</b>."
+      )
+      device.off()
+      onList = onList.drop(1)
+    } else {
+      if (settings.log) log.trace(
+        'PBSG-LIB enforceMutualExclusion() unexpected condition.<br/>'
+        + "onList: >${onList}<"
+      )
+    }
   }
 }
 
@@ -230,7 +237,7 @@ void displaySwitchStates () {
 }
 
 void turnOffPeers (String callerDNI) {
-  state.switchDNIs.findAll{ dni -> dni != callerDNI }.each{ dni ->
+  state.switchDNIs?.findAll{ dni -> dni != callerDNI }.each{ dni ->
     app.getChildDevice(dni).off()
   }
 }

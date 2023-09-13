@@ -194,56 +194,6 @@ Everything else should respond to mode changes (not the modePBSG VSWs).
   //     handlerMethod      // String
   //   )
 
-.Abandoned
-----
-/*
-void addRoomToDeviceMapsToState() {
-  // Design Note:
-  //   - Use "device.displayName.toString().contains('...')".
-  //   - The use of "toString()" is critical for proper parsing.
-  Map<String, List<DevW>> roomToSwitches = getRoomToSwitches()
-  //Map<String, List<DevW>> den = roomToSwitches.findAll{it.key == 'Den'}
-  Map<String, List<DevW>> zzz = roomToSwitches.findAll{['UNKNOWN', 'Den'].contains(it.key)}
-// (room2switches) ${roomToSwitches}
-//--DEBUG--  paragraph """DEBUG:
-//--DEBUG--(raw) ${zzz}
-//--DEBUG--(led) ${zzz.collectEntries{r, dlist ->
-//--DEBUG--  [r, keepLED(dList)]
-//--DEBUG--}}
-//--DEBUG--(non-lutron) ${zzz.collectEntries{r, dlist ->
-//--DEBUG--  [r, keepNonLutron(dList)]
-//--DEBUG--}}
-//--DEBUG--(lutron) ${zzz.collectEntries{r, dList ->
-//--DEBUG--  [r, keepLutron(dList)]
-//--DEBUG--}}
-"""
-//==>  Map<String, List<DevW>> roomToLutronDevice = roomToSwitches.findAll{ r, dList ->
-//==>    dList.findAll{ d -> d.displayName.toString().contains('lutron') }
-//==>  }
-
-//==>String testString = '(lutron-100 something with LED)'
-//==>paragraph """EXPLORE \
-//==>${testString.contains('lutron')} \
-//==>${testString.contains('lutron') && !testString.contains('LED')} \
-//==>${!testString.contains('lutron')}"""
-
-//  paragraph """DEBUG:
-//<b>original:</b> ${roomToSwitches}
-//<b>roomToLutronDevice:</b> ${roomToSwitches.findAll{ r, dList -> keepLutron(dList)}}
-//"""
-//==>    (it.value.displayName.toString().contains('lutron') && !it.value.displayName.toString().contains('LED'))
-//==>  }
-  state.roomToLutronDevice = roomToLutronDevice
-  Map<String, List<DevW>> roomToLutronLED = roomToSwitches.findAll{
-    it.value.displayName.toString().contains('LED')
-  }
-  state.roomToLutronLED = roomToLutronLED
-  Map<String, List<DevW>> roomToNonLutron = roomToSwitches.findAll{
-    !it.value.displayName.toString().contains('lutron')
-  }
-  state.roomToNonLutron = roomToNonLutron
-}
-*/
 
 /*
 void showDevicesByRoom (String label, Map<String, List<DevW>> roomToDevice) {

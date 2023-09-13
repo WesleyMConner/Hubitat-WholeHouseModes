@@ -54,33 +54,43 @@ Map whaPage() {
     //   - settings.remove('Y')
     // reLabelLeds()
     section {
-      solicitLog()                                  // <- provided by Utils
-      solicitSeeTouchKeypads (
-        'lutronSeeTouchKeypads',
-        'Identify <b>ALL Keypads</b> with buttons that impact Hubitat <b>mode changes</b>.'
+      configureLogging()                                  // <- provided by Utils
+      input(
+        name: 'seeTouchKeypads',
+        title: 'seeTouchKeypads<br/>' \
+          + comment('Identify Keypads that host LEDs/Buttons that change the Hubitat mode.'),
+        type: 'device.LutronSeeTouchKeypad',
+        submitOnChange: true,
+        required: false,
+        multiple: true
       )
-      solicitLutronLEDs(
-        'lutronModeButtons',
-        'Identify <b>All LEDs/Buttons</b> that enable Hubitat <b>mode changes</b>.'
+      input(
+        name: 'lutronModeButtons',
+        title: 'lutronModeButtons<br/>' \
+          + comment('Identify Keypad LEDs/Buttons that change the Hubitat mode.'),
+        type: 'device.LutronComponentSwitch',
+        submitOnChange: true,
+        required: false,
+        multiple: true
       )
       if (state.MODE_SWITCH_NAMES == null || settings?.lutronModeButtons == null) {
         paragraph(red('Mode activation buttons are pending pre-requisites.'))
       } else {
-        selectLedsForListItems(
-          state.MODE_SWITCH_NAMES,
-          settings.lutronModeButtons,
-          'modeButton'
+        identifyLedButtonsForListItems(           // From ra2Library.groovy
+          state.MODE_SWITCH_NAMES,                //   - list
+          settings.lutronModeButtons,             //   - ledDevices
+          'modeButton'                            //   - prefix
         )
-        populateKpadButtons('modeButton')
-        populateKpadButtonDniToTargetMode()
+        populateStateKpadButtons('modeButton')
+        populateStateKpadButtonDniToTargetMode()
       }
-      solictFocalRoomNames()
+      identifyParticipatingRooms()
       if (!settings.rooms) {
         paragraph red('Management of child apps is pending selection of Room Names.')
       } else {
         keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME], false)
-        displayRoomAppDrilldown()
-        pbsgChildAppDrilldown(
+        displayInstantiatedRoomHrefs()
+        displayInstantiatedPbsgHref(
           state.MODE_PBSG_APP_NAME,
           'modePBSG',
           'modePbsgPage',
@@ -97,18 +107,20 @@ Map whaPage() {
   }
 }
 
-void solictFocalRoomNames () {
+void identifyParticipatingRooms() {
   roomPicklist = app.getRooms().collect{it.name}.sort()
-  collapsibleInput(
-    blockLabel: 'Focal Rooms',
+  input(
     name: 'rooms',
     type: 'enum',
-    title: 'Select Participating Rooms',
-    options: roomPicklist
+    title: '<b>Select Participating Rooms</b>',
+    options: roomPicklist,
+    submitOnChange: true,
+    required: false,
+    multiple: true
   )
 }
 
-void displayRoomAppDrilldown() {
+void displayInstantiatedRoomHrefs() {
   paragraph heading('Room Scene Configuration')
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
@@ -127,7 +139,7 @@ void displayRoomAppDrilldown() {
   }
 }
 
-void populateKpadButtonDniToTargetMode () {
+void populateStateKpadButtonDniToTargetMode () {
   Map<String, String> result = [:]
   state.kpadButtons.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetMode ->
@@ -240,9 +252,9 @@ void keypadToVswHandler (Event e) {
 
 void initialize() {
   if (settings.log) log.trace "WHA initialize()"
-  settings.lutronSeeTouchKeypads.each{ d ->
+  settings.seeTouchKeypads.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, keypadToVswHandler, ['filterEvents': false])
+    subscribe(device, keypadToVswHandler, ['filterEvents': true])
   }
 }

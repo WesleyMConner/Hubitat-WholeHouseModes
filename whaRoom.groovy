@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// R O O M   S C E N E S
+// R O O M   S C E N E S →
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -52,54 +52,87 @@ Map whaRoomPage () {
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
+/*
+settings.remove('Games_namePicoButtons')
+settings.remove('Read_namePicoButtons')
+settings.remove('picoButtonsForAutomatic')
+settings.remove('picoButtons_Automatic')
+*/
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
     section {
-      solicitLog()                          // <- provided by Utils
-      solicitModeNamesAsSceneNames()
-      solicitCustomScenes()
+      configureLogging()                          // <- provided by Utils
+      selectModeNamesAsSceneNames()
+      identifyCustomScenes()
       populateStateScenes()
-      solicitSceneForModeName()
-      solicitSeeTouchKeypads (
-        'lutronSeeTouchKeypads',
-        'Identify <b>ALL Keypads</b> with buttons that impact <b>Room scenes</b>.'
+      selectScenePerMode()
+      input(
+        name: 'seeTouchKeypads',
+        title: 'seeTouchKeypads<br/>' \
+          + comment('Authorize Keypads with buttons that activate room scenes.'),
+        type: 'device.LutronSeeTouchKeypad',
+        submitOnChange: true,
+        required: false,
+        multiple: true
       )
-      solicitLutronLEDs(
-        'lutronSceneButtons',
-        'Identify <b>All LEDs/Buttons</b> that enable <b>Room scenes</b>.'
+      input(
+        name: 'sceneButtons',
+        title: 'sceneButtons<br/>' \
+          + comment('Authorize Keypad LEDs/Buttons that activate room scenes.'),
+        type: 'device.LutronComponentSwitch',
+        submitOnChange: true,
+        required: false,
+        multiple: true
       )
-      if (state.scenes == null || settings?.lutronSceneButtons == null) {
+      if (state.scenes == null || settings?.sceneButtons == null) {
         paragraph(red('Scene activation buttons are pending pre-requisites.'))
       } else {
-        selectLedsForListItems(
+        identifyLedButtonsForListItems(
           state.scenes,
-          settings.lutronSceneButtons,
+          settings.sceneButtons,
           'sceneButton'
         )
-        populateKpadButtons('sceneButton')
-        populateKpadButtonDniToTargetScene()
+        populateStateKpadButtons('sceneButton')
+        populateStateKpadButtonDniToTargetScene()
       }
-      //-----> TBD START
-      //solicitLutronPicos(
-      //  'lutronnamePicoButtons',
-      //  'W I P -> Identify <b>Picos</b> and <b>Pico Buttons</b> that enable <b>Room scenes</b>.',
-      //  [ required: false ]
-      //)
-      //-> Process Picos similar to Leds above ?!
-      //-----> TBD END
-      solicitLutronMainRepeater(
-        'lutronMainRepeaters',
-        'Identify Repeaters that host integration buttons for <b>Room scenes</b>.'
+      input(
+        name: 'picos',
+        title: 'lutronPicos<br/>' \
+          + comment('Identify Picos with buttons that change the Room scene.'),
+        type: 'device.LutronFastPico',
+        submitOnChange: true,
+        required: false,
+        multiple: true
       )
-      solicitSwitches(
-        'independentDevices',
-        'Identify devices <b>NOT</b> set via Lutron integration buttons.',
-        [ required: false]
+      if (settings.picos == null) {
+        paragraph(
+          red('Selection of pico buttons to activate scenes is pending pre-requisites.')
+        )
+      } else {
+        selectPicoButtonsForScene(settings.picos)
+        populateStatePicoButtonToTargetScene()
+      }
+      input(
+        name: 'mainRepeater',
+        title: 'mainRepeater<br/>' \
+          + comment('Identify Repeaters that host integration buttons for Room scenes'),
+        type: 'device.LutronKeypad',
+        submitOnChange: true,
+        required: false,
+        multiple: false
       )
-
-      if (state.scenes && (settings.independentDevices || settings.lutronMainRepeaters)) {
-        solicitRoomScene()
-        populateSceneToDeviceValues()
+      input(
+        name: 'independentDevices',
+        title: 'independentDevices<br/>' \
+          + comment('Identify Repeaters that host integration buttons for Room scenes.'),
+        type: 'capability.switch',
+        submitOnChange: true,
+        required: false,
+        multiple: true
+      )
+      if (state.scenes && (settings.independentDevices || settings.mainRepeater)) {
+        configureRoomScene()
+        populateStateSceneToDeviceValues()
       } else {
         paragraph red('Soliciation of Room scenes is pending pre-requisite data.')
       }
@@ -108,7 +141,7 @@ Map whaRoomPage () {
       } else {
         keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME], settings.log)
         ArrayList switchNames = [*state.scenes, 'AUTOMATIC', 'MANUAL']
-        pbsgChildAppDrilldown(
+        displayInstantiatedPbsgHref(
           state.SCENE_PBSG_APP_NAME,
           'roomPBSG',
           'roomPbsgPage',
@@ -125,7 +158,7 @@ Map whaRoomPage () {
   }
 }
 
-void solicitModeNamesAsSceneNames () {
+void selectModeNamesAsSceneNames () {
   input(
     name: 'modeNamesAsSceneNames',
     type: 'enum',
@@ -139,7 +172,7 @@ void solicitModeNamesAsSceneNames () {
   )
 }
 
-void solicitCustomScenes () {
+void identifyCustomScenes () {
   String prefix = 'customScene'
   LinkedHashMap<String, String> slots = [
     "${prefix}1": settings["${prefix}1"],
@@ -152,9 +185,9 @@ void solicitCustomScenes () {
     "${prefix}8": settings["${prefix}8"],
     "${prefix}9": settings["${prefix}9"]
   ]
-  LinkedHashMap<String, String> filled = slots.findAll{it.value}
+  LinkedHashMap<String, String> filled = slots?.findAll{it.value}
   // Only present 1 empty sceen "slot" at a time.
-  LinkedHashMap<String, String> firstOpen = slots.findAll{!it.value}?.take(1)
+  LinkedHashMap<String, String> firstOpen = slots?.findAll{!it.value}?.take(1)
   LinkedHashMap<String, String> custom = \
     firstOpen + filled.sort{ a, b -> a.value <=> b.value }
   paragraph emphasis('Add Custom Scene Names <em>(optional)</em>:')
@@ -209,11 +242,11 @@ void solicitNonLutronDevicesForWhaRoom () {
   )
 }
 
-void solicitSceneForModeName () {
+void selectScenePerMode () {
   if (state.scenes == null) {
     paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
   } else {
-    paragraph emphasis('Select scenes for per-mode automation:')
+    paragraph emphasis('Select automatic scene per Hubitat mode:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
       String inputName = "modeToScene^${modeName}"
       String defaultValue = settings[inputName]
@@ -233,39 +266,42 @@ void solicitSceneForModeName () {
   }
 }
 
-List<String> namePicoButtons (DevW pico) {
-  String dN = pico.displayName
+//"${d.getLabel()}: ${d.getDeviceNetworkId()}"
+
+Map<String,String> namePicoButtons (DevW pico) {
+  String label = pico.getLabel()
+  String id = pico.getId()
   return [
-    "${dN}^1^Top",
-    "${dN}^2^Up",
-    "${dN}^3^Middle",
-    "${dN}^4^Down",
-    "${dN}^5^Bottom"
+    "${id}^1": "${label}^1",
+    "${id}^2": "${label}^2",
+    "${id}^3": "${label}^3",
+    "${id}^4": "${label}^4",
+    "${id}^5": "${label}^5"
   ]
 }
 
-List<String> picoButtonPicklist (List<DevW> picos) {
-  List<String> results = []
+Map<String, String> picoButtonPicklist (List<DevW> picos) {
+  Map<String, String> results = [:]
   picos.each{ pico -> results << namePicoButtons(pico) }
-  results = results.flatten()
+  //results = results.flatten()
   return results
 }
 
-void selectPicoButtonsForScene() {
+void selectPicoButtonsForScene(List<DevW> picos) {
   if (state.scenes == null) {
     paragraph(red(
       'Once scene names exist, this section will solicit affiliated pico buttons.'
     ))
   } else {
-    List<DevW> picos = parent.getPicoDevices()
     //log.trace "R_${state.ROOM_NAME} selectPicoButtonsForScene() picos [A]: ${picos}"
-    state.scenes.each{ sceneName ->
+    List<String> picoScenes = ['AUTOMATIC'] << state.scenes
+    picoScenes.flatten().each{ sceneName ->
       input(
           // Head's Up:
           //   - circa Aug-2023, Hubitat translates settings.Xyz to settings.xyz
-          name: "${sceneName}_namePicoButtons",
+          name: "picoButtons_${sceneName}",
           type: 'enum',
-          title: emphasis("Pico Buttons activating ${state.ROOM_NAME} '${sceneName}'."),
+          title: emphasis("Pico Buttons activating <b>${sceneName}</b>"),
           width: 6,
           submitOnChange: true,
           required: false,
@@ -276,9 +312,32 @@ void selectPicoButtonsForScene() {
   }
 }
 
-void solicitRoomScene () {
+void populateStatePicoButtonToTargetScene() {
+  state.picoButtonToTargetScene = [:]
+  settings.findAll{ key, value -> key.contains('picoButtons_') }
+          .each{ key, value ->
+            String scene = key.tokenize('_')[1]
+            value.each{ idAndButton ->
+              List<String> valTok = idAndButton.tokenize('^')
+              String deviceId = valTok[0]
+              String buttonNumber = valTok[1]
+              if (state.picoButtonToTargetScene[deviceId] == null) {
+                state.picoButtonToTargetScene[deviceId] = [:]
+              }
+              state.picoButtonToTargetScene[deviceId][buttonNumber] = scene
+            }
+          }
+}
+
+Set<String> getSettingsSceneKeys () {
+  return settings.findAll{ key, value -> key.contains('scene^') }.keySet()
+}
+
+void configureRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
+  Set<String> sceneKeysAtStart = getSettingsSceneKeys()
+  Set<String> currentSceneKeys = []
   if (state.scenes == null) {
     paragraph red('Identification of Room Scene deetails selection will proceed once scene names exist.')
   } else {
@@ -287,6 +346,7 @@ void solicitRoomScene () {
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.independentDevices?.each{ d ->
         String inputName = "scene^${sceneName}^Independent^${d.getDeviceNetworkId()}"
+        currentSceneKeys += inputName
         col += 2
         input(
           name: inputName,
@@ -299,8 +359,9 @@ void solicitRoomScene () {
           defaultValue: 0
         )
       }
-      settings.lutronMainRepeaters?.each{d ->
-      String inputName = "scene^${sceneName}^Repeater^${d.getDeviceNetworkId()}"
+      settings.mainRepeater?.each{d ->
+        String inputName = "scene^${sceneName}^Repeater^${d.getDeviceNetworkId()}"
+        currentSceneKeys += inputName
         col += 2
         input(
           name: inputName,
@@ -319,9 +380,22 @@ void solicitRoomScene () {
       }
     }
   }
+  // Prune stale scene settings keys.
+  log.trace(
+    "R_${state.ROOM_NAME} configureRoomScene()<br/>"
+    + "<b>sceneKeysAtStart:</b> ${sceneKeysAtStart}<br/>"
+    + "<b>currentSceneKeys:</b> ${currentSceneKeys}<br/>"
+    + "<b>excess:</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
+  )
+  sceneKeysAtStart.minus(currentSceneKeys).each{ key ->
+    log.trace(
+      "R_${state.ROOM_NAME} configureRoomScene() removing setting ${key}"
+    )
+    settings.remove(key)
+  }
 }
 
-void populateKpadButtonDniToTargetScene () {
+void populateStateKpadButtonDniToTargetScene () {
   Map<String, String> result = [:]
   state.kpadButtons.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetScene ->
@@ -332,7 +406,7 @@ void populateKpadButtonDniToTargetScene () {
 }
 
 void updateLutronKpadLeds (String currScene) {
-  settings.lutronSceneButtons.each{ ledObj ->
+  settings.sceneButtons.each{ ledObj ->
     String dni = ledObj.getDeviceNetworkId()
     String sceneTarget = state.kpadButtonDniToTargetScene[dni]
     // Note: If sceneTarget is null, all ledObj's are turned off.
@@ -382,7 +456,7 @@ void pbsgVswTurnedOnCallback (String currentScene) {
   }
 }
 
-void populateSceneToDeviceValues() {
+void populateStateSceneToDeviceValues() {
   // Reset state for the Repeater/Independent per-scene device values.
   state['sceneToRepeater'] = [:]
   state['sceneToIndependent'] = [:]
@@ -415,7 +489,7 @@ void activateScene (String scene) {
   //   state.sceneToRepeater[sceneName][dni]
   //   state.sceneToIndependent[sceneName][dni]
   // THIS APPLICATION ALLOWS A SINGLE LUTRON MAIN REPEATER PER ROOM
-  state.sceneToRepeater[scene].each{ repeaterDni, buttonNumber ->
+  state.sceneToRepeater?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} activateScene('${scene}') repeater: ${repeaterDni}, "
       + "button: ${buttonNumber}"
@@ -424,9 +498,13 @@ void activateScene (String scene) {
     //       LED on the Main Repeater.
     //-> state.currentRepeaterDeviceNetworkId = repeaterDni
     state.currentSceneRepeaterLED = buttonNumber
-    DevW matchedRepeater = settings.lutronMainRepeaters.findAll{ repeater ->
+    DevW matchedRepeater = settings.mainRepeater?.findAll{ repeater ->
       repeater.getDeviceNetworkId() == repeaterDni
-    }.first()
+    }?.first() ?: {
+      log.error(
+        "R_${state.ROOM_NAME} activateScene() no repeater w/ DNI: ${repeaterDni}."
+      )
+    }
     state.currentSceneRepeaterDeviceId = matchedRepeater.getId()
     matchedRepeater.push(buttonNumber)
   }
@@ -435,9 +513,13 @@ void activateScene (String scene) {
       "R_${state.ROOM_NAME} activateScene('${scene}') device: ${deviceDni}, "
       + "level: ${level}"
     )
-    DevW matchedDevice = settings.independentDevices.findAll{ device ->
+    DevW matchedDevice = settings.independentDevices?.findAll{ device ->
       device.getDeviceNetworkId() == deviceDni
-    }.first()                                    // There should be one match by DNI.
+    }?.first() ?: {                              // There should be one match by DNI.
+      log.error(
+        "R_${state.ROOM_NAME} activateScene() no matchedDevice w/ DNI: ${deviceDni}."
+      )
+    }
     if (matchedDevice.hasCommand('setLevel')) {          // Treat device as a dimmer.
       matchedDevice.setLevel(level)                  // Assume on()/off() is handled.
     } else {                                             // Treat device as a switch.
@@ -538,21 +620,47 @@ void keypadToVswHandler (Event e) {
   }
 }
 
+void picoHandler (Event e) {
+  if (e.isStateChange == true && e.name == 'pushed') {
+    // Check to see if the received button is assigned to a scene.
+    //-> log.trace(
+    //->   "DEBUG 626<br/>"
+    //->   + "state.picoButtonToTargetScene: ${state.picoButtonToTargetScene}<br/>"
+    //->   + "state.picoButtonToTargetScene?.getAt(e.deviceId.toString()): ${state.picoButtonToTargetScene?.getAt(e.deviceId.toString())}<br/>"
+    //->   + "scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())?.getAt(e.value): ${scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())?.getAt(e.value)}"
+    //-> )
+    String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())?.getAt(e.value)
+    if (scene) {
+      log.trace(
+        "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} "
+        + "activating ${scene}."
+      )
+      app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
+    } else {
+      log.trace(
+        "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} no action."
+      )
+    }
+  }
+}
+
 void initialize() {
   if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
   if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to modeHandler"
   subscribe(location, "mode", modeHandler)
-  settings.lutronSeeTouchKeypads.each{ device ->
-    //DevW device = d
+  settings.seeTouchKeypads.each{ device ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} subscribing to Keypad ${deviceTag(device)}."
     )
-    subscribe(device, keypadToVswHandler, ['filterEvents': false])
+    subscribe(device, keypadToVswHandler, ['filterEvents': true])
   }
-  settings.lutronMainRepeaters.each{ device ->
+  settings.mainRepeater.each{ device ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} subscribing to Repeater ${deviceTag(device)}"
     )
-    subscribe(device, repeaterLedHandler, ['filterEvents': false])
+    subscribe(device, repeaterLedHandler, ['filterEvents': true])
+  }
+  settings.picos.each{ device ->
+    subscribe(device, picoHandler, ['filterEvents': true])
   }
 }
