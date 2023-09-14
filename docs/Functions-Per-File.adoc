@@ -1,0 +1,208 @@
+= Functions Per File
+
+.UtilsLibrary.groovy
+----
+String heading (String s)
+
+String important (String s)
+
+String emphasis (String s)
+
+String emphasis2 (String s)
+
+String normal (String s)
+
+String bullet (String s)
+
+String comment (String s)
+
+String red (String s)
+
+void identifyLedButtonsForListItems (
+  List<String> list,
+  List<DevW> ledDevices,
+  String prefix
+)
+
+void identifyLedButtonsForListItems (
+  List<String> list,
+  List<DevW> ledDevices,
+  String prefix
+)
+
+void displayInstantiatedPbsgHref (
+  String pbsgName,           // state.MODE_PBSG_APP_NAME
+  String pbsgInstType,       // 'modePBSG'
+  String pbsgPageName,       // 'modePbsgPage'
+  ArrayList switchNames,     // state.MODE_SWITCH_NAMES
+  String defaultSwitchName   // state.DEFAULT_MODE_SWITCH_NAME
+)
+
+void configureLogging
+
+String displaySettings ()
+
+String displayState ()
+
+void populateStateKpadButtons (String prefix)
+
+String getAppInfo (InstAppW appObj)
+
+void keepOldestAppObjPerAppLabel (
+  List<String> keepLabels,
+  Boolean LOG = false
+)
+
+String deviceTag (def device)
+
+String eventDetails (Event e, Boolean DEEP = false)
+----
+
+.pbsgLibrary.groovy
+----
+void defaultPage ()
+
+String switchShortNameToDNI (String shortName)
+
+String switchDniToShortName (String dni)
+
+void configure (
+  List<String> switchNames,
+  String defaultSwitchName,
+  Boolean log
+)
+
+void toggleSwitch (String shortName)
+
+void turnOnSwitch (String shortName)
+
+void addOrphanChild ()
+
+void manageChildDevices ()
+
+String getSwitchState (DevW d)
+
+List<DevW> getOnSwitches ()
+
+void enforceMutualExclusion ()
+
+void enforceDefaultSwitch ()
+
+void enforcePbsgConstraints ()
+
+String emphasizeOn (String s)
+
+void displaySwitchStates ()
+
+void turnOffPeers (String callerDNI)
+
+void pbsgEventHandler (Event e)
+
+void initialize ()
+
+void installed ()
+
+void updated ()
+
+void uninstalled ()
+----
+
+.modePBSG.groovy
+----
+Map modePbsgPage ()
+----
+
+.roomPBSG.groovy
+----
+Map roomPbsgPage ()
+----
+
+.whaRoom.groovy
+----
+Map whaRoomPage ()
+
+void selectModeNamesAsSceneNames ()
+
+void identifyCustomScenes ()
+
+void populateStateScenes ()
+
+void solicitNonLutronDevicesForWhaRoom ()
+
+void selectScenePerMode ()
+
+Map<String,String> namePicoButtons (DevW pico)
+
+Map<String, String> picoButtonPicklist (List<DevW> picos)
+
+void selectPicoButtonsForScene (List<DevW> picos)
+
+void populateStatePicoButtonToTargetScene ()
+
+Set<String> getSettingsSceneKeys ()
+
+void configureRoomScene ()
+
+void populateStateKpadButtonDniToTargetScene ()
+
+void updateLutronKpadLeds (String currScene)
+
+String getSceneForMode (String mode = getLocation().getMode())
+
+void pbsgVswTurnedOnCallback (String currentScene)
+
+void populateStateSceneToDeviceValues ()
+
+void activateScene (String scene)
+
+void removeAllChildApps ()
+
+void installed ()
+
+void uninstalled ()
+
+void updated ()
+
+void repeaterLedHandler (Event e)
+
+void modeHandler (Event e)
+
+void keypadToVswHandler (Event e)
+
+void picoHandler (Event e)
+
+void motionSensorHandler (Event e)
+
+void initialize ()
+----
+
+.wha.groovy
+----
+Map whaPage ()
+
+void identifyParticipatingRooms ()
+
+void displayInstantiatedRoomHrefs ()
+
+void populateStateKpadButtonDniToTargetMode ()
+
+void updateLutronKpadLeds (String currMode)
+
+void pbsgVswTurnedOnCallback (String currMode)
+
+void removeAllChildApps ()
+
+void pruneOrphanedChildApps ()
+
+void displayAppInfoLink ()
+
+void installed ()
+
+void uninstalled ()
+
+void updated ()
+
+void keypadToVswHandler (Event e)
+
+void initialize ()
+----

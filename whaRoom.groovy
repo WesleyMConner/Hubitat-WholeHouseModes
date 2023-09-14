@@ -17,9 +17,8 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.UtilsLibrary
-#include wesmc.ra2Library
 
-definition(
+definition (
   parent: 'wesmc:wha',
   name: 'whaRoom',
   namespace: 'wesmc',
@@ -52,16 +51,9 @@ Map whaRoomPage () {
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
-/*
-settings.remove('Games_namePicoButtons')
-settings.remove('Read_namePicoButtons')
-settings.remove('picoButtonsForAutomatic')
-settings.remove('picoButtons_Automatic')
-*/
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
     state.MANUAL_OVERRIDE = false
-    //-> state.MANUAL_OVERRIDE = state.MANUAL_OVERRIDE ?: false
     section {
       configureLogging()                          // <- provided by Utils
       input(
@@ -279,8 +271,6 @@ void selectScenePerMode () {
   }
 }
 
-//"${d.getLabel()}: ${d.getDeviceNetworkId()}"
-
 Map<String,String> namePicoButtons (DevW pico) {
   String label = pico.getLabel()
   String id = pico.getId()
@@ -296,22 +286,18 @@ Map<String,String> namePicoButtons (DevW pico) {
 Map<String, String> picoButtonPicklist (List<DevW> picos) {
   Map<String, String> results = [:]
   picos.each{ pico -> results << namePicoButtons(pico) }
-  //results = results.flatten()
   return results
 }
 
-void selectPicoButtonsForScene(List<DevW> picos) {
+void selectPicoButtonsForScene (List<DevW> picos) {
   if (state.scenes == null) {
     paragraph(red(
       'Once scene names exist, this section will solicit affiliated pico buttons.'
     ))
   } else {
-    //log.trace "R_${state.ROOM_NAME} selectPicoButtonsForScene() picos [A]: ${picos}"
     List<String> picoScenes = ['AUTOMATIC'] << state.scenes
     picoScenes.flatten().each{ sceneName ->
       input(
-          // Head's Up:
-          //   - circa Aug-2023, Hubitat translates settings.Xyz to settings.xyz
           name: "picoButtons_${sceneName}",
           type: 'enum',
           title: emphasis("Pico Buttons activating <b>${sceneName}</b>"),
@@ -325,7 +311,7 @@ void selectPicoButtonsForScene(List<DevW> picos) {
   }
 }
 
-void populateStatePicoButtonToTargetScene() {
+void populateStatePicoButtonToTargetScene () {
   state.picoButtonToTargetScene = [:]
   settings.findAll{ key, value -> key.contains('picoButtons_') }
           .each{ key, value ->
@@ -425,19 +411,19 @@ void updateLutronKpadLeds (String currScene) {
     // Note: If sceneTarget is null, all ledObj's are turned off.
     if (currScene == sceneTarget) {
       if (settings.log) log.trace(
-        "Turning on LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}."
+        "Turning on LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}"
       )
       ledObj.on()
     } else {
       if (settings.log) log.trace(
-        "Turning off LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}."
+        "Turning off LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}"
       )
       ledObj.off()
     }
   }
 }
 
-String getSceneForMode(String mode = getLocation().getMode()) {
+String getSceneForMode (String mode = getLocation().getMode()) {
   String result = settings["modeToScene^${mode}"]
   if (settings.log) {
     log.trace "R_${state.ROOM_NAME} getSceneForMode() <b>${mode} -> ${result}</b>"
@@ -464,7 +450,7 @@ void pbsgVswTurnedOnCallback (String currentScene) {
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC (${targetScene})"
       )
       if (settings.motionSensor == false) activateScene(targetScene)
-      break;
+      break
     default:
       if (settings.log) log.trace(
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing '${currentScene}'"
@@ -473,7 +459,7 @@ void pbsgVswTurnedOnCallback (String currentScene) {
   }
 }
 
-void populateStateSceneToDeviceValues() {
+void populateStateSceneToDeviceValues () {
   // Reset state for the Repeater/Independent per-scene device values.
   state['sceneToRepeater'] = [:]
   state['sceneToIndependent'] = [:]
@@ -513,13 +499,12 @@ void activateScene (String scene) {
     )
     // Note: The repeater's Id (not DNI) and button are required to track the scene's
     //       LED on the Main Repeater.
-    //-> state.currentRepeaterDeviceNetworkId = repeaterDni
     state.currentSceneRepeaterLED = buttonNumber
     DevW matchedRepeater = settings.mainRepeater?.findAll{ repeater ->
       repeater.getDeviceNetworkId() == repeaterDni
     }?.first() ?: {
       log.error(
-        "R_${state.ROOM_NAME} activateScene() no repeater w/ DNI: ${repeaterDni}."
+        "R_${state.ROOM_NAME} activateScene() no repeater w/ DNI: ${repeaterDni}"
       )
     }
     state.currentSceneRepeaterDeviceId = matchedRepeater.getId()
@@ -534,7 +519,7 @@ void activateScene (String scene) {
       device.getDeviceNetworkId() == deviceDni
     }?.first() ?: {                              // There should be one match by DNI.
       log.error(
-        "R_${state.ROOM_NAME} activateScene() no matchedDevice w/ DNI: ${deviceDni}."
+        "R_${state.ROOM_NAME} activateScene() no matchedDevice w/ DNI: ${deviceDni}"
       )
     }
     if (matchedDevice.hasCommand('setLevel')) {          // Treat device as a dimmer.
@@ -552,24 +537,31 @@ void activateScene (String scene) {
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} removeAllChildApps removing ${child.getLabel()} (${child.getId()})"
+      "R_${state.ROOM_NAME} removeAllChildApps removing ${child.getLabel()} "
+      + "(${child.getId()})"
     )
     deleteChildApp(child.getId())
   }
 }
 
-void installed() {
-  if (settings.log) log.trace "R_${state.ROOM_NAME} installed() for '${state.ROOM_NAME}'."
+void installed () {
+  if (settings.log) log.trace(
+    "R_${state.ROOM_NAME} installed() for '${state.ROOM_NAME}'."
+  )
   initialize()
 }
 
-void uninstalled() {
-  if (settings.log) log.trace "R_${state.ROOM_NAME} uninstalled() for '${state.ROOM_NAME}'."
+void uninstalled () {
+  if (settings.log) log.trace(
+    "R_${state.ROOM_NAME} uninstalled() for '${state.ROOM_NAME}'."
+  )
   removeAllChildApps()
 }
 
-void updated() {
-  if (settings.log) log.trace "R_${state.ROOM_NAME} updated() for '${state.ROOM_NAME}'."
+void updated () {
+  if (settings.log) log.trace(
+    "R_${state.ROOM_NAME} updated() for '${state.ROOM_NAME}'."
+  )
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
@@ -582,7 +574,7 @@ void repeaterLedHandler (Event e) {
   //   is presumed.
   // - If the current scene's LED turns back on, the MANUAL_OVERRIDE is presumed
   //   to be overridden.
-  //   - The field e.deviceId arrives as a number and must be cast toString().
+  // - The field e.deviceId arrives as a number and must be cast toString().
   if (
        (e.deviceId.toString() == state.currentSceneRepeaterDeviceId)
        && (e.name == "buttonLed-${state.currentSceneRepeaterLED}")
@@ -621,74 +613,78 @@ void keypadToVswHandler (Event e) {
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
   //   - Keypad buttons are matched to state data to activate a target VSW.
-  if (e.name == 'pushed') {
-    String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
-    //-> if (settings.log) log.trace(
-    //->   "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' "
-    //->   + "<b>Keypad Device Id:</b> ${e.deviceId}, "
-    //->   + "<b>Keypad Button:</b> ${e.value}, "
-    //->   + "<b>Affiliated Switch:</b> ${targetVsw}"
-    //-> )
-    // Turn on appropriate pbsg-modes-X VSW.
-    if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}."
-    )
-    if (targetVsw) app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
-  } else {
-    if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} keypadToVswHandler() for '${state.ROOM_NAME}' unexpected event "
-      + "name '${e.name}' for DNI '${e.deviceId}'"
-    )
+  switch (e.name) {
+    case 'pushed':
+      String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
+      // Turn on appropriate pbsg-modes-X VSW.
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}"
+      )
+      if (targetVsw) {
+        app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
+      }
+      break
+    case 'held':
+    case 'released':
+      // Ignore without logging
+      break
+    default:
+      if (settings.log) log.trace(
+        "R_${state.ROOM_NAME} keypadToVswHandler() for "
+        + "'${state.ROOM_NAME}' unexpected event name '${e.name}' "
+        + "for DNI '${e.deviceId}'"
+      )
   }
 }
 
 void picoHandler (Event e) {
-  if (e.isStateChange == true && e.name == 'pushed') {
-    // Check to see if the received button is assigned to a scene.
-    //-> log.trace(
-    //->   "DEBUG 626<br/>"
-    //->   + "state.picoButtonToTargetScene: ${state.picoButtonToTargetScene}<br/>"
-    //->   + "state.picoButtonToTargetScene?.getAt(e.deviceId.toString()): ${state.picoButtonToTargetScene?.getAt(e.deviceId.toString())}<br/>"
-    //->   + "scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())?.getAt(e.value): ${scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())?.getAt(e.value)}"
-    //-> )
-    String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())?.getAt(e.value)
-    if (scene) {
-      log.trace(
-        "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} "
-        + "activating ${scene}."
-      )
-      app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
-    } else {
-      log.trace(
-        "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} no action."
-      )
+  if (e.isStateChange == true) {
+    switch (e.name) {
+      case 'pushed':
+        // Check to see if the received button is assigned to a scene.
+        String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
+                                                    ?.getAt(e.value)
+        if (scene) {
+          log.trace(
+            "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} "
+            + "activating ${scene}"
+          )
+          app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
+        } else {
+          log.trace(
+            "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} no action."
+          )
+        }
+        break
+      //-> case 'held':
+      //-> case 'released':
+      //-> default:
     }
   }
+  // Ignore non-state change events.
 }
 
 void motionSensorHandler (Event e) {
-//->log.trace "DEBUG motionSensorHandler -><br/>${eventDetails(e)}"
   if (e.name == 'motion' && e.isStateChange == true) {
-//->log.trace "DEBUG motionSensorHandler PROCEEDING"
     if (e.value == 'active') {
       String targetScene = (state.currentScene == 'AUTOMATIC')
         ? getSceneForMode() : state.currentScene
-log.trace "DEBUG motionSensorHandler ACTIVE -> >${targetScene}<"
       activateScene(targetScene)
     } else if (e.value == 'inactive') {
-log.trace "DEBUG motionSensorHandler INACTIVE -> 'Off'<br/>"
       activateScene('Off')
     }
   }
 }
 
-void initialize() {
-  if (settings.log) log.trace "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'."
-  if (settings.log) log.trace "R_${state.ROOM_NAME} subscribing to modeHandler"
+void initialize () {
+  if (settings.log) log.trace(
+    "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'. "
+    + "Subscribing to modeHandler."
+  )
   subscribe(location, "mode", modeHandler)
   settings.seeTouchKeypads.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Keypad ${deviceTag(device)}."
+      "R_${state.ROOM_NAME} subscribing to Keypad ${deviceTag(device)}"
     )
     subscribe(device, keypadToVswHandler, ['filterEvents': true])
   }
@@ -700,13 +696,13 @@ void initialize() {
   }
   settings.picos.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Pico ${deviceTag(device)}."
+      "R_${state.ROOM_NAME} subscribing to Pico ${deviceTag(device)}"
     )
     subscribe(device, picoHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Motion Sensor ${deviceTag(device)}."
+      "R_${state.ROOM_NAME} subscribing to Motion Sensor ${deviceTag(device)}"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }

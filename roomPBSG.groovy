@@ -14,9 +14,8 @@
 // ---------------------------------------------------------------------------------
 #include wesmc.pbsgLibrary
 #include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
-#include wesmc.ra2Library
 
-definition(
+definition (
   parent: 'wesmc:whaRoom',
   name: 'roomPBSG',
   namespace: 'wesmc',

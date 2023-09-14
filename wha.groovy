@@ -18,9 +18,8 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.UtilsLibrary
-#include wesmc.ra2Library
 
-definition(
+definition (
   name: 'wha',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
@@ -36,7 +35,7 @@ preferences {
   page(name: 'whaPage')
 }
 
-Map whaPage() {
+Map whaPage () {
   return dynamicPage(
     name: 'whaPage',
     title: heading('Whole House Automation (WHA)<br/>') \
@@ -76,10 +75,10 @@ Map whaPage() {
       if (state.MODE_SWITCH_NAMES == null || settings?.lutronModeButtons == null) {
         paragraph(red('Mode activation buttons are pending pre-requisites.'))
       } else {
-        identifyLedButtonsForListItems(           // From ra2Library.groovy
-          state.MODE_SWITCH_NAMES,                //   - list
-          settings.lutronModeButtons,             //   - ledDevices
-          'modeButton'                            //   - prefix
+        identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
+          state.MODE_SWITCH_NAMES,              //   - list
+          settings.lutronModeButtons,           //   - ledDevices
+          'modeButton'                          //   - prefix
         )
         populateStateKpadButtons('modeButton')
         populateStateKpadButtonDniToTargetMode()
@@ -107,7 +106,7 @@ Map whaPage() {
   }
 }
 
-void identifyParticipatingRooms() {
+void identifyParticipatingRooms () {
   roomPicklist = app.getRooms().collect{it.name}.sort()
   input(
     name: 'rooms',
@@ -120,12 +119,14 @@ void identifyParticipatingRooms() {
   )
 }
 
-void displayInstantiatedRoomHrefs() {
+void displayInstantiatedRoomHrefs () {
   paragraph heading('Room Scene Configuration')
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
-      if (settings.log) log.trace "WHA addRoomAppsIfMissing() Adding room ${roomName}."
+      if (settings.log) log.trace(
+        "WHA addRoomAppsIfMissing() Adding room ${roomName}"
+      )
       roomApp = addChildApp('wesmc', 'whaRoom', roomName)
     }
     href (
@@ -160,7 +161,7 @@ void updateLutronKpadLeds (String currMode) {
   }
 }
 
-void pbsgVswTurnedOnCallback(String currMode) {
+void pbsgVswTurnedOnCallback (String currMode) {
   // Design Notes
   //   - The modePbsg instance calls this method to reflect a state change.
   //   - When a PBSG-managed switch turns on, its peers can be presumed to be off.
@@ -212,17 +213,17 @@ void displayAppInfoLink () {
     + 'target="_blank"><br/>Click for more information</a>')
 }
 
-void installed() {
+void installed () {
   if (settings.log) log.trace 'WHA installed()'
   initialize()
 }
 
-void uninstalled() {
+void uninstalled () {
   if (settings.log) log.trace "WHA uninstalled()"
   removeAllChildApps()
 }
 
-void updated() {
+void updated () {
   if (settings.log) log.trace 'WHA updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
@@ -250,7 +251,7 @@ void keypadToVswHandler (Event e) {
   }
 }
 
-void initialize() {
+void initialize () {
   if (settings.log) log.trace "WHA initialize()"
   settings.seeTouchKeypads.each{ d ->
     DevW device = d

@@ -26,11 +26,11 @@ library (
 )
 
 // Include this page content when instantiating PBSG instances, then call
-// configure() - see below - to complete device configuration.
+// configure () - see below - to complete device configuration.
 void defaultPage () {
   section {
-    paragraph(
-      heading("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
+    paragraph (
+      heading ("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>")
       + emphasis(red('Use the browser back button to return to the parent page.'))
     )
     manageChildDevices()
@@ -98,7 +98,7 @@ void turnOnSwitch (String shortName) {
   }
 }
 
-void addOrphanChild() {
+void addOrphanChild () {
   // This method supports orphan removal testing. See manageChildDevices().
   addChildDevice(
     'hubitat',         // namespace
@@ -142,7 +142,7 @@ void manageChildDevices () {
   }
 }
 
-String getSwitchState(DevW d) {
+String getSwitchState (DevW d) {
   List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
   return stateValues.contains('on')
       ? 'on'
@@ -151,7 +151,7 @@ String getSwitchState(DevW d) {
         : 'unknown'
 }
 
-List<DevW> getOnSwitches() {
+List<DevW> getOnSwitches () {
   if (!state.switchDNIs) {
     paragraph red(
       'Mutual Exclusion enforcement is pending required data (switchDNIs).'
@@ -167,7 +167,7 @@ List<DevW> getOnSwitches() {
   }
 }
 
-void enforceMutualExclusion() {
+void enforceMutualExclusion () {
   List<DevW> onList = getOnSwitches()
   while (onList && onList.size() > 1) {
     DevW device = onList?.first()
@@ -188,7 +188,7 @@ void enforceMutualExclusion() {
   }
 }
 
-void enforceDefaultSwitch() {
+void enforceDefaultSwitch () {
   List<DevW> onList = getOnSwitches()
   if (state.defaultSwitchName && !onList) {
     if (settings.log) log.trace(
@@ -201,7 +201,7 @@ void enforceDefaultSwitch() {
   }
 }
 
-void enforcePbsgConstraints() {
+void enforcePbsgConstraints () {
   if (!state.switchDNIs) {
     paragraph red(
       'Mutual Exclusion enforcement is pending required data (switchDNIs).'
@@ -213,7 +213,7 @@ void enforcePbsgConstraints() {
   }
 }
 
-String emphasizeOn(String s) {
+String emphasizeOn (String s) {
   return s == 'on' ? red('<b>on</b>') : "<em>${s}</em>"
 }
 
@@ -268,7 +268,7 @@ void pbsgEventHandler (Event e) {
   }
 }
 
-void initialize() {
+void initialize () {
   app.getAllChildDevices().each{ device ->
     if (settings.log) log.trace(
       "PBSG-LIB initialize() subscribing ${deviceTag(device)}..."
@@ -277,18 +277,18 @@ void initialize() {
   }
 }
 
-void installed() {
+void installed () {
   if (settings.log) log.trace 'PBSG-LIB installed()'
   initialize()
 }
 
-void updated() {
+void updated () {
   if (settings.log) log.trace 'PBSG-LIB updated()'
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
-void uninstalled() {
+void uninstalled () {
   if (settings.log) log.trace 'PBSG-LIB uninstalled(), DELETING CHILD DEVICES'
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)

@@ -16,7 +16,7 @@ import com.hubitat.app.DeviceWrapper as DevW
 #include wesmc.pbsgLibrary
 #include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
 
-definition(
+definition (
   parent: 'wesmc:wha',
   name: 'modePBSG',
   namespace: 'wesmc',
@@ -35,7 +35,7 @@ definition(
 )
 
 preferences {
-  page(name: 'modePbsgPage')
+  page (name: 'modePbsgPage')
 }
 
 Map modePbsgPage () {
@@ -44,6 +44,6 @@ Map modePbsgPage () {
     install: false,
     uninstall: false
   ) {
-    defaultPage()
+    defaultPage ()
   }
 }
