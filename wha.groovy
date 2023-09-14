@@ -48,21 +48,48 @@ Map whaPage () {
     state.MODE_PBSG_APP_NAME = 'pbsg_modes'
     state.MODE_SWITCH_NAMES = getLocation().getModes().collect{it.name}
     state.DEFAULT_MODE_SWITCH_NAME = getGlobalVar('defaultMode').value
+    state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'ALL_ON',
+      'AWAY', 'CLEANING', 'FLASH', 'PANIC', 'QUIET']
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
     // reLabelLeds()
+//-> settings.remove('specialFunctionButtons')
     section {
-      configureLogging()                                  // <- provided by Utils
+      configureLogging()                            // <- provided by Utils
       input(
         name: 'seeTouchKeypads',
-        title: 'seeTouchKeypads<br/>' \
-          + comment('Identify Keypads that host LEDs/Buttons that change the Hubitat mode.'),
+        title: 'Authorize SeeTouch Keypad Access<br/>' \
+          + comment('Identify keypads with buttons that:<br/>') \
+          + bullet(comment('Trigger specialty whole-house functions.<br/>')) \
+          + bullet(comment('Change the Hubitat mode.')),
         type: 'device.LutronSeeTouchKeypad',
         submitOnChange: true,
         required: false,
         multiple: true
       )
+
+      input(
+        name: 'specialFnButtons',
+        title: 'Identify Special Function Buttons<br/>' \
+          + comment("Examples: ${state.SPECIALTY_BUTTONS}"),
+        type: 'device.LutronComponentSwitch',
+        submitOnChange: true,
+        required: false,
+        multiple: true
+      )
+      if (settings?.specialFnButtons == null) {
+        paragraph(red('No specialty activation buttons are selected.'))
+      } else {
+        identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
+          state.SPECIALTY_BUTTONS,              //   - list
+          settings.specialFnButtons,           //   - ledDevices
+          'specialFnButton'                     //   - prefix
+        )
+        populateStateKpadButtons('specialFnButton')
+        populateStateKpadButtonDniToSpecialFnButtons()
+      }
+
       input(
         name: 'lutronModeButtons',
         title: 'lutronModeButtons<br/>' \
@@ -140,9 +167,20 @@ void displayInstantiatedRoomHrefs () {
   }
 }
 
+void populateStateKpadButtonDniToSpecialFnButtons () {
+  Map<String, String> result = [:]
+  state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
+    buttonMap.each{ buttonNumber, specialtyFn ->
+      result["${kpadDni}-${buttonNumber}"] = specialtyFn
+    }
+  }
+  state.kpadButtonDniToSpecialtyFn = result
+}
+
+
 void populateStateKpadButtonDniToTargetMode () {
   Map<String, String> result = [:]
-  state.kpadButtons.collect{ kpadDni, buttonMap ->
+  state.modeButtonMap.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetMode ->
       result["${kpadDni}-${buttonNumber}"] = targetMode
     }
@@ -229,33 +267,83 @@ void updated () {
   initialize()
 }
 
-void keypadToVswHandler (Event e) {
+void specialFnHandler (Event e) {
+  switch (e.name) {
+    case 'pushed':
+      String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
+                                                         ?.getAt(e.value)
+      if (specialtyFunction == null) return
+      switch(specialtyFunction) {
+        case 'ALARM':
+        case 'ALL_AUTO':
+        case 'ALL_OFF':
+        case 'ALL_ON':
+        case 'AWAY':
+        case 'CLEANING':
+        case 'FLASH':
+        case 'PANIC':
+        case 'QUIET':
+          if (settings.log) log.trace(
+            "WHA specialFnHandler() <b>${specialtyFunction}</b> "
+            + "function execution is <b>TBD</b>"
+          )
+          break
+        default:
+          // Silently
+          log.error(
+            "WHA specialFnHandler() Unknown specialty function "
+            + "<b>'${specialtyFunction}'</b>"
+          )
+      }
+      break;
+    case 'held':
+    case 'released':
+    default:
+      if (settings.log) log.trace(
+        "WHA specialFnHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
+      )
+  }
+}
+
+void modeChangeHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
   //   - Keypad buttons are matched to state data to activate a target VSW.
-  if (e.name == 'pushed') {
-    String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
-    if (settings.log) log.trace(
-      "WHA keypadToVswHandler() "
-      + "<b>Keypad Device Id:</b> ${e.deviceId}, "
-      + "<b>Keypad Button:</b> ${e.value}, "
-      + "<b>Affiliated Switch Name:</b> ${targetVsw}"
-    )
-    // Turn on the appropriate PBSG VSW for the pushed Keypad Led/Button.
-    if (targetVsw) app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).toggleSwitch(targetVsw)
-  } else {
-    if (settings.log) log.trace(
-      "WHA keypadToVswHandler() unexpected event name '${e.name}' for DNI '${e.deviceId}'"
-    )
+  switch (e.name) {
+    case 'pushed':
+      String targetVsw = state.modeButtonMap?.getAt(e.deviceId.toString())
+                                            ?.getAt(e.value)
+      if (targetVsw) {
+        if (settings.log) log.trace "WHA modeChangeHandler() turning on ${targetVsw}"
+        app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+      }
+      // Silently ignore buttons that DO NOT impact Hubitat mode.
+      break;
+    case 'held':
+    case 'released':
+    default:
+      if (settings.log) log.trace(
+        "WHA modeChangeHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
+      )
   }
 }
 
 void initialize () {
+  // Design Notes
+  //   - The same keypad may be associated with two different, specialized handlers
+  //     (e.g., mode changing buttons vs special functionalily buttons).
   if (settings.log) log.trace "WHA initialize()"
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "WHA subscribing to ${device.displayName} ${device.id}"
-    subscribe(device, keypadToVswHandler, ['filterEvents': true])
+    if (settings.log) log.trace(
+      "WHA initialize() subscribing ${getDeviceInfo(device)} to mode handler."
+    )
+    subscribe(device, modeChangeHandler, ['filterEvents': true])
+  }
+  settings.seeTouchKeypads.each{ d ->
+    DevW device = d
+    if (settings.log) log.trace "WHA subscribing to ${getDeviceInfo(device)}"
+    subscribe(device, specialFnHandler, ['filterEvents': true])
   }
 }

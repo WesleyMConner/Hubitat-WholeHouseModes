@@ -175,7 +175,7 @@ void enforceMutualExclusion () {
       if (settings.log) log.trace(
         'PBSG-LIB enforceMutualExclusion(), <br/>'
         + "<b>onList:</b> ${onList}, "
-        + " turning off <b>${deviceTag(device)}</b>."
+        + " turning off <b>${getDeviceInfo(device)}</b>."
       )
       device.off()
       onList = onList.drop(1)
@@ -271,7 +271,7 @@ void pbsgEventHandler (Event e) {
 void initialize () {
   app.getAllChildDevices().each{ device ->
     if (settings.log) log.trace(
-      "PBSG-LIB initialize() subscribing ${deviceTag(device)}..."
+      "PBSG-LIB initialize() subscribing ${getDeviceInfo(device)}..."
     )
     subscribe(device, "switch", pbsgEventHandler, ['filterEvents': false])
   }

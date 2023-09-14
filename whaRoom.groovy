@@ -396,7 +396,7 @@ void configureRoomScene () {
 
 void populateStateKpadButtonDniToTargetScene () {
   Map<String, String> result = [:]
-  state.kpadButtons.collect{ kpadDni, buttonMap ->
+  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetScene ->
       result["${kpadDni}-${buttonNumber}"] = targetScene
     }
@@ -566,7 +566,7 @@ void updated () {
   initialize()
 }
 
-void repeaterLedHandler (Event e) {
+void sceneChangeHandler (Event e) {
   // DESIGN NOTES
   // - Each room scene SHOULD HAVE a corresponding Main Repeater integration button
   //   and LED.
@@ -582,19 +582,19 @@ void repeaterLedHandler (Event e) {
   ) {
     if (e.value == 'off') {
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} repeaterLedHandler() activating a MANUAL_OVERRIDE."
+        "R_${state.ROOM_NAME} sceneChangeHandler() activating a MANUAL_OVERRIDE."
       )
       state.MANUAL_OVERRIDE = true
     } else if (e.value == 'on') {
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} repeaterLedHandler() deactivating a MANUAL_OVERRIDE."
+        "R_${state.ROOM_NAME} sceneChangeHandler() deactivating a MANUAL_OVERRIDE."
       )
       state.MANUAL_OVERRIDE = false
     }
   }
 }
 
-void modeHandler (Event e) {
+void modeChangeHandler (Event e) {
   if (
     e.name == 'mode'
     && state.MANUAL_OVERRIDE == false
@@ -602,7 +602,7 @@ void modeHandler (Event e) {
   ) {
     String targetScene = getSceneForMode(e.value)
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} modeHandler() processing AUTOMATIC (${targetScene})"
+      "R_${state.ROOM_NAME} modeChangeHandler() processing AUTOMATIC (${targetScene})"
     )
     if (settings.motionSensor == false) activateScene(targetScene)
   }
@@ -615,7 +615,8 @@ void keypadToVswHandler (Event e) {
   //   - Keypad buttons are matched to state data to activate a target VSW.
   switch (e.name) {
     case 'pushed':
-      String targetVsw = state.kpadButtons.getAt(e.deviceId.toString())?.getAt(e.value)
+      String targetVsw = state.sceneButtonMap?.getAt(e.deviceId.toString())
+                                             ?.getAt(e.value)
       // Turn on appropriate pbsg-modes-X VSW.
       if (settings.log) log.trace(
         "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}"
@@ -679,30 +680,30 @@ void motionSensorHandler (Event e) {
 void initialize () {
   if (settings.log) log.trace(
     "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'. "
-    + "Subscribing to modeHandler."
+    + "Subscribing to modeChangeHandler."
   )
-  subscribe(location, "mode", modeHandler)
+  subscribe(location, "mode", modeChangeHandler)
   settings.seeTouchKeypads.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Keypad ${deviceTag(device)}"
+      "R_${state.ROOM_NAME} subscribing to Keypad ${getDeviceInfo(device)}"
     )
     subscribe(device, keypadToVswHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Repeater ${deviceTag(device)}"
+      "R_${state.ROOM_NAME} subscribing to Repeater ${getDeviceInfo(device)}"
     )
-    subscribe(device, repeaterLedHandler, ['filterEvents': true])
+    subscribe(device, sceneChangeHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Pico ${deviceTag(device)}"
+      "R_${state.ROOM_NAME} subscribing to Pico ${getDeviceInfo(device)}"
     )
     subscribe(device, picoHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} subscribing to Motion Sensor ${deviceTag(device)}"
+      "R_${state.ROOM_NAME} subscribing to Motion Sensor ${getDeviceInfo(device)}"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }

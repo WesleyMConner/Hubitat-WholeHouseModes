@@ -20,7 +20,7 @@ String showSwitchInfoWithState(
 ) {
   if (!devices) devices = settings.swGroup
   return devices.collect({
-    "${deviceTag(it)} ${emphasizeOn(extractSwitchState(it))}"
+    "${getDeviceInfo(it)} ${emphasizeOn(extractSwitchState(it))}"
   }).sort().join(delimiter) ?: 'N/A'
 }
 
@@ -42,7 +42,7 @@ void logSettingsAndState(String calledBy) {
       <tr>
         <th align='right'>Default Switch:</th>
         <td>${settings.useDefault
-                ? deviceTag(getSwitchById(settings.dfltSwitchNameId))
+                ? getDeviceInfo(getSwitchById(settings.dfltSwitchNameId))
                 : 'N/A'
             }
         </td>

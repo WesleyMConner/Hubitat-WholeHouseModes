@@ -48,12 +48,12 @@ void populateStateKpadButtons (String prefix)
 
 String getAppInfo (InstAppW appObj)
 
+String getDeviceInfo (def device)  // Note: def vs DevW
+
 void keepOldestAppObjPerAppLabel (
   List<String> keepLabels,
   Boolean LOG = false
 )
-
-String deviceTag (def device)
 
 String eventDetails (Event e, Boolean DEEP = false)
 ----
