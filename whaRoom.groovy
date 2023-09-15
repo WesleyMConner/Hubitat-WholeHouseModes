@@ -449,13 +449,13 @@ void pbsgVswTurnedOnCallback (String currentScene) {
       if (settings.log) log.trace(
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC (${targetScene})"
       )
-      if (settings.motionSensor == false) activateScene(targetScene)
+      if (!settings?.motionSensor) activateScene(targetScene)
       break
     default:
       if (settings.log) log.trace(
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing '${currentScene}'"
       )
-      if (settings.motionSensor == false) activateScene(currentScene)
+      if (!settings?.motionSensor) activateScene(currentScene)
   }
 }
 
@@ -604,7 +604,7 @@ void modeChangeHandler (Event e) {
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} modeChangeHandler() processing AUTOMATIC (${targetScene})"
     )
-    if (settings.motionSensor == false) activateScene(targetScene)
+    if (!settings?.motionSensor) activateScene(targetScene)
   }
 }
 
@@ -639,6 +639,7 @@ void keypadToVswHandler (Event e) {
 }
 
 void picoHandler (Event e) {
+  Integer changePercentage = 10
   if (e.isStateChange == true) {
     switch (e.name) {
       case 'pushed':
@@ -651,6 +652,28 @@ void picoHandler (Event e) {
             + "activating ${scene}"
           )
           app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
+        } else if (e.value == '2') {  // Default "Raise" behavior
+          log.trace(
+            "R_${state.ROOM_NAME} picoHandler() Raising ${settings.independentDevices}"
+          )
+          settings.independentDevices.each{ d ->
+              d.setLevel(Math.min(
+                (d.currentValue('level') as Integer) + changePercentage,
+                100
+              ))
+          }
+          state.MANUAL_OVERRIDE = true
+        } else if (e.value == '4') {  // Default "Lower" behavior
+          log.trace(
+            "R_${state.ROOM_NAME} picoHandler() Lowering ${settings.independentDevices}"
+          )
+          settings.independentDevices.each{ d ->
+              d.setLevel(Math.max(
+                (d.currentValue('level') as Integer) - changePercentage,
+                0
+              ))
+          }
+          state.MANUAL_OVERRIDE = true
         } else {
           log.trace(
             "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} no action."
