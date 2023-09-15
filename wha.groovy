@@ -161,7 +161,7 @@ void displayInstantiatedRoomHrefs () {
       width: 2,
       url: "/installedapp/configure/${roomApp?.getId()}/whaRoomPage",
       style: 'internal',
-      title: "Edit <b>${getAppInfo(roomApp)}</b> Scenes",
+      title: "<b>${getAppInfo(roomApp)}</b> Scenes",
       state: null, //'complete'
     )
   }

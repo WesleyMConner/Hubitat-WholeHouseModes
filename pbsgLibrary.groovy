@@ -15,6 +15,11 @@
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.hub.domain.Event as Event
 
+// THIS LIBRARY DEPENDS ON 'UtilsLibrary.groovy' WHICH MUST BE INCLUDED
+// BY THE APPLICATIONS THAT INSTANTIATE A PBSG INSTANCE.
+//   - See 'modePBSG.groovy' and 'roomPBSG.groovy'.
+//   - Example depedendency: String getSwitchState (DevW d)
+
 library (
   name: 'pbsgLibrary',
   namespace: 'wesmc',
@@ -140,15 +145,6 @@ void manageChildDevices () {
     orphanDNIs.each{ dni -> deleteChildDevice(dni) }
     initialize()
   }
-}
-
-String getSwitchState (DevW d) {
-  List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
-  return stateValues.contains('on')
-      ? 'on'
-      : stateValues.contains('off')
-        ? 'off'
-        : 'unknown'
 }
 
 List<DevW> getOnSwitches () {

@@ -657,10 +657,15 @@ void picoHandler (Event e) {
             "R_${state.ROOM_NAME} picoHandler() Raising ${settings.independentDevices}"
           )
           settings.independentDevices.each{ d ->
+            if (getSwitchState(d) == 'off') {
+              d.setLevel(5)
+              //d.on()
+             } else {
               d.setLevel(Math.min(
                 (d.currentValue('level') as Integer) + changePercentage,
                 100
               ))
+            }
           }
           state.MANUAL_OVERRIDE = true
         } else if (e.value == '4') {  // Default "Lower" behavior
@@ -673,7 +678,6 @@ void picoHandler (Event e) {
                 0
               ))
           }
-          state.MANUAL_OVERRIDE = true
         } else {
           log.trace(
             "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} no action."
