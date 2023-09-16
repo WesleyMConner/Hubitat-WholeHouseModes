@@ -53,10 +53,17 @@ Map whaPage () {
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
-    // reLabelLeds()
-//-> settings.remove('specialFunctionButtons')
     section {
       configureLogging()                            // <- provided by Utils
+      input(
+        name: 'specialtyFnMainRepeater',
+        title: 'Authorize Specialty Function Repeater Access<br/>' \
+          + comment("Used for 'all off'... behavior."),
+        type: 'device.LutronKeypad',
+        submitOnChange: true,
+        required: false,
+        multiple: false
+      )
       input(
         name: 'seeTouchKeypads',
         title: 'Authorize SeeTouch Keypad Access<br/>' \
@@ -68,7 +75,6 @@ Map whaPage () {
         required: false,
         multiple: true
       )
-
       input(
         name: 'specialFnButtons',
         title: 'Identify Special Function Buttons<br/>' \
@@ -274,9 +280,24 @@ void specialFnHandler (Event e) {
                                                          ?.getAt(e.value)
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
-        case 'ALARM':
         case 'ALL_AUTO':
-        case 'ALL_OFF':
+          if (settings.log) log.trace 'WHA specialFnHandler() executing ALL_AUTO'
+          settings.rooms.each{ roomName ->
+            InstAppW roomApp = app.getChildAppByLabel(roomName)
+            roomApp.turnOffManualOverride()
+          }
+          //--TBD--> Update of Keypad LEDs
+          break;
+       // Rooms will trip into MANUAL OVERRIDE if ALL_OFF is executed
+       // Unless and until there is a formal ALL_OFF mode
+       //--breakingChange-> case 'ALL_OFF':
+       //--breakingChange->   if (settings.log) log.trace 'WHA specialFnHandler() executing ALL_OFF'
+       //--breakingChange->   // Hard-coding the ALL_OFF button for now.
+       //--breakingChange->   settings.specialtyFnMainRepeater.push(2)
+       //--breakingChange->   //--TBD--> Brute-Force Turn Off of non-Lutron devices is TBD.
+       //--breakingChange->   //--TBD--> Update of Keypad LEDs is TBD.
+       //--breakingChange->   break;
+        case 'ALARM':
         case 'ALL_ON':
         case 'AWAY':
         case 'CLEANING':

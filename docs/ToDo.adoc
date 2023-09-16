@@ -1,12 +1,6 @@
 = Prioritized To Do List
 
-== High Priority
-.`whaRoom`
-** Replace `state.MANUAL_OVERRIDE` with child device `VswManualOverride`.
-
-.`wha`
-* Implement `ALL_AUTO` in `void specialFnHandler (Event e)`.
-
+== On Deck
 .`whaRoom`
 * Add all motion-based Rooms
 
@@ -46,12 +40,39 @@ device instance for light-level activation.
 * A prospective `luxHandler()` will behave similarly to `void motionSensorHandler (Event e)`.
 
 == Implement `wha` Low Priority
-.In `void specialFnHandler (Event e)`:
+.See `specialFnHandler()
+
+.Group 1
+For *MANUAL OVERRIDE* compatibility, the following need (a) an optional per room custom scene, *OR* (b) a new whole-house hubitat mode.
+
 * `ALL_OFF`
-* `ALARM`
 * `ALL_ON`
-* `AWAY`
 * `CLEANING`
-* `FLASH`
+
+.Group 2
+If the away/vacation program leverages optional per-room scenes, then the
+overall approach will be compatible as a whole-house mode *OR* per-room
+custom scenes.
+
+* `AWAY`
+
+.Group 3
+The specific behavior of the following is TBD. The solution needs to be
+compatible with modes, MANUAL OVERRIDE detection, etc.
+
+* `ALARM`
 * `PANIC`
+* `FLASH`
+
+.Group 4
+The following is intended to silence door alarms, etc.
+
 * `QUIET`
+
+== RELEASED
+.`whaRoom`
+&#x2713; Replace `state.MANUAL_OVERRIDE` with child device `VswManualOverride`.
+
+.`wha`
+&#x2713; Implement `ALL_AUTO` in `void specialFnHandler (Event e)`.
+

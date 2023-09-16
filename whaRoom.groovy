@@ -49,13 +49,22 @@ Map whaRoomPage () {
     nextPage: 'whaPage'
   ) {
     // SAMPLE STATE & SETTINGS CLEAN UP
+    //   - app.deleteChildDevice(<INSERT DNI>)
     //   - state.remove('X')
     //   - settings.remove('Y')
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
-    state.MANUAL_OVERRIDE = false
+    state.MANUAL_OVERRIDE_VSW_DNI = "${state.ROOM_NAME.replaceAll(' ','_')}_ManualOverride"
+    DevW overrideVsw = app.getChildDevice(state.MANUAL_OVERRIDE_VSW_DNI)
+      ?:  addChildDevice(
+            'hubitat',
+            'Virtual Switch',
+            state.MANUAL_OVERRIDE_VSW_DNI,
+            [isComponent: true, name: state.MANUAL_OVERRIDE_VSW_DNI]
+          )
+    overrideVsw.off()
     section {
-      configureLogging()                          // <- provided by Utils
+      configureLogging()                            // <- provided by Utils
       input(
         name: 'motionSensor',
         title: 'motionSensor<br/>' \
@@ -160,6 +169,18 @@ Map whaRoomPage () {
       )
     }
   }
+}
+
+Boolean isManualOverrideVswOn() {
+  return (getSwitchState(app.getChildDevice(state.MANUAL_OVERRIDE_VSW_DNI)) == 'on')
+}
+
+void turnOffManualOverride() {
+  app.getChildDevice(state.MANUAL_OVERRIDE_VSW_DNI).off()
+}
+
+void turnOnManualOverride() {
+  app.getChildDevice(state.MANUAL_OVERRIDE_VSW_DNI).on()
 }
 
 void selectModeNamesAsSceneNames () {
@@ -436,11 +457,11 @@ void pbsgVswTurnedOnCallback (String currentScene) {
     "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() received ${currentScene}"
   )
   state.currentScene = currentScene
-  if (state.MANUAL_OVERRIDE == true) {
+  if (isManualOverrideVswOn()) {
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() releasing MANUAL_OVERRIDE"
+      "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() turning off manual override"
     )
-    state.MANUAL_OVERRIDE = false
+    turnOffManualOverride()
   }
   updateLutronKpadLeds(currentScene)
   switch(currentScene) {
@@ -582,14 +603,14 @@ void sceneChangeHandler (Event e) {
   ) {
     if (e.value == 'off') {
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} sceneChangeHandler() activating a MANUAL_OVERRIDE."
+        "R_${state.ROOM_NAME} sceneChangeHandler() turning on manual override."
       )
-      state.MANUAL_OVERRIDE = true
+      turnOnManualOverride()
     } else if (e.value == 'on') {
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} sceneChangeHandler() deactivating a MANUAL_OVERRIDE."
+        "R_${state.ROOM_NAME} sceneChangeHandler() turning off manual override."
       )
-      state.MANUAL_OVERRIDE = false
+      turnOffManualOverride()
     }
   }
 }
@@ -597,7 +618,7 @@ void sceneChangeHandler (Event e) {
 void modeChangeHandler (Event e) {
   if (
     e.name == 'mode'
-    && state.MANUAL_OVERRIDE == false
+    && ! isManualOverrideVswOn()
     && state.currentScene == 'AUTOMATIC'
   ) {
     String targetScene = getSceneForMode(e.value)
@@ -618,10 +639,10 @@ void keypadToVswHandler (Event e) {
       String targetVsw = state.sceneButtonMap?.getAt(e.deviceId.toString())
                                              ?.getAt(e.value)
       // Turn on appropriate pbsg-modes-X VSW.
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}"
-      )
       if (targetVsw) {
+        if (settings.log) log.trace(
+          "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}"
+        )
         app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
       }
       break
@@ -667,7 +688,7 @@ void picoHandler (Event e) {
               ))
             }
           }
-          state.MANUAL_OVERRIDE = true
+          turnOnManualOverride()
         } else if (e.value == '4') {  // Default "Lower" behavior
           log.trace(
             "R_${state.ROOM_NAME} picoHandler() Lowering ${settings.independentDevices}"
