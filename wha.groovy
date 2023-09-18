@@ -273,6 +273,13 @@ void updated () {
   initialize()
 }
 
+void AllAuto () {
+  settings.rooms.each{ roomName ->
+    InstAppW roomApp = app.getChildAppByLabel(roomName)
+    roomApp.turnOffManualOverride()
+  }
+}
+
 void specialFnHandler (Event e) {
   switch (e.name) {
     case 'pushed':
@@ -282,10 +289,7 @@ void specialFnHandler (Event e) {
       switch(specialtyFunction) {
         case 'ALL_AUTO':
           if (settings.log) log.trace 'WHA specialFnHandler() executing ALL_AUTO'
-          settings.rooms.each{ roomName ->
-            InstAppW roomApp = app.getChildAppByLabel(roomName)
-            roomApp.turnOffManualOverride()
-          }
+          AllAuto()
           //--TBD--> Update of Keypad LEDs
           break;
        // Rooms will trip into MANUAL OVERRIDE if ALL_OFF is executed
@@ -338,6 +342,10 @@ void modeChangeHandler (Event e) {
       if (targetVsw) {
         if (settings.log) log.trace "WHA modeChangeHandler() turning on ${targetVsw}"
         app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+      }
+      if (targetVsw == 'Day') {
+        if (settings.log) log.trace "WHA modeChangeHandler()  executing ALL_AUTO"
+        AllAuto()
       }
       // Silently ignore buttons that DO NOT impact Hubitat mode.
       break;
