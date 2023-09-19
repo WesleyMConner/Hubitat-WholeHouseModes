@@ -543,11 +543,11 @@ void activateScene (String scene) {
         "R_${state.ROOM_NAME} activateScene() no matchedDevice w/ DNI: ${deviceDni}"
       )
     }
-    // Ordering of setLevel vs on/off is TBD. Level alone DOES NOT WORK consistently.
-    if (matchedDevice.hasCommand('setLevel')) matchedDevice.setLevel(level)
-    if (level == 0) {
+    if (matchedDevice.hasCommand('setLevel')) {
+      matchedDevice.setLevel(level)
+    } else if (level == 0) {
       matchedDevice.off()
-    } else {
+    } else if (level == 100) {
       matchedDevice.on()
     }
   }
