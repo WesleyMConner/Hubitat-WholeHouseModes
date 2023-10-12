@@ -1,4 +1,44 @@
+// cspell:words imagesdir pdfwidth scaledwidth seqdiag
+:kroki-fetch-diagram:
+:imagesdir: media
 = Functions Per File
+
+[erd, target="my-erd", format="svg", width="1024", pdfwidth="100%"", scaledwidth="100%"]
+....
+erd {
+[Person]
+*name
+height
+weight
++birth_location_id
+
+[Location]
+*id
+city
+state
+country
+
+Person *--1 Location
+}
+....
+
+```erd
+[Person]
+*name
+height
+weight
++birth_location_id
+
+[Location]
+*id
+city
+state
+country
+
+Person *--1 Location
+}
+
+````
 
 .UtilsLibrary.groovy
 ----

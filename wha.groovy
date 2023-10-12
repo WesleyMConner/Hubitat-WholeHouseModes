@@ -38,8 +38,11 @@ preferences {
 Map whaPage () {
   return dynamicPage(
     name: 'whaPage',
-    title: heading('Whole House Automation (WHA)<br/>') \
-      + bullet("Press ${red('<b>Done</b>')} to ensure event subscriptions update!"),
+    title: heading('Whole House Automation (WHA) Application<br/>') \
+      + bullet("Authorize Access to appropriate devices.<br/>") \
+      + bullet("Create the Mode PBSG App Instance.<br/>") \
+      + bullet("Identify Participating Rooms.<br/>") \
+      + bullet(red("Press <b>Done</b> (see below) to ensure event subscription updates !!!")),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
@@ -89,7 +92,7 @@ Map whaPage () {
       } else {
         identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
           state.SPECIALTY_BUTTONS,              //   - list
-          settings.specialFnButtons,           //   - ledDevices
+          settings.specialFnButtons,            //   - ledDevices
           'specialFnButton'                     //   - prefix
         )
         populateStateKpadButtons('specialFnButton')

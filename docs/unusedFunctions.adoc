@@ -107,9 +107,9 @@ void solicitLutronMiscellaneousKeypads (
 }
 ----
 
-.authorizeSeeTouchKeypads
+.authorizekeypads
 ----
-void authorizeSeeTouchKeypads (
+void authorizekeypads (
   String settingsKey,
   String note = '',
   Map args = [:],

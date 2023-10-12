@@ -1,5 +1,18 @@
 = Prioritized To Do List
 
+== Prioritized List
+* Migrate from Hubitat 2.3.5.152 to 2.3.6.135 (or latest).
+* Fix Manual Override
+
+** Manual Override *DOES NOT* detect room button presses consistently.
+** The current strategy is to watch the LED on an associated Keypad.
+** Some room scenes DO NOT have an associated keypad button.
+** Watching a Main Repeater LED is an improvement, but only works if the
+for the portion of a scene (if any) that depends on a Main Repeater.
+** For independent devices, it may be necessary to identify departures in expected on()/off()/level()!
+
+* Un-setting Manual Override *IS NOT* sufficient for ALL_AUTO as it does not displace room scenes - i.e., activate VSW AUTOMATIC per room.
+
 == On Deck
 .`whaRoom`
 * Add all motion-based Rooms
