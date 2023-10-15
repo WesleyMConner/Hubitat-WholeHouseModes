@@ -32,10 +32,10 @@ library (
 // -------------
 // G L O B A L S
 // -------------
-BLACK = 'rgba(0, 0, 0, 1.0)'
-BLUE = 'rgba(51, 92, 255, 1.0)'
-LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
-RED = 'rgba(255, 0, 0, 1.0)'
+String BLACK = 'rgba(0, 0, 0, 1.0)'
+String BLUE = 'rgba(51, 92, 255, 1.0)'
+String LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
+String RED = 'rgba(255, 0, 0, 1.0)'
 
 // ---------------------------------------
 // P A R A G R A P H   F O R M A T T I N G
@@ -78,6 +78,61 @@ String comment(String s) {
 String red(String s) {
   RED_BOLD = "color: ${RED}; font-style: bold"
   return """<span style="${RED_BOLD}">${s}</span>"""
+}
+
+// -------------
+// L O G G I N G
+// -------------
+
+void L(String level, String s) {
+  switch (level) {
+    case 'ERROR':
+      // Error logging is always true
+      log.error(s)
+      break
+    case 'WARN':
+      if (state.LOG_LEVEL2_WARN) log.warn(s)
+      break
+    case 'INFO':
+      if (state.LOG_LEVEL3_INFO) log.info(s)
+      break
+    case 'DEBUG':
+      if (state.LOG_LEVEL4_DEBUG) log.debug(s)
+      break
+    case 'TRACE':
+      if (state.LOG_LEVEL5_TRACE) log.trace(s)
+      break
+  }
+}
+
+void configureLogging2 () {
+  input (
+    name: 'logThreshold',
+    type: 'enum',
+    title: 'Log Threshold',
+    defaultValue: 'TRACE',
+    options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
+    submitOnChange: true
+  )
+  if (settings.logThreshold) {
+    // Establish defaults
+    state.LOG_LEVEL1_ERROR = true
+    state.LOG_LEVEL2_WARN = false
+    state.LOG_LEVEL3_INFO = false
+    state.LOG_LEVEL4_DEBUG = false
+    state.LOG_LEVEL5_TRACE = false
+    // NOTE: MAKING DELIBERATE USE OF SWITCH "FALL THROUGH" BEHAVIOR!
+    switch(settings.logThreshold) {
+      case 'TRACE':
+        state.LOG_LEVEL5_TRACE = true
+      case 'DEBUG':
+        state.LOG_LEVEL4_DEBUG = true
+      case 'INFO':
+        state.LOG_LEVEL3_INFO = true
+      case 'WARN':
+        state.LOG_LEVEL2_WARN = true
+    }
+  }
 }
 
 // -----------------------------
@@ -124,7 +179,6 @@ void displayInstantiatedPbsgHref(
   ArrayList switchNames,     // state.MODE_SWITCH_NAMES
   String defaultSwitchName   // state.DEFAULT_MODE_SWITCH_NAME
   ) {
-  // Design Notes
   //   - Once a PGSB instance has been created and configured, it may be
   //     necessary to reconfigure the PBSG - e.g., if the switchNames list
   //     grows or shrinks.

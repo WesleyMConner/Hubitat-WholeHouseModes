@@ -12,6 +12,7 @@
 //     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 //     implied.
 // ---------------------------------------------------------------------------------
+import com.hubitat.app.ChildDeviceWrapper as ChildDevW
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
@@ -553,6 +554,127 @@ void activateScene (String scene) {
   }
 }
 
+Boolean isExpectedSceneActive () {
+  // Ignore the value of MANUAL_OVERRIDE and determine whether:
+  //    TRUE - The room's 'state.currentScene' is active per inspection of
+  //           (1) The associated Lutron Main Repeater scene LED (if any)
+  //               is "on".
+  //                 AND
+  //           (2) The independent device values (if any) are at expected
+  //               values.
+  //   FALSE - Evidence of a MANUAL_OVERRIDE is present.
+  //
+  // Example 1 (from lutronSceneChangeHandler)
+  //   expectedScene: Cook
+  //   repeaterData: [Ra2K-1-1848:29]
+  //   independentDevData: null
+  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
+  //   sceneButton: >29<, buttonTarget: buttonLed-29
+  //   button name: >buttonLed-29<, button value: on
+  //
+  // Example 2 (from lutronSceneChangeHandler)
+  //   expectedScene: Chill
+  //   repeaterData: [Ra2K-1-1848:41]
+  //   independentDevData: [02:100]
+  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
+  //   sceneButton: >41<, buttonTarget: buttonLed-41
+  //   button name: >buttonLed-41<, button value: on
+  //   INDEPENDENT DEVICE at 0, dev: Den - Fireplace w/ dni: 02
+  //   devLevel: >100<
+  //
+  // Example 3 (from keypad)
+  //   R_Kitchen lutronSceneChangeHandler() turning on manual override.
+  //
+  // Example 4 (from keypad)
+  //   R_Den lutronSceneChangeHandler() turning on manual override.
+  //
+  // Example 5 (from independentDeviceHandler)
+  //   EVENT
+  //     descriptionText    Den - Fireplace was turned off [physical]
+  //     displayName    Den - Fireplace
+  //     deviceId    1
+  //     name    switch
+  //     value    off
+  //     isStateChange    true
+  //   expectedScene: Chill
+  //   repeaterData: [Ra2K-1-1848:41]
+  //   independentDevData: [02:100]
+  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
+  //   sceneButton: >41<, buttonTarget: buttonLed-41
+  //   button name: >buttonLed-41<, button value: off
+  //   INDEPENDENT DEVICE at 0, dev: Den - Fireplace w/ dni: 02
+  //   devLevel: >100<
+  //
+  // Example 6 (from independentDeviceHandler)
+  //   EVENT
+  //     descriptionText    Den - Fireplace was turned on [physical]
+  //     displayName    Den - Fireplace
+  //     deviceId    1
+  //     name    switch
+  //     value    on
+  //     isStateChange    true
+  //   expectedScene: Chill
+  //   repeaterData: [Ra2K-1-1848:41]
+  //   independentDevData: [02:100]
+  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
+  //   sceneButton: >41<, buttonTarget: buttonLed-41
+  //   button name: >buttonLed-41<, button value: off
+  //   INDEPENDENT DEVICE at 0, dev: Den - Fireplace w/ dni: 02
+  //   devLevel: >100<
+  List<String> logData = ["R_${state.ROOM_NAME} isEpectedSceneActive()"]
+
+  String expectedScene = (state.currentScene == 'AUTOMATIC')
+    ? getSceneForMode()
+    : state.currentScene
+
+  logData += "expectedScene: ${expectedScene}"
+
+  Map repeaterData = state.sceneToRepeater?.getAt(expectedScene)
+  logData += "repeaterData: ${repeaterData}"
+
+  Map independentDevData = state.sceneToIndependent?.getAt(expectedScene)
+  logData += "independentDevData: ${independentDevData}"
+
+  // ----------------------------------------------------------------------
+  // NOTE: You cannot use getChildDevice(dni) for the following. These
+  //       devices ARE NOT children. Instead, use the authorizations
+  //       obtained for device access - e.g., settings.mainRepeater,
+  //       independentDevices.
+  // ----------------------------------------------------------------------
+  settings?.mainRepeater.eachWithIndex{ rep, index ->
+    String repDni = rep.deviceNetworkId
+    logData += "REPEATER at ${index}, rep: >${rep}< w/ dni: >${repDni}<"
+    String sceneButton = repeaterData.getAt(repDni)
+    String buttonTarget = "buttonLed-${sceneButton}"
+    logData += "sceneButton: >${sceneButton}<, buttonTarget: ${buttonTarget}"
+    //logData += "For target >${buttonTarget}<: ${rep.currentState(buttonTarget)}"
+    def buttonTargetData = rep.currentState(buttonTarget)
+    // com.hubitat.hub.domain.State@1c20149[dataType=ENUM,date=Sat Oct 14 14:52:16 EDT 2023,deviceId=6825,id=,name=buttonLed-21,unit=,value=off]
+    String name = buttonTargetData.name
+    String value = buttonTargetData.value
+    logData += "button name: >${name}<, button value: ${value}"
+  }
+
+  settings?.independentDevices.eachWithIndex{ dev, index ->
+    String devDni = dev.deviceNetworkId
+    logData += "INDEPENDENT DEVICE at ${index}, dev: ${dev} w/ dni: ${devDni}"
+    String targetDevLevel = independentDevData.getAt(devDni)
+    String actualSwitch = dev.currentState('switch')
+    if (actualSwitch) {
+      logData += "targetDevLevel: >${targetDevLevel}<, value: ${actualSwitch.value}"
+    }
+    String actualLevel = dev.currentState('level')
+    if (actualLevel) {
+      logData += "targetDevLevel: >${targetDevLevel}<, name: ${actualLevel.name}, value: ${actualLevel.value}"
+    }
+  }
+
+  if (settings.log) log.trace logData.join('<br/>')
+
+  // • sceneToIndependent → [TV:[02:100], Chill:[02:100], Supplement:[02:0], Party:[02:100], Night:[02:100], Day:[02:0]]
+  // • sceneToRepeater → [Chill:[Ra2K-1-1848:41], Day:[Ra2K-1-1848:42], Party:[Ra2K-1-1848:46], Supplement:[Ra2K-1-1848:47], TV:[Ra2K-1-1848:48], Night:[Ra2K-1-1848:44]]
+}
+
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
     if (settings.log) log.trace(
@@ -585,8 +707,7 @@ void updated () {
   initialize()
 }
 
-void sceneChangeHandler (Event e) {
-  // DESIGN NOTES
+void lutronSceneChangeHandler (Event e) {
   // - Each room scene SHOULD HAVE a corresponding Main Repeater integration button
   //   and LED.
   // - If the current scene's Button LED turns off unexpectedly, a MANUAL_OVERRIDE
@@ -601,19 +722,38 @@ void sceneChangeHandler (Event e) {
   ) {
     if (e.value == 'off') {
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} sceneChangeHandler() turning on manual override."
+        "R_${state.ROOM_NAME} lutronSceneChangeHandler() turning on manual override."
       )
       turnOnManualOverride()
     } else if (e.value == 'on') {
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} sceneChangeHandler() turning off manual override."
+        "R_${state.ROOM_NAME} lutronSceneChangeHandler() turning off manual override."
       )
+  // YOU ARE HERE
+  isExpectedSceneActive()
+  // YOU ARE HERE
       turnOffManualOverride()
     }
   }
 }
 
-void modeChangeHandler (Event e) {
+void independentDeviceHandler (Event e) {
+  // If a participating device event occurs …
+  // - If the device's value departs from the current scene's expected value,
+  //   turn on MANUAL_OVERRIDE.
+  // - If device's value is at the current scene's expected value, check ALL
+  //   participating devices AND turn off MANUAL_OVERRIDE if-and-only-if
+  //   ALL independent devices have their expected values.
+
+  // YOU ARE HERE
+  if (settings.log) log.trace(
+    "independentDeviceHandler()<br/>${eventDetails(e)}"
+  )
+  isExpectedSceneActive()
+  // YOU ARE HERE
+}
+
+void hubitatModeChangeHandler (Event e) {
   if (
     e.name == 'mode'
     && ! isManualOverrideVswOn()
@@ -621,13 +761,13 @@ void modeChangeHandler (Event e) {
   ) {
     String targetScene = getSceneForMode(e.value)
     if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} modeChangeHandler() processing AUTOMATIC (${targetScene})"
+      "R_${state.ROOM_NAME} hubitatModeChangeHandler() processing AUTOMATIC (${targetScene})"
     )
     if (!settings?.motionSensor) activateScene(targetScene)
   }
 }
 
-void keypadToVswHandler (Event e) {
+void keypadSceneButtonHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
@@ -639,7 +779,7 @@ void keypadToVswHandler (Event e) {
       // Turn on appropriate pbsg-modes-X VSW.
       if (targetVsw) {
         if (settings.log) log.trace(
-          "R_${state.ROOM_NAME} keypadToVswHandler() toggling ${targetVsw}"
+          "R_${state.ROOM_NAME} keypadSceneButtonHandler() toggling ${targetVsw}"
         )
         app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
       }
@@ -650,14 +790,14 @@ void keypadToVswHandler (Event e) {
       break
     default:
       if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} keypadToVswHandler() for "
+        "R_${state.ROOM_NAME} keypadSceneButtonHandler() for "
         + "'${state.ROOM_NAME}' unexpected event name '${e.name}' "
         + "for DNI '${e.deviceId}'"
       )
   }
 }
 
-void picoHandler (Event e) {
+void picoButtonHandler (Event e) {
   Integer changePercentage = 10
   if (e.isStateChange == true) {
     switch (e.name) {
@@ -667,13 +807,13 @@ void picoHandler (Event e) {
                                                     ?.getAt(e.value)
         if (scene) {
           log.trace(
-            "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} "
+            "R_${state.ROOM_NAME} picoButtonHandler() w/ ${e.deviceId}-${e.value} "
             + "activating ${scene}"
           )
           app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
           log.trace(
-            "R_${state.ROOM_NAME} picoHandler() Raising ${settings.independentDevices}"
+            "R_${state.ROOM_NAME} picoButtonHandler() Raising ${settings.independentDevices}"
           )
           settings.independentDevices.each{ d ->
             if (getSwitchState(d) == 'off') {
@@ -689,7 +829,7 @@ void picoHandler (Event e) {
           turnOnManualOverride()
         } else if (e.value == '4') {  // Default "Lower" behavior
           log.trace(
-            "R_${state.ROOM_NAME} picoHandler() Lowering ${settings.independentDevices}"
+            "R_${state.ROOM_NAME} picoButtonHandler() Lowering ${settings.independentDevices}"
           )
           settings.independentDevices.each{ d ->
               d.setLevel(Math.max(
@@ -699,7 +839,7 @@ void picoHandler (Event e) {
           }
         } else {
           log.trace(
-            "R_${state.ROOM_NAME} picoHandler() w/ ${e.deviceId}-${e.value} no action."
+            "R_${state.ROOM_NAME} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
         break
@@ -718,6 +858,8 @@ void motionSensorHandler (Event e) {
         ? getSceneForMode() : state.currentScene
       activateScene(targetScene)
     } else if (e.value == 'inactive') {
+      // Use brute-force to ensure automation is restored when the room is empty.
+      state.currentScene = 'AUTOMATIC'
       activateScene('Off')
     }
   }
@@ -726,26 +868,26 @@ void motionSensorHandler (Event e) {
 void initialize () {
   if (settings.log) log.trace(
     "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'. "
-    + "Subscribing to modeChangeHandler."
+    + "Subscribing to hubitatModeChangeHandler."
   )
-  subscribe(location, "mode", modeChangeHandler)
+  subscribe(location, "mode", hubitatModeChangeHandler)
   settings.seeTouchKeypads.each{ device ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} subscribing to Keypad ${getDeviceInfo(device)}"
     )
-    subscribe(device, keypadToVswHandler, ['filterEvents': true])
+    subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} subscribing to Repeater ${getDeviceInfo(device)}"
     )
-    subscribe(device, sceneChangeHandler, ['filterEvents': true])
+    subscribe(device, lutronSceneChangeHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     if (settings.log) log.trace(
       "R_${state.ROOM_NAME} subscribing to Pico ${getDeviceInfo(device)}"
     )
-    subscribe(device, picoHandler, ['filterEvents': true])
+    subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     if (settings.log) log.trace(
@@ -753,4 +895,14 @@ void initialize () {
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
+
+  // YOU ARE HERE
+  settings.independentDevices.each{ device ->
+    if (settings.log) log.trace(
+      "R_${state.ROOM_NAME} subscribing to independentDevice ${getDeviceInfo(device)}"
+    )
+    subscribe(device, independentDeviceHandler, ['filterEvents': true])
+  }
+  // YOU ARE HERE
+
 }

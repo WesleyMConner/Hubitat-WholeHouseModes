@@ -53,7 +53,7 @@ device instance for light-level activation.
 * A prospective `luxHandler()` will behave similarly to `void motionSensorHandler (Event e)`.
 
 == Implement `wha` Low Priority
-.See `specialFnHandler()
+.See `specialFnButtonHandler()
 
 .Group 1
 For *MANUAL OVERRIDE* compatibility, the following need (a) an optional per room custom scene, *OR* (b) a new whole-house hubitat mode.
@@ -87,5 +87,5 @@ The following is intended to silence door alarms, etc.
 &#x2713; Replace `state.MANUAL_OVERRIDE` with child device `VswManualOverride`.
 
 .`wha`
-&#x2713; Implement `ALL_AUTO` in `void specialFnHandler (Event e)`.
+&#x2713; Implement `ALL_AUTO` in `void specialFnButtonHandler (Event e)`.
 

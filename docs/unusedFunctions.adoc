@@ -13,10 +13,9 @@ void collapsibleInput (Map args = [:]) {
           multiple: true,
            options: null
   ] << args
-  // Design Notes
-  //   - Wrap Hubitat input() with a slider (bool) that enables hiding
-  //     the input() to declutter the screen.
-  //   - Default values for all arguments are provided.
+  // - Wrap Hubitat input() with a slider (bool) that enables hiding
+  //   the input() to declutter the screen.
+  // - Default values for all arguments are provided.
 
   String boolHideInput = "hide${_args.name}"
   //String devices = settings[_args.name]

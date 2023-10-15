@@ -58,6 +58,12 @@ Map whaPage () {
     //   - settings.remove('Y')
     section {
       configureLogging()                            // <- provided by Utils
+      configureLogging2 ()
+      L('TRACE', 'Test of TRACE level logging')
+      L('DEBUG', 'Test of DEBUG level logging')
+      L('INFO', 'Test of INFO level logging')
+      L('WARN', 'Test of WARN level logging')
+      L('ERROR', 'Test of ERROR level logging')
       input(
         name: 'specialtyFnMainRepeater',
         title: 'Authorize Specialty Function Repeater Access<br/>' \
@@ -209,13 +215,12 @@ void updateLutronKpadLeds (String currMode) {
 }
 
 void pbsgVswTurnedOnCallback (String currMode) {
-  // Design Notes
-  //   - The modePbsg instance calls this method to reflect a state change.
-  //   - When a PBSG-managed switch turns on, its peers can be presumed to be off.
-  //   - This function's response includes setting mode Keypad LEDs on/off.
-  //   - SeeTouch Keypad LEDs are switches that respond to on/off.
-  //   - Access to LEDs is approved via a per-scene list of LEDs:
-  //       modeButton_<scene> → ["<description>: <LED DNI>", ...]
+  // - The modePbsg instance calls this method to reflect a state change.
+  // - When a PBSG-managed switch turns on, its peers can be presumed to be off.
+  // - This function's response includes setting mode Keypad LEDs on/off.
+  // - SeeTouch Keypad LEDs are switches that respond to on/off.
+  // - Access to LEDs is approved via a per-scene list of LEDs:
+  //   modeButton_<scene> → ["<description>: <LED DNI>", ...]
   log.trace(
     "WHA pbsgVswTurnedOnCallback() activating <b>mode = ${currMode}</b>."
   )
@@ -283,7 +288,7 @@ void AllAuto () {
   }
 }
 
-void specialFnHandler (Event e) {
+void specialFnButtonHandler (Event e) {
   switch (e.name) {
     case 'pushed':
       String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
@@ -291,14 +296,14 @@ void specialFnHandler (Event e) {
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
         case 'ALL_AUTO':
-          if (settings.log) log.trace 'WHA specialFnHandler() executing ALL_AUTO'
+          if (settings.log) log.trace 'WHA specialFnButtonHandler() executing ALL_AUTO'
           AllAuto()
           //--TBD--> Update of Keypad LEDs
           break;
        // Rooms will trip into MANUAL OVERRIDE if ALL_OFF is executed
        // Unless and until there is a formal ALL_OFF mode
        //--breakingChange-> case 'ALL_OFF':
-       //--breakingChange->   if (settings.log) log.trace 'WHA specialFnHandler() executing ALL_OFF'
+       //--breakingChange->   if (settings.log) log.trace 'WHA specialFnButtonHandler() executing ALL_OFF'
        //--breakingChange->   // Hard-coding the ALL_OFF button for now.
        //--breakingChange->   settings.specialtyFnMainRepeater.push(2)
        //--breakingChange->   //--TBD--> Brute-Force Turn Off of non-Lutron devices is TBD.
@@ -312,14 +317,14 @@ void specialFnHandler (Event e) {
         case 'PANIC':
         case 'QUIET':
           if (settings.log) log.trace(
-            "WHA specialFnHandler() <b>${specialtyFunction}</b> "
+            "WHA specialFnButtonHandler() <b>${specialtyFunction}</b> "
             + "function execution is <b>TBD</b>"
           )
           break
         default:
           // Silently
           log.error(
-            "WHA specialFnHandler() Unknown specialty function "
+            "WHA specialFnButtonHandler() Unknown specialty function "
             + "<b>'${specialtyFunction}'</b>"
           )
       }
@@ -328,12 +333,12 @@ void specialFnHandler (Event e) {
     case 'released':
     default:
       if (settings.log) log.trace(
-        "WHA specialFnHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
+        "WHA specialFnButtonHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
 }
 
-void modeChangeHandler (Event e) {
+void modeChangeButtonHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
@@ -343,11 +348,11 @@ void modeChangeHandler (Event e) {
       String targetVsw = state.modeButtonMap?.getAt(e.deviceId.toString())
                                             ?.getAt(e.value)
       if (targetVsw) {
-        if (settings.log) log.trace "WHA modeChangeHandler() turning on ${targetVsw}"
+        if (settings.log) log.trace "WHA modeChangeButtonHandler() turning on ${targetVsw}"
         app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
       }
       if (targetVsw == 'Day') {
-        if (settings.log) log.trace "WHA modeChangeHandler()  executing ALL_AUTO"
+        if (settings.log) log.trace "WHA modeChangeButtonHandler()  executing ALL_AUTO"
         AllAuto()
       }
       // Silently ignore buttons that DO NOT impact Hubitat mode.
@@ -356,26 +361,25 @@ void modeChangeHandler (Event e) {
     case 'released':
     default:
       if (settings.log) log.trace(
-        "WHA modeChangeHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
+        "WHA modeChangeButtonHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
 }
 
 void initialize () {
-  // Design Notes
-  //   - The same keypad may be associated with two different, specialized handlers
-  //     (e.g., mode changing buttons vs special functionalily buttons).
+  // - The same keypad may be associated with two different, specialized handlers
+  //   (e.g., mode changing buttons vs special functionalily buttons).
   if (settings.log) log.trace "WHA initialize()"
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
     if (settings.log) log.trace(
       "WHA initialize() subscribing ${getDeviceInfo(device)} to mode handler."
     )
-    subscribe(device, modeChangeHandler, ['filterEvents': true])
+    subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
   }
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
     if (settings.log) log.trace "WHA subscribing to ${getDeviceInfo(device)}"
-    subscribe(device, specialFnHandler, ['filterEvents': true])
+    subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
 }
