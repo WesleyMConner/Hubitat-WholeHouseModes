@@ -63,11 +63,14 @@ String switchDniToShortName (String dni) {
 void configure (
   List<String> switchNames,
   String defaultSwitchName,
-  Boolean log
+  String logLevel
   ) {
   // !!! DO NOT ATTEMPT ANY LOGGING IN THIS METHOD !!!
   // Invoked by a parent application just after instantiating a new PBSG.
-  app.updateSetting('logThreshold', 'DEBUG')
+  // See displayInstantiatedPbsgHref() in UtilsLibrary.groovy
+  // - pbsgApp.configure(switchNames, defaultSwitchName, settings.log)
+  settings.remove('log')
+  settings.logThreshold = logLevel
   state.switchNames = switchNames
   state.switchDNIs = switchNames.collect{ switchName ->
     switchShortNameToDNI(switchName)

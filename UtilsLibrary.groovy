@@ -193,7 +193,7 @@ void displayInstantiatedPbsgHref(
     if (pbsgApp) deleteChildDevice(pbsg.getDeviceNetworkId())
     pbsgApp = addChildApp('wesmc', pbsgInstType, pbsgName)
   }
-  pbsgApp.configure(switchNames, defaultSwitchName, settings.log)
+  pbsgApp.configure(switchNames, defaultSwitchName, 'DEBUG')
   href (
     name: pbsgName,
     width: 2,

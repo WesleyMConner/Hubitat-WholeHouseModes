@@ -193,11 +193,15 @@ Boolean isManualOverrideVswOn() {
 }
 
 void turnOffManualOverride() {
+  L('DEBUG', "R_${state.ROOM_NAME} turn<b>Off</b>ManualOverride()")
   app.getChildDevice(state.MANUAL_OVERRIDE_VSW_DNI).off()
+  updateLutronKpadLeds(state.currentScene)
 }
 
 void turnOnManualOverride() {
+  L('DEBUG', "R_${state.ROOM_NAME} turn<b>On</b>ManualOverride()")
   app.getChildDevice(state.MANUAL_OVERRIDE_VSW_DNI).on()
+  updateLutronKpadLeds(state.currentScene)
 }
 
 void selectModeNamesAsSceneNames () {
@@ -447,11 +451,12 @@ void populateStateKpadButtonDniToTargetScene () {
 }
 
 void updateLutronKpadLeds (String currScene) {
+  // - If "sceneTarget" (see below) is null, all ledObj's are turned off.
+  // - Scene LEDs ARE NOT enabled if MANUAL_OVERRIDE is "on".
   settings.sceneButtons.each{ ledObj ->
     String dni = ledObj.getDeviceNetworkId()
     String sceneTarget = state.kpadButtonDniToTargetScene[dni]
-    // Note: If sceneTarget is null, all ledObj's are turned off.
-    if (currScene == sceneTarget) {
+    if (currScene == sceneTarget && !isManualOverrideVswOn()) {
       L(
         'DEBUG',
         "Turning on LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}"
@@ -483,10 +488,6 @@ void pbsgVswTurnedOnCallback (String currentScene) {
   )
   state.currentScene = currentScene
   if (isManualOverrideVswOn()) {
-    L(
-      'DEBUG',
-      "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() turning off manual override"
-    )
     turnOffManualOverride()
   }
   updateLutronKpadLeds(currentScene)
@@ -585,128 +586,96 @@ void activateScene (String scene) {
   }
 }
 
-Boolean isExpectedSceneActive () {
-  // Ignore the value of MANUAL_OVERRIDE and determine whether:
-  //    TRUE - The room's 'state.currentScene' is active per inspection of
-  //           (1) The associated Lutron Main Repeater scene LED (if any)
-  //               is "on".
-  //                 AND
-  //           (2) The independent device values (if any) are at expected
-  //               values.
-  //   FALSE - Evidence of a MANUAL_OVERRIDE is present.
-  //
-  // Example 1 (from lutronSceneChangeHandler)
-  //   expectedScene: Cook
-  //   repeaterData: [Ra2K-1-1848:29]
-  //   independentDevData: null
-  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
-  //   sceneButton: >29<, buttonTarget: buttonLed-29
-  //   button name: >buttonLed-29<, button value: on
-  //
-  // Example 2 (from lutronSceneChangeHandler)
-  //   expectedScene: Chill
-  //   repeaterData: [Ra2K-1-1848:41]
-  //   independentDevData: [02:100]
-  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
-  //   sceneButton: >41<, buttonTarget: buttonLed-41
-  //   button name: >buttonLed-41<, button value: on
-  //   INDEPENDENT DEVICE at 0, dev: Den - Fireplace w/ dni: 02
-  //   devLevel: >100<
-  //
-  // Example 3 (from keypad)
-  //   R_Kitchen lutronSceneChangeHandler() turning on manual override.
-  //
-  // Example 4 (from keypad)
-  //   R_Den lutronSceneChangeHandler() turning on manual override.
-  //
-  // Example 5 (from independentDeviceHandler)
-  //   EVENT
-  //     descriptionText    Den - Fireplace was turned off [physical]
-  //     displayName    Den - Fireplace
-  //     deviceId    1
-  //     name    switch
-  //     value    off
-  //     isStateChange    true
-  //   expectedScene: Chill
-  //   repeaterData: [Ra2K-1-1848:41]
-  //   independentDevData: [02:100]
-  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
-  //   sceneButton: >41<, buttonTarget: buttonLed-41
-  //   button name: >buttonLed-41<, button value: off
-  //   INDEPENDENT DEVICE at 0, dev: Den - Fireplace w/ dni: 02
-  //   devLevel: >100<
-  //
-  // Example 6 (from independentDeviceHandler)
-  //   EVENT
-  //     descriptionText    Den - Fireplace was turned on [physical]
-  //     displayName    Den - Fireplace
-  //     deviceId    1
-  //     name    switch
-  //     value    on
-  //     isStateChange    true
-  //   expectedScene: Chill
-  //   repeaterData: [Ra2K-1-1848:41]
-  //   independentDevData: [02:100]
-  //   REPEATER at 0, rep: >Control - REP 1 (ra2-1)< w/ dni: >Ra2K-1-1848<
-  //   sceneButton: >41<, buttonTarget: buttonLed-41
-  //   button name: >buttonLed-41<, button value: off
-  //   INDEPENDENT DEVICE at 0, dev: Den - Fireplace w/ dni: 02
-  //   devLevel: >100<
-  List<String> logData = ["R_${state.ROOM_NAME} isEpectedSceneActive()"]
-
-  String expectedScene = (state.currentScene == 'AUTOMATIC')
-    ? getSceneForMode()
-    : state.currentScene
-
-  logData += "expectedScene: ${expectedScene}"
-
-  Map repeaterData = state.sceneToRepeater?.getAt(expectedScene)
-  logData += "repeaterData: ${repeaterData}"
-
-  Map indepDevData = state.sceneToIndependent?.getAt(expectedScene)
-  logData += "indepDevData: ${indepDevData}"
-
-  // ----------------------------------------------------------------------
-  // NOTE: You cannot use getChildDevice(dni) for the following. These
-  //       devices ARE NOT children. Instead, use the authorizations
-  //       obtained for device access - e.g., settings.mainRepeater,
-  //       independentDevices.
-  // ----------------------------------------------------------------------
-  settings?.mainRepeater.eachWithIndex{ rep, index ->
-    String repDni = rep.deviceNetworkId
-    String associatedButton = repeaterData[repDni]
-    String led = "buttonLed-${associatedButton}"
-    String ledVal = rep.currentValue(led)
-    logData += "rep ${index}: ${repDni} w/ ${led}: ${ledVal}"
-  }
-
-  settings?.independentDevices.eachWithIndex{ dev, index ->
-    String devDni = dev.deviceNetworkId
-    String targetLevel = indepDevData[devDni]
-    String actualSwitch = dev.currentValue('switch')
-    String actualLevel = dev.currentValue('level')
-    logData += "dev ${index}: ${devDni} w/ targetLevel: ${targetLevel}, actualSwitch: ${actualSwitch}, actualLevel: ${actualLevel}"
-    //->logData += "dev data: ${dev.getData()}"
-    //->logData += "dev states: ${dev.getCurrentStates()}"
-    //->logData += "dev attributes: ${dev.getSupportedAttributes()}"
-    //->logData += "dev capabilities: ${dev.getCapabilities()}"
-    /*
-    String targetDevLevel = independentDevData.getAt(devDni)
-    String actualSwitch = dev.currentState('switch')
-    if (actualSwitch) {
-      logData += "targetDevLevel: >${targetDevLevel}<, value: ${actualSwitch.value}"
+Boolean isRoomSceneLedActive() {
+  List<String> traceData = ["R_${state.ROOM_NAME} isRoomSceneLedActive()"]
+  // Fail true if the current room's scenes DO NOT leverage an
+  // "RA2 Shared Scene" (via an RA2 Main Repeater Integration Button).
+  Boolean retVal = true
+  if (!state.currentSceneRepeaterDeviceId) {
+    traceData += "No RA2 Shared Scene in use."
+  } else {
+    String expectedScene = (state.currentScene == 'AUTOMATIC')
+      ? getSceneForMode()
+      : state.currentScene
+    traceData += "expectedScene: ${expectedScene}"
+    Map repeaterData = state.sceneToRepeater?.getAt(expectedScene)
+    traceData += "repeaterData: ${repeaterData}"
+    settings?.mainRepeater.eachWithIndex{ rep, index ->
+      String repDni = rep.deviceNetworkId
+      String associatedButton = repeaterData[repDni]
+      String led = "buttonLed-${associatedButton}"
+      String ledVal = rep.currentValue(led)
+      traceData += "rep ${index}: ${repDni} w/ ${led}: ${ledVal}"
+      if (ledVal == 'off') {
+        traceData += "${repDni} ${led} = ${ledVal}, retVal -> <b>false</b>"
+        retVal = false
+        // Note: It is NOT possible to break from a closure.
+      }
     }
-    String actualLevel = dev.currentState('level')
-    //-> if (actualLevel) {
-    //->   logData += "targetDevLevel: >${targetDevLevel}<, name: ${actualLevel.name}, value: ${actualLevel.value}"
-    //-> }
-    */
   }
+  L('TRACE', traceData.join('<br/>'))
+  L('DEBUG', "R_${state.ROOM_NAME} isRoomSceneLedActive() -> ${retVal}")
+  return retVal
+}
 
-  L('DEBUG', logData.join('<br/>'))
+Boolean areRoomSceneDevLevelsCorrect() {
+  List<String> traceData = ["R_${state.ROOM_NAME} areRoomSceneDevLevelsCorrect()"]
+  // Fail true if the current room's scenes DO NOT leverage Independent Devices.
+  Boolean retVal = true
+  if (!state.sceneToIndependent) {
+    traceData += "No Independent Devices."
+  } else {
+    String expectedScene = (state.currentScene == 'AUTOMATIC')
+      ? getSceneForMode()
+      : state.currentScene
+    traceData += "expectedScene: ${expectedScene}"
+    Map indepDevData = state.sceneToIndependent?.getAt(expectedScene)
+    traceData += "indepDevData: ${indepDevData}"
+    settings?.independentDevices.eachWithIndex{ dev, index ->
+      String devDni = dev.deviceNetworkId
+      Integer targetLevel = indepDevData[devDni]
+      String targetSwitch = (targetLevel == 0) ? 'off' : 'on'
+      Integer actualLevel = dev.currentValue('level')
+      String actualSwitch = dev.currentValue('switch')
+      traceData += (
+        "dev ${index}: ${devDni} w/ targetLevel: ${targetLevel}, "
+        + "actualSwitch: ${actualSwitch}, actualLevel: ${actualLevel}"
+      )
+      if (targetLevel != actualLevel) {
+        traceData += (
+          "${repDni} targetLevel (${targetLevel}) != actualLevel (${actualLevel}), "
+          + "returning <b>false</b>."
+        )
+        retVal = false
+        // Note: It is NOT possible to break from a closure.
+      } else  (targetLevel != actualLevel) {
+        traceData += (
+          "${repDni} targetSwitch (${targetSwitch}) != actualSwitch (${actualSwitch}), "
+          + "returning <b>false</b>."
+        )
+        retVal = false
+        // Note: It is NOT possible to break from a closure.
+      }
+    }
+  }
+  L('TRACE', traceData.join('<br/>'))
+  L('DEBUG', "R_${state.ROOM_NAME} areRoomSceneDevLevelsCorrect() -> ${retVal}")
+  return retVal
+}
 
-  // • sceneToIndependent → [TV:[02:100], Chill:[02:100], Supplement:[02:0], Party:[02:100], Night:[02:100], Day:[02:0]]
-  // • sceneToRepeater → [Chill:[Ra2K-1-1848:41], Day:[Ra2K-1-1848:42], Party:[Ra2K-1-1848:46], Supplement:[Ra2K-1-1848:47], TV:[Ra2K-1-1848:48], Night:[Ra2K-1-1848:44]]
+Boolean updateManualOverride() {
+  Boolean manualOverride = !isRoomSceneLedActive() || !areRoomSceneDevLevelsCorrect()
+  if ( (manualOverride == true) && (isManualOverrideVswOn() == false) ) {
+    turnOnManualOverride()
+    updateLutronKpadLeds(state.currentScene)
+  } else if ( (manualOverride == false) && (isManualOverrideVswOn() == true) ) {
+    turnOffManualOverride()
+  }
+  L(
+    'DEBUG',
+    "R_${state.ROOM_NAME} updateManualOverride() -> <b>${manualOverride ? 'On' : 'Off'}</b>"
+  )
+  return manualOverride
 }
 
 void removeAllChildApps () {
@@ -746,51 +715,32 @@ void updated () {
 }
 
 void lutronSceneChangeHandler (Event e) {
-  // - Each room scene SHOULD HAVE a corresponding Main Repeater integration button
-  //   and LED.
-  // - If the current scene's Button LED turns off unexpectedly, a MANUAL_OVERRIDE
-  //   is presumed.
-  // - If the current scene's LED turns back on, the MANUAL_OVERRIDE is presumed
-  //   to be overridden.
   // - The field e.deviceId arrives as a number and must be cast toString().
+  // - This subscription processes Main Repeater events, which is applicable
+  //   to Rooms that leverage an RA2 Main Repeater (virtual) Integration
+  //   Button and corresponding (virtual) LED. Work is delegated to
+  //   updateManualOverride()
   if (
        (e.deviceId.toString() == state.currentSceneRepeaterDeviceId)
        && (e.name == "buttonLed-${state.currentSceneRepeaterLED}")
        && (e.isStateChange == true)
   ) {
-    if (e.value == 'off') {
-      L(
-        'DEBUG',
-        "R_${state.ROOM_NAME} lutronSceneChangeHandler() turning on manual override."
-      )
-      turnOnManualOverride()
-    } else if (e.value == 'on') {
-      L(
-        'DEBUG',
-        "R_${state.ROOM_NAME} lutronSceneChangeHandler() turning off manual override."
-      )
-  // YOU ARE HERE
-  isExpectedSceneActive()
-  // YOU ARE HERE
-      turnOffManualOverride()
-    }
+    L(
+      'TRACE',
+      "R_${state.ROOM_NAME} lutronSceneChangeHandler() calling updateManualOverride()"
+    )
+    updateManualOverride()
   }
 }
 
 void independentDeviceHandler (Event e) {
-  // If a participating device event occurs …
-  // - If the device's value departs from the current scene's expected value,
-  //   turn on MANUAL_OVERRIDE.
-  // - If device's value is at the current scene's expected value, check ALL
-  //   participating devices AND turn off MANUAL_OVERRIDE if-and-only-if
-  //   ALL independent devices have their expected values.
-
-  // YOU ARE HERE
-  L('TRACE',
-    "independentDeviceHandler()<br/>${eventDetails(e)}"
+  // - This subscription processes Independent Device events. Work is delegated
+  //   to updateManualOverride.
+  L(
+    'TRACE',
+    "R_${state.ROOM_NAME} independentDeviceHandler() calling updateManualOverride()"
   )
-  isExpectedSceneActive()
-  // YOU ARE HERE
+  updateManualOverride()
 }
 
 void hubitatModeChangeHandler (Event e) {
@@ -816,14 +766,21 @@ void keypadSceneButtonHandler (Event e) {
   //   - Keypad buttons are matched to state data to activate a target VSW.
   switch (e.name) {
     case 'pushed':
-      String targetVsw = state.sceneButtonMap?.getAt(e.deviceId.toString())
-                                             ?.getAt(e.value)
-      // Turn on appropriate pbsg-modes-X VSW.
-      if (targetVsw) {
-        L('DEBUG',
-          "R_${state.ROOM_NAME} keypadSceneButtonHandler() toggling ${targetVsw}"
-        )
-        app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
+      if (isManualOverrideVswOn()) {
+        // An explicit keypad button press overrides any current MANUAL_OVERRIDE.
+        // WHA uses keypad buttons to activate an explicit Room Scene.
+        turnOffManualOverride()
+      } else {
+        // Toggle the corresponding pbsg-modes-X VSW for the keypad button.
+        String targetVsw = state.sceneButtonMap?.getAt(e.deviceId.toString())
+                                               ?.getAt(e.value)
+        if (targetVsw) {
+          L(
+            'DEBUG',
+            "R_${state.ROOM_NAME} keypadSceneButtonHandler() toggling ${targetVsw}"
+          )
+          app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
+        }
       }
       break
     case 'held':
