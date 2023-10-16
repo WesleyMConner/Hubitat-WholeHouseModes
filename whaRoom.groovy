@@ -41,10 +41,11 @@ Map whaRoomPage () {
   // to each WHA Rooms instance. Capture app.getLabel() as state.ROOM_NAME.
   return dynamicPage(
     name: 'whaRoomPage',
-    title: \
-      heading("${app.getLabel()} Scenes<br/>") \
-        + comment("Click <b>${red('Done')}</b> to enable subscriptions.<br/>") \
-        + comment('Tab to register changes.'),
+    title: [
+      heading("${app.getLabel()} Scenes<br/>"),
+      comment("Click <b>${red('Done')}</b> to enable subscriptions.<br/>"),
+      comment('Tab to register changes.')
+    ].join(),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
@@ -53,6 +54,7 @@ Map whaRoomPage () {
     //   - app.deleteChildDevice(<INSERT DNI>)
     //   - state.remove('X')
     //   - settings.remove('Y')
+settings.remove('log')
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME}"
     state.MANUAL_OVERRIDE_VSW_DNI = "${state.ROOM_NAME.replaceAll(' ','_')}_ManualOverride"
@@ -68,9 +70,11 @@ Map whaRoomPage () {
       configureLogging()                            // <- provided by Utils
       input(
         name: 'motionSensor',
-        title: 'motionSensor<br/>' \
-          + comment('Identify one Motion Sensor if desired<br/>.') \
-          + comment('The Custom Scene "<b>Off</b>" is automatically added below.'),
+        title: [
+          'motionSensor<br/>',
+          comment('Identify one Motion Sensor if desired<br/>.'),
+          comment('The Custom Scene "<b>Off</b>" is automatically added below.')
+        ].join(),
         type: 'device.LutronMotionSensor',
         submitOnChange: true,
         required: false,
@@ -82,8 +86,10 @@ Map whaRoomPage () {
       selectScenePerMode()
       input(
         name: 'seeTouchKeypads',
-        title: 'seeTouchKeypads<br/>' \
-          + comment('Authorize Keypads with buttons that activate room scenes.'),
+        title: [
+          'seeTouchKeypads<br/>',
+          comment('Authorize Keypads with buttons that activate room scenes.')
+        ].join(),
         type: 'device.LutronSeeTouchKeypad',
         submitOnChange: true,
         required: false,
@@ -91,8 +97,10 @@ Map whaRoomPage () {
       )
       input(
         name: 'sceneButtons',
-        title: 'sceneButtons<br/>' \
-          + comment('Authorize Keypad LEDs/Buttons that activate room scenes.'),
+        title: [
+          'sceneButtons<br/>',
+          comment('Authorize Keypad LEDs/Buttons that activate room scenes.')
+        ].join(),
         type: 'device.LutronComponentSwitch',
         submitOnChange: true,
         required: false,
@@ -111,8 +119,10 @@ Map whaRoomPage () {
       }
       input(
         name: 'picos',
-        title: 'lutronPicos<br/>' \
-          + comment('Identify Picos with buttons that change the Room scene.'),
+        title: [
+          'lutronPicos<br/>',
+          comment('Identify Picos with buttons that change the Room scene.')
+        ].join(),
         type: 'device.LutronFastPico',
         submitOnChange: true,
         required: false,
@@ -128,8 +138,10 @@ Map whaRoomPage () {
       }
       input(
         name: 'mainRepeater',
-        title: 'mainRepeater<br/>' \
-          + comment('Identify Repeaters that host integration buttons for Room scenes'),
+        title: [
+          'mainRepeater<br/>',
+          comment('Identify Repeaters that host integration buttons for Room scenes')
+        ].join(),
         type: 'device.LutronKeypad',
         submitOnChange: true,
         required: false,
@@ -137,8 +149,10 @@ Map whaRoomPage () {
       )
       input(
         name: 'independentDevices',
-        title: 'independentDevices<br/>' \
-          + comment('Identify Repeaters that host integration buttons for Room scenes.'),
+        title: [
+          'independentDevices<br/>',
+          comment('Identify Repeaters that host integration buttons for Room scenes.')
+        ].join(),
         type: 'capability.switch',
         submitOnChange: true,
         required: false,
@@ -153,7 +167,7 @@ Map whaRoomPage () {
       if (state.scenes == null) {
         paragraph red('Management of child apps is pending selection of Room scenes.')
       } else {
-        keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME], settings.log)
+        keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME])
         ArrayList switchNames = [*state.scenes, 'AUTOMATIC']
         displayInstantiatedPbsgHref(
           state.SCENE_PBSG_APP_NAME,
@@ -164,9 +178,11 @@ Map whaRoomPage () {
         )
       }
       paragraph(
-        heading('Debug<br/>')
-        + "${ displayState() }<br/>"
-        + "${ displaySettings() }"
+        [
+          heading('Debug<br/>'),
+          "${ displayState() }<br/>",
+          "${ displaySettings() }"
+        ].join()
       )
     }
   }
@@ -402,14 +418,18 @@ void configureRoomScene () {
     }
   }
   // Prune stale scene settings keys.
-  log.trace(
-    "R_${state.ROOM_NAME} configureRoomScene()<br/>"
-    + "<b>sceneKeysAtStart:</b> ${sceneKeysAtStart}<br/>"
-    + "<b>currentSceneKeys:</b> ${currentSceneKeys}<br/>"
-    + "<b>excess:</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
+  L(
+    'TRACE',
+    [
+      "R_${state.ROOM_NAME} configureRoomScene()<br/>",
+      "<b>sceneKeysAtStart:</b> ${sceneKeysAtStart}<br/>",
+      "<b>currentSceneKeys:</b> ${currentSceneKeys}<br/>",
+      "<b>excess:</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
+    ].join()
   )
   sceneKeysAtStart.minus(currentSceneKeys).each{ key ->
-    log.trace(
+    L(
+      'DEBUG',
       "R_${state.ROOM_NAME} configureRoomScene() removing setting ${key}"
     )
     settings.remove(key)
@@ -432,12 +452,14 @@ void updateLutronKpadLeds (String currScene) {
     String sceneTarget = state.kpadButtonDniToTargetScene[dni]
     // Note: If sceneTarget is null, all ledObj's are turned off.
     if (currScene == sceneTarget) {
-      if (settings.log) log.trace(
+      L(
+        'DEBUG',
         "Turning on LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}"
       )
       ledObj.on()
     } else {
-      if (settings.log) log.trace(
+      L(
+        'DEBUG',
         "Turning off LED ${dni} for ${state.ROOM_NAME} scene ${sceneTarget}"
       )
       ledObj.off()
@@ -447,19 +469,22 @@ void updateLutronKpadLeds (String currScene) {
 
 String getSceneForMode (String mode = getLocation().getMode()) {
   String result = settings["modeToScene^${mode}"]
-  if (settings.log) {
-    log.trace "R_${state.ROOM_NAME} getSceneForMode() <b>${mode} -> ${result}</b>"
-  }
+  L(
+    'TRACE',
+    "R_${state.ROOM_NAME} getSceneForMode() <b>${mode} -> ${result}</b>"
+  )
   return result
 }
 
 void pbsgVswTurnedOnCallback (String currentScene) {
-  if (settings.log) log.trace(
+  L(
+    'TRACE',
     "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() received ${currentScene}"
   )
   state.currentScene = currentScene
   if (isManualOverrideVswOn()) {
-    if (settings.log) log.trace(
+    L(
+      'DEBUG',
       "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() turning off manual override"
     )
     turnOffManualOverride()
@@ -468,13 +493,15 @@ void pbsgVswTurnedOnCallback (String currentScene) {
   switch(currentScene) {
     case 'AUTOMATIC':
       String targetScene = getSceneForMode()
-      if (settings.log) log.trace(
-        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing AUTOMATIC (${targetScene})"
+      L(
+        'TRACE',
+        "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() AUTOMATIC -> ${targetScene}"
       )
       if (!settings?.motionSensor) activateScene(targetScene)
       break
     default:
-      if (settings.log) log.trace(
+      L(
+        'TRACE',
         "R_${state.ROOM_NAME} pbsgVswTurnedOnCallback() processing '${currentScene}'"
       )
       if (!settings?.motionSensor) activateScene(currentScene)
@@ -509,15 +536,16 @@ void populateStateSceneToDeviceValues () {
 
 void activateScene (String scene) {
   // Push Repeater buttons and execute Independent switch/dimmer levels.
-  if (settings.log) log.trace "R_${state.ROOM_NAME} activateScene('${scene}') "
+  L('TRACE', "R_${state.ROOM_NAME} activateScene('${scene}') ")
   // Values are expected at ...
   //   state.sceneToRepeater[sceneName][dni]
   //   state.sceneToIndependent[sceneName][dni]
   // THIS APPLICATION ALLOWS A SINGLE LUTRON MAIN REPEATER PER ROOM
   state.sceneToRepeater?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} activateScene('${scene}') repeater: ${repeaterDni}, "
-      + "button: ${buttonNumber}"
+        + "button: ${buttonNumber}"
     )
     // Note: The repeater's Id (not DNI) and button are required to track the scene's
     //       LED on the Main Repeater.
@@ -525,7 +553,8 @@ void activateScene (String scene) {
     DevW matchedRepeater = settings.mainRepeater?.findAll{ repeater ->
       repeater.getDeviceNetworkId() == repeaterDni
     }?.first() ?: {
-      log.error(
+      L(
+        'error',
         "R_${state.ROOM_NAME} activateScene() no repeater w/ DNI: ${repeaterDni}"
       )
     }
@@ -533,14 +562,16 @@ void activateScene (String scene) {
     matchedRepeater.push(buttonNumber)
   }
   state.sceneToIndependent[scene].each{ deviceDni, level ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} activateScene('${scene}') device: ${deviceDni}, "
-      + "level: ${level}"
+        + "level: ${level}"
     )
     DevW matchedDevice = settings.independentDevices?.findAll{ device ->
       device.getDeviceNetworkId() == deviceDni
     }?.first() ?: {                              // There should be one match by DNI.
-      log.error(
+      L(
+        'error',
         "R_${state.ROOM_NAME} activateScene() no matchedDevice w/ DNI: ${deviceDni}"
       )
     }
@@ -632,8 +663,8 @@ Boolean isExpectedSceneActive () {
   Map repeaterData = state.sceneToRepeater?.getAt(expectedScene)
   logData += "repeaterData: ${repeaterData}"
 
-  Map independentDevData = state.sceneToIndependent?.getAt(expectedScene)
-  logData += "independentDevData: ${independentDevData}"
+  Map indepDevData = state.sceneToIndependent?.getAt(expectedScene)
+  logData += "indepDevData: ${indepDevData}"
 
   // ----------------------------------------------------------------------
   // NOTE: You cannot use getChildDevice(dni) for the following. These
@@ -643,33 +674,36 @@ Boolean isExpectedSceneActive () {
   // ----------------------------------------------------------------------
   settings?.mainRepeater.eachWithIndex{ rep, index ->
     String repDni = rep.deviceNetworkId
-    logData += "REPEATER at ${index}, rep: >${rep}< w/ dni: >${repDni}<"
-    String sceneButton = repeaterData.getAt(repDni)
-    String buttonTarget = "buttonLed-${sceneButton}"
-    logData += "sceneButton: >${sceneButton}<, buttonTarget: ${buttonTarget}"
-    //logData += "For target >${buttonTarget}<: ${rep.currentState(buttonTarget)}"
-    def buttonTargetData = rep.currentState(buttonTarget)
-    // com.hubitat.hub.domain.State@1c20149[dataType=ENUM,date=Sat Oct 14 14:52:16 EDT 2023,deviceId=6825,id=,name=buttonLed-21,unit=,value=off]
-    String name = buttonTargetData.name
-    String value = buttonTargetData.value
-    logData += "button name: >${name}<, button value: ${value}"
+    String associatedButton = repeaterData[repDni]
+    String led = "buttonLed-${associatedButton}"
+    String ledVal = rep.currentValue(led)
+    logData += "rep ${index}: ${repDni} w/ ${led}: ${ledVal}"
   }
 
   settings?.independentDevices.eachWithIndex{ dev, index ->
     String devDni = dev.deviceNetworkId
-    logData += "INDEPENDENT DEVICE at ${index}, dev: ${dev} w/ dni: ${devDni}"
+    String targetLevel = indepDevData[devDni]
+    String actualSwitch = dev.currentValue('switch')
+    String actualLevel = dev.currentValue('level')
+    logData += "dev ${index}: ${devDni} w/ targetLevel: ${targetLevel}, actualSwitch: ${actualSwitch}, actualLevel: ${actualLevel}"
+    //->logData += "dev data: ${dev.getData()}"
+    //->logData += "dev states: ${dev.getCurrentStates()}"
+    //->logData += "dev attributes: ${dev.getSupportedAttributes()}"
+    //->logData += "dev capabilities: ${dev.getCapabilities()}"
+    /*
     String targetDevLevel = independentDevData.getAt(devDni)
     String actualSwitch = dev.currentState('switch')
     if (actualSwitch) {
       logData += "targetDevLevel: >${targetDevLevel}<, value: ${actualSwitch.value}"
     }
     String actualLevel = dev.currentState('level')
-    if (actualLevel) {
-      logData += "targetDevLevel: >${targetDevLevel}<, name: ${actualLevel.name}, value: ${actualLevel.value}"
-    }
+    //-> if (actualLevel) {
+    //->   logData += "targetDevLevel: >${targetDevLevel}<, name: ${actualLevel.name}, value: ${actualLevel.value}"
+    //-> }
+    */
   }
 
-  if (settings.log) log.trace logData.join('<br/>')
+  L('DEBUG', logData.join('<br/>'))
 
   // • sceneToIndependent → [TV:[02:100], Chill:[02:100], Supplement:[02:0], Party:[02:100], Night:[02:100], Day:[02:0]]
   // • sceneToRepeater → [Chill:[Ra2K-1-1848:41], Day:[Ra2K-1-1848:42], Party:[Ra2K-1-1848:46], Supplement:[Ra2K-1-1848:47], TV:[Ra2K-1-1848:48], Night:[Ra2K-1-1848:44]]
@@ -677,30 +711,34 @@ Boolean isExpectedSceneActive () {
 
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
-    if (settings.log) log.trace(
+    L(
+      'DEBUG',
       "R_${state.ROOM_NAME} removeAllChildApps removing ${child.getLabel()} "
-      + "(${child.getId()})"
+        + "(${child.getId()})"
     )
     deleteChildApp(child.getId())
   }
 }
 
 void installed () {
-  if (settings.log) log.trace(
+  L(
+    'TRACE',
     "R_${state.ROOM_NAME} installed() for '${state.ROOM_NAME}'."
   )
   initialize()
 }
 
 void uninstalled () {
-  if (settings.log) log.trace(
+  L(
+    'TRACE',
     "R_${state.ROOM_NAME} uninstalled() for '${state.ROOM_NAME}'."
   )
   removeAllChildApps()
 }
 
 void updated () {
-  if (settings.log) log.trace(
+  L(
+    'TRACE',
     "R_${state.ROOM_NAME} updated() for '${state.ROOM_NAME}'."
   )
   unsubscribe()  // Suspend event processing to rebuild state variables.
@@ -721,12 +759,14 @@ void lutronSceneChangeHandler (Event e) {
        && (e.isStateChange == true)
   ) {
     if (e.value == 'off') {
-      if (settings.log) log.trace(
+      L(
+        'DEBUG',
         "R_${state.ROOM_NAME} lutronSceneChangeHandler() turning on manual override."
       )
       turnOnManualOverride()
     } else if (e.value == 'on') {
-      if (settings.log) log.trace(
+      L(
+        'DEBUG',
         "R_${state.ROOM_NAME} lutronSceneChangeHandler() turning off manual override."
       )
   // YOU ARE HERE
@@ -746,7 +786,7 @@ void independentDeviceHandler (Event e) {
   //   ALL independent devices have their expected values.
 
   // YOU ARE HERE
-  if (settings.log) log.trace(
+  L('TRACE',
     "independentDeviceHandler()<br/>${eventDetails(e)}"
   )
   isExpectedSceneActive()
@@ -760,8 +800,10 @@ void hubitatModeChangeHandler (Event e) {
     && state.currentScene == 'AUTOMATIC'
   ) {
     String targetScene = getSceneForMode(e.value)
-    if (settings.log) log.trace(
-      "R_${state.ROOM_NAME} hubitatModeChangeHandler() processing AUTOMATIC (${targetScene})"
+    L(
+      'TRACE',
+      "R_${state.ROOM_NAME} hubitatModeChangeHandler() processing "
+        + "AUTOMATIC -> ${targetScene}"
     )
     if (!settings?.motionSensor) activateScene(targetScene)
   }
@@ -778,7 +820,7 @@ void keypadSceneButtonHandler (Event e) {
                                              ?.getAt(e.value)
       // Turn on appropriate pbsg-modes-X VSW.
       if (targetVsw) {
-        if (settings.log) log.trace(
+        L('DEBUG',
           "R_${state.ROOM_NAME} keypadSceneButtonHandler() toggling ${targetVsw}"
         )
         app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(targetVsw)
@@ -789,10 +831,11 @@ void keypadSceneButtonHandler (Event e) {
       // Ignore without logging
       break
     default:
-      if (settings.log) log.trace(
+      L(
+        'WARN',
         "R_${state.ROOM_NAME} keypadSceneButtonHandler() for "
-        + "'${state.ROOM_NAME}' unexpected event name '${e.name}' "
-        + "for DNI '${e.deviceId}'"
+          + "'${state.ROOM_NAME}' unexpected event name '${e.name}' "
+          + "for DNI '${e.deviceId}'"
       )
   }
 }
@@ -806,13 +849,15 @@ void picoButtonHandler (Event e) {
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value)
         if (scene) {
-          log.trace(
+          L(
+            'DEBUG',
             "R_${state.ROOM_NAME} picoButtonHandler() w/ ${e.deviceId}-${e.value} "
-            + "activating ${scene}"
+              + "activating ${scene}"
           )
           app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
-          log.trace(
+          L(
+            'DEBUG',
             "R_${state.ROOM_NAME} picoButtonHandler() Raising ${settings.independentDevices}"
           )
           settings.independentDevices.each{ d ->
@@ -828,7 +873,8 @@ void picoButtonHandler (Event e) {
           }
           turnOnManualOverride()
         } else if (e.value == '4') {  // Default "Lower" behavior
-          log.trace(
+          L(
+            'DEBUG',
             "R_${state.ROOM_NAME} picoButtonHandler() Lowering ${settings.independentDevices}"
           )
           settings.independentDevices.each{ d ->
@@ -838,7 +884,8 @@ void picoButtonHandler (Event e) {
               ))
           }
         } else {
-          log.trace(
+          L(
+            'TRACE',
             "R_${state.ROOM_NAME} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
@@ -866,31 +913,36 @@ void motionSensorHandler (Event e) {
 }
 
 void initialize () {
-  if (settings.log) log.trace(
+  L(
+    'TRACE',
     "R_${state.ROOM_NAME} initialize() of '${state.ROOM_NAME}'. "
-    + "Subscribing to hubitatModeChangeHandler."
+      + "Subscribing to hubitatModeChangeHandler."
   )
   subscribe(location, "mode", hubitatModeChangeHandler)
   settings.seeTouchKeypads.each{ device ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} subscribing to Keypad ${getDeviceInfo(device)}"
     )
     subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} subscribing to Repeater ${getDeviceInfo(device)}"
     )
     subscribe(device, lutronSceneChangeHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} subscribing to Pico ${getDeviceInfo(device)}"
     )
     subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} subscribing to Motion Sensor ${getDeviceInfo(device)}"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
@@ -898,11 +950,11 @@ void initialize () {
 
   // YOU ARE HERE
   settings.independentDevices.each{ device ->
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "R_${state.ROOM_NAME} subscribing to independentDevice ${getDeviceInfo(device)}"
     )
     subscribe(device, independentDeviceHandler, ['filterEvents': true])
   }
   // YOU ARE HERE
-
 }

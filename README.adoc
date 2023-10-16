@@ -221,7 +221,7 @@ PRIOR_pbsgVswEventHandler = { event, pbsgInst ->
   if (event.isStateChange) {
     switch(event.value) {
       case 'on':
-        if (settings.log) log.trace "pbsgVswEventHandler() ${event.displayName}"
+        L('TRACE', "pbsgVswEventHandler() ${event.displayName}")
           + 'turned "ON". Turning off switch group peers.'
         pbsgInst.scene2Vsw.each{ scene, vsw ->
           // No harm in turning off a VSW that might already be off.

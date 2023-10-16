@@ -84,33 +84,12 @@ String red(String s) {
 // L O G G I N G
 // -------------
 
-void L(String level, String s) {
-  switch (level) {
-    case 'ERROR':
-      // Error logging is always true
-      log.error(s)
-      break
-    case 'WARN':
-      if (state.LOG_LEVEL2_WARN) log.warn(s)
-      break
-    case 'INFO':
-      if (state.LOG_LEVEL3_INFO) log.info(s)
-      break
-    case 'DEBUG':
-      if (state.LOG_LEVEL4_DEBUG) log.debug(s)
-      break
-    case 'TRACE':
-      if (state.LOG_LEVEL5_TRACE) log.trace(s)
-      break
-  }
-}
-
-void configureLogging2 () {
+void configureLogging () {
   input (
     name: 'logThreshold',
     type: 'enum',
     title: 'Log Threshold',
-    defaultValue: 'TRACE',
+    defaultValue: 'DEBUG',
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     submitOnChange: true
   )
@@ -132,6 +111,29 @@ void configureLogging2 () {
       case 'WARN':
         state.LOG_LEVEL2_WARN = true
     }
+  }
+}
+
+void L(String level, String s) {
+  switch (level) {
+    case 'ERROR':
+      log.error(s)                         // Error logging is always true.
+      break
+    case 'WARN':
+      if (state.LOG_LEVEL2_WARN) log.warn(s)
+      break
+    case 'INFO':
+      if (state.LOG_LEVEL3_INFO) log.info(s)
+      break
+    case 'DEBUG':
+      if (state.LOG_LEVEL4_DEBUG) log.debug(s)
+      break
+    case 'TRACE':
+      if (state.LOG_LEVEL5_TRACE) log.trace(s)
+      break
+    // Ignore the default case which arose during initialization testing.
+//->    default:
+//->      log.error "Logging function L() received unknown level >${level}<."
   }
 }
 
@@ -179,20 +181,12 @@ void displayInstantiatedPbsgHref(
   ArrayList switchNames,     // state.MODE_SWITCH_NAMES
   String defaultSwitchName   // state.DEFAULT_MODE_SWITCH_NAME
   ) {
-  //   - Once a PGSB instance has been created and configured, it may be
-  //     necessary to reconfigure the PBSG - e.g., if the switchNames list
-  //     grows or shrinks.
-  //   - The PBSG-LIB configure() can function as a re-configure() as it
-  //     preserves existing VSWs that need to remain and prunes VSWs that
-  //     leave scope.
-  if (settings.log) log.trace(
-    'UTILS pbsgChildAppDrilldown() '
-    + "<b>pbsgName:</b> ${pbsgName}, "
-    + "<b>pbsgInstType:</b> ${pbsgInstType}, "
-    + "<b>pbsgPageName:</b> ${pbsgPageName}, "
-    + "<b>switchNames:</b> ${switchNames}, "
-    + "<b>defaultSwitchName:</b> ${defaultSwitchName}"
-  )
+  // - Once a PGSB instance has been created and configured, it may be
+  //   necessary to reconfigure the PBSG - e.g., if the switchNames list
+  //   grows or shrinks.
+  // - The PBSG-LIB configure() can function as a re-configure() as it
+  //   preserves existing VSWs that need to remain and prunes VSWs that
+  //   leave scope.
   paragraph heading('PBSG Inspection')
   InstAppW pbsgApp = app.getChildAppByLabel(pbsgName)
   if (!pbsgApp || pbsgApp.getAllChildDevices().size() == 0) {
@@ -207,17 +201,6 @@ void displayInstantiatedPbsgHref(
     style: 'internal',
     title: "Edit <b>${getAppInfo(pbsgApp)}</b>",
     state: null, //'complete'
-  )
-}
-
-void configureLogging () {
-  Boolean currentValue = settings.log ?: true
-  input (
-    name: 'log',
-    type: 'bool',
-    title: "${currentValue ? 'Logging ENABLED' : 'Logging DISABLED'}",
-    defaultValue: currentValue,
-    submitOnChange: true
   )
 }
 
@@ -286,27 +269,30 @@ String getDeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-void keepOldestAppObjPerAppLabel (List<String> keepLabels, Boolean LOG = false) {
+void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
   getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, appObjs ->
-    if (LOG) log.trace(
-      "UTILS keepOldestAppObjPerAppLabel(), "
-      + "<b>label:</b> >${label}<, "
-      + "<b>keepLabels:</b> >${keepLabels}<, "
-      + "<b>keepLabels?.findAll{ it -> it == label }:</b> ${keepLabels?.findAll{ it -> it == label }}"
-    )
-    // NOTE: Using 'findALl{} since contains() DID NOT work.
+    // NOTE: Using 'findALl{} since contains() DID NOT prove reliable.
     if (keepLabels?.findAll{ it -> it == label }) {
       appObjs.sort{}.reverse().eachWithIndex{ appObj, index ->
         if (index == 0) {
-          if (LOG) log.trace "UTILS keepOldestAppObjPerAppLabel() keeping newer '${getAppInfo(appObj)}'"
+          L(
+            'TRACE',
+            "UTILS keepOldestAppObjPerAppLabel() kept App <b>${getAppInfo(appObj)}</b>"
+          )
         } else {
-          if (LOG) log.trace "UTILS keepOldestAppObjPerAppLabel() deleting older '${getAppInfo(appObj)}'"
+          L(
+            'DEBUG',
+            "UTILS keepOldestAppObjPerAppLabel() deleted App <b>${getAppInfo(appObj)}</b>"
+          )
           deleteChildApp(appObj.getId())
         }
       }
     } else {
       appObjs.each{ appObj ->
-        if (LOG) log.trace "UTILS keepOldestAppObjPerAppLabel() deleting orphaned '${getAppInfo(appObj)}')"
+        L(
+          'DEBUG',
+          "UTILS keepOldestAppObjPerAppLabel() deleted orphan App '${getAppInfo(appObj)}')"
+        )
         deleteChildApp(appObj.getId())
       }
     }

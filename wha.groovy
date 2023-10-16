@@ -38,11 +38,13 @@ preferences {
 Map whaPage () {
   return dynamicPage(
     name: 'whaPage',
-    title: heading('Whole House Automation (WHA) Application<br/>') \
-      + bullet("Authorize Access to appropriate devices.<br/>") \
-      + bullet("Create the Mode PBSG App Instance.<br/>") \
-      + bullet("Identify Participating Rooms.<br/>") \
-      + bullet(red("Press <b>Done</b> (see below) to ensure event subscription updates !!!")),
+    title: [
+      heading('Whole House Automation (WHA) Application<br/>'),
+      bullet("Authorize Access to appropriate devices.<br/>"),
+      bullet("Create the Mode PBSG App Instance.<br/>"),
+      bullet("Identify Participating Rooms.<br/>"),
+      bullet(red("Press <b>Done</b> (see below) to ensure event subscription updates !!!"))
+    ].join(),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
@@ -56,18 +58,15 @@ Map whaPage () {
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
+//settings.remove('log')
     section {
       configureLogging()                            // <- provided by Utils
-      configureLogging2 ()
-      L('TRACE', 'Test of TRACE level logging')
-      L('DEBUG', 'Test of DEBUG level logging')
-      L('INFO', 'Test of INFO level logging')
-      L('WARN', 'Test of WARN level logging')
-      L('ERROR', 'Test of ERROR level logging')
       input(
         name: 'specialtyFnMainRepeater',
-        title: 'Authorize Specialty Function Repeater Access<br/>' \
-          + comment("Used for 'all off'... behavior."),
+        title: [
+          'Authorize Specialty Function Repeater Access<br/>',
+          comment("Used for 'all off'... behavior.")
+        ].join(),
         type: 'device.LutronKeypad',
         submitOnChange: true,
         required: false,
@@ -75,10 +74,12 @@ Map whaPage () {
       )
       input(
         name: 'seeTouchKeypads',
-        title: 'Authorize SeeTouch Keypad Access<br/>' \
-          + comment('Identify keypads with buttons that:<br/>') \
-          + bullet(comment('Trigger specialty whole-house functions.<br/>')) \
-          + bullet(comment('Change the Hubitat mode.')),
+        title: [
+          'Authorize SeeTouch Keypad Access<br/>',
+          comment('Identify keypads with buttons that:<br/>'),
+          bullet(comment('Trigger specialty whole-house functions.<br/>')),
+          bullet(comment('Change the Hubitat mode.'))
+        ].join(),
         type: 'device.LutronSeeTouchKeypad',
         submitOnChange: true,
         required: false,
@@ -86,8 +87,10 @@ Map whaPage () {
       )
       input(
         name: 'specialFnButtons',
-        title: 'Identify Special Function Buttons<br/>' \
-          + comment("Examples: ${state.SPECIALTY_BUTTONS}"),
+        title: [
+          'Identify Special Function Buttons<br/>',
+          comment("Examples: ${state.SPECIALTY_BUTTONS}")
+        ].join(),
         type: 'device.LutronComponentSwitch',
         submitOnChange: true,
         required: false,
@@ -107,8 +110,10 @@ Map whaPage () {
 
       input(
         name: 'lutronModeButtons',
-        title: 'lutronModeButtons<br/>' \
-          + comment('Identify Keypad LEDs/Buttons that change the Hubitat mode.'),
+        title: [
+          'lutronModeButtons<br/>',
+          comment('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
+        ].join(),
         type: 'device.LutronComponentSwitch',
         submitOnChange: true,
         required: false,
@@ -129,7 +134,7 @@ Map whaPage () {
       if (!settings.rooms) {
         paragraph red('Management of child apps is pending selection of Room Names.')
       } else {
-        keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME], false)
+        keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME])
         displayInstantiatedRoomHrefs()
         displayInstantiatedPbsgHref(
           state.MODE_PBSG_APP_NAME,
@@ -139,11 +144,11 @@ Map whaPage () {
           state.DEFAULT_MODE_SWITCH_NAME
         )
       }
-      paragraph(
-        heading('Debug<br/>')
-        + "${ displayState() }<br/>"
-        + "${ displaySettings() }"
-      )
+      paragraph([
+        heading('Debug<br/>'),
+        "${ displayState() }<br/>",
+        "${ displaySettings() }"
+      ].join())
     }
   }
 }
@@ -166,7 +171,8 @@ void displayInstantiatedRoomHrefs () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
-      if (settings.log) log.trace(
+      L(
+        'DEBUG',
         "WHA addRoomAppsIfMissing() Adding room ${roomName}"
       )
       roomApp = addChildApp('wesmc', 'whaRoom', roomName)
@@ -221,7 +227,8 @@ void pbsgVswTurnedOnCallback (String currMode) {
   // - SeeTouch Keypad LEDs are switches that respond to on/off.
   // - Access to LEDs is approved via a per-scene list of LEDs:
   //   modeButton_<scene> → ["<description>: <LED DNI>", ...]
-  log.trace(
+  L(
+    'DEBUG',
     "WHA pbsgVswTurnedOnCallback() activating <b>mode = ${currMode}</b>."
   )
   getLocation().setMode(currMode)
@@ -230,7 +237,8 @@ void pbsgVswTurnedOnCallback (String currMode) {
 
 void removeAllChildApps () {
   getAllChildApps().each{ child ->
-    if (settings.log) log.trace(
+    L(
+      'DEBUG',
       "WHA removeAllChildApps() child: >${child.getId()}< >${child.getLabel()}<"
     )
     deleteChildApp(child.getId())
@@ -240,18 +248,20 @@ void removeAllChildApps () {
 void pruneOrphanedChildApps () {
   //Initially, assume InstAppW supports instance equality tests -> values is a problem
   List<InstAppW> kids = getAllChildApps()
-  if (settings.log) log.info(
-    'WHA pruneOrphanedChildApps() processing '
-    + "${kids.collect{it.getLabel()}.join(', ')}"
+  L(
+    'TRACE',
+    "WHA pruneOrphanedChildApps() processing ${kids.collect{it.getLabel()}.join(', ')}"
   )
   List<String> roomNames =
   kids.each{ kid ->
     if (settings.rooms?.contains(kid)) {
-      if (settings.log) log.info(
+      L(
+        'TRACE',
         "WHA pruneOrphanedChildApps() skipping ${kid.getLabel()} (room)"
       )
     } else {
-      if (settings.log) log.info(
+      L(
+        'DEBUG',
         "WHA pruneOrphanedChildApps() deleting ${kid.getLabel()} (orphan)"
       )
       deleteChildApp(kid.getId())
@@ -260,23 +270,27 @@ void pruneOrphanedChildApps () {
 }
 
 void displayAppInfoLink () {
-  paragraph comment('Whole House Automation - @wesmc, ' \
-    + '<a href="https://github.com/WesleyMConner/Hubitat-wha" ' \
-    + 'target="_blank"><br/>Click for more information</a>')
+  paragraph comment(
+    [
+      'Whole House Automation - @wesmc, ',
+      '<a href="https://github.com/WesleyMConner/Hubitat-wha" ',
+      'target="_blank"><br/>Click for more information</a>'
+    ].join()
+  )
 }
 
 void installed () {
-  if (settings.log) log.trace 'WHA installed()'
+  L('TRACE', 'WHA installed()')
   initialize()
 }
 
 void uninstalled () {
-  if (settings.log) log.trace "WHA uninstalled()"
+  L('TRACE', "WHA uninstalled()")
   removeAllChildApps()
 }
 
 void updated () {
-  if (settings.log) log.trace 'WHA updated()'
+  L('TRACE', 'WHA updated()')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
@@ -296,14 +310,14 @@ void specialFnButtonHandler (Event e) {
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
         case 'ALL_AUTO':
-          if (settings.log) log.trace 'WHA specialFnButtonHandler() executing ALL_AUTO'
+          L('TRACE', 'WHA specialFnButtonHandler() executing ALL_AUTO')
           AllAuto()
           //--TBD--> Update of Keypad LEDs
           break;
        // Rooms will trip into MANUAL OVERRIDE if ALL_OFF is executed
        // Unless and until there is a formal ALL_OFF mode
        //--breakingChange-> case 'ALL_OFF':
-       //--breakingChange->   if (settings.log) log.trace 'WHA specialFnButtonHandler() executing ALL_OFF'
+       //--breakingChange->   L('TRACE', 'WHA specialFnButtonHandler() executing ALL_OFF')
        //--breakingChange->   // Hard-coding the ALL_OFF button for now.
        //--breakingChange->   settings.specialtyFnMainRepeater.push(2)
        //--breakingChange->   //--TBD--> Brute-Force Turn Off of non-Lutron devices is TBD.
@@ -316,23 +330,26 @@ void specialFnButtonHandler (Event e) {
         case 'FLASH':
         case 'PANIC':
         case 'QUIET':
-          if (settings.log) log.trace(
+          L(
+            'TRACE',
             "WHA specialFnButtonHandler() <b>${specialtyFunction}</b> "
-            + "function execution is <b>TBD</b>"
+              + "function execution is <b>TBD</b>"
           )
           break
         default:
           // Silently
-          log.error(
-            "WHA specialFnButtonHandler() Unknown specialty function "
-            + "<b>'${specialtyFunction}'</b>"
+          L(
+            'error',
+            "WHA specialFnButtonHandler() Unknown specialty "
+              + "function <b>'${specialtyFunction}'</b>"
           )
       }
       break;
     case 'held':
     case 'released':
     default:
-      if (settings.log) log.trace(
+      L(
+        'TRACE',
         "WHA specialFnButtonHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
@@ -348,11 +365,17 @@ void modeChangeButtonHandler (Event e) {
       String targetVsw = state.modeButtonMap?.getAt(e.deviceId.toString())
                                             ?.getAt(e.value)
       if (targetVsw) {
-        if (settings.log) log.trace "WHA modeChangeButtonHandler() turning on ${targetVsw}"
+        L(
+          'DEBUG',
+          "WHA modeChangeButtonHandler() turning on ${targetVsw}"
+        )
         app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
       }
       if (targetVsw == 'Day') {
-        if (settings.log) log.trace "WHA modeChangeButtonHandler()  executing ALL_AUTO"
+        L(
+          'DEBUG',
+          "WHA modeChangeButtonHandler()  executing ALL_AUTO"
+        )
         AllAuto()
       }
       // Silently ignore buttons that DO NOT impact Hubitat mode.
@@ -360,7 +383,8 @@ void modeChangeButtonHandler (Event e) {
     case 'held':
     case 'released':
     default:
-      if (settings.log) log.trace(
+      L(
+        'TRACE',
         "WHA modeChangeButtonHandler() ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
@@ -369,17 +393,18 @@ void modeChangeButtonHandler (Event e) {
 void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
-  if (settings.log) log.trace "WHA initialize()"
+  L('TRACE', "WHA initialize()")
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    if (settings.log) log.trace(
+    L(
+      'TRACE',
       "WHA initialize() subscribing ${getDeviceInfo(device)} to mode handler."
     )
     subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
   }
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    if (settings.log) log.trace "WHA subscribing to ${getDeviceInfo(device)}"
+    L('TRACE', "WHA subscribing to ${getDeviceInfo(device)}")
     subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
 }
