@@ -51,14 +51,19 @@ Map whaPage () {
   ) {
     app.updateLabel('Whole House Automation')
     state.MODE_PBSG_APP_NAME = 'pbsg_modes'
-    state.MODE_SWITCH_NAMES = getLocation().getModes().collect{it.name}
-    state.DEFAULT_MODE_SWITCH_NAME = getGlobalVar('defaultMode').value
+    state.MODES = getLocation().getModes().collect{it.name}
+    getGlobalVar('defaultMode').value
     state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'ALL_ON',
       'AWAY', 'CLEANING', 'FLASH', 'PANIC', 'QUIET']
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
-//settings.remove('log')
+    //-----------------------------------------
+    // REMOVE NO LONGER USED SETTINGS AND STATE
+    //-----------------------------------------
+    settings.remove('log')
+    state.remove('MODE_SWITCH_NAMES')
+    //-----------------------------------------
     section {
       configureLogging()                            // <- provided by Utils
       input(
@@ -119,11 +124,11 @@ Map whaPage () {
         required: false,
         multiple: true
       )
-      if (state.MODE_SWITCH_NAMES == null || settings?.lutronModeButtons == null) {
+      if (state.MODES == null || settings?.lutronModeButtons == null) {
         paragraph(red('Mode activation buttons are pending pre-requisites.'))
       } else {
         identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
-          state.MODE_SWITCH_NAMES,              //   - list
+          state.MODES,              //   - list
           settings.lutronModeButtons,           //   - ledDevices
           'modeButton'                          //   - prefix
         )
@@ -136,12 +141,16 @@ Map whaPage () {
       } else {
         keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME])
         displayInstantiatedRoomHrefs()
-        displayInstantiatedPbsgHref(
-          state.MODE_PBSG_APP_NAME,
-          'modePBSG',
-          'modePbsgPage',
-          state.MODE_SWITCH_NAMES,
-          state.DEFAULT_MODE_SWITCH_NAME
+        displayInstantiatedPbsgHref(            // From UtilsLibrary.groovy
+          state.MODE_PBSG_APP_NAME,             //   pbsgName
+          'modePBSG',                           //   pbsgInstType
+          'modePbsgPage',                       //   pbsgPageName
+          [                                     //   switchDNIs
+            *state.MODES, 'MANUAL_OVERRIDE'
+          ].collect{ mode -> "${state.MODE_PBSG_APP_NAME}_${mode}" },
+                                                //   defaultSwitchDNI
+          "${state.MODE_PBSG_APP_NAME}_${getGlobalVar('defaultMode').value}",
+          'DEBUG'                               //   logLevel
         )
       }
       paragraph([
@@ -220,7 +229,8 @@ void updateLutronKpadLeds (String currMode) {
   }
 }
 
-void pbsgVswTurnedOnCallback (String currMode) {
+void pbsgVswTurnedOnCallback (String currPbsgSwitch) {
+  String currMode = currPbsgSwitch?.minus("${state.MODE_PBSG_APP_NAME}_")
   // - The modePbsg instance calls this method to reflect a state change.
   // - When a PBSG-managed switch turns on, its peers can be presumed to be off.
   // - This function's response includes setting mode Keypad LEDs on/off.

@@ -175,14 +175,15 @@ String getSwitchState (DevW d) {
 }
 
 void displayInstantiatedPbsgHref(
-  String pbsgName,           // state.MODE_PBSG_APP_NAME
-  String pbsgInstType,       // 'modePBSG'
-  String pbsgPageName,       // 'modePbsgPage'
-  ArrayList switchNames,     // state.MODE_SWITCH_NAMES
-  String defaultSwitchName   // state.DEFAULT_MODE_SWITCH_NAME
+  String pbsgName,
+  String pbsgInstType,
+  String pbsgPageName,
+  ArrayList switchDNIs,     // Passed into pbsgLibrary configure.
+  String defaultSwitchDNI,  // Passed into pbsgLibrary configure.
+  String LOGLEVEL           // Passed into pbsgLibrary configure.
   ) {
   // - Once a PGSB instance has been created and configured, it may be
-  //   necessary to reconfigure the PBSG - e.g., if the switchNames list
+  //   necessary to reconfigure the PBSG - e.g., if the switchDNIs list
   //   grows or shrinks.
   // - The PBSG-LIB configure() can function as a re-configure() as it
   //   preserves existing VSWs that need to remain and prunes VSWs that
@@ -193,7 +194,11 @@ void displayInstantiatedPbsgHref(
     if (pbsgApp) deleteChildDevice(pbsg.getDeviceNetworkId())
     pbsgApp = addChildApp('wesmc', pbsgInstType, pbsgName)
   }
-  pbsgApp.configure(switchNames, defaultSwitchName, 'DEBUG')
+  pbsgApp.configure(
+    switchDNIs,        // List<String> switchDNIs,
+    defaultSwitchDNI,  // String defaultSwitchDNI,
+    logLevel           // String logLevel
+  )
   href (
     name: pbsgName,
     width: 2,

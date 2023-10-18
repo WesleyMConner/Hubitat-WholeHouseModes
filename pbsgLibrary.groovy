@@ -34,6 +34,7 @@ library (
 // configure () - see below - to complete device configuration.
 void defaultPage () {
   section {
+    settings.remove('log')  // No Longer Used, but periodically still seen.
     paragraph(
       [
         heading ("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>"),
@@ -45,69 +46,63 @@ void defaultPage () {
     paragraph(
       [
         heading('Debug<br/>'),
-        "${ displaySettings() }<br/>",
-        "${ displayState() }"
+        "${ displayState() }<br/>",
+        "${ displaySettings() }"
       ].join()
     )
   }
 }
 
-String switchShortNameToDNI (String shortName) {
-  return "${app.getLabel()}_${shortName}"
-}
-
-String switchDniToShortName (String dni) {
-  return dni.minus("${app.getLabel()}_")
-}
-
 void configure (
-  List<String> switchNames,
-  String defaultSwitchName,
+  List<String> switchDNIs,
+  String defaultSwitchDNI,
   String logLevel
   ) {
   // !!! DO NOT ATTEMPT ANY LOGGING IN THIS METHOD !!!
   // Invoked by a parent application just after instantiating a new PBSG.
   // See displayInstantiatedPbsgHref() in UtilsLibrary.groovy
-  // - pbsgApp.configure(switchNames, defaultSwitchName, settings.log)
+  // - pbsgApp.configure(sceneNames, defaultSwitchName, settings.log)
+  //-----------------------------------------
+  // REMOVE NO LONGER USED SETTINGS AND STATE
+  //-----------------------------------------
   settings.remove('log')
+  state.remove('defaultSwitchName')
+  state.remove('switchNames')
+  //-----------------------------------------
   settings.logThreshold = logLevel
-  state.switchNames = switchNames
-  state.switchDNIs = switchNames.collect{ switchName ->
-    switchShortNameToDNI(switchName)
-  }
-  state.defaultSwitchName = defaultSwitchName
-  state.defaultSwitchDNI = switchShortNameToDNI(defaultSwitchName)
+  state.switchDNIs = switchDNIs
+  state.defaultSwitchDNI = defaultSwitchDNI
   manageChildDevices()
   enforcePbsgConstraints()
 }
 
-void toggleSwitch (String shortName) {
-  DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
+void toggleSwitch (String switchDNI) {
+  DevW sw = app.getChildDevice(switchDNI)
   String switchState = getSwitchState(sw)
   switch (switchState) {
     case 'on':
       L(
         'DEBUG',
-        "PBSG-LIB toggleSwitch() w/ shortName: ${shortName} on() -> off()"
+        "PBSG-LIB toggleSwitch() w/ switchDNI: ${switchDNI} on() -> off()"
       )
       sw.off()
       break;
     case 'off':
       L(
         'DEBUG',
-        "PBSG-LIB toggleSwitch() w/ shortName: ${shortName} off() -> on()"
+        "PBSG-LIB toggleSwitch() w/ switchDNI: ${switchDNI} off() -> on()"
       )
       sw.on()
       break;
   }
 }
 
-void turnOnSwitch (String shortName) {
+void turnOnSwitch (String switchDNI) {
   L(
     'DEBUG',
-    "PBSG-LIB turnOnSwitch() w/ shortName: ${shortName}"
+    "PBSG-LIB turnOnSwitch() w/ switchDNI: ${switchDNI}"
   )
-  DevW sw = app.getChildDevice(switchShortNameToDNI(shortName))
+  DevW sw = app.getChildDevice(switchDNI)
   if (sw) {
     sw.on()
   }
@@ -127,9 +122,9 @@ void manageChildDevices () {
   // Uncomment the following to test orphan child app removal.
   //-> addOrphanChild()
   //=> GET ALL CHILD DEVICES AT ENTRY
-  if (!state.switchNames) {
+  if (!state.switchDNIs) {
     paragraph red(
-      'manageChildDevices() is pending required state data (switchNames).'
+      'manageChildDevices() is pending required state data (switchDNIs).'
     )
   } else {
     List<DevW> entryDNIs = getAllChildDevices().collect{ device ->
@@ -202,10 +197,10 @@ void enforceMutualExclusion () {
 
 void enforceDefaultSwitch () {
   List<DevW> onList = getOnSwitches()
-  if (state.defaultSwitchName && !onList) {
+  if (state.defaultSwitchDNI && !onList) {
     L(
       'DEBUG',
-      "PBSG-LIB enforceDefaultSwitch() turning on <b>${state.defaultSwitchName}</b>"
+      "PBSG-LIB enforceDefaultSwitch() turning on <b>${state.defaultSwitchDNI}</b>"
     )
     app.getChildDevice(state.defaultSwitchDNI).on()
   } else {
@@ -260,12 +255,43 @@ void turnOffPeers (String callerDNI) {
 }
 
 void pbsgEventHandler (Event e) {
+  // e.displayName - The DNI of the reporting switch.
+  //       e.value - 'on' or 'off' is expected
+  // THIS HANDLER MONITORS VALUE CHANGES FOR ALL PBSG SWITCHES.
+  // - It is the final arbiter of the state.currActiveSwitch.
+  // - The state.prevActiveSwitch is preserved for reactivation
+  //   when MANUAL_OVERRIDE turns off.
   if (e.isStateChange) {
     if (e.value == 'on') {
       turnOffPeers(e.displayName)
-      parent.pbsgVswTurnedOnCallback(switchDniToShortName(e.displayName))
+      state.prevActiveSwitch = state.currActiveSwitch ?: state.defaultSwitchDNI
+      state.currActiveSwitch = e.displayName
+      L(
+        'DEBUG',
+        //-> [
+        //->   "PBSG-LIB pbsgEventHandler() e.displayName: ${e.displayName}",
+        "PBSG-LIB pbsgEventHandler() ${state.prevActiveSwitch} -> ${state.currActiveSwitch}"
+        //-> ].join()
+      )
+      parent.pbsgVswTurnedOnCallback(state.currActiveSwitch)
     } else if (e.value == 'off') {
-      enforceDefaultSwitch()
+      if (e.displayName.contains('MANUAL_OVERRIDE')) {
+        // Special behavior for MANUAL ENTRY: Restore previously switch.
+        //-> state.currActiveSwitch = state.prevActiveSwitch ?: state.defaultSwitchDNI
+        turnOnSwitch(state.prevActiveSwitch)
+        //-> L(
+        //->   'DEBUG',
+        //->   "PBSG-LIB pbsgEventHandler() MANUAL_OVERRIDE -> ${state.currActiveSwitch}"
+        //-> )
+      } else {
+        enforceDefaultSwitch()
+        //-> state.prevActiveSwitch = state.currActiveSwitch ?: state.defaultSwitchDNI
+        //-> state.currActiveSwitch = onSwitch
+        //-> L(
+        //->   'DEBUG',
+        //->   "PBSG-LIB pbsgEventHandler() ${state.prevActiveSwitch} -> ${state.currActiveSwitch}"
+        //-> )
+      }
     } else {
       L(
         'WARN',
@@ -278,7 +304,7 @@ void pbsgEventHandler (Event e) {
 void initialize () {
   app.getAllChildDevices().each{ device ->
     L(
-      'TRACE',
+      'DEBUG',
       "PBSG-LIB initialize() subscribing ${getDeviceInfo(device)}..."
     )
     subscribe(device, "switch", pbsgEventHandler, ['filterEvents': false])
