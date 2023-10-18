@@ -31,7 +31,7 @@ library (
 )
 
 // Include this page content when instantiating PBSG instances, then call
-// configure () - see below - to complete device configuration.
+// configure() - see below - to complete device configuration.
 void defaultPage () {
   section {
     settings.remove('log')  // No Longer Used, but periodically still seen.
@@ -58,17 +58,16 @@ void configure (
   String defaultSwitchDNI,
   String logLevel
   ) {
-  // !!! DO NOT ATTEMPT ANY LOGGING IN THIS METHOD !!!
   // Invoked by a parent application just after instantiating a new PBSG.
   // See displayInstantiatedPbsgHref() in UtilsLibrary.groovy
   // - pbsgApp.configure(sceneNames, defaultSwitchName, settings.log)
-  //-----------------------------------------
+  //---------------------------------------------------------------------------------
   // REMOVE NO LONGER USED SETTINGS AND STATE
-  //-----------------------------------------
-  settings.remove('log')
-  state.remove('defaultSwitchName')
-  state.remove('switchNames')
-  //-----------------------------------------
+  //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
+  //?? settings.remove('log')
+  //?? state.remove('defaultSwitchName')
+  //?? state.remove('switchNames')
+  //---------------------------------------------------------------------------------
   settings.logThreshold = logLevel
   state.switchDNIs = switchDNIs
   state.defaultSwitchDNI = defaultSwitchDNI
@@ -102,10 +101,15 @@ void turnOnSwitch (String switchDNI) {
     'DEBUG',
     "PBSG-LIB turnOnSwitch() w/ switchDNI: ${switchDNI}"
   )
-  DevW sw = app.getChildDevice(switchDNI)
-  if (sw) {
-    sw.on()
-  }
+  app.getChildDevice(switchDNI)?.on()
+}
+
+void turnOffSwitch (String switchDNI) {
+  L(
+    'DEBUG',
+    "PBSG-LIB turnOffSwitch() w/ switchDNI: ${switchDNI}"
+  )
+  app.getChildDevice(switchDNI)?.off()
 }
 
 void addOrphanChild () {
@@ -323,7 +327,7 @@ void updated () {
 }
 
 void uninstalled () {
-  L('TRACE', 'PBSG-LIB uninstalled(), DELETING CHILD DEVICES')
+  L('DEBUG', 'PBSG-LIB uninstalled(), DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)
   }

@@ -58,12 +58,13 @@ Map whaPage () {
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
-    //-----------------------------------------
+    //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
-    //-----------------------------------------
+    //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
     settings.remove('log')
-    state.remove('MODE_SWITCH_NAMES')
-    //-----------------------------------------
+    //?? state.remove('MODE_SWITCH_NAMES')
+    //?? state.remove('DEFAULT_MODE_SWITCH_NAME')
+    //---------------------------------------------------------------------------------
     section {
       configureLogging()                            // <- provided by Utils
       input(
