@@ -71,6 +71,7 @@ void configure (
   settings.logThreshold = logLevel
   state.switchDNIs = switchDNIs
   state.defaultSwitchDNI = defaultSwitchDNI
+  state.inspectScene = state.currentScene
   manageChildDevices()
   enforcePbsgConstraints()
 }
@@ -80,16 +81,16 @@ void toggleSwitch (String switchDNI) {
   String switchState = getSwitchState(sw)
   switch (switchState) {
     case 'on':
-      L(
-        'DEBUG',
-        "PBSG-LIB toggleSwitch() w/ switchDNI: ${switchDNI} on() -> off()"
+      Linfo(
+        'toggleSwitch()',
+        "w/ switchDNI: ${switchDNI} on() -> off()"
       )
       sw.off()
       break;
     case 'off':
-      L(
-        'DEBUG',
-        "PBSG-LIB toggleSwitch() w/ switchDNI: ${switchDNI} off() -> on()"
+      Linfo(
+        'toggleSwitch()',
+        "w/ switchDNI: ${switchDNI} off() -> on()"
       )
       sw.on()
       break;
@@ -97,18 +98,10 @@ void toggleSwitch (String switchDNI) {
 }
 
 void turnOnSwitch (String switchDNI) {
-  L(
-    'DEBUG',
-    "PBSG-LIB turnOnSwitch() w/ switchDNI: ${switchDNI}"
-  )
   app.getChildDevice(switchDNI)?.on()
 }
 
 void turnOffSwitch (String switchDNI) {
-  L(
-    'DEBUG',
-    "PBSG-LIB turnOffSwitch() w/ switchDNI: ${switchDNI}"
-  )
   app.getChildDevice(switchDNI)?.off()
 }
 
@@ -136,26 +129,27 @@ void manageChildDevices () {
     }
     List<DevW> missingDNIs = (state.switchDNIs)?.minus(entryDNIs)
     List<DevW> orphanDNIs = entryDNIs.minus(state.switchDNIs)
-    L('TRACE',
-      [
-        'PBSG-LIB manageChildDevices()<table>',
-        "<tr><th>entryDNIs</th><td>${entryDNIs}</td></tr>",
-        "<tr><th>state.switchDNIs</th><td>${state.switchDNIs}</td></tr>",
-        "<tr><th>missingDNIs</th><td>${missingDNIs}</td></tr>",
-        "<tr><th>orphanDNIs:</th><td>${orphanDNIs}</td></tr>",
-        '</table>'
-      ].join()
-    )
+    //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
+    //-> Ldebug(
+    //->   'manageChildDevices()',
+    //->   [
+    //->     '<table>',
+    //->     "<tr><th>entryDNIs</th><td>${entryDNIs}</td></tr>",
+    //->     "<tr><th>state.switchDNIs</th><td>${state.switchDNIs}</td></tr>",
+    //->     "<tr><th>missingDNIs</th><td>${missingDNIs}</td></tr>",
+    //->     "<tr><th>orphanDNIs:</th><td>${orphanDNIs}</td></tr>",
+    //->     '</table>'
+    //->   ].join()
+    //-> )
     missingDNIs.each{ dni ->
-      L(
-        'DEBUG',
-        "PBSG-LIB manageChildDevices() adding child for DNI: '${dni}'"
+      Linfo(
+        'manageChildDevices()',
+        "adding child for DNI: '${dni}'"
       )
       addChildDevice(
         'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
       )}
     orphanDNIs.each{ dni -> deleteChildDevice(dni) }
-    initialize()
   }
 }
 
@@ -180,21 +174,20 @@ void enforceMutualExclusion () {
   while (onList && onList.size() > 1) {
     DevW device = onList?.first()
     if (device) {
-      L(
-        'DEBUG',
+      Linfo(
+        'enforceMutualExclusion()',
         [
-          'PBSG-LIB enforceMutualExclusion(), <br/>',
           "<b>onList:</b> ${onList}, ",
-          " turning off <b>${getDeviceInfo(device)}</b>."
+          "turning off <b>${getDeviceInfo(device)}</b>."
         ].join()
       )
       device.off()
       onList = onList.drop(1)
     } else {
-      L(
-        'TRACE',
-        "PBSG-LIB enforceMutualExclusion() taking no action.<br/>onList: >${onList}<"
-      )
+      //-> Linfo(
+      //->   'enforceMutualExclusion()',
+      //->   "taking no action.<br/>onList: >${onList}<"
+      //-> )
     }
   }
 }
@@ -202,15 +195,15 @@ void enforceMutualExclusion () {
 void enforceDefaultSwitch () {
   List<DevW> onList = getOnSwitches()
   if (state.defaultSwitchDNI && !onList) {
-    L(
-      'DEBUG',
-      "PBSG-LIB enforceDefaultSwitch() turning on <b>${state.defaultSwitchDNI}</b>"
+    Linfo(
+      'enforceDefaultSwitch()',
+      "turning on <b>${state.defaultSwitchDNI}</b>"
     )
     app.getChildDevice(state.defaultSwitchDNI).on()
   } else {
-    L(
-      'TRACE',
-      "PBSG-LIB enforceDefaultSwitch() taking no action.<br/>onList: >${onList}<"
+    Linfo(
+      'enforceDefaultSwitch()',
+      "taking no action.<br/>onList: >${onList}<"
     )
   }
 }
@@ -270,12 +263,9 @@ void pbsgEventHandler (Event e) {
       turnOffPeers(e.displayName)
       state.prevActiveSwitch = state.currActiveSwitch ?: state.defaultSwitchDNI
       state.currActiveSwitch = e.displayName
-      L(
-        'DEBUG',
-        //-> [
-        //->   "PBSG-LIB pbsgEventHandler() e.displayName: ${e.displayName}",
-        "PBSG-LIB pbsgEventHandler() ${state.prevActiveSwitch} -> ${state.currActiveSwitch}"
-        //-> ].join()
+      Linfo(
+        'pbsgEventHandler()',
+        "${state.prevActiveSwitch} -> ${state.currActiveSwitch}"
       )
       parent.pbsgVswTurnedOnCallback(state.currActiveSwitch)
     } else if (e.value == 'off') {
@@ -283,23 +273,13 @@ void pbsgEventHandler (Event e) {
         // Special behavior for MANUAL ENTRY: Restore previously switch.
         //-> state.currActiveSwitch = state.prevActiveSwitch ?: state.defaultSwitchDNI
         turnOnSwitch(state.prevActiveSwitch)
-        //-> L(
-        //->   'DEBUG',
-        //->   "PBSG-LIB pbsgEventHandler() MANUAL_OVERRIDE -> ${state.currActiveSwitch}"
-        //-> )
       } else {
         enforceDefaultSwitch()
-        //-> state.prevActiveSwitch = state.currActiveSwitch ?: state.defaultSwitchDNI
-        //-> state.currActiveSwitch = onSwitch
-        //-> L(
-        //->   'DEBUG',
-        //->   "PBSG-LIB pbsgEventHandler() ${state.prevActiveSwitch} -> ${state.currActiveSwitch}"
-        //-> )
       }
     } else {
-      L(
-        'WARN',
-        "PBSG-LIB pbsgEventHandler(), unexpected event value = >${e.value}<"
+      Lwarn(
+        'pbsgEventHandler()',
+        "unexpected event value = >${e.value}<"
       )
     }
   }
@@ -307,27 +287,30 @@ void pbsgEventHandler (Event e) {
 
 void initialize () {
   app.getAllChildDevices().each{ device ->
-    L(
-      'DEBUG',
-      "PBSG-LIB initialize() subscribing ${getDeviceInfo(device)}..."
+    Linfo(
+      'initialize()',
+      "subscribing ${getDeviceInfo(device)}..."
     )
     subscribe(device, "switch", pbsgEventHandler, ['filterEvents': false])
+    //-> state.inspectScene = state.currentScene
+    manageChildDevices()
+    enforcePbsgConstraints()
   }
 }
 
 void installed () {
-  L('TRACE', 'PBSG-LIB installed()')
+  Lerror('installed()', '')
   initialize()
 }
 
 void updated () {
-  L('TRACE', 'PBSG-LIB updated()')
+  Lerror('updated()', '')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void uninstalled () {
-  L('DEBUG', 'PBSG-LIB uninstalled(), DELETING CHILD DEVICES')
+  Lerror('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)
   }

@@ -114,28 +114,47 @@ void configureLogging () {
   }
 }
 
-void L(String level, String s) {
+void Lerror (String fnName, String s) {
+  log.error("${app.getLabel()}.${fnName} ${s}")
+}
+
+void Lwarn (String fnName, String s) {
+  if (state.LOG_LEVEL2_WARN) log.warn("${app.getLabel()}.${fnName} ${s}")
+}
+
+void Linfo (String fnName, String s) {
+  if (state.LOG_LEVEL3_INFO) log.info("${app.getLabel()}.${fnName} ${s}")
+}
+
+void Ldebug (String fnName, String s) {
+  if (state.LOG_LEVEL4_DEBUG) log.debug("${app.getLabel()}.${fnName} ${s}")
+}
+
+void Ltrace (String fnName, String s) {
+  if (state.LOG_LEVEL5_TRACE) log.trace("${app.getLabel()}.${fnName} ${s}")
+}
+
+/*
+void L(String level, String fnName, String s) {
   switch (level) {
     case 'ERROR':
-      log.error(s)                         // Error logging is always true.
+      log.error("${app.getLabel()}.${fnName} ${s}")
       break
     case 'WARN':
-      if (state.LOG_LEVEL2_WARN) log.warn(s)
+      if (state.LOG_LEVEL2_WARN) log.warn("${app.getLabel()}.${fnName} ${s}")
       break
     case 'INFO':
-      if (state.LOG_LEVEL3_INFO) log.info(s)
+      if (state.LOG_LEVEL3_INFO) log.info("${app.getLabel()}.${fnName} ${s}")
       break
     case 'DEBUG':
-      if (state.LOG_LEVEL4_DEBUG) log.debug(s)
+      if (state.LOG_LEVEL4_DEBUG) log.debug("${app.getLabel()}.${fnName} ${s}")
       break
     case 'TRACE':
-      if (state.LOG_LEVEL5_TRACE) log.trace(s)
+      if (state.LOG_LEVEL5_TRACE) log.trace("${app.getLabel()}.${fnName} ${s}")
       break
-    // Ignore the default case which arose during initialization testing.
-//->    default:
-//->      log.error "Logging function L() received unknown level >${level}<."
   }
 }
+*/
 
 // -----------------------------
 // G E N E R A L   M E T H O D S
@@ -280,23 +299,23 @@ void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
     if (keepLabels?.findAll{ it -> it == label }) {
       appObjs.sort{}.reverse().eachWithIndex{ appObj, index ->
         if (index == 0) {
-          L(
-            'TRACE',
-            "UTILS keepOldestAppObjPerAppLabel() kept App <b>${getAppInfo(appObj)}</b>"
+          Linfo(
+            'keepOldestAppObjPerAppLabel()',
+            "retaining <b>${getAppInfo(appObj)}</b>"
           )
         } else {
-          L(
-            'DEBUG',
-            "UTILS keepOldestAppObjPerAppLabel() deleted App <b>${getAppInfo(appObj)}</b>"
+          Linfo(
+            'keepOldestAppObjPerAppLabel()',
+            "dropping <b>${getAppInfo(appObj)}</b>"
           )
           deleteChildApp(appObj.getId())
         }
       }
     } else {
       appObjs.each{ appObj ->
-        L(
-          'DEBUG',
-          "UTILS keepOldestAppObjPerAppLabel() deleted orphan App '${getAppInfo(appObj)}')"
+        Linfo(
+          'keepOldestAppObjPerAppLabel()',
+          "dropping orphaned <b>${getAppInfo(appObj)}</b>"
         )
         deleteChildApp(appObj.getId())
       }

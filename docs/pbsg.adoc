@@ -25,7 +25,7 @@ String showSwitchInfoWithState(
 }
 
 void logSettingsAndState(String calledBy) {
-  L('TRACE', """)logSettingsAndState() from ${calledBy}:<br/>
+  Ltrace(""")logSettingsAndState() from ${calledBy}:<br/>
     <table>
       <tr>
         <th align='right'>LOG:</th>
