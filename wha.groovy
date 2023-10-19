@@ -310,7 +310,9 @@ void updated () {
 void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
-    roomApp.turnOffManualOverride()
+    String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
+    Linfo('AllAuto()', "Turning on <b>${manualOverrideSwitchDNI}</b>")
+    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
 
