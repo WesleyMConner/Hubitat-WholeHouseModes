@@ -134,28 +134,6 @@ void Ltrace (String fnName, String s) {
   if (state.LOG_LEVEL5_TRACE) log.trace("${app.getLabel()}.${fnName} ${s}")
 }
 
-/*
-void L(String level, String fnName, String s) {
-  switch (level) {
-    case 'ERROR':
-      log.error("${app.getLabel()}.${fnName} ${s}")
-      break
-    case 'WARN':
-      if (state.LOG_LEVEL2_WARN) log.warn("${app.getLabel()}.${fnName} ${s}")
-      break
-    case 'INFO':
-      if (state.LOG_LEVEL3_INFO) log.info("${app.getLabel()}.${fnName} ${s}")
-      break
-    case 'DEBUG':
-      if (state.LOG_LEVEL4_DEBUG) log.debug("${app.getLabel()}.${fnName} ${s}")
-      break
-    case 'TRACE':
-      if (state.LOG_LEVEL5_TRACE) log.trace("${app.getLabel()}.${fnName} ${s}")
-      break
-  }
-}
-*/
-
 // -----------------------------
 // G E N E R A L   M E T H O D S
 // -----------------------------
