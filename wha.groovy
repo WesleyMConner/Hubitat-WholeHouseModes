@@ -165,7 +165,7 @@ Map whaPage () {
 }
 
 void identifyParticipatingRooms () {
-  roomPicklist = app.getRooms().collect{it.name}.sort()
+  roomPicklist = app.getRooms().collect{it.name.replace(' ', '_')}.sort()
   input(
     name: 'rooms',
     type: 'enum',

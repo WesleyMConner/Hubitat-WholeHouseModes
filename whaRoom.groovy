@@ -63,7 +63,7 @@ Map whaRoomPage () {
     //?? state.remove('MANUAL_OVERRIDE_VSW_DNI')
     //?? app.deleteChildDevice("${state.ROOM_NAME}_ManualOverride".replaceAll(' ', '_'))
     //---------------------------------------------------------------------------------
-    app.updateLabel
+    //----PRIOR-REPAIR----> app.updateLabel(app.getLabel().replace(' ', '_'))
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME.replace(' ', '_')}"
     section {

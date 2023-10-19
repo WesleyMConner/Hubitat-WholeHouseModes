@@ -281,7 +281,7 @@ void populateStateKpadButtons (String prefix) {
 }
 
 String getAppInfo (InstAppW app) {
-  return "${app.getLabel()} (${app.getId()})"
+  return "${app?.getLabel() ?: 'MISSING_LABEL'} (${app?.getId() ?: 'MISSING_ID'})"
 }
 
 String getDeviceInfo (def device) {
