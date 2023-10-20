@@ -277,12 +277,12 @@ void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
     if (keepLabels?.findAll{ it -> it == label }) {
       appObjs.sort{}.reverse().eachWithIndex{ appObj, index ->
         if (index == 0) {
-          Linfo(
+          Ldebug(
             'keepOldestAppObjPerAppLabel()',
             "retaining <b>${getAppInfo(appObj)}</b>"
           )
         } else {
-          Linfo(
+          Ldebug(
             'keepOldestAppObjPerAppLabel()',
             "dropping <b>${getAppInfo(appObj)}</b>"
           )
@@ -291,7 +291,7 @@ void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
       }
     } else {
       appObjs.each{ appObj ->
-        Linfo(
+        Ldebug(
           'keepOldestAppObjPerAppLabel()',
           "dropping orphaned <b>${getAppInfo(appObj)}</b>"
         )

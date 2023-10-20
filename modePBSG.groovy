@@ -44,6 +44,6 @@ Map modePbsgPage () {
     install: false,
     uninstall: false
   ) {
-    defaultPage ()
+    defaultPage()
   }
 }

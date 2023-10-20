@@ -459,7 +459,7 @@ String getSceneForMode (String mode = getLocation().getMode()) {
   String result = settings["modeToScene^${mode}"]
   Ldebug(
     'getSceneForMode()',
-    "<b>${mode} -> ${result}</b>"
+    "mode: <b>${mode}</b>, scene: <b>${result}</b>"
   )
   return result
 }
@@ -467,7 +467,10 @@ String getSceneForMode (String mode = getLocation().getMode()) {
 void pbsgVswTurnedOnCallback (String currPbsgSwitch) {
   String currScene = currPbsgSwitch?.minus("${state.SCENE_PBSG_APP_NAME}_")
   // If 'state.inspectScene' is observed, MANUAL_OVERRIDE is resolved.
-  state.inspectScene = (currScene == 'MANUAL_OVERRIDE') ? state.currentScene : currScene
+  state.inspectScene = (currScene == 'MANUAL_OVERRIDE') ? state.inspectScene : currScene
+  if (state.inspectScene == 'MANUAL_OVERRIDE') {
+    Lerror('pbsgVswTurnedOnCallback()', 'state,inspectScene == MANUAL_OVERRIDE')
+  }
   state.currentScene = currScene
   Ldebug(
     'pbsgVswTurnedOnCallback()',

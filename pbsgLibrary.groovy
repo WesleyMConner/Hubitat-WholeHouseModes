@@ -71,9 +71,12 @@ void configure (
   settings.logThreshold = logLevel
   state.switchDNIs = switchDNIs
   state.defaultSwitchDNI = defaultSwitchDNI
-  state.inspectScene = state.currentScene
-  manageChildDevices()
-  enforcePbsgConstraints()
+  String observedMode = getLocation().getMode()
+  String switchDNI = "${state.SCENE_PBSG_APP_NAME}_${observedMode}"
+  Ldebug('configure()', "Turning on VSW for observedMode '${observedMode}'")
+  turnOnSwitch(switchDNI)
+  //xx manageChildDevices()
+  //xx enforcePbsgConstraints()
 }
 
 void toggleSwitch (String switchDNI) {
@@ -195,7 +198,7 @@ void enforceMutualExclusion () {
 void enforceDefaultSwitch () {
   List<DevW> onList = getOnSwitches()
   if (state.defaultSwitchDNI && !onList) {
-    Linfo(
+    Ldebug(
       'enforceDefaultSwitch()',
       "turning on <b>${state.defaultSwitchDNI}</b>"
     )
@@ -287,7 +290,7 @@ void pbsgEventHandler (Event e) {
 
 void initialize () {
   app.getAllChildDevices().each{ device ->
-    Linfo(
+    Ldebug(
       'initialize()',
       "subscribing ${getDeviceInfo(device)}..."
     )
@@ -299,18 +302,18 @@ void initialize () {
 }
 
 void installed () {
-  Lerror('installed()', '')
+  Ldebug('installed()', '')
   initialize()
 }
 
 void updated () {
-  Lerror('updated()', '')
+  Ldebug('updated()', '')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void uninstalled () {
-  Lerror('uninstalled()', 'DELETING CHILD DEVICES')
+  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)
   }
