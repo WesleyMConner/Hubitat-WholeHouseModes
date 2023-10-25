@@ -48,7 +48,7 @@ Map whaRoomPage () {
     ].join(),
     install: true,
     uninstall: true,
-    nextPage: 'whaPage'
+    //nextPage: 'whaPage'
   ) {
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - app.deleteChildDevice(<INSERT DNI>)
@@ -568,7 +568,7 @@ void activateScene (String scene) {
     state.roomSceneRepeaterDeviceId = matchedRepeater.getId()
     matchedRepeater.push(buttonNumber)
   }
-  state.sceneToIndependent[scene].each{ deviceDni, level ->
+  state.sceneToIndependent?.getAt(scene)?.each{ deviceDni, level ->
     Ldebug(
       'activateScene()',
       "${scene}': device: ${deviceDni}, level: ${level}"
@@ -698,7 +698,7 @@ Boolean areRoomSceneDevLevelsCorrect() {
         'areRoomSceneDevLevelsCorrect()',
         "DNI: ${dev.deviceNetworkId}"
       )
-      Integer devTargetVal = indepDevData.getAt(dev.deviceNetworkId)
+      Integer devTargetVal = indepDevData?.getAt(dev.deviceNetworkId)
       if (devTargetVal) {
         Ldebug(
           'areRoomSceneDevLevelsCorrect()',

@@ -75,6 +75,7 @@ void configPbsg (List<String> switchDNIs, String defaultSwitchDNI, String logLev
 
 void toggleSwitch (String switchDNI) {
   DevW sw = app.getChildDevice(switchDNI)
+  if (!sw) Lerror('toggleSwitch()', "null sw for switchDNI: ${switchDNI}")
   String switchState = getSwitchState(sw)
   switch (switchState) {
     case 'on':
@@ -91,15 +92,21 @@ void toggleSwitch (String switchDNI) {
       )
       sw.on()
       break;
+    default:
+      Lerror('toggleSwitch()', "unexpected switchState: ${switchState}")
   }
 }
 
 void turnOnSwitch (String switchDNI) {
-  app.getChildDevice(switchDNI)?.on()
+  DevW sw = app.getChildDevice(switchDNI)
+  if (!sw) Lerror('turnOnSwitch()', "null sw for switchDNI: ${switchDNI}")
+  sw.on()
 }
 
 void turnOffSwitch (String switchDNI) {
-  app.getChildDevice(switchDNI)?.off()
+  DevW sw = app.getChildDevice(switchDNI)
+  if (!sw) Lerror('turnOffSwitch()', "null sw for switchDNI: ${switchDNI}")
+  sw.off()
 }
 
 //----
@@ -198,7 +205,7 @@ void enforceDefaultSwitch () {
       'enforceDefaultSwitch()',
       "turning on <b>${state.defaultSwitchDNI}</b>"
     )
-    app.getChildDevice(state.defaultSwitchDNI).on()
+    turnOnSwitch(state.defaultSwitchDNI)
   } else {
     Ltrace(
       'enforceDefaultSwitch()',

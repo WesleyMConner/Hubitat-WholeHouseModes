@@ -40,7 +40,8 @@ preferences {
 Map roomPbsgPage () {
   return dynamicPage (
     name: 'roomPbsgPage',
-    install: false, //true,
+    install: true,
+    nextPage: whaPage,
     uninstall: false
   ) {
     defaultPage()

@@ -152,7 +152,7 @@ Map whaPage () {
         ].collect{ mode ->
           "${state.MODE_PBSG_APP_NAME}_${mode}"
         }
-        String defaultSwitchDNI = "${state.MODE_PBSG_APP_NAME}_AUTOMATIC"
+        String defaultSwitchDNI = "${state.MODE_PBSG_APP_NAME}_Day"
         // PBSG configPbsg() adjusts PBSG-owned VSWs if vswDNIs grows or shrinks
         // - preserving, pruning or adding VSWs as needed.
         modePBSG.configPbsg(vswDNIs, defaultSwitchDNI, settings.logThreshold)
