@@ -53,8 +53,8 @@ Map whaPage () {
     state.MODE_PBSG_APP_NAME = 'pbsg_modes'
     state.MODES = getLocation().getModes().collect{it.name}
     getGlobalVar('defaultMode').value
-    state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'ALL_ON',
-      'AWAY', 'CLEANING', 'FLASH', 'PANIC', 'QUIET']
+    state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
+      'FLASH', 'PANIC', 'QUIET']
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - state.remove('X')
     //   - settings.remove('Y')
@@ -67,7 +67,7 @@ Map whaPage () {
     //?? state.remove('DEFAULT_MODE_SWITCH_NAME')
     //---------------------------------------------------------------------------------
     section {
-      configureLogging()                            // <- provided by Utils
+      solicitLogThreshold()                            // <- provided by Utils
       input(
         name: 'specialtyFnMainRepeater',
         title: [
@@ -114,7 +114,6 @@ Map whaPage () {
         populateStateKpadButtons('specialFnButton')
         populateStateKpadButtonDniToSpecialFnButtons()
       }
-
       input(
         name: 'lutronModeButtons',
         title: [
@@ -143,16 +142,27 @@ Map whaPage () {
       } else {
         keepOldestAppObjPerAppLabel([*settings.rooms, state.MODE_PBSG_APP_NAME])
         displayInstantiatedRoomHrefs()
-        displayInstantiatedPbsgHref(            // From UtilsLibrary.groovy
-          state.MODE_PBSG_APP_NAME,             //   pbsgName
-          'modePBSG',                           //   pbsgInstType
-          'modePbsgPage',                       //   pbsgPageName
-          [                                     //   switchDNIs
-            *state.MODES, 'MANUAL_OVERRIDE'
-          ].collect{ mode -> "${state.MODE_PBSG_APP_NAME}_${mode}" },
-                                                //   defaultSwitchDNI
-          "${state.MODE_PBSG_APP_NAME}_${getGlobalVar('defaultMode').value}",
-          'DEBUG'                               //   logLevel
+        paragraph heading('Inspect Mode PBSG')
+        InstAppW modePBSG = app.getChildAppByLabel(state.MODE_PBSG_APP_NAME)
+        if (!modePBSG || modePBSG.getAllChildDevices().size() == 0) {
+          modePBSG = addChildApp('wesmc', 'modePBSG', 'modePbsgPage')
+        }
+        List<String> vswDNIs = [
+          *state.MODES /*, 'MANUAL_OVERRIDE' */
+        ].collect{ mode ->
+          "${state.MODE_PBSG_APP_NAME}_${mode}"
+        }
+        String defaultSwitchDNI = "${state.MODE_PBSG_APP_NAME}_AUTOMATIC"
+        // PBSG configPbsg() adjusts PBSG-owned VSWs if vswDNIs grows or shrinks
+        // - preserving, pruning or adding VSWs as needed.
+        modePBSG.configPbsg(vswDNIs, defaultSwitchDNI, settings.logThreshold)
+        href (
+          name: state.SCENE_PBSG_APP_NAME,
+          width: 2,
+          url: "/installedapp/configure/${modePBSG.getId()}/modePbsgPage",
+          style: 'internal',
+          title: "Edit <b>${getAppInfo(modePBSG)}</b>",
+          state: null
         )
       }
       paragraph([
@@ -302,7 +312,7 @@ void uninstalled () {
 }
 
 void updated () {
-  Ldebug('updated()', '')
+  Ltrace('updated()', '')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
@@ -311,7 +321,7 @@ void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Linfo('AllAuto()', "Turning on <b>${manualOverrideSwitchDNI}</b>")
+    Ldebug('AllAuto()', "Turning on <b>${manualOverrideSwitchDNI}</b>")
     roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
@@ -328,19 +338,8 @@ void specialFnButtonHandler (Event e) {
           AllAuto()
           //--TBD--> Update of Keypad LEDs
           break;
-       // Rooms will trip into MANUAL OVERRIDE if ALL_OFF is executed
-       // Unless and until there is a formal ALL_OFF mode
-       //--breakingChange-> case 'ALL_OFF':
-       //--breakingChange->   Ldebug('WHA specialFnButtonHandler() executing ALL_OFF')
-       //--breakingChange->   // Hard-coding the ALL_OFF button for now.
-       //--breakingChange->   settings.specialtyFnMainRepeater.push(2)
-       //--breakingChange->   //--TBD--> Brute-Force Turn Off of non-Lutron devices is TBD.
-       //--breakingChange->   //--TBD--> Update of Keypad LEDs is TBD.
-       //--breakingChange->   break;
         case 'ALARM':
-        case 'ALL_ON':
         case 'AWAY':
-        case 'CLEANING':
         case 'FLASH':
         case 'PANIC':
         case 'QUIET':

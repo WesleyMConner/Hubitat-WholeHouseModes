@@ -84,7 +84,7 @@ String red(String s) {
 // L O G G I N G
 // -------------
 
-void configureLogging () {
+void solicitLogThreshold () {
   input (
     name: 'logThreshold',
     type: 'enum',
@@ -171,41 +171,6 @@ String getSwitchState (DevW d) {
         : 'unknown'
 }
 
-void displayInstantiatedPbsgHref(
-  String pbsgName,
-  String pbsgInstType,
-  String pbsgPageName,
-  ArrayList switchDNIs,     // Passed into pbsgLibrary configure.
-  String defaultSwitchDNI,  // Passed into pbsgLibrary configure.
-  String LOGLEVEL           // Passed into pbsgLibrary configure.
-  ) {
-  // - Once a PGSB instance has been created and configured, it may be
-  //   necessary to reconfigure the PBSG - e.g., if the switchDNIs list
-  //   grows or shrinks.
-  // - The PBSG-LIB configure() can function as a re-configure() as it
-  //   preserves existing VSWs that need to remain and prunes VSWs that
-  //   leave scope.
-  paragraph heading('PBSG Inspection')
-  InstAppW pbsgApp = app.getChildAppByLabel(pbsgName)
-  if (!pbsgApp || pbsgApp.getAllChildDevices().size() == 0) {
-    if (pbsgApp) deleteChildDevice(pbsg.getDeviceNetworkId())
-    pbsgApp = addChildApp('wesmc', pbsgInstType, pbsgName)
-  }
-  pbsgApp.configure(
-    switchDNIs,        // List<String> switchDNIs,
-    defaultSwitchDNI,  // String defaultSwitchDNI,
-    logLevel           // String logLevel
-  )
-  href (
-    name: pbsgName,
-    width: 2,
-    url: "/installedapp/configure/${pbsgApp.getId()}/${pbsgPageName}",
-    style: 'internal',
-    title: "Edit <b>${getAppInfo(pbsgApp)}</b>",
-    state: null, //'complete'
-  )
-}
-
 String displaySettings() {
   [
     '<b>SETTINGS</b>',
@@ -272,21 +237,24 @@ String getDeviceInfo (def device) {
 }
 
 void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
+  // Abstract
+  //   - No new application should have the same label as an existing application.
+  //   - Tactically generate an error for any new, duplicated applications.
   getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, appObjs ->
-    // NOTE: Using 'findALl{} since contains() DID NOT prove reliable.
     if (keepLabels?.findAll{ it -> it == label }) {
-      appObjs.sort{}.reverse().eachWithIndex{ appObj, index ->
+      appObjs = appObjs.sort{}.reverse()
+      appObjs.eachWithIndex{ appObj, index ->
         if (index == 0) {
-          Ldebug(
-            'keepOldestAppObjPerAppLabel()',
-            "retaining <b>${getAppInfo(appObj)}</b>"
-          )
+          //-> Ldebug(
+          //->   'keepOldestAppObjPerAppLabel()',
+          //->   "retaining <b>${getAppInfo(appObj)}</b>"
+          //-> )
         } else {
-          Ldebug(
+          Lerror(
             'keepOldestAppObjPerAppLabel()',
-            "dropping <b>${getAppInfo(appObj)}</b>"
+            "<b>${getAppInfo(appObj)}</b> duplicates ${getAppInfo(appObjs.first())}"
           )
-          deleteChildApp(appObj.getId())
+          //-> deleteChildApp(appObj.getId())
         }
       }
     } else {

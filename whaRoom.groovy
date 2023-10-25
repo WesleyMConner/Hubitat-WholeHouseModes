@@ -60,6 +60,10 @@ Map whaRoomPage () {
     settings.remove('log')
     state.remove('ManualOverrideDevice')
     state.remove('PBSGapp')
+    state.remove('currentScene')
+    state.remove('currentSceneRepeaterDeviceId')
+    state.remove('currentSceneRepeaterLED')
+    state.remove('inspectScene')
     //?? state.remove('MANUAL_OVERRIDE_VSW_DNI')
     //?? app.deleteChildDevice("${state.ROOM_NAME}_ManualOverride".replaceAll(' ', '_'))
     //---------------------------------------------------------------------------------
@@ -67,7 +71,7 @@ Map whaRoomPage () {
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME.replace(' ', '_')}"
     section {
-      configureLogging()                            // <- provided by Utils
+      solicitLogThreshold()                            // <- provided by Utils
       input(
         name: 'motionSensor',
         title: [
@@ -167,16 +171,28 @@ Map whaRoomPage () {
       if (state.scenes == null) {
         paragraph red('Management of child apps is pending selection of Room scenes.')
       } else {
+        // Before presenting room drilldown HREFs, prune any d
         keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME])
-        displayInstantiatedPbsgHref(            // From UtilsLibrary.groovy
-          state.SCENE_PBSG_APP_NAME,                 // pbsgName
-          'roomPBSG',                                // pbsgInstType
-          'roomPbsgPage',                            // pbsgPageName
-          [                                          // switchDNIs
-            *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE'
-          ].collect{ scene -> "${state.SCENE_PBSG_APP_NAME}_${scene}" },
-          "${state.SCENE_PBSG_APP_NAME}_AUTOMATIC",  // defaultSwitchDNI
-          'DEBUG'                                    // logLevel
+        paragraph heading('Inspect Room PBSG')
+        InstAppW roomPBSG = app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME)
+        if (!roomPBSG || roomPBSG.getAllChildDevices().size() == 0) {
+          roomPBSG = addChildApp('wesmc', 'roomPBSG', 'roomPbsgPage')
+        }
+        List<String> vswDNIs = [
+          *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE'
+        ].collect{ scene ->
+          "${state.SCENE_PBSG_APP_NAME}_${scene}"
+        }
+        String defaultSwitchDNI = "${state.SCENE_PBSG_APP_NAME}_AUTOMATIC"
+        // Set core instance fields immediately after PBSG instantiation.
+        roomPBSG.configPbsg(vswDNIs, defaultSwitchDNI, settings.logThreshold)
+        href (
+          name: state.SCENE_PBSG_APP_NAME,
+          width: 2,
+          url: "/installedapp/configure/${roomPBSG.getId()}/roomPbsgPage",
+          style: 'internal',
+          title: "Edit <b>${getAppInfo(roomPBSG)}</b>",
+          state: null
         )
       }
       paragraph(
@@ -364,9 +380,13 @@ void configureRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
   Set<String> sceneKeysAtStart = getSettingsSceneKeys()
+  //-> Ldebug(
+  //->   'configureRoomScene() <b>sceneKeysAtStart:</b><br/>',
+  //->   sceneKeysAtStart.join('<br/>')
+  //-> )
   Set<String> currentSceneKeys = []
   if (state.scenes == null) {
-    paragraph red('Identification of Room Scene deetails selection will proceed once scene names exist.')
+    paragraph red('Identification of Room Scene details selection will proceed once scene names exist.')
   } else {
     state.scenes?.each{ sceneName ->
       Integer col = 2
@@ -406,16 +426,17 @@ void configureRoomScene () {
         paragraph('', width: 1)
       }
     }
+
   }
   // Prune stale scene settings keys.
-  Ldebug(
-    'configureRoomScene()',
-    [
-      "<b>sceneKeysAtStart:</b> ${sceneKeysAtStart}<br/>",
-      "<b>currentSceneKeys:</b> ${currentSceneKeys}<br/>",
-      "<b>excess:</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
-    ].join()
-  )
+  //-> Ldebug(
+  //->   'configureRoomScene()<br/>',
+  //->   [
+  //->     "<b>Scene Keys (Start):</b> ${sceneKeysAtStart}<br/>",
+  //->     "<b>Scene Keys   (End):</b> ${currentSceneKeys}<br/>",
+  //->     "<b>Excess Keys (Diff):</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
+  //->   ].join()
+  //-> )
   sceneKeysAtStart.minus(currentSceneKeys).each{ key ->
     Ldebug(
       'configureRoomScene()',
@@ -466,15 +487,15 @@ String getSceneForMode (String mode = getLocation().getMode()) {
 
 void pbsgVswTurnedOnCallback (String currPbsgSwitch) {
   String currScene = currPbsgSwitch?.minus("${state.SCENE_PBSG_APP_NAME}_")
-  // If 'state.inspectScene' is observed, MANUAL_OVERRIDE is resolved.
-  state.inspectScene = (currScene == 'MANUAL_OVERRIDE') ? state.inspectScene : currScene
-  if (state.inspectScene == 'MANUAL_OVERRIDE') {
-    Lerror('pbsgVswTurnedOnCallback()', 'state,inspectScene == MANUAL_OVERRIDE')
+  // If 'state.roomScene' is observed, MANUAL_OVERRIDE is resolved.
+  state.roomScene = (currScene == 'MANUAL_OVERRIDE') ? state.roomScene : currScene
+  if (state.roomScene == 'MANUAL_OVERRIDE') {
+    Lerror('pbsgVswTurnedOnCallback()', 'state.roomScene == MANUAL_OVERRIDE')
   }
-  state.currentScene = currScene
+  state.currScenePerVsw = currScene
   Ldebug(
     'pbsgVswTurnedOnCallback()',
-    "currPbsgSwitch: ${currPbsgSwitch}, currScene: ${currScene}, inspectScene: ${state.inspectScene}"
+    "currPbsgSwitch: ${currPbsgSwitch}, currScene: ${currScene}, inspectScene: ${state.roomScene}"
   )
   //-----> updateLutronKpadLeds(currScene)
   switch(currScene) {
@@ -535,7 +556,7 @@ void activateScene (String scene) {
     )
     // Note: The repeater's Id (not DNI) and button are required to track the scene's
     //       LED on the Main Repeater.
-    state.currentSceneRepeaterLED = buttonNumber
+    state.roomSceneRepeaterLED = buttonNumber
     DevW matchedRepeater = settings.mainRepeater?.findAll{ repeater ->
       repeater.getDeviceNetworkId() == repeaterDni
     }?.first() ?: {
@@ -544,7 +565,7 @@ void activateScene (String scene) {
         "no repeater w/ DNI: ${repeaterDni}"
       )
     }
-    state.currentSceneRepeaterDeviceId = matchedRepeater.getId()
+    state.roomSceneRepeaterDeviceId = matchedRepeater.getId()
     matchedRepeater.push(buttonNumber)
   }
   state.sceneToIndependent[scene].each{ deviceDni, level ->
@@ -574,8 +595,8 @@ Boolean isRoomSceneLedActive() {
   // Fail true if the current room's scenes DO NOT leverage an
   // "RA2 Shared Scene" (via an RA2 Main Repeater Integration Button).
   Boolean retVal = true
-  if (!state.currentSceneRepeaterDeviceId) {
-    Linfo(
+  if (!state.roomSceneRepeaterDeviceId) {
+    Ldebug(
       'isRoomSceneLedActive()',
       'No RA2 Shared Scene in use.'
     )
@@ -583,43 +604,43 @@ Boolean isRoomSceneLedActive() {
     // LEDs will light if (a) they match an explicitly set Room Scene or
     // (b) they match the room's current AUTOMATIC scene. No LEDs should
     // light if the room's scene is MANUAL_OVERRIDE.
-    String ledScene = (state.currentScene == 'AUTOMATIC')
+    String ledScene = (state.currScenePerVsw == 'AUTOMATIC')
       ? getSceneForMode()
-      : state.currentScene
-    Linfo(
+      : state.currScenePerVsw
+    Ldebug(
       'isRoomSceneLedActive()',
       "ledScene: ${ledScene}"
     )
     Map repeaterData = state.sceneToRepeater?.getAt(ledScene)
     if (repeaterData) {
-      Linfo(
+      Ldebug(
         'isRoomSceneLedActive()',
         "repeaterData: ${repeaterData}"
       )
       settings?.mainRepeater.eachWithIndex{ rep, index ->
         String repDni = rep.deviceNetworkId
-        Linfo(
+        Ldebug(
           'isRoomSceneLedActive()',
           "repDni: ${repDni}"
         )
         String associatedButton = repeaterData.getAt(repDni)
-        Linfo(
+        Ldebug(
           'isRoomSceneLedActive()',
           "associatedButton: ${associatedButton}"
         )
         String led = "buttonLed-${associatedButton}"
-        Linfo(
+        Ldebug(
           'isRoomSceneLedActive()',
           "led: ${led}"
         )
         String ledVal = rep.currentValue(led)
-        Linfo(
+        Ldebug(
           'isRoomSceneLedActive()',
           "ledVal: ${ledVal}"
         )
         if (ledVal == 'off') {
           retVal = false
-          Linfo(
+          Ldebug(
             'isRoomSceneLedActive()',
             "retVal: ${retVal}"
           )
@@ -630,69 +651,70 @@ Boolean isRoomSceneLedActive() {
   }
   Ldebug(
     'isRoomSceneLedActive()',
-"R_${state.ROOM_NAME} isRoomSceneLedActive() -> ${retVal}")
+    "R_${state.ROOM_NAME} isRoomSceneLedActive() -> ${retVal}"
+  )
   return retVal
 }
 
 Boolean areRoomSceneDevLevelsCorrect() {
   // Fail true if the current room's scenes DO NOT leverage Independent Devices.
-  // Note that device level comparisons are made to state.inspectScene (and
-  // NOT state.currentScene). When state.currentScene == MANUAL_OVERRIDE,
-  // state.inspectScene will retain the critera required to release the OVERRIDE.
+  // Note that device level comparisons are made to state.roomScene (and
+  // NOT state.currScenePerVsw). When state.currScenePerVsw == MANUAL_OVERRIDE,
+  // state.roomScene will retain the critera required to release the OVERRIDE.
   Boolean retVal = true
   if (!state.sceneToIndependent) {
-    Linfo(
+    Ldebug(
       'areRoomSceneDevLevelsCorrect()',
       "No Independent Devices."
     )
   } else {
-    Linfo(
+    Ldebug(
       'areRoomSceneDevLevelsCorrect()',
       "sceneToIndependent: ${state.sceneToIndependent}"               // SEEN IN LOGS
     )
-    if (!state.inspectScene) {
-      if (!state.currentScene) {
-        Lerror(areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! state.inspectScene IS NOT populated')
+    if (!state.roomScene) {
+      if (!state.currScenePerVsw) {
+        Lerror(areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! state.roomScene IS NOT populated')
       }
     }
-    Linfo(
+    Ldebug(
       'areRoomSceneDevLevelsCorrect()',
-      "state.inspectScene: ${state.inspectScene}"                     // NOT AVAILABLE
+      "state.roomScene: ${state.roomScene}"                     // NOT AVAILABLE
     )
-    String restoreScene = (state.inspectScene == 'AUTOMATIC')
+    String restoreScene = (state.roomScene == 'AUTOMATIC')
       ? getSceneForMode()
-      : state.inspectScene
-    Linfo(
+      : state.roomScene
+    Ldebug(
       'areRoomSceneDevLevelsCorrect()',
       "restoreScene: ${restoreScene}"
     )
     Map indepDevData = state.sceneToIndependent?.getAt(restoreScene)
-    Linfo(
+    Ldebug(
       'areRoomSceneDevLevelsCorrect()',
       "indepDevData: ${indepDevData}"
     )
     settings?.independentDevices.each{ dev ->
-      Linfo(
+      Ldebug(
         'areRoomSceneDevLevelsCorrect()',
         "DNI: ${dev.deviceNetworkId}"
       )
       Integer devTargetVal = indepDevData.getAt(dev.deviceNetworkId)
       if (devTargetVal) {
-        Linfo(
+        Ldebug(
           'areRoomSceneDevLevelsCorrect()',
           "devTargetVal: ${devTargetVal}"
         )
         if (dev.hasAttribute('switch')) {
           String expectedSwitch = (devTargetVal == 0) ? 'off' : 'on'
           String actualSwitch = dev.currentValue('switch')
-          Linfo(
+          Ldebug(
             'areRoomSceneDevLevelsCorrect()',
             "switch: expected: ${expectedSwitch}, actual: ${actualSwitch}"
           )
         }
         if (dev.hasAttribute('level')) {
           Integer actualLevel = dev.currentValue('level')
-          Linfo(
+          Ldebug(
             'areRoomSceneDevLevelsCorrect()',
             "level: expected: ${devTargetVal} actual: ${actualLevel}"
           )
@@ -700,7 +722,7 @@ Boolean areRoomSceneDevLevelsCorrect() {
       }
     }
   }
-  Linfo(
+  Ldebug(
     'areRoomSceneDevLevelsCorrect()',
     "retVal: ${retVal}"
   )
@@ -736,22 +758,6 @@ void removeAllChildApps () {
   }
 }
 
-void installed () {
-  Ldebug('installed()', '')
-  initialize()
-}
-
-void uninstalled () {
-  Ldebug('uninstalled()', '')
-  removeAllChildApps()
-}
-
-void updated () {
-  Ldebug('updated()', '')
-  unsubscribe()  // Suspend event processing to rebuild state variables.
-  initialize()
-}
-
 void repeaterLedHandler (Event e) {
   // - The field e.deviceId arrives as a number and must be cast toString().
   // - This subscription processes Main Repeater events, which is applicable
@@ -759,8 +765,8 @@ void repeaterLedHandler (Event e) {
   //   Button and corresponding (virtual) LED. Work is delegated to
   //   detectManualOverride()
   if (
-       (e.deviceId.toString() == state.currentSceneRepeaterDeviceId)
-       && (e.name == "buttonLed-${state.currentSceneRepeaterLED}")
+       (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
+       && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
        && (e.isStateChange == true)
   ) {
     Ldebug(
@@ -786,8 +792,8 @@ void hubitatModeChangeHandler (Event e) {
     e.name == 'mode'
     && state.currentScene == 'AUTOMATIC'
   ) {
-    if (!state.inspectScene) {
-      state.inspectScene = 'AUTOMATIC'
+    if (!state.roomScene) {
+      state.roomScene = 'AUTOMATIC'
     }
     String targetScene = getSceneForMode(e.value)
     Ldebug(
@@ -837,12 +843,13 @@ void picoButtonHandler (Event e) {
         // Check to see if the received button is assigned to a scene.
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value)
+        String scenePbsg = "${state.SCENE_PBSG_APP_NAME}_${scene}"
         if (scene) {
           Ldebug(
             'picoButtonHandler()',
-            "w/ ${e.deviceId}-${e.value} activating ${scene}"
+            "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
           )
-          app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scene)
+          app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME).toggleSwitch(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Ldebug(
             'picoButtonHandler()',
@@ -888,15 +895,31 @@ void picoButtonHandler (Event e) {
 void motionSensorHandler (Event e) {
   if (e.name == 'motion' && e.isStateChange == true) {
     if (e.value == 'active') {
-      String targetScene = (state.currentScene == 'AUTOMATIC')
-        ? getSceneForMode() : state.currentScene
+      String targetScene = (state.currScenePerVsw == 'AUTOMATIC')
+        ? getSceneForMode() : state.currScenePerVsw
       activateScene(targetScene)
     } else if (e.value == 'inactive') {
       // Use brute-force to ensure automation is restored when the room is empty.
-      state.currentScene = 'AUTOMATIC'
+      state.currScenePerVsw = 'AUTOMATIC'
       activateScene('Off')
     }
   }
+}
+
+void installed () {
+  Ldebug('installed()', '')
+  initialize()
+}
+
+void uninstalled () {
+  Ldebug('uninstalled()', '')
+  removeAllChildApps()
+}
+
+void updated () {
+  Ldebug('updated()', '')
+  unsubscribe()  // Suspend event processing to rebuild state variables.
+  initialize()
 }
 
 void initialize () {
