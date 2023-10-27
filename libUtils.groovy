@@ -20,119 +20,14 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
 
 library (
- name: 'UtilsLibrary',
+ name: 'libUtils',
  namespace: 'wesmc',
  author: 'WesleyMConner',
  description: 'General-Purpose Methods that are Reusable across Hubitat Projects',
  category: 'general purpose',
- documentationLink: 'https://github.com/WesleyMConner/Hubitat-UtilsLibrary/README.adoc',
- importUrl: 'https://github.com/WesleyMConner/Hubitat-UtilsLibrary.git'
+ documentationLink: 'https://github.com/WesleyMConner/Hubitat-libUtils/README.adoc',
+ importUrl: 'https://github.com/WesleyMConner/Hubitat-libUtils.git'
 )
-
-// -------------
-// G L O B A L S
-// -------------
-String BLACK = 'rgba(0, 0, 0, 1.0)'
-String BLUE = 'rgba(51, 92, 255, 1.0)'
-String LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
-String RED = 'rgba(255, 0, 0, 1.0)'
-
-// ---------------------------------------
-// P A R A G R A P H   F O R M A T T I N G
-// ---------------------------------------
-String heading(String s) {
-  HEADING_CSS = 'font-size: 2em; font-weight: bold;'
-  return """<span style="${HEADING_CSS}">${s}</span>"""
-}
-
-String important(String s) {
-  IMPORTANT_CSS = "font-size: 1em; color: ${RED};"
-  return """<span style="${IMPORTANT_CSS}">${s}</span>"""
-}
-
-String emphasis(String s) {
-  EMPHASIS_CSS = "font-size: 1.3em; color: ${BLUE}; margin-left: 0px;"
-  return """<span style="${EMPHASIS_CSS}">${s}</span>"""
-}
-
-String emphasis2(String s) {
-  EMPHASIS2_CSS = "font-size: 1.1em; color: ${BLUE}; margin-left: 0px;"
-  return """<span style="${EMPHASIS2_CSS}">${s}</span>"""
-}
-
-String normal(String s) {
-  NORMAL_CSS = 'font-size: 1.1em;'
-  return """<span style="${NORMAL_CSS}">${s}</span>"""
-}
-
-String bullet(String s) {
-  BULLET_CSS = 'font-size: 1.0em; margin-left: 10px;'
-  return """<span style="${BULLET_CSS}">&#x2022;&nbsp;&nbsp;${s}</span>"""
-}
-
-String comment(String s) {
-  COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
-  return """<span style="${COMMENT_CSS}">${s}</span>"""
-}
-
-String red(String s) {
-  RED_BOLD = "color: ${RED}; font-style: bold"
-  return """<span style="${RED_BOLD}">${s}</span>"""
-}
-
-// -------------
-// L O G G I N G
-// -------------
-
-void solicitLogThreshold () {
-  input (
-    name: 'logThreshold',
-    type: 'enum',
-    title: 'Log Threshold',
-    defaultValue: 'DEBUG',
-    options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
-    submitOnChange: true
-  )
-  if (settings.logThreshold) {
-    // Establish defaults
-    state.LOG_LEVEL1_ERROR = true
-    state.LOG_LEVEL2_WARN = false
-    state.LOG_LEVEL3_INFO = false
-    state.LOG_LEVEL4_DEBUG = false
-    state.LOG_LEVEL5_TRACE = false
-    // NOTE: MAKING DELIBERATE USE OF SWITCH "FALL THROUGH" BEHAVIOR!
-    switch(settings.logThreshold) {
-      case 'TRACE':
-        state.LOG_LEVEL5_TRACE = true
-      case 'DEBUG':
-        state.LOG_LEVEL4_DEBUG = true
-      case 'INFO':
-        state.LOG_LEVEL3_INFO = true
-      case 'WARN':
-        state.LOG_LEVEL2_WARN = true
-    }
-  }
-}
-
-void Lerror (String fnName, String s) {
-  log.error("${app.getLabel()}.${fnName} ${s}")
-}
-
-void Lwarn (String fnName, String s) {
-  if (state.LOG_LEVEL2_WARN) log.warn("${app.getLabel()}.${fnName} ${s}")
-}
-
-void Linfo (String fnName, String s) {
-  if (state.LOG_LEVEL3_INFO) log.info("${app.getLabel()}.${fnName} ${s}")
-}
-
-void Ldebug (String fnName, String s) {
-  if (state.LOG_LEVEL4_DEBUG) log.debug("${app.getLabel()}.${fnName} ${s}")
-}
-
-void Ltrace (String fnName, String s) {
-  if (state.LOG_LEVEL5_TRACE) log.trace("${app.getLabel()}.${fnName} ${s}")
-}
 
 // -----------------------------
 // G E N E R A L   M E T H O D S
@@ -236,22 +131,23 @@ String getDeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
+/*
+void detectChildAppDupsForLabel (List<String> keepLabels) {
   // Abstract
   //   - No new application should have the same label as an existing application.
   //   - Tactically generate an error for any new, duplicated applications.
-  getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, appObjs ->
+  app.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, appObjs ->
     if (keepLabels?.findAll{ it -> it == label }) {
       appObjs = appObjs.sort{}.reverse()
       appObjs.eachWithIndex{ appObj, index ->
         if (index == 0) {
           //-> Ldebug(
-          //->   'keepOldestAppObjPerAppLabel()',
+          //->   'detectChildAppDupsForLabel()',
           //->   "retaining <b>${getAppInfo(appObj)}</b>"
           //-> )
         } else {
           Lerror(
-            'keepOldestAppObjPerAppLabel()',
+            'detectChildAppDupsForLabel()',
             "<b>${getAppInfo(appObj)}</b> duplicates ${getAppInfo(appObjs.first())}"
           )
           //-> deleteChildApp(appObj.getId())
@@ -260,7 +156,7 @@ void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
     } else {
       appObjs.each{ appObj ->
         Ldebug(
-          'keepOldestAppObjPerAppLabel()',
+          'detectChildAppDupsForLabel()',
           "dropping orphaned <b>${getAppInfo(appObj)}</b>"
         )
         deleteChildApp(appObj.getId())
@@ -268,6 +164,7 @@ void keepOldestAppObjPerAppLabel (List<String> keepLabels) {
     }
   }
 }
+*/
 
 String eventDetails (Event e, Boolean DEEP = false) {
   String rows = """

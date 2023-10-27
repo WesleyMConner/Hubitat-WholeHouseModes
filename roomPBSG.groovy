@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// roomPBSG (an instsantiation of pbsgLibrary)
+// roomPBSG (an instsantiation of libPbsgPrivate)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -12,15 +12,16 @@
 //     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 //     implied.
 // ---------------------------------------------------------------------------------
-#include wesmc.pbsgLibrary
-#include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
+#include wesmc.libPbsgPrivate
+#include wesmc.libUtils
+#include wesmc.libLogAndDisplay
 
 definition (
   parent: 'wesmc:whaRoom',
   name: 'roomPBSG',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A PBSG (pbsgLibrary instance) rooted in a WHA Rooms instance',
+  description: 'A PBSG (libPbsgPrivate instance) rooted in a WHA Rooms instance',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -45,5 +46,23 @@ Map roomPbsgPage () {
     uninstall: false
   ) {
     defaultPage()
+  }
+}
+
+void installed () {
+  Ltrace('installed()', 'At entry')
+  clientProvidedRoomPbsgInit()
+}
+
+void updated () {
+  Ltrace('updated()', 'At entry')
+  clientProvidedRoomPbsgInit()
+}
+
+void uninstalled () {
+  Ltrace('uninstalled()', 'At entry')
+  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
+  getAllChildDevices().collect{ device ->
+    deleteChildDevice(device.deviceNetworkId)
   }
 }

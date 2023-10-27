@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// modePBSG (an instsantiation of pbsgLibrary)
+// modePBSG (an instsantiation of libPbsgPrivate)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -13,15 +13,16 @@
 //     implied.
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
-#include wesmc.pbsgLibrary
-#include wesmc.UtilsLibrary  // Required by wesmc.pbsgLibrary
+#include wesmc.libPbsgPrivate
+#include wesmc.libUtils
+#include wesmc.libLogAndDisplay
 
 definition (
   parent: 'wesmc:wha',
   name: 'modePBSG',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A PBSG (pbsgLibrary instance) rooted in Whole House Automation',
+  description: 'A PBSG (libPbsgPrivate instance) rooted in Whole House Automation',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -46,4 +47,28 @@ Map modePbsgPage () {
   ) {
     defaultPage()
   }
+}
+
+void installed () {
+  Ltrace('installed()', 'At entry')
+  clientProvidedModePbsgInit()
+}
+
+void updated () {
+  Ltrace('updated()', 'At entry')
+  clientProvidedModePbsgInit()
+}
+
+void uninstalled () {
+  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
+  getAllChildDevices().collect{ device ->
+    deleteChildDevice(device.deviceNetworkId)
+  }
+}
+
+void modeVswOnCallback (Event event) {
+  Ldebug(
+    'modeVswOnCallback()',
+    eventDetails(event)
+  )
 }

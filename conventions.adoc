@@ -1,0 +1,6 @@
+= Conventions
+
+* Room names DO NOT include spaces (e.g., 'LHS_Bath', 'LHS_Bdrm'); so, +
+`roomPicklist = app.getRooms().collect{it.name.replace(' ', '_')}.sort()` +
+reduces to +
+`roomPicklist = app.getRooms().collect{it.name}.sort()`
