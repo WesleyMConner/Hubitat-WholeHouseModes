@@ -40,10 +40,13 @@ preferences {
 }
 
 Map modePbsgPage () {
+  // Norally, this page IS NOT presented.
+  //   - This page can be viewed via an instance link on the main Hubitat Apps menu.
+  //   - Instance state & settings are rendered on the parent App's page.
   return dynamicPage (
     name: 'modePbsgPage',
     install: true,
-    uninstall: false
+    uninstall: true
   ) {
     defaultPage()
   }
@@ -51,24 +54,82 @@ Map modePbsgPage () {
 
 void installed () {
   Ltrace('installed()', 'At entry')
-  clientProvidedModePbsgInit()
+  modePbsgInit()
 }
 
 void updated () {
   Ltrace('updated()', 'At entry')
-  clientProvidedModePbsgInit()
+  modePbsgInit()
 }
 
 void uninstalled () {
   Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
+    Ldebug('uninstalled()', "Deleting '${device.deviceNetworkId}'")
     deleteChildDevice(device.deviceNetworkId)
   }
 }
 
-void modeVswOnCallback (Event event) {
+void modeVswEventHandler (Event e) {
+  // Process events for Mode PGSG child VSWs.
+  //   - The received e.displayName is the DNI of the reporting child VSW.
+  //   - When a Mode VSW turns on, change the Hubitat mode accordingly.
+  //   - Clients DO NOT get a callback for this event.
+  //   - Clients SHOULD subscribe to Hubitat Mode change events.
+  Ltrace('modeVswEventHandler', "eventDetails: ${eventDetails(e)}")
+  if (e.isStateChange) {
+    if (e.value == 'on') {
+      if (state.previousVswDni == e.displayName) {
+        Lerror(
+          'modeVswEventHandler()',
+          "The active Mode VSW '${state.activeVswDni}' did not change."
+        )
+      }
+      state.previousVswDni = state.activeVswDni ?: state.defaultVswDni
+      state.activeVswDni = e.displayName
+      Ldebug(
+        'modeVswEventHandler()',
+        "${state.previousVswDni} -> ${state.activeVswDni}"
+      )
+      turnOnVswExclusively(state.activeVswDni)
+      // Adjust the Hubitat mode.
+      String mode = getModeNameForVswDni(e.displayName)
+      Ldebug(
+        'modeVswEventHandler()',
+        "Setting mode to <b>${mode}</b>"
+      )
+      getLocation().setMode(mode)
+    } else if (e.value == 'off') {
+      // Take no action when a VSW turns off
+    } else {
+      Lwarn(
+        'modeVswEventHandler()',
+        "unexpected event value = >${e.value}<"
+      )
+    }
+  }
+}
+
+void modePbsgInit() {
+  Ltrace('modePbsgInit()', 'At entry')
+  unsubscribe()
+  List<DevW> vsws = getVsws()
+manageChildDevices()
+  if (!vsws) {
+    Lerror('modePbsgInit()', 'The child VSW instances are MISSING.')
+  }
+  vsws.each{ vsw ->
+    Ltrace(
+      'modePbsgInit()',
+      "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
+    )
+    subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
+  }
+  // The initially "on" PBSG VSW should be consistent with the Hubitat mode.
+  String mode = getLocation().getMode()
   Ldebug(
-    'modeVswOnCallback()',
-    eventDetails(event)
+    'modePbsgInit()',
+    "Activating VSW for mode: <b>${mode}</b>"
   )
+  getVswByName(mode).turnOnVswExclusively()
 }

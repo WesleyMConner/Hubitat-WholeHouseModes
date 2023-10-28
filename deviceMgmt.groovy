@@ -57,7 +57,7 @@ Map deviceMgmtPage () {
         '<b>Display Name</b> = <b>Device Label</b> ?: <b>Device Name</b>'
       )
       List<String> tabularOutput = [
-        "'Device Id','Device Label','Device Name','Display Name','DNI'"
+        "'Device Id','Device Label','Device Name','Display Name','Dni'"
       ]
       settings.allDevices?.each{ d ->
         tabularOutput << \

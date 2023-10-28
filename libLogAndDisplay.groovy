@@ -84,6 +84,22 @@ String red(String s) {
 // L O G G I N G
 // -------------
 
+void setLogLevels (String logThreshold) {
+  // IMPORTANT
+  //   - The switch statement "FALL THROUGHs" are intentional.
+  //   - A 'default' is avoided to reduce spurious noise.
+  switch(logThreshold) {
+    case 'TRACE':
+      state.logLevel5Trace = true
+    case 'DEBUG':
+      state.logLevel4Debug = true
+    case 'INFO':
+      state.logLevel3Info = true
+    case 'WARN':
+      state.logLevel2Warn = true
+  }
+}
+
 void solicitLogThreshold () {
   input (
     name: 'logThreshold',
@@ -93,44 +109,37 @@ void solicitLogThreshold () {
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     submitOnChange: true
   )
-  if (settings.logThreshold) {
-    // Establish defaults
-    state.logLevel1Error = true
-    state.logLevel2Warn = false
-    state.logLevel3Info = false
-    state.logLevel4Debug = false
-    state.logLevel5Trace = false
-    // NOTE: MAKING DELIBERATE USE OF SWITCH "FALL THROUGH" BEHAVIOR!
-    switch(settings.logThreshold) {
-      case 'TRACE':
-        state.logLevel5Trace = true
-      case 'DEBUG':
-        state.logLevel4Debug = true
-      case 'INFO':
-        state.logLevel3Info = true
-      case 'WARN':
-        state.logLevel2Warn = true
-    }
-  }
+  if (settings.logThreshold) setLogLevels(settings.logThreshold)
 }
 
+
 void Lerror (String fnName, String s) {
-  log.error("${app.getLabel()}.${fnName} ${s}")
+  log.error(
+    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+  )
 }
 
 void Lwarn (String fnName, String s) {
-  if (state.logLevel2Warn) log.warn("${app.getLabel()}.${fnName} ${s}")
+  if (state.logLevel2Warn) log.warn(
+    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+  )
 }
 
 void Linfo (String fnName, String s) {
-  if (state.logLevel3Info) log.info("${app.getLabel()}.${fnName} ${s}")
+  if (state.logLevel3Info) log.info(
+    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+  )
 }
 
 void Ldebug (String fnName, String s) {
-  if (state.logLevel4Debug) log.debug("${app.getLabel()}.${fnName} ${s}")
+  if (state.logLevel4Debug) log.debug(
+    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+  )
 }
 
 void Ltrace (String fnName, String s) {
-  if (state.logLevel5Trace) log.trace("${app.getLabel()}.${fnName} ${s}")
+  if (state.logLevel5Trace) log.trace(
+    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+  )
 }
 

@@ -1,27 +1,32 @@
+"Supported Commands: ${device.getSupportedCommands()}",
+"Supported Attributes: ${device.getSupportedAttributes()}"
+
+
+
 /*
 void pbsgEventHandler (Event e) {
   // Process events for child VSWs.
-  //   - After initialize() identifies 'state.activeVswDNI' and calls
+  //   - After initialize() identifies 'state.activeVswDni' and calls
   //     parent.pbsgVswTurnedOnCallback(), this method becomes authoritative
-  //     for 'state.activeVswDNI' and parent.pbsgVswTurnedOnCallback()
+  //     for 'state.activeVswDni' and parent.pbsgVswTurnedOnCallback()
   //     invocation.
-  // - The state.previousVswDNI is preserved for reactivation
+  // - The state.previousVswDni is preserved for reactivation
   //   when MANUAL_OVERRIDE turns off.
   if (e.isStateChange) {
     if (e.value == 'on') {
-      turnOffPeers(e.displayName)
-      state.previousVswDNI = state.activeVswDNI ?: state.defaultVswDNI
-      state.activeVswDNI = e.displayName
+      turnOffVswPeers(e.displayName)
+      state.previousVswDni = state.activeVswDni ?: state.defaultVswDni
+      state.activeVswDni = e.displayName
       Ldebug(
         'pbsgEventHandler()',
-        "${state.previousVswDNI} -> ${state.activeVswDNI}"
+        "${state.previousVswDni} -> ${state.activeVswDni}"
       )
-      parent.pbsgVswTurnedOnCallback(state.activeVswDNI)
+      parent.pbsgVswTurnedOnCallback(state.activeVswDni)
     } else if (e.value == 'off') {
       if (e.displayName.contains('MANUAL_OVERRIDE')) {
         // Special behavior for MANUAL ENTRY: Restore previously switch.
-        state.activeVswDNI = state.previousVswDNI ?: state.defaultVswDNI
-        turnOnVsw(state.previousVswDNI)
+        state.activeVswDni = state.previousVswDni ?: state.defaultVswDni
+        turnOnVsw(state.previousVswDni)
       } else {
         enforceDefaultSwitch()
       }
@@ -36,7 +41,7 @@ void pbsgEventHandler (Event e) {
 
 void initPbsg () {
   // Abstract
-  //   Identify 'state.activeVswDNI', call parent.pbsgVswTurnedOnCallback(),
+  //   Identify 'state.activeVswDni', call parent.pbsgVswTurnedOnCallback(),
   //   then hand control over to pbsgEventHandler() to process VSW events.
   Ltrace('initialize()', 'At entry')
   manageChildDevices()

@@ -40,7 +40,7 @@ void identifyLedButtonsForListItems(
   ) {
   // Keypad LEDs are used as a proxy for Keypad buttons.
   //   - The button's displayName is meaningful to clients.
-  //   - The button's deviceNetworkId is <KPAD DNI> hyphen <BUTTON #>
+  //   - The button's deviceNetworkId is <KPAD Dni> hyphen <BUTTON #>
   list.each{ item ->
     input(
       name: "${prefix}_${item}",
@@ -207,4 +207,14 @@ String eventDetails (Event e, Boolean DEEP = false) {
       <td>${e.unixTime}</td>
     </tr>"""
   return "<table>${rows}</table>"
+}
+
+void removeAllChildApps () {
+  app.getAllChildApps().each{ child ->
+    Ldebug(
+      'removeAllChildApps()',
+      "child: >${child.getId()}< >${child.getLabel()}<"
+    )
+    deleteChildApp(child.getId())
+  }
 }

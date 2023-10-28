@@ -49,7 +49,7 @@ Map whaRoomPage () {
       comment('Tab to register changes.')
     ].join(),
     install: true,
-    uninstall: true,
+    uninstall: false,
     //nextPage: 'whaPage'
   ) {
     // Forcibly remove unused settings and state, a missing Hubitat feature.
@@ -184,7 +184,7 @@ Map whaRoomPage () {
       } else {
         List roomScenes = [ *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE' ]
         roomPbsg = createRoomScenePbsg(
-          state.roomName,        // String roomName,
+          state.roomName,         // String roomName,
           roomScenes,             // List<String> roomScenes,
           'AUTOMATIC',            // String defaultScene,
           settings.logThreshold,  // String logThreshold
@@ -198,7 +198,7 @@ Map whaRoomPage () {
         ].join()
       )
       paragraph "roomPbsg: >${roomPbsg}<"
-      paragraph roomPbsg.debugStateAndSettings("${roomPbsg.getLabel()} (${roomPbsg.getId()})")
+      //--TBD-> paragraph roomPbsg.pbsgStateAndSettings("${roomPbsg.getLabel()} (${roomPbsg.getId()})")
     }
   }
 }
@@ -482,9 +482,7 @@ String getSceneForMode (String mode = getLocation().getMode()) {
   return result
 }
 
-
-void pbsgVswTurnedOnCallback (String currPbsgSwitch) {
-  String currScene = currPbsgSwitch?.minus("${state.roomScenePbsgAppId}_")
+void pbsgVswTurnedOnCallback (String currScene) {
   // If 'state.roomScene' is observed, MANUAL_OVERRIDE is resolved.
   state.roomScene = (currScene == 'MANUAL_OVERRIDE') ? state.roomScene : currScene
   if (state.roomScene == 'MANUAL_OVERRIDE') {
@@ -529,13 +527,13 @@ void populateStateSceneToDeviceValues () {
       // Circa 2023-Sep, no object destructuring syntax in Grooy.
       String sceneName = parsedKey[1]
       String deviceType = parsedKey[2]
-      String deviceDNI = parsedKey[3]
-      // If missing, create an empty map for the scene's deviceDNI->value data.
+      String deviceDni = parsedKey[3]
+      // If missing, create an empty map for the scene's deviceDni->value data.
       // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
       String stateKey = "sceneTo${deviceType}"
       if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
-      // Populate the current deviceDNI->value data.
-      state[stateKey][sceneName][deviceDNI] = value
+      // Populate the current deviceDni->value data.
+      state[stateKey][sceneName][deviceDni] = value
     }
   }
 }
@@ -552,7 +550,7 @@ void activateScene (String scene) {
       'activateScene()',
       "${scene}: repeater: ${repeaterDni}, button: ${buttonNumber}"
     )
-    // Note: The repeater's Id (not DNI) and button are required to track the scene's
+    // Note: The repeater's Id (not Dni) and button are required to track the scene's
     //       LED on the Main Repeater.
     state.roomSceneRepeaterLED = buttonNumber
     DevW matchedRepeater = settings.mainRepeater?.findAll{ repeater ->
@@ -560,7 +558,7 @@ void activateScene (String scene) {
     }?.first() ?: {
       Ldebug(
         'activateScene()',
-        "no repeater w/ DNI: ${repeaterDni}"
+        "no repeater w/ Dni: ${repeaterDni}"
       )
     }
     state.roomSceneRepeaterDeviceId = matchedRepeater.getId()
@@ -573,10 +571,10 @@ void activateScene (String scene) {
     )
     DevW matchedDevice = settings.independentDevices?.findAll{ device ->
       device.getDeviceNetworkId() == deviceDni
-    }?.first() ?: {                              // There should be one match by DNI.
+    }?.first() ?: {                              // There should be one match by Dni.
       Ldebug(
         'activateScene()',
-        "no matchedDevice w/ DNI: ${deviceDni}"
+        "no matchedDevice w/ Dni: ${deviceDni}"
       )
     }
     if (matchedDevice.hasCommand('setLevel')) {
@@ -694,7 +692,7 @@ Boolean areRoomSceneDevLevelsCorrect() {
     settings?.independentDevices.each{ dev ->
       Ldebug(
         'areRoomSceneDevLevelsCorrect()',
-        "DNI: ${dev.deviceNetworkId}"
+        "Dni: ${dev.deviceNetworkId}"
       )
       Integer devTargetVal = indepDevData?.getAt(dev.deviceNetworkId)
       if (devTargetVal) {
@@ -727,14 +725,14 @@ Boolean areRoomSceneDevLevelsCorrect() {
   return retVal
 }
 
-InstAppW getScenePbsg () {
-  InstAppW retVal = app.getChildAppByLabel(state.roomScenePbsgAppId)
-    ?: Lerror(
-      'getScenePbsg()',
-      "<b>FAILED</b> to locate scenePbsg App"
-    )
-  return retVal
-}
+//-> InstAppW getScenePbsg () {
+//->   InstAppW retVal = app.getChildAppByLabel(state.roomScenePbsgAppId)
+//->     ?: Lerror(
+//->       'getScenePbsg()',
+//->       "<b>FAILED</b> to locate scenePbsg App"
+//->     )
+//->   return retVal
+//-> }
 
 Boolean detectManualOverride() {
   // Turning a PBSG switch on/off that's already on/off WILL NOT generate a
@@ -743,16 +741,6 @@ Boolean detectManualOverride() {
     getScenePbsg().turnOnSwitch("${state.roomScenePbsgAppId}_MANUAL_OVERRIDE")
   } else {
     getScenePbsg().turnOffVsw("${state.roomScenePbsgAppId}_MANUAL_OVERRIDE")
-  }
-}
-
-void removeAllChildApps () {
-  app.getAllChildApps().each{ child ->
-    Ldebug(
-      'removeAllChildApps()',
-      "removing ${child.getLabel()} (${child.getId()})"
-    )
-    deleteChildApp(child.getId())
   }
 }
 
@@ -823,7 +811,7 @@ void keypadSceneButtonHandler (Event e) {
           'keypadSceneButtonHandler()',
           "toggling ${targetVsw}"
         )
-        getScenePbsg().toggleSwitch(targetVsw)
+        getScenePbsg().toggleVsw(targetVsw)
       }
       break
     case 'held':
@@ -833,7 +821,7 @@ void keypadSceneButtonHandler (Event e) {
     default:
       Lwarn(
         'keypadSceneButtonHandler()',
-        "for '${state.roomName}' unexpected event name '${e.name}' for DNI '${e.deviceId}'"
+        "for '${state.roomName}' unexpected event name '${e.name}' for Dni '${e.deviceId}'"
       )
   }
 }
@@ -852,7 +840,7 @@ void picoButtonHandler (Event e) {
             'picoButtonHandler()',
             "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
           )
-          app.getChildAppByLabel(state.roomScenePbsgAppId).toggleSwitch(scenePbsg)
+          app.getChildAppByLabel(state.roomScenePbsgAppId).toggleVsw(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Ldebug(
             'picoButtonHandler()',
@@ -911,7 +899,13 @@ void motionSensorHandler (Event e) {
 
 void installed () {
   Ltrace('installed()', '')
-  initialize()
+  whaRoomInitialize()
+}
+
+void updated () {
+  Ltrace('updated()', '')
+  unsubscribe()  // Suspend event processing to rebuild state variables.
+  whaRoomInitialize()
 }
 
 void uninstalled () {
@@ -919,49 +913,43 @@ void uninstalled () {
   removeAllChildApps()
 }
 
-void updated () {
-  Ltrace('updated()', '')
-  unsubscribe()  // Suspend event processing to rebuild state variables.
-  initialize()
-}
-
-void initialize () {
+void whaRoomInitialize () {
   Ltrace(
-    'initialize()',
+    'whaRoomInitialize()',
     "R_${state.roomName} subscribing to hubitatModeChangeHandler()"
   )
   subscribe(location, "mode", hubitatModeChangeHandler)
   settings.seeTouchKeypads.each{ device ->
     Ltrace(
-      'initialize()',
+      'whaRoomInitialize()',
       "R_${state.roomName} subscribing seeTouchKeypad '${getDeviceInfo(device)}' to keypadSceneButtonHandler()"
     )
     subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     Ltrace(
-      'initialize()',
+      'whaRoomInitialize()',
       "R_${state.roomName} subscribing to mainRepeater '${getDeviceInfo(device)}' to repeaterLedHandler()"
     )
     subscribe(device, repeaterLedHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     Ltrace(
-      'initialize()',
+      'whaRoomInitialize()',
       "R_${state.roomName} subscribing to Pico '${getDeviceInfo(device)}' to picoButtonHandler()"
     )
     subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     Ltrace(
-      'initialize()',
+      'whaRoomInitialize()',
       "R_${state.roomName} subscribing to motionSensor '${getDeviceInfo(device)}' to motionSensorHandler()"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
   settings.independentDevices.each{ device ->
     Ltrace(
-      'initialize()',
+      'whaRoomInitialize()',
       "R_${state.roomName} subscribing to independentDevice '${getDeviceInfo(device)}' to independentDeviceHandler()"
     )
     subscribe(device, independentDeviceHandler, ['filterEvents': true])

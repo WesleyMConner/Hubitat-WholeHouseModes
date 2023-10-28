@@ -37,153 +37,137 @@ preferences {
   page(name: 'whaPage')
 }
 
-Map whaPage () {
-  return dynamicPage(
-    name: 'whaPage',
+void removeLegacySettingsAndState () {
+  settings.remove('log')
+  state.remove('LOG_LEVEL1_ERROR')
+  state.remove('LOG_LEVEL2_WARN')
+  state.remove('LOG_LEVEL3_INFO')
+  state.remove('LOG_LEVEL4_DEBUG')
+  state.remove('LOG_LEVEL5_TRACE')
+  state.remove('LOG_WARN')
+  state.remove('MODE_PBSG_APP_NAME')
+  state.remove('MODES')
+  state.remove('PBSGapp')
+  state.remove('SPECIALTY_BUTTONS')
+  state.remove('specialtyButtons')
+  state.remove('specialtyFnButtons')
+}
+
+InstAppW manageModePbsg () {
+  Ldebug('manageModePbsg()', 'At entry')
+  state.modePbsgName = 'whaModePbsg'
+  state.modes = getLocation().getModes().collect{it.name}
+  state.defaultMode = getGlobalVar('defaultMode').value
+  return createModePbsg(
+    state.modePbsgName,
+    state.modes,
+    state.defaultMode,
+    'DEBUG',                 // See also libPbsgPrivate adjustLogLevel(...)
+  )
+}
+
+void authorizeMainRepeater () {
+  input(
+    name: 'specialtyFnMainRepeater',
     title: [
-      heading('Whole House Automation (WHA) Application<br/>'),
-      bullet("Authorize Access to appropriate devices.<br/>"),
-      bullet("Create the Mode PBSG App Instance.<br/>"),
-      bullet("Identify Participating Rooms.<br/>"),
-      bullet(red("Press <b>Done</b> (see below) to ensure event subscription updates !!!"))
+      'Authorize Specialty Function Repeater Access<br/>',
+      comment("Used for 'all off'... behavior.")
     ].join(),
-    install: true,
-    uninstall: true,
-    nextPage: 'whaPage'
-  ) {
-    app.updateLabel('Whole House Automation')
-    //--hold-> state.MODE_PBSG_APP_NAME = getModePbsgAppLabel()
-    state.modes = getLocation().getModes().collect{it.name}
-    getGlobalVar('defaultMode').value
-    state.specialtyButtons = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
-      'FLASH', 'PANIC', 'QUIET']
-    // Forcibly remove unused settings and state, a missing Hubitat feature.
-    settings.remove('log')
-    state.remove('LOG_LEVEL1_ERROR')
-    state.remove('LOG_LEVEL2_WARN')
-    state.remove('LOG_LEVEL3_INFO')
-    state.remove('LOG_LEVEL4_DEBUG')
-    state.remove('LOG_LEVEL5_TRACE')
-    state.remove('LOG_WARN')
-    state.remove('MODE_PBSG_APP_NAME')
-    state.remove('MODES')
-    state.remove('PBSGapp')
-    state.remove('SPECIALTY_BUTTONS')
-    //?? state.remove('MODE_SWITCH_NAMES')
-    //?? state.remove('DEFAULT_MODE_SWITCH_NAME')
-    section {
-      InstAppW modePbsg
-      solicitLogThreshold()                            // <- provided by Utils
-      if (!state.modes || !settings.logThreshold) {
-        paragraph(
-          red(
-            [
-              'Creation of Mode PBSG is pending prerequites.',
-              "<b>state.modes:</b> ${state.modes}",
-              "<b>settings.logThreshold:</b> ${settings.logThreshold}"
-            ].join('<br/>')
-          )
-        )
-      } else {
-        modePbsg = createModePbsg(
-          state.modes,            // List<String> modes,
-          'Day',                  // String defaultMode,
-          settings.logThreshold,  // String logThreshold
-        )
+    type: 'device.LutronKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
+}
+
+void authorizeSeeTouchKeypads () {
+  input(
+    name: 'seeTouchKeypads',
+    title: [
+      'Authorize SeeTouch Keypad Access<br/>',
+      comment('Identify keypads with buttons that:<br/>'),
+      bullet(comment('Trigger specialty whole-house functions.<br/>')),
+      bullet(comment('Change the Hubitat mode.'))
+    ].join(),
+    type: 'device.LutronSeeTouchKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void identifySpecialFunctionButtons() {
+  input(
+    name: 'specialFnButtons',
+    title: [
+      'Identify Special Function Buttons<br/>',
+      comment("Examples: ${state.specialFnButtons}")
+    ].join(),
+    type: 'device.LutronComponentSwitch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void wireButtonsToSpecialFunctions () {
+  state.specialFnButtons = [
+    'ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY', 'FLASH', 'PANIC', 'QUIET'
+  ]
+  if (settings?.specialFnButtons == null) {
+    paragraph(red('No specialty activation buttons are selected.'))
+  } else {
+    identifyLedButtonsForListItems(              // Wire
+      state.specialFnButtons,                    //   - to Special Functions
+      settings.specialFnButtons,                 //   - from Keypad Button
+      'specialFnButton'                          //   - prefix
+    )
+    populateStateKpadButtons('specialFnButton')  // specialFnButton_*
+    Map<String, String> result = [:]             // kpadButtonDniToSpecialtyFn
+    state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
+      buttonMap.each{ buttonNumber, specialtyFn ->
+        result["${kpadDni}-${buttonNumber}"] = specialtyFn
       }
-      input(
-        name: 'specialtyFnMainRepeater',
-        title: [
-          'Authorize Specialty Function Repeater Access<br/>',
-          comment("Used for 'all off'... behavior.")
-        ].join(),
-        type: 'device.LutronKeypad',
-        submitOnChange: true,
-        required: false,
-        multiple: false
-      )
-      input(
-        name: 'seeTouchKeypads',
-        title: [
-          'Authorize SeeTouch Keypad Access<br/>',
-          comment('Identify keypads with buttons that:<br/>'),
-          bullet(comment('Trigger specialty whole-house functions.<br/>')),
-          bullet(comment('Change the Hubitat mode.'))
-        ].join(),
-        type: 'device.LutronSeeTouchKeypad',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      input(
-        name: 'specialFnButtons',
-        title: [
-          'Identify Special Function Buttons<br/>',
-          comment("Examples: ${state.specialtyButtons}")
-        ].join(),
-        type: 'device.LutronComponentSwitch',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      if (settings?.specialFnButtons == null) {
-        paragraph(red('No specialty activation buttons are selected.'))
-      } else {
-        identifyLedButtonsForListItems(     // From libUtils.groovy
-          state.specialtyButtons,          //   - list
-          settings.specialFnButtons,        //   - ledDevices
-          'specialFnButton'                 //   - prefix
-        )
-        populateStateKpadButtons('specialFnButton')
-        populateStateKpadButtonDniToSpecialFnButtons()
-      }
-      input(
-        name: 'lutronModeButtons',
-        title: [
-          'lutronModeButtons<br/>',
-          comment('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
-        ].join(),
-        type: 'device.LutronComponentSwitch',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      if (state.modes == null || settings?.lutronModeButtons == null) {
-        paragraph(red('Mode activation buttons are pending pre-requisites.'))
-      } else {
-        identifyLedButtonsForListItems(         // From libUtils.groovy
-          state.modes,              //   - list
-          settings.lutronModeButtons,           //   - ledDevices
-          'modeButton'                          //   - prefix
-        )
-        populateStateKpadButtons('modeButton')
-        populateStateKpadButtonDniToTargetMode()
-      }
-      identifyParticipatingRooms()
-      if (!settings.rooms) {
-        paragraph red('Management of child apps is pending selection of Room Names.')
-      } else {
-        //--TBD-> detectChildAppDupsForLabel([*settings.rooms, state.MODE_PBSG_APP_NAME])
-        displayInstantiatedRoomHrefs()
-      }
-      paragraph(
-        [
-          heading('Scene PBSG<br/>'),
-          "${ displayState() }<br/>",
-          "${ displaySettings() }"
-        ].join()
-      )
-      paragraph([
-        heading('Debug<br/>'),
-        "${ displayState() }<br/>",
-        "${ displaySettings() }"
-      ].join())
-      paragraph modePbsg.debugStateAndSettings("${modePbsg.getLabel()} (${modePbsg.getId()})")
+      state.kpadButtonDniToSpecialtyFn = result
     }
   }
 }
 
-void identifyParticipatingRooms () {
+void identifyModeButtons () {
+  input(
+    name: 'lutronModeButtons',
+    title: [
+      'lutronModeButtons<br/>',
+      comment('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
+    ].join(),
+    type: 'device.LutronComponentSwitch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void wireButtonsToModes () {
+  if (state.modes == null || settings?.lutronModeButtons == null) {
+    paragraph(red('Mode activation buttons are pending pre-requisites.'))
+  } else {
+    identifyLedButtonsForListItems(            // Wire
+      state.modes,                             //   - to Hubitat Mode
+      settings.lutronModeButtons,              //   - from Keypad Button
+      'modeButton'                             //   - prefix
+    )
+    populateStateKpadButtons('modeButton')     // modeButton_*
+    Map<String, String> result = [:]           // kpadButtonDniToTargetMode
+    state.modeButtonMap.collect{ kpadDni, buttonMap ->
+      buttonMap.each{ buttonNumber, targetMode ->
+        result["${kpadDni}-${buttonNumber}"] = targetMode
+      }
+    }
+    state.kpadButtonDniToTargetMode = result
+  }
+}
+
+void solicitParticipatingRooms () {
   // By convention, Hubitat room names DO NOT have whitespace.
   roomPicklist = app.getRooms().collect{it.name}.sort()
   input(
@@ -198,77 +182,97 @@ void identifyParticipatingRooms () {
 }
 
 void displayInstantiatedRoomHrefs () {
-  paragraph heading('Room Scene Configuration')
-  settings.rooms.each{ modeName ->
-    InstAppW roomApp = app.getChildAppByLabel(modeName)
-    if (!roomApp) {
-      Ldebug(
-        'addRoomAppsIfMissing()',
-        "Adding room ${modeName}"
+  if (!settings.rooms) {
+    paragraph red('Management of child apps is pending selection of Room Names.')
+  } else {
+    paragraph heading('Room Scene Configuration')
+    settings.rooms.each{ roomName ->
+      InstAppW roomApp = app.getChildAppByLabel(roomName)
+      if (!roomApp) {
+        Ldebug(
+          'addRoomAppsIfMissing()',
+          "Adding room ${roomName}"
+        )
+        roomApp = addChildApp('wesmc', 'whaRoom', roomName)
+      }
+      href (
+        name: roomName,
+        width: 2,
+        url: "/installedapp/configure/${roomApp?.getId()}/whaRoomPage",
+        style: 'internal',
+        title: "<b>${getAppInfo(roomApp)}</b> Scenes",
+        state: null, //'complete'
       )
-      roomApp = addChildApp('wesmc', 'whaRoom', modeName)
-    }
-    href (
-      name: modeName,
-      width: 2,
-      url: "/installedapp/configure/${roomApp?.getId()}/whaRoomPage",
-      style: 'internal',
-      title: "<b>${getAppInfo(roomApp)}</b> Scenes",
-      state: null, //'complete'
-    )
-  }
-}
-
-void populateStateKpadButtonDniToSpecialFnButtons () {
-  Map<String, String> result = [:]
-  state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, specialtyFn ->
-      result["${kpadDni}-${buttonNumber}"] = specialtyFn
-    }
-  }
-  state.kpadButtonDniToSpecialtyFn = result
-}
-
-
-void populateStateKpadButtonDniToTargetMode () {
-  Map<String, String> result = [:]
-  state.modeButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, targetMode ->
-      result["${kpadDni}-${buttonNumber}"] = targetMode
-    }
-  }
-  state.kpadButtonDniToTargetMode = result
-}
-
-void updateLutronKpadLeds (String currMode) {
-  settings.lutronModeButtons.each{ ledObj ->
-    String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
-    if (currMode == modeTarget) {
-      ledObj.on()
-    } else {
-      ledObj.off()
     }
   }
 }
 
-void removeAllChildApps () {
-  app.getAllChildApps().each{ child ->
-    Ldebug(
-      'removeAllChildApps()',
-      "child: >${child.getId()}< >${child.getLabel()}<"
-    )
-    deleteChildApp(child.getId())
+// settings.rooms
+
+void displayStateAndSettings () {
+  paragraph([
+    heading('Debug'),
+    "${ displayState() }",
+    "${ displaySettings() }"
+  ].join('<br/>'))
+}
+
+Map whaPage () {
+  removeLegacySettingsAndState()
+  InstAppW modePbsg = manageModePbsg()
+  Ldebug('whaPage()', "modePbsg: ${getAppInfo(modePbsg)}")
+  return dynamicPage(
+    name: 'whaPage',
+    title: [
+      heading('Whole House Automation (WHA) Application<br/>'),
+      bullet("Authorize Access to appropriate devices.<br/>"),
+      bullet("Create the Mode PBSG App Instance.<br/>"),
+      bullet("Identify Participating Rooms.<br/>"),
+      bullet(red("Press <b>Done</b> (see below) to ensure event subscription updates !!!"))
+    ].join(),
+    install: true,
+    uninstall: false,
+  ) {
+    app.updateLabel('Whole House Automation (WHA)')
+    section {
+      solicitLogThreshold()                                           // Utils.groovy
+      if (settings.logThreshold) {
+        modePbsg.adjustLogLevel(settings.logThreshold)
+      }
+      authorizeMainRepeater()
+      authorizeSeeTouchKeypads()
+      identifySpecialFunctionButtons()
+      wireButtonsToSpecialFunctions()
+      identifyModeButtons()
+      wireButtonsToModes()
+      solicitParticipatingRooms()
+      displayInstantiatedRoomHrefs()
+      displayStateAndSettings()
+      if (modePbsg) {
+        paragraph modePbsg.pbsgStateAndSettings("${modePbsg.getLabel()} (${modePbsg.getId()})")
+      }
+    }
   }
 }
+
+//-> void updateLutronKpadLeds (String currMode) {
+//->   settings.lutronModeButtons.each{ ledObj ->
+//->     String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
+//->     if (currMode == modeTarget) {
+//->       ledObj.on()
+//->     } else {
+//->       ledObj.off()
+//->     }
+//->   }
+//-> }
 
 void pruneOrphanedChildApps () {
-  //Initially, assume InstAppW supports instance equality tests -> values is a problem
   List<InstAppW> kids = app.getAllChildApps()
   Ldebug(
     'pruneOrphanedChildApps()',
     "processing ${kids.collect{it.getLabel()}.join(', ')}"
   )
-  List<String> modeNames =
+  //--xx-> List<String> modeNames =
   kids.each{ kid ->
     if (settings.rooms?.contains(kid)) {
       Ldebug(
@@ -297,7 +301,13 @@ void displayAppInfoLink () {
 
 void installed () {
   Ldebug('installed()', '')
-  initialize()
+  whaInitialize()
+}
+
+void updated () {
+  Ltrace('updated()', '')
+  unsubscribe()  // Suspend event processing to rebuild state variables.
+  whaInitialize()
 }
 
 void uninstalled () {
@@ -305,18 +315,13 @@ void uninstalled () {
   removeAllChildApps()
 }
 
-void updated () {
-  Ltrace('updated()', '')
-  unsubscribe()  // Suspend event processing to rebuild state variables.
-  initialize()
-}
-
 void allAuto () {
-  settings.rooms.each{ modeName ->
-    InstAppW roomApp = app.getChildAppByLabel(modeName)
-    String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Ldebug('allAuto()', "Turning on <b>${manualOverrideSwitchDNI}</b>")
-    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDNI)
+  // ??? RELOCATE ???
+  settings.rooms.each{ roomName ->
+    InstAppW roomApp = app.getChildAppByLabel(roomName)
+    String manualOverrideSwitchDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
+    Ldebug('allAuto()', "Turning on <b>${manualOverrideSwitchDni}</b>")
+    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDni)
   }
 }
 
@@ -396,19 +401,19 @@ void modeChangeButtonHandler (Event e) {
   }
 }
 
-void initialize () {
+void whaInitialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
-  Ltrace('initialize()', '')
+  Ltrace('whaInitialize()', '')
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
     Ltrace(
-      'initialize()',
+      'whaInitialize()',
       "subscribing seeTouchKeypad '${getDeviceInfo(device)}' to modeChangeButtonHandler()."
     )
     subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
     Ltrace(
-      'initialize()',
+      'whaInitialize()',
       "subscribing seeTouchKeypad '${getDeviceInfo(device)}' to specialFnButtonHandler()"
     )
     subscribe(device, specialFnButtonHandler, ['filterEvents': true])
