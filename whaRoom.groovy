@@ -44,10 +44,10 @@ Map whaRoomPage () {
   return dynamicPage(
     name: 'whaRoomPage',
     title: [
-      heading("${app.getLabel()} Scenes<br/>"),
-      comment("Click <b>${red('Done')}</b> to enable subscriptions.<br/>"),
+      heading("${app.getLabel()} Scenes"),
+      comment("Click <b>'Done'</b> to enable subscriptions."),
       comment('Tab to register changes.')
-    ].join(),
+    ].join('<br/>'),
     install: true,
     uninstall: false,
     //nextPage: 'whaPage'
@@ -77,10 +77,10 @@ Map whaRoomPage () {
       input(
         name: 'motionSensor',
         title: [
-          'motionSensor<br/>',
-          comment('Identify one Motion Sensor if desired<br/>.'),
+          'motionSensor',
+          comment('Identify one Motion Sensor if desired.'),
           comment('The Custom Scene "<b>Off</b>" is automatically added below.')
-        ].join(),
+        ].join('<br/>'),
         type: 'device.LutronMotionSensor',
         submitOnChange: true,
         required: false,
@@ -93,9 +93,9 @@ Map whaRoomPage () {
       input(
         name: 'seeTouchKeypads',
         title: [
-          'seeTouchKeypads<br/>',
+          'seeTouchKeypads',
           comment('Authorize Keypads with buttons that activate room scenes.')
-        ].join(),
+        ].join('<br/>'),
         type: 'device.LutronSeeTouchKeypad',
         submitOnChange: true,
         required: false,
@@ -104,16 +104,16 @@ Map whaRoomPage () {
       input(
         name: 'sceneButtons',
         title: [
-          'sceneButtons<br/>',
+          'sceneButtons',
           comment('Authorize Keypad LEDs/Buttons that activate room scenes.')
-        ].join(),
+        ].join('<br/>'),
         type: 'device.LutronComponentSwitch',
         submitOnChange: true,
         required: false,
         multiple: true
       )
       if (state.scenes == null || settings?.sceneButtons == null) {
-        paragraph(red('Scene activation buttons are pending pre-requisites.'))
+        paragraph('Scene activation buttons are pending pre-requisites.')
       } else {
         identifyLedButtonsForListItems(
           state.scenes,
@@ -126,9 +126,9 @@ Map whaRoomPage () {
       input(
         name: 'picos',
         title: [
-          'lutronPicos<br/>',
+          'lutronPicos',
           comment('Identify Picos with buttons that change the Room scene.')
-        ].join(),
+        ].join('<br/>'),
         type: 'device.LutronFastPico',
         submitOnChange: true,
         required: false,
@@ -136,7 +136,7 @@ Map whaRoomPage () {
       )
       if (settings.picos == null) {
         paragraph(
-          red('Selection of pico buttons to activate scenes is pending pre-requisites.')
+          'Selection of pico buttons to activate scenes is pending pre-requisites.'
         )
       } else {
         selectPicoButtonsForScene(settings.picos)
@@ -145,9 +145,9 @@ Map whaRoomPage () {
       input(
         name: 'mainRepeater',
         title: [
-          'mainRepeater<br/>',
+          'mainRepeater',
           comment('Identify Repeaters that host integration buttons for Room scenes')
-        ].join(),
+        ].join('<br/>'),
         type: 'device.LutronKeypad',
         submitOnChange: true,
         required: false,
@@ -156,9 +156,9 @@ Map whaRoomPage () {
       input(
         name: 'independentDevices',
         title: [
-          'independentDevices<br/>',
+          'independentDevices',
           comment('Identify Repeaters that host integration buttons for Room scenes.')
-        ].join(),
+        ].join('<br/>'),
         type: 'capability.switch',
         submitOnChange: true,
         required: false,
@@ -168,18 +168,16 @@ Map whaRoomPage () {
         configureRoomScene()
         populateStateSceneToDeviceValues()
       } else {
-        paragraph red('Soliciation of Room scenes is pending pre-requisite data.')
+        paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
       }
       if (!state.roomName || !state.scenes || !settings.logThreshold) {
         paragraph(
-          red(
-            [
-              'Creation of Room Scene PBSG is pending prerequites.',
-              "<b>state.roomName:</b> ${state.roomName}",
-              "<b>state.scenes:</b> ${state.scenes}",
-              "<b>settings.logThreshold:</b> ${settings.logThreshold}"
-            ].join('<br/>')
-          )
+          [
+            'Creation of Room Scene PBSG is pending prerequites.',
+            "<b>state.roomName:</b> ${state.roomName}",
+            "<b>state.scenes:</b> ${state.scenes}",
+            "<b>settings.logThreshold:</b> ${settings.logThreshold}"
+          ].join('<br/>')
         )
       } else {
         List roomScenes = [ *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE' ]
@@ -192,10 +190,10 @@ Map whaRoomPage () {
       }
       paragraph(
         [
-          heading('Scene PBSG<br/>'),
-          "${ displayState() }<br/>",
+          heading('Scene PBSG'),
+          "${ displayState() }",
           "${ displaySettings() }"
-        ].join()
+        ].join('<br/>')
       )
       paragraph "roomPbsg: >${roomPbsg}<"
       //--TBD-> paragraph roomPbsg.pbsgStateAndSettings("${roomPbsg.getLabel()} (${roomPbsg.getId()})")
@@ -290,7 +288,7 @@ void solicitNonLutronDevicesForWhaRoom () {
 
 void selectScenePerMode () {
   if (state.scenes == null) {
-    paragraph red('Mode-to-Scene selection will proceed once scene names exist.')
+    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
   } else {
     paragraph emphasis('Select automatic scene per Hubitat mode:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
@@ -332,9 +330,9 @@ Map<String, String> picoButtonPicklist (List<DevW> picos) {
 
 void selectPicoButtonsForScene (List<DevW> picos) {
   if (state.scenes == null) {
-    paragraph(red(
+    paragraph(
       'Once scene names exist, this section will solicit affiliated pico buttons.'
-    ))
+    )
   } else {
     List<String> picoScenes = ['AUTOMATIC'] << state.scenes
     picoScenes.flatten().each{ sceneName ->
@@ -383,7 +381,7 @@ void configureRoomScene () {
   //-> )
   Set<String> currentSceneKeys = []
   if (state.scenes == null) {
-    paragraph red('Identification of Room Scene details selection will proceed once scene names exist.')
+    paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
   } else {
     state.scenes?.each{ sceneName ->
       Integer col = 2
@@ -429,10 +427,10 @@ void configureRoomScene () {
   //-> Ldebug(
   //->   'configureRoomScene()<br/>',
   //->   [
-  //->     "<b>Scene Keys (Start):</b> ${sceneKeysAtStart}<br/>",
-  //->     "<b>Scene Keys   (End):</b> ${currentSceneKeys}<br/>",
+  //->     "<b>Scene Keys (Start):</b> ${sceneKeysAtStart}",
+  //->     "<b>Scene Keys   (End):</b> ${currentSceneKeys}",
   //->     "<b>Excess Keys (Diff):</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
-  //->   ].join()
+  //->   ].join('<br/>')
   //-> )
   sceneKeysAtStart.minus(currentSceneKeys).each{ key ->
     Ldebug(

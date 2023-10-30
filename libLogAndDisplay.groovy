@@ -37,48 +37,40 @@ String BLUE = 'rgba(51, 92, 255, 1.0)'
 String LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
 String RED = 'rgba(255, 0, 0, 1.0)'
 
+H1_CSS = 'font-size: 2em; font-weight: bold;'
+H2_CSS = 'font-size: 1em; font-weight: bold;'
+BULLET_CSS = 'font-size: 1.0em; margin-left: 10px;'
+EMPHASIS_CSS = "font-size: 1.3em; color: ${BLUE}; margin-left: 0px;"
+COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
+
 // ---------------------------------------
 // P A R A G R A P H   F O R M A T T I N G
 // ---------------------------------------
 String heading(String s) {
-  HEADING_CSS = 'font-size: 2em; font-weight: bold;'
-  return """<span style="${HEADING_CSS}">${s}</span>"""
+  return """<span style="${H1_CSS}">${s}</span>"""
 }
 
-//-> String important(String s) {
-//->   IMPORTANT_CSS = "font-size: 1em; color: ${RED};"
-//->   return """<span style="${IMPORTANT_CSS}">${s}</span>"""
-//-> }
-
-String emphasis(String s) {
-  EMPHASIS_CSS = "font-size: 1.3em; color: ${BLUE}; margin-left: 0px;"
-  return """<span style="${EMPHASIS_CSS}">${s}</span>"""
+String heading2(String s) {
+  return """<span style="${H2_CSS}">${s}</span>"""
 }
-
-//-> String emphasis2(String s) {
-//->   EMPHASIS2_CSS = "font-size: 1.1em; color: ${BLUE}; margin-left: 0px;"
-//->   return """<span style="${EMPHASIS2_CSS}">${s}</span>"""
-//-> }
-
-//-> String normal(String s) {
-//->   NORMAL_CSS = 'font-size: 1.1em;'
-//->   return """<span style="${NORMAL_CSS}">${s}</span>"""
-//-> }
 
 String bullet(String s) {
-  BULLET_CSS = 'font-size: 1.0em; margin-left: 10px;'
   return """<span style="${BULLET_CSS}">&#x2022;&nbsp;&nbsp;${s}</span>"""
 }
 
+
+String emphasis(String s) {
+  return """<span style="${EMPHASIS_CSS}">${s}</span>"""
+}
+
 String comment(String s) {
-  COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
   return """<span style="${COMMENT_CSS}">${s}</span>"""
 }
 
-String red(String s) {
-  RED_BOLD = "color: ${RED}; font-style: bold"
-  return """<span style="${RED_BOLD}">${s}</span>"""
-}
+//-> String red(String s) {
+//->   RED_BOLD = "color: ${RED}; font-style: bold"
+//->   return """<span style="${RED_BOLD}">${s}</span>"""
+//-> }
 
 // -------------
 // L O G G I N G

@@ -54,7 +54,7 @@ void removeLegacySettingsAndState () {
 }
 
 InstAppW manageModePbsg () {
-  Ldebug('manageModePbsg()', 'At entry')
+  Ltrace('manageModePbsg()', 'At entry')
   state.modePbsgName = 'whaModePbsg'
   state.modes = getLocation().getModes().collect{it.name}
   state.defaultMode = getGlobalVar('defaultMode').value
@@ -70,9 +70,9 @@ void authorizeMainRepeater () {
   input(
     name: 'specialtyFnMainRepeater',
     title: [
-      'Authorize Specialty Function Repeater Access<br/>',
-      comment("Used for 'all off'... behavior.")
-    ].join(),
+      heading2('Authorize Specialty Function Repeater Access'),
+      bullet('Identify repeaters supporting special function implementation.')
+    ].join('<br/>'),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
@@ -84,11 +84,10 @@ void authorizeSeeTouchKeypads () {
   input(
     name: 'seeTouchKeypads',
     title: [
-      'Authorize SeeTouch Keypad Access<br/>',
-      comment('Identify keypads with buttons that:<br/>'),
-      bullet(comment('Trigger specialty whole-house functions.<br/>')),
-      bullet(comment('Change the Hubitat mode.'))
-    ].join(),
+      heading2('Authorize SeeTouch Keypad Access'),
+      bullet('Identify Specialty Function keypad buttons.'),
+      bullet('Identify keypad buttons used to change the Hubitat Mode.')
+    ].join('<br/>'),
     type: 'device.LutronSeeTouchKeypad',
     submitOnChange: true,
     required: false,
@@ -100,9 +99,9 @@ void identifySpecialFunctionButtons() {
   input(
     name: 'specialFnButtons',
     title: [
-      'Identify Special Function Buttons<br/>',
-      comment("Examples: ${state.specialFnButtons}")
-    ].join(),
+      heading2('Identify Special Function Buttons'),
+      bullet("Examples: ${state.specialFnButtons}")
+    ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
     required: false,
@@ -115,7 +114,7 @@ void wireButtonsToSpecialFunctions () {
     'ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY', 'FLASH', 'PANIC', 'QUIET'
   ]
   if (settings?.specialFnButtons == null) {
-    paragraph(red('No specialty activation buttons are selected.'))
+    paragraph('No specialty activation buttons are selected.')
   } else {
     identifyLedButtonsForListItems(              // Wire
       state.specialFnButtons,                    //   - to Special Functions
@@ -137,9 +136,9 @@ void identifyModeButtons () {
   input(
     name: 'lutronModeButtons',
     title: [
-      'lutronModeButtons<br/>',
-      comment('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
-    ].join(),
+      heading2('Identify Hubitat Mode Buttons'),
+      bullet('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
+    ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
     required: false,
@@ -149,7 +148,7 @@ void identifyModeButtons () {
 
 void wireButtonsToModes () {
   if (state.modes == null || settings?.lutronModeButtons == null) {
-    paragraph(red('Mode activation buttons are pending pre-requisites.'))
+    paragraph('Mode activation buttons are pending pre-requisites.')
   } else {
     identifyLedButtonsForListItems(            // Wire
       state.modes,                             //   - to Hubitat Mode
@@ -173,7 +172,7 @@ void solicitParticipatingRooms () {
   input(
     name: 'rooms',
     type: 'enum',
-    title: '<b>Select Participating Rooms</b>',
+    title: heading2('Select Participating Rooms'),
     options: roomPicklist,
     submitOnChange: true,
     required: false,
@@ -183,7 +182,7 @@ void solicitParticipatingRooms () {
 
 void displayInstantiatedRoomHrefs () {
   if (!settings.rooms) {
-    paragraph red('Management of child apps is pending selection of Room Names.')
+    paragraph 'Management of child apps is pending selection of Room Names.'
   } else {
     paragraph heading('Room Scene Configuration')
     settings.rooms.each{ roomName ->
@@ -207,8 +206,6 @@ void displayInstantiatedRoomHrefs () {
   }
 }
 
-// settings.rooms
-
 void displayStateAndSettings () {
   paragraph([
     heading('Debug'),
@@ -220,16 +217,14 @@ void displayStateAndSettings () {
 Map whaPage () {
   removeLegacySettingsAndState()
   InstAppW modePbsg = manageModePbsg()
-  Ldebug('whaPage()', "modePbsg: ${getAppInfo(modePbsg)}")
+  //-> Ldebug('whaPage()', "modePbsg: ${getAppInfo(modePbsg)}")
   return dynamicPage(
     name: 'whaPage',
     title: [
-      heading('Whole House Automation (WHA) Application<br/>'),
-      bullet("Authorize Access to appropriate devices.<br/>"),
-      bullet("Create the Mode PBSG App Instance.<br/>"),
-      bullet("Identify Participating Rooms.<br/>"),
-      bullet(red("Press <b>Done</b> (see below) to ensure event subscription updates !!!"))
-    ].join(),
+      heading('Whole House Automation (WHA) Application'),
+      bullet('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
+      bullet('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
+    ].join('<br/>'),
     install: true,
     uninstall: false,
   ) {
@@ -249,8 +244,7 @@ Map whaPage () {
       displayInstantiatedRoomHrefs()
       displayStateAndSettings()
       if (modePbsg) {
-        paragraph modePbsg.pbsgStateAndSettings("${modePbsg.getLabel()} (${modePbsg.getId()})")
-      }
+        paragraph modePbsg.pbsgStateAndSettings(getAppInfo(modePbsg))}
     }
   }
 }
@@ -289,29 +283,29 @@ void pruneOrphanedChildApps () {
   }
 }
 
-void displayAppInfoLink () {
-  paragraph comment(
-    [
-      'Whole House Automation - @wesmc, ',
-      '<a href="https://github.com/WesleyMConner/Hubitat-wha" ',
-      'target="_blank"><br/>Click for more information</a>'
-    ].join()
-  )
-}
+//-> void displayAppInfoLink () {
+//->   paragraph comment(
+//->     [
+//->       'Whole House Automation - @wesmc, ',
+//->       '<a href="https://github.com/WesleyMConner/Hubitat-wha" ',
+//->       'target="_blank"><br/>Click for more information</a>'
+//->     ].join()
+//->   )
+//-> }
 
 void installed () {
-  Ldebug('installed()', '')
+  Ldebug('installed()', 'At entry')
   whaInitialize()
 }
 
 void updated () {
-  Ltrace('updated()', '')
+  Ltrace('updated()', 'At entry')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   whaInitialize()
 }
 
 void uninstalled () {
-  Ldebug('uninstalled()', '')
+  Ltrace('uninstalled()', 'At entry')
   removeAllChildApps()
 }
 

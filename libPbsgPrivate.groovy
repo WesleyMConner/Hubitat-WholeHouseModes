@@ -65,6 +65,36 @@ void populateStateVswDnis () {
   Ldebug('populateStateVswDnis()', "state.vswNames: ${state.vswNames} state.vswDnis: ${state.vswDnis}")
 }
 
+/*
+Boolean isPbsgHealthy () {
+  Boolean result = true
+  Ldebug('isPbsgHealthy', displayState())
+  Ldebug('isPbsgHealthy', displaySettings())
+  if (
+    state.getAt('pbsgName') == null
+    || state.getAt('vswDniPrefix') == null
+    || state.getAt('vswNames') == null
+    || state.getAt('defaultVswName') == null
+    || state.getAt('defaultVswDni') == null
+  ) {
+    result = false
+    Ltrace(
+      isPbsgHealthy(),
+      [
+        'PBSG data before repairs.',
+        "<b>state.pbsgName:</b> ${state.pbsgName}",
+        "<b>state.vswDniPrefix:</b> ${state.vswDniPrefix}",
+        "<b>state.vswNames:</b> ${state.vswNames}",
+        "<b>state.defaultVswName:</b> ${state.defaultVswName}",
+        "<b>state.defaultVswDni:</b> ${state.defaultVswDni}",
+        "<b>settings.logThreshold:</b> ${settings.logThreshold}"
+      ].join('<br/>&nbsp;&nbsp;')
+    )
+  }
+  return result
+}
+*/
+
 void configPbsg (
     String pbsgName,
     List<String> vswNames,
@@ -85,7 +115,7 @@ void configPbsg (
   state.pbsgName = pbsgName
   state.vswDniPrefix = "${state.pbsgName}_"
   state.vswNames = vswNames
-  populateStateVswDnis()  //--xx-> state.vswDnis = vswNames.collect{ name -> vswNameToDni(name) }
+  populateStateVswDnis()  //-> vswNames.collect{ name -> vswNameToDni(name) }
   state.defaultVswName = defaultVswName
   state.defaultVswDni = vswNameToDni(defaultVswName)
   settings.logThreshold = logLevel
@@ -96,40 +126,28 @@ void manageChildDevices () {
   Ltrace('manageChildDevices()', 'At entry')
   // Uncomment the following to test orphan child app removal.
   //==T E S T I N G   O N L Y==> addOrphanChild()
-  if (!state.vswDnis) {
-    Linfo('manageChildDevices()', 'state.vswDnis is null, re-populating')
-    populateStateVswDnis()
-  }
-  if (!state.vswDnis) {
-    // It is possible that a human has manually deleted ''.
-    Lerror('manageChildDevices()', 'state.vswDnis is null')
-  } else {
-    List<DevW> entryDnis = getAllChildDevices().collect{ device ->
-      device.deviceNetworkId
-    }
-    List<DevW> missingDnis = (state.vswDnis)?.minus(entryDnis)
-    List<DevW> orphanDnis = entryDnis.minus(state.vswDnis)
-    //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
-    //-> Ltrace(
-    //->   'manageChildDevices()',
-    //->   [
-    //->     '<table>',
-    //->     "<tr><th>entryDnis</th><td>${entryDnis}</td></tr>",
-    //->     "<tr><th>state.vswDnis</th><td>${state.vswDnis}</td></tr>",
-    //->     "<tr><th>missingDnis</th><td>${missingDnis}</td></tr>",
-    //->     "<tr><th>orphanDnis:</th><td>${orphanDnis}</td></tr>",
-    //->     '</table>'
-    //->   ].join()
-    //-> )
-    missingDnis.each{ dni ->
-      Ldebug('manageChildDevices()', "adding '<b>${dni}'</b>")
-      addChildDevice(
-        'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
-      )}
-    orphanDnis.each{ dni ->
-      Ldebug('manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
-      deleteChildDevice(dni)
-    }
+  List<DevW> missingDnis = (state.vswDnis)?.minus(entryDnis)
+  List<DevW> orphanDnis = entryDnis?.minus(state.vswDnis)
+  //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
+  //-> Ltrace(
+  //->   'manageChildDevices()',
+  //->   [
+  //->     '<table>',
+  //->     "<tr><th>entryDnis</th><td>${entryDnis}</td></tr>",
+  //->     "<tr><th>state.vswDnis</th><td>${state.vswDnis}</td></tr>",
+  //->     "<tr><th>missingDnis</th><td>${missingDnis}</td></tr>",
+  //->     "<tr><th>orphanDnis:</th><td>${orphanDnis}</td></tr>",
+  //->     '</table>'
+  //->   ].join()
+  //-> )
+  missingDnis.each{ dni ->
+    Ldebug('manageChildDevices()', "adding '<b>${dni}'</b>")
+    addChildDevice(
+      'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
+    )}
+  orphanDnis.each{ dni ->
+    Ldebug('manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
+    deleteChildDevice(dni)
   }
 }
 
@@ -266,9 +284,9 @@ void defaultPage () {
   section {
     paragraph(
       [
-        heading ("${app.getLabel()} a PBSG (Pushbutton Switch Group)<br/>"),
-        emphasis(red('Use the browser back button to return to the parent page.'))
-      ].join()
+        heading ("${app.getLabel()} a PBSG (Pushbutton Switch Group)"),
+        emphasis('Use the browser back button to return to the parent page.')
+      ].join('<br/>')
     )
     solicitLogThreshold()                                     // Fn provided by Utils
     paragraph pbsgStateAndSettings('DEBUG')

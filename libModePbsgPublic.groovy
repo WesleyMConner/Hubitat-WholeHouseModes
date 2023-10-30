@@ -31,19 +31,29 @@ InstAppW createModePbsg (
     String defaultMode,
     String logThreshold
   ) {
+  Ltrace('createModePbsg()', "At entry")
   // The recommended modePbsgName is 'whaModePbsg'.
   InstAppW modePbsg = getChildAppByLabel(modePbsgName)
-  Ldebug('createModePbsg()', modePbsgName)
-  if (!modePbsg) {
-    Ldebug('createModePbsg()', "creating new Mode PBSG instance '${modePbsgName}'")
+  if (modePbsg) {
+    Ltrace('createModePbsg()', "is using existing '${getAppInfo(modePbsg)}'")
+    //-> if (modePbsg.isPbsgHealthy() == false) {
+    Ltrace(
+      'createModePbsg()',
+      modePbsg.pbsgStateAndSettings('PEEK AT EXISTING MODE PBSG')
+    )
+    modePbsg.configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+    Ltrace(
+      'createModePbsg()',
+      modePbsg.pbsgStateAndSettings('PEEK AFTER FRESH createModePbsg() CALL')
+    )
+  } else {
     modePbsg = app.addChildApp(
       'wesmc',      // See modePBSG.groovy 'definition.namespace'
       'modePBSG',   // See modePBSG.groovy 'definition.name'
       modePbsgName  // PBSG's label/name (id will be a generated integer)
     )
+    Ldebug('createModePbsg()', "created new '${getAppInfo(modePbsg)}'")
     configPbsg(modePbsgName, modes, defaultMode, logThreshold)
-  } else {
-    Ltrace('createModePbsg()', "using existing modePbsg instance '${modePbsgName}'")
   }
   return modePbsg
 }

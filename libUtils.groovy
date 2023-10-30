@@ -44,9 +44,9 @@ void identifyLedButtonsForListItems(
   list.each{ item ->
     input(
       name: "${prefix}_${item}",
+      title: heading2("Identify LEDs/Buttons for <b>${item}</b>"),
       type: 'enum',
       width: 6,
-      title: emphasis("Identify LEDs/Buttons for <b>${item}</b>"),
       submitOnChange: true,
       required: false,
       multiple: true,
