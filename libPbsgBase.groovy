@@ -71,11 +71,17 @@ void turnOffVsw (String vswName, passedVsw = null) {
 
 void turnOnVswExclusively (String vswName, passedVsw = null) {
   DevW vsw = passedVsw ?: app.getChildDevice(vswNameToDni(vswName))
-  if (!vsw) {
-    Lerror('turnOnVswExclusively()', "vsw named '${vswName}' is missing")
-  }
+  if (!vsw) Lerror('turnOnVswExclusively()', "vsw named '${vswName}' is missing")
   // Turn off peers BEFORE turning on vswDni!
   turnOffVswPeers(vswName, vsw)
+  //--xx-> String vswDni = vswNameToDni(vswName)
+  //--xx-> DevW vsw = app.getChildDevice(vswDni)
+  //--xx-> if (!vsw) {
+  //--xx->   Lerror(
+  //--xx->     'turnOnVswExclusively()',
+  //--xx->     "<b>vswName:</b> '${vswName}', <b>vswDni:</b> '${vswDni}', <b>vsw:</b> '${vsw.getDeviceNetworkId()}'"
+  //--xx->   )
+  //--xx-> }
   vsw.on()
 }
 
@@ -96,10 +102,6 @@ void toggleVsw (String vswName, passedVsw = null) {
     default:
       Lerror('toggleVsw()', "unexpected switchState: ${switchState}")
   }
-}
-
-DevW getVswByName (String vswName) {
-  return getVswByDni(vswNameToDni(vswName))
 }
 
 void defaultPage () {
@@ -214,26 +216,27 @@ void manageChildDevices () {
 
 void turnOffVswPeers (String vswName, passedVsw = null) {
   state.vswNames?.findAll{ name -> name != vswName }.each{ peerName ->
-    DevW peerVsw app.getChildDevice(vswNameToDni(peerName))
+    DevW peerVsw = app.getChildDevice(vswNameToDni(peerName))
     if (!peerVsw) {
       Lerror('turnOffVswPeers()', "peerVsw named '${peerName}' is missing")
     }
+    Ltrace('turnOffVswPeers()', "turning off '${peerName}'")
     peerVsw.off()
   }
 }
 
 DevW getVswByDni (String vswDni) {
-  return app.getChildAppByLabel(vswDni)
+  return app.getChildDevice(vswDni)
+}
+
+DevW getVswByName (String vswName) {
+  return getVswByDni(vswNameToDni(vswName))
 }
 
 List<DevW> getVsws (String option = null) {
-  Ldebug('getVsws', "<br/>${pbsgStateAndSettings('INSIDE getVsws()')}")
+  //--DEEP-DEBUGGING-> Ldebug('getVsws', "<br/>${pbsgStateAndSettings('INSIDE getVsws()')}")
   if (!state.vswDnis) {
-    Ldebug('getVsws()', 'Missing state.vswDnis, re-populating')
-    populateStateVswDnis()
-  }
-  if (!state.vswDnis) {
-    Lerror('getVsws()', 'Missing state.vswDnis')
+    Lerror('getVsws()', "Missing 'state.vswDnis', call PBSG's updated() method.")
   } else {
     List<DevW> vsws = []
     state.vswDnis.collect{ vswDni ->
@@ -273,7 +276,8 @@ void enforceDefaultSwitch () {
       'enforceDefaultSwitch()',
       "turning on <b>${state.defaultVswDni}</b>"
     )
-    turnOnVsw(state.defaultVswDni)
+    DevW vsw = app.getChildDevice(vswNameToDni(vswName))
+    vsw.on()
   } else {
     Ltrace(
       'enforceDefaultSwitch()',

@@ -79,7 +79,7 @@ void modeVswEventHandler (Event e) {
   //   - When a Mode VSW turns on, change the Hubitat mode accordingly.
   //   - Clients DO NOT get a callback for this event.
   //   - Clients SHOULD subscribe to Hubitat Mode change events.
-  Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
+  //--DEEP-DEBUGGING-> Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
       if (state.previousVswDni == e.displayName) {
@@ -134,7 +134,9 @@ void modePbsgInit() {
     'modePbsgInit()',
     "Activating VSW for mode: <b>${mode}</b>"
   )
-  getVswByName(mode).turnOnVswExclusively()
+  Ltrace('modePbsgInit()', 'B E F O R E')
+  turnOnVswExclusively(mode)
+  Ltrace('modePbsgInit()', 'A F T E R')
 }
 
 /*
