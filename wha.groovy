@@ -18,7 +18,7 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libLogAndDisplay
-#include wesmc.libModePbsgPublic
+#include wesmc.libPbsgBase
 #include wesmc.libUtils
 
 definition (
@@ -37,6 +37,26 @@ preferences {
   page(name: 'whaPage')
 }
 
+InstAppW getOrCreateModePbsg (
+    String modePbsgName = 'whaModePbsg',
+    String defaultMode = 'Day',
+    String logThreshold = 'Debug'
+  ) {
+  // I M P O R T A N T
+  //   - Functionally, a Mode PBSG is a singleton.
+  //   - Any real work should occur in modePBSG.groovy (the App definition).
+  //   - On creation, a Mode PBSG should create all of its child VSWs.
+  //   - If an existing Mode PBSG is available, it is returned "AS IS".
+  //   - The Mode PBSG's update() process will refresh child VSWs, but at
+  //     some performance cost.
+  return modePbsg = getChildAppByLabel(modePbsgName)
+    ?:  addChildApp(
+          'wesmc',      // See modePBSG.groovy definition's (App) namespace.
+          'modePBSG',   // See modePBSG.groovy definition's (App) name.
+          modePbsgName  // Label used to create or get the child App.
+        )
+}
+
 void removeLegacySettingsAndState () {
   settings.remove('log')
   state.remove('LOG_LEVEL1_ERROR')
@@ -51,19 +71,6 @@ void removeLegacySettingsAndState () {
   state.remove('SPECIALTY_BUTTONS')
   state.remove('specialtyButtons')
   state.remove('specialtyFnButtons')
-}
-
-InstAppW manageModePbsg () {
-  Ltrace('manageModePbsg()', 'At entry')
-  state.modePbsgName = 'whaModePbsg'
-  state.modes = getLocation().getModes().collect{it.name}
-  state.defaultMode = getGlobalVar('defaultMode').value
-  return createModePbsg(
-    state.modePbsgName,
-    state.modes,
-    state.defaultMode,
-    'DEBUG',                 // See also libPbsgPrivate adjustLogLevel(...)
-  )
 }
 
 void authorizeMainRepeater () {
@@ -184,7 +191,7 @@ void displayInstantiatedRoomHrefs () {
   if (!settings.rooms) {
     paragraph 'Management of child apps is pending selection of Room Names.'
   } else {
-    paragraph heading('Room Scene Configuration')
+    paragraph heading1('Room Scene Configuration')
     settings.rooms.each{ roomName ->
       InstAppW roomApp = app.getChildAppByLabel(roomName)
       if (!roomApp) {
@@ -206,22 +213,13 @@ void displayInstantiatedRoomHrefs () {
   }
 }
 
-void displayStateAndSettings () {
-  paragraph([
-    heading('Debug'),
-    "${ displayState() }",
-    "${ displaySettings() }"
-  ].join('<br/>'))
-}
-
 Map whaPage () {
   removeLegacySettingsAndState()
-  InstAppW modePbsg = manageModePbsg()
-  //-> Ldebug('whaPage()', "modePbsg: ${getAppInfo(modePbsg)}")
+  InstAppW modePbsg = getOrCreateModePbsg()
   return dynamicPage(
     name: 'whaPage',
     title: [
-      heading('Whole House Automation (WHA) Application'),
+      heading1('Whole House Automation (WHA) Application'),
       bullet('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
       bullet('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
     ].join('<br/>'),
@@ -231,9 +229,10 @@ Map whaPage () {
     app.updateLabel('Whole House Automation (WHA)')
     section {
       solicitLogThreshold()                                           // Utils.groovy
-      if (settings.logThreshold) {
-        modePbsg.adjustLogLevel(settings.logThreshold)
-      }
+      //-> DON'T MAKE ADJUSTMENTS HERE, INSTEAD WAIT FOR updated().
+      //-> if (settings.logThreshold) {
+      //->   modePbsg.adjustLogLevel(settings.logThreshold)
+      //-> }
       authorizeMainRepeater()
       authorizeSeeTouchKeypads()
       identifySpecialFunctionButtons()
@@ -242,11 +241,35 @@ Map whaPage () {
       wireButtonsToModes()
       solicitParticipatingRooms()
       displayInstantiatedRoomHrefs()
-      displayStateAndSettings()
+      //--xx-> modePbsg.displayStateAndSettings() ?: heading1('modePbsg IS NOT present')
+      //-> NEED TO DISPLAY CHILD PBSG DETAILS HERE
       if (modePbsg) {
-        paragraph modePbsg.pbsgStateAndSettings(getAppInfo(modePbsg))}
+        paragraph modePbsg.pbsgStateAndSettings(getAppInfo(modePbsg))
+        paragraph insertForceUpdateButton()
+      }
     }
   }
+}
+
+void appButtonHandler (def b) {
+  // This method runs in an independent process, retrieve Mode PBSG instance.
+  InstAppW modePbsg = getOrCreateModePbsg()
+  switch (b) {
+    case 'updateModePbsg':
+      Ldebug('appButtonHandler()', "received 'updateModePbsg'")
+      modePbsg.updated()
+      break
+    default:
+      Lerror('appButtonHandler()', "unexpected '${b}'")
+  }
+}
+
+String insertForceUpdateButton () {
+  input(
+    name: 'updateModePbsg',
+    type: 'button',
+    title: 'Force Mode PBSG Update'
+  )
 }
 
 //-> void updateLutronKpadLeds (String currMode) {

@@ -16,7 +16,7 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.hub.domain.Event as Event
 
 library (
-  name: 'libPbsgPrivate',
+  name: 'libPbsgBase',
   namespace: 'wesmc',
   author: 'WesleyMConner',
   description: 'PBSG (headless Pushbutton Switch Group)',
@@ -26,74 +26,9 @@ library (
 )
 
 //----
-//---- C O N V E N I E N C E
+//---- P U B L I C
+//----   These functions are intended for downstream use.
 //----
-
-String getPbsgName () {
-  return state.pbsgName
-}
-
-String vswNameToDni (String name) {
-  return "${state.vswDniPrefix}${name}"
-}
-
-String vswDnitoName (String modeVswDni) {
-  modeVswDni.minus("${vswDniPrefix()}")
-}
-
-//----
-//---- C O N F I G U R E
-//----
-
-void removeLegacySettingsAndState () {
-  settings.remove('log')
-  state.remove('activeVswDni')
-  state.remove('defaultVswDni')
-  state.remove('inspectScene')
-  state.remove('LOG_LEVEL1_ERROR')
-  state.remove('LOG_LEVEL2_WARN')
-  state.remove('LOG_LEVEL3_INFO')
-  state.remove('LOG_LEVEL4_DEBUG')
-  state.remove('LOG_LEVEL5_TRACE')
-  state.remove('previousVswDni')
-  state.remove('roomScene')
-  state.remove('switchDnis')
-}
-
-void populateStateVswDnis () {
-  state.vswDnis = state.vswNames.collect{ name -> vswNameToDni(name) }
-  Ldebug('populateStateVswDnis()', "state.vswNames: ${state.vswNames} state.vswDnis: ${state.vswDnis}")
-}
-
-/*
-Boolean isPbsgHealthy () {
-  Boolean result = true
-  Ldebug('isPbsgHealthy', displayState())
-  Ldebug('isPbsgHealthy', displaySettings())
-  if (
-    state.getAt('pbsgName') == null
-    || state.getAt('vswDniPrefix') == null
-    || state.getAt('vswNames') == null
-    || state.getAt('defaultVswName') == null
-    || state.getAt('defaultVswDni') == null
-  ) {
-    result = false
-    Ltrace(
-      isPbsgHealthy(),
-      [
-        'PBSG data before repairs.',
-        "<b>state.pbsgName:</b> ${state.pbsgName}",
-        "<b>state.vswDniPrefix:</b> ${state.vswDniPrefix}",
-        "<b>state.vswNames:</b> ${state.vswNames}",
-        "<b>state.defaultVswName:</b> ${state.defaultVswName}",
-        "<b>state.defaultVswDni:</b> ${state.defaultVswDni}",
-        "<b>settings.logThreshold:</b> ${settings.logThreshold}"
-      ].join('<br/>&nbsp;&nbsp;')
-    )
-  }
-  return result
-}
-*/
 
 void configPbsg (
     String pbsgName,
@@ -115,40 +50,11 @@ void configPbsg (
   state.pbsgName = pbsgName
   state.vswDniPrefix = "${state.pbsgName}_"
   state.vswNames = vswNames
-  populateStateVswDnis()  //-> vswNames.collect{ name -> vswNameToDni(name) }
+  populateStateVswDnis()
   state.defaultVswName = defaultVswName
   state.defaultVswDni = vswNameToDni(defaultVswName)
   settings.logThreshold = logLevel
   manageChildDevices()
-}
-
-void manageChildDevices () {
-  Ltrace('manageChildDevices()', 'At entry')
-  // Uncomment the following to test orphan child app removal.
-  //==T E S T I N G   O N L Y==> addOrphanChild()
-  List<DevW> missingDnis = (state.vswDnis)?.minus(entryDnis)
-  List<DevW> orphanDnis = entryDnis?.minus(state.vswDnis)
-  //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
-  //-> Ltrace(
-  //->   'manageChildDevices()',
-  //->   [
-  //->     '<table>',
-  //->     "<tr><th>entryDnis</th><td>${entryDnis}</td></tr>",
-  //->     "<tr><th>state.vswDnis</th><td>${state.vswDnis}</td></tr>",
-  //->     "<tr><th>missingDnis</th><td>${missingDnis}</td></tr>",
-  //->     "<tr><th>orphanDnis:</th><td>${orphanDnis}</td></tr>",
-  //->     '</table>'
-  //->   ].join()
-  //-> )
-  missingDnis.each{ dni ->
-    Ldebug('manageChildDevices()', "adding '<b>${dni}'</b>")
-    addChildDevice(
-      'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
-    )}
-  orphanDnis.each{ dni ->
-    Ldebug('manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
-    deleteChildDevice(dni)
-  }
 }
 
 void adjustLogLevel (String logThreshold) {
@@ -156,25 +62,11 @@ void adjustLogLevel (String logThreshold) {
   setLogLevels(logThreshold)
 }
 
-//----
-//---- O P E R A T I O N S
-//----
-
 void turnOffVsw (String vswName, passedVsw = null) {
   DevW vsw = passedVsw ?: app.getChildDevice(vswNameToDni(vswName))
   if (!vsw) Lerror('turnOffVsw()', "vsw named '${vswName}' is missing")
   vsw.off()
   enforceDefaultSwitch()
-}
-
-void turnOffVswPeers (String vswName, passedVsw = null) {
-  state.vswNames?.findAll{ name -> name != vswName }.each{ peerName ->
-    DevW peerVsw app.getChildDevice(vswNameToDni(peerName))
-    if (!peerVsw) {
-      Lerror('turnOffVswPeers()', "peerVsw named '${peerName}' is missing")
-    }
-    peerVsw.off()
-  }
 }
 
 void turnOnVswExclusively (String vswName, passedVsw = null) {
@@ -208,6 +100,126 @@ void toggleVsw (String vswName, passedVsw = null) {
 
 DevW getVswByName (String vswName) {
   return getVswByDni(vswNameToDni(vswName))
+}
+
+void defaultPage () {
+  // Abstract
+  //   - Include this page content when instantiating PBSG instances.
+  //   - Then, call configPbsg(), see below, to complete device configuration.
+  // Forcibly remove unused settings and state, a missing Hubitat feature.
+  removeLegacyPbsgSettingsAndState()
+  section {
+    paragraph(
+      [
+        heading2("${app.getLabel()} a PBSG (Pushbutton Switch Group)"),
+        emphasis('Use the browser back button to return to the parent page.')
+      ].join('<br/>')
+    )
+    solicitLogThreshold()                                     // Fn provided by Utils
+    paragraph pbsgStateAndSettings('DEBUG')
+  }
+}
+
+String pbsgStateAndSettings (String title) {
+  List<String> results = []
+  results += heading1(title)
+  results += state ? '<b>STATE</b>' : 'N O   S T A T E'
+  state.sort().collect{ k, v ->
+    if (k == 'vswDnis') {
+      if (!v) {
+        Lerror('pbsgStateAndSettings()', 'At key vswDnis, encountered null.')
+      }
+      v.each{ vswDni ->
+        DevW vsw = app.getChildDevice(vswDni)
+        String state = getSwitchState(vsw)
+        state = (state == 'on') ? "<b>on</b>" : "<i>${state}</i>"
+        results += "&nbsp;&nbsp;${vswDni} ${state}"
+      }
+    } else {
+      results += bullet("<b>${k}</b> → ${v}")
+    }
+  }
+  results += settings ? displaySettings() : 'N O   S E T T I N G S'
+  return results.join('<br/>')
+}
+
+//----
+//---- P R I V A T E
+//----   Hubitat does not facilitate Grooy classes or similar advanced
+//----   developer tools. The functions below SHOULD NOT be used directly,
+//----   but are included in the library since PUBLIC methods incorporate
+//----   them (directly or indirectly).
+//----
+
+String vswNameToDni (String name) {
+  return "${state.vswDniPrefix}${name}"
+}
+
+//--unused-> String vswDnitoName (String modeVswDni) {
+//--unused->   modeVswDni.minus("${vswDniPrefix()}")
+//--unused-> }
+
+void removeLegacyPbsgSettingsAndState () {
+  settings.remove('log')
+  state.remove('activeVswDni')
+  state.remove('defaultVswDni')
+  state.remove('inspectScene')
+  state.remove('LOG_LEVEL1_ERROR')
+  state.remove('LOG_LEVEL2_WARN')
+  state.remove('LOG_LEVEL3_INFO')
+  state.remove('LOG_LEVEL4_DEBUG')
+  state.remove('LOG_LEVEL5_TRACE')
+  state.remove('previousVswDni')
+  state.remove('roomScene')
+  state.remove('switchDnis')
+}
+
+void populateStateVswDnis () {
+  state.vswDnis = state.vswNames.collect{ name -> vswNameToDni(name) }
+}
+
+void manageChildDevices () {
+  Ltrace('manageChildDevices()', 'At entry')
+  // Uncomment the following to test orphan child app removal.
+  //==T E S T I N G   O N L Y==> addOrphanChild()
+  // The ONLY child devices for a PBSG are its managed VSWs.
+  List<String> entryDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
+  // Since removeAll() modifies the collection, copy data before application.
+  List<String> missingDnis = state.vswDnis
+  missingDnis.removeAll(entryDnis)
+  List<String> orphanDnis = entryDnis
+  orphanDnis.removeAll(state.vswDnis)
+  //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
+  Ltrace(
+    'manageChildDevices()',
+    [
+      '<table>',
+      "<tr><th>entryDnis</th><td>${entryDnis}</td></tr>",
+      "<tr><th>state.vswDnis</th><td>${state.vswDnis}</td></tr>",
+      "<tr><th>missingDnis</th><td>${missingDnis}</td></tr>",
+      "<tr><th>orphanDnis:</th><td>${orphanDnis}</td></tr>",
+      '</table>'
+    ].join()
+  )
+  missingDnis.each{ dni ->
+    Ldebug('manageChildDevices()', "adding '<b>${dni}'</b>")
+    addChildDevice(
+      'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
+    )}
+  orphanDnis.each{ dni ->
+    Ldebug('manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
+    deleteChildDevice(dni)
+  }
+}
+
+void turnOffVswPeers (String vswName, passedVsw = null) {
+  state.vswNames?.findAll{ name -> name != vswName }.each{ peerName ->
+    DevW peerVsw app.getChildDevice(vswNameToDni(peerName))
+    if (!peerVsw) {
+      Lerror('turnOffVswPeers()', "peerVsw named '${peerName}' is missing")
+    }
+    peerVsw.off()
+  }
 }
 
 DevW getVswByDni (String vswDni) {
@@ -270,54 +282,8 @@ void enforceDefaultSwitch () {
   }
 }
 
-
 //----
-//---- D I S P L A Y
-//----
-
-void defaultPage () {
-  // Abstract
-  //   - Include this page content when instantiating PBSG instances.
-  //   - Then, call configPbsg(), see below, to complete device configuration.
-  // Forcibly remove unused settings and state, a missing Hubitat feature.
-  removeLegacySettingsAndState()
-  section {
-    paragraph(
-      [
-        heading ("${app.getLabel()} a PBSG (Pushbutton Switch Group)"),
-        emphasis('Use the browser back button to return to the parent page.')
-      ].join('<br/>')
-    )
-    solicitLogThreshold()                                     // Fn provided by Utils
-    paragraph pbsgStateAndSettings('DEBUG')
-  }
-}
-
-String pbsgStateAndSettings (String title) {
-  List<String> results = []
-  results += heading(title)
-  results += state ? '<b>STATE</b>' : 'N O   S T A T E'
-  state.sort().collect{ k, v ->
-    if (k == 'vswDnis') {
-      if (!v) {
-        Lerror('pbsgStateAndSettings()', 'At key vswDnis, encountered null.')
-      }
-      v.each{ vswDni ->
-        DevW vsw = app.getChildDevice(vswDni)
-        String state = getSwitchState(vsw)
-        state = (state == 'on') ? "<b>on</b>" : "<i>${state}</i>"
-        results += "&nbsp;&nbsp;${vswDni} ${state}"
-      }
-    } else {
-      results += bullet("<b>${k}</b> → ${v}")
-    }
-  }
-  results += settings ? displaySettings() : 'N O   S E T T I N G S'
-  return results.join('<br/>')
-}
-
-//----
-//---- T E S T I N G
+//---- T E S T I N G   O N L Y
 //----
 
 void addOrphanChild () {

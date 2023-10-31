@@ -46,7 +46,7 @@ COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
 // ---------------------------------------
 // P A R A G R A P H   F O R M A T T I N G
 // ---------------------------------------
-String heading(String s) {
+String heading1(String s) {
   return """<span style="${H1_CSS}">${s}</span>"""
 }
 

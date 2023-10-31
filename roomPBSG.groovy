@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// roomPBSG (an instsantiation of libPbsgPrivate)
+// roomPBSG (an instsantiation of libPbsgBase)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -12,7 +12,7 @@
 //     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 //     implied.
 // ---------------------------------------------------------------------------------
-#include wesmc.libPbsgPrivate
+#include wesmc.libPbsgBase
 #include wesmc.libUtils
 #include wesmc.libLogAndDisplay
 
@@ -21,7 +21,7 @@ definition (
   name: 'roomPBSG',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A PBSG (libPbsgPrivate instance) rooted in a WHA Rooms instance',
+  description: 'A PBSG (extends libPbsgBase) designed for use in whaRoom.groovy',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23

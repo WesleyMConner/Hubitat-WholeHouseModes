@@ -18,7 +18,7 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libLogAndDisplay
-#include wesmc.libRoomPbsgPublic
+#include wesmc.libPbsgBase
 #include wesmc.libUtils
 
 definition (
@@ -38,13 +38,37 @@ preferences {
   page(name: 'whaRoomPage')
 }
 
+/*
+InstAppW createRoomScenePbsg(
+    String roomName,
+    List<String> roomScenes,
+    String defaultScene,
+    String logThreshold
+  ) {
+  String roomPbsgName = roomNameToRoomPbsgName(roomName)
+  InstAppW roomScenePbsg = getChildAppByLabel(roomPbsgName)
+  if (!roomScenePbsg) {
+    Ldebug('createRoomScenePbsg()', "creating new Room PBSG instance '${roomPbsgName}'")
+    roomScenePbsg = app.addChildApp(
+      'wesmc',       // See roomPBSG.groovy 'definition.namespace'
+      'roomPBSG',    // See roomPBSG.groovy 'definition.name'
+      roomPbsgName   // PBSG's label/name (id will be a generated integer)
+    )
+    configPbsg(roomPbsgName, roomScenes, defaultScene, logThreshold)
+  } else {
+    Ltrace('createRoomScenePbsg()', "using existing modePbsg instance '${roomPbsgName}'")
+  }
+  return roomScenePbsg
+}
+*/
+
 Map whaRoomPage () {
   // The parent application (Whole House Automation) assigns a unique label
   // to each WHA Rooms instance. Capture app.getLabel() as state.roomName.
   return dynamicPage(
     name: 'whaRoomPage',
     title: [
-      heading("${app.getLabel()} Scenes"),
+      heading1("${app.getLabel()} Scenes"),
       comment("Click <b>'Done'</b> to enable subscriptions."),
       comment('Tab to register changes.')
     ].join('<br/>'),
@@ -190,7 +214,7 @@ Map whaRoomPage () {
       }
       paragraph(
         [
-          heading('Scene PBSG'),
+          heading1('Scene PBSG'),
           "${ displayState() }",
           "${ displaySettings() }"
         ].join('<br/>')

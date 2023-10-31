@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// modePBSG (an instsantiation of libPbsgPrivate)
+// modePBSG (an instsantiation of libPbsgBase)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -13,7 +13,7 @@
 //     implied.
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
-#include wesmc.libPbsgPrivate
+#include wesmc.libPbsgBase
 #include wesmc.libUtils
 #include wesmc.libLogAndDisplay
 
@@ -22,7 +22,7 @@ definition (
   name: 'modePBSG',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A PBSG (libPbsgPrivate instance) rooted in Whole House Automation',
+  description: 'A PBSG (extends libPbsgBase) designed for use in wha.groovy',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -41,8 +41,11 @@ preferences {
 
 Map modePbsgPage () {
   // Norally, this page IS NOT presented.
-  //   - This page can be viewed via an instance link on the main Hubitat Apps menu.
-  //   - Instance state & settings are rendered on the parent App's page.
+  //   - This page can be viewed via an instance link from the main
+  //     Hubitat Apps menu.
+  //   - Instance state & settings are rendered on the parent App's page
+  //     along with a button that can be used to force update() the App
+  //     instance.
   return dynamicPage (
     name: 'modePbsgPage',
     install: true,
@@ -76,7 +79,7 @@ void modeVswEventHandler (Event e) {
   //   - When a Mode VSW turns on, change the Hubitat mode accordingly.
   //   - Clients DO NOT get a callback for this event.
   //   - Clients SHOULD subscribe to Hubitat Mode change events.
-  Ltrace('modeVswEventHandler', "eventDetails: ${eventDetails(e)}")
+  Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
       if (state.previousVswDni == e.displayName) {
@@ -114,7 +117,7 @@ void modePbsgInit() {
   Ltrace('modePbsgInit()', 'At entry')
   unsubscribe()
   List<DevW> vsws = getVsws()
-manageChildDevices()
+  //--PRIVATE-> manageChildDevices()
   if (!vsws) {
     Lerror('modePbsgInit()', 'The child VSW instances are MISSING.')
   }
@@ -133,3 +136,49 @@ manageChildDevices()
   )
   getVswByName(mode).turnOnVswExclusively()
 }
+
+/*
+InstAppW getOrCreateModePbsg (
+    String modePbsgName = 'whaModePbsg',
+    String defaultMode = 'Day',
+    String logThreshold = 'Debug'
+  ) {
+  // I M P O R T A N T
+  //   - Functionally, a Mode PBSG is a singleton.
+  //   - Any real work should occur in modePBSG.groovy (the App definition).
+  //   - If modes are changed OR the pbsg's VSWs are manually, force a
+  //     modePBSG.groovy update().
+  //   - For efficienctm, DO NOT automatically invoke modePBSG.groovy update().
+  List<String> modes = getLocation().getModes().collect{ it.name }
+  if ( modes.contains(defaultMode) == false ) {
+    Lerror(
+      'getOrCreateModePbsg()',
+      "The defaultMode (${defaultMode}) is not present in modes (${modes})"
+    )
+  }
+  //-> Ltrace('createModePbsg()', "At entry")
+  InstAppW modePbsg = getChildAppByLabel(modePbsgName)
+  if (modePbsg) {
+    Ltrace('getOrCreateModePbsg()', "Using existing '${getAppInfo(modePbsg)}'")
+    //-> if (modePbsg.isPbsgHealthy() == false) {
+    Ltrace(
+      'getOrCreateModePbsg()',
+      modePbsg.pbsgStateAndSettings('PEEK AT EXISTING MODE PBSG')
+    )
+    configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+    Ltrace(
+      'getOrCreateModePbsg()',
+      modePbsg.pbsgStateAndSettings('PEEK AFTER FRESH createModePbsg() CALL')
+    )
+    configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+  } else {
+    modePbsg = app.addChildApp(
+      'wesmc',      // See modePBSG.groovy 'definition.namespace'
+      'modePBSG',   // See modePBSG.groovy 'definition.name'
+      modePbsgName  // PBSG's label/name (id will be a generated integer)
+    )
+    Ldebug('getOrCreateModePbsg()', "created new '${getAppInfo(modePbsg)}'")
+    configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+  }
+  return modePbsg
+}*/
