@@ -66,21 +66,23 @@ String getSwitchState (DevW d) {
         : 'unknown'
 }
 
-String displaySettings() {
-  [
-    '<b>SETTINGS</b>',
-    settings.sort().collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
-  ].join('<br/>')
+String _getStateBulletsAsIs() {
+  List<String> result = []
+  state.sort().each{ k, v ->
+    result += bullet1("<b>${k}</b> → ${v}")
+  }
+  return result.join('<br/>')
 }
 
-String displayState() {
-  [
-    '<b>STATE</b>',
-    state.sort().collect{ k, v -> bullet("<b>${k}</b> → ${v}") }.join('<br/>')
-  ].join('<br/>')
+String _getSettingsBulletsAsIs() {
+  List<String> result = []
+  settings.sort().each{ k, v ->
+    result += bullet1("<b>${k}</b> → ${v}")
+  }
+  return result.join('<br/>')
 }
 
-void populateStateKpadButtons (String prefix) {
+void _populateStateKpadButtons (String prefix) {
   // Design Note
   //   The Keypad LEDs collected by selectForMode() function as a proxy for
   //   Keypad button presses. Settings data includes the user-friendly

@@ -54,7 +54,7 @@ InstAppW createRoomScenePbsg(
       'roomPBSG',    // See roomPBSG.groovy 'definition.name'
       roomPbsgName   // PBSG's label/name (id will be a generated integer)
     )
-    configPbsg(roomPbsgName, roomScenes, defaultScene, logThreshold)
+    _configPbsg(roomPbsgName, roomScenes, defaultScene, logThreshold)
   } else {
     Ltrace('createRoomScenePbsg()', "using existing modePbsg instance '${roomPbsgName}'")
   }
@@ -144,7 +144,7 @@ Map whaRoomPage () {
           settings.sceneButtons,
           'sceneButton'
         )
-        populateStateKpadButtons('sceneButton')
+        _populateStateKpadButtons('sceneButton')
         populateStateKpadButtonDniToTargetScene()
       }
       input(
@@ -215,12 +215,12 @@ Map whaRoomPage () {
       paragraph(
         [
           heading1('Scene PBSG'),
-          "${ displayState() }",
-          "${ displaySettings() }"
+          "${ _displayStateAsIs() }",
+          "${ _getSettingsBulletsAsIs() }"
         ].join('<br/>')
       )
       paragraph "roomPbsg: >${roomPbsg}<"
-      //--TBD-> paragraph roomPbsg.pbsgStateAndSettings("${roomPbsg.getLabel()} (${roomPbsg.getId()})")
+      //--TBD-> paragraph roomPbsg._pbsgStateAndSettings("${roomPbsg.getLabel()} (${roomPbsg.getId()})")
     }
   }
 }
@@ -762,7 +762,7 @@ Boolean detectManualOverride() {
   if (!isRoomSceneLedActive() || !areRoomSceneDevLevelsCorrect()) {
     getScenePbsg().turnOnSwitch("${state.roomScenePbsgAppId}_MANUAL_OVERRIDE")
   } else {
-    getScenePbsg().turnOffVsw("${state.roomScenePbsgAppId}_MANUAL_OVERRIDE")
+    getScenePbsg()._turnOffVswByName('MANUAL_OVERRIDE')
   }
 }
 
@@ -833,7 +833,7 @@ void keypadSceneButtonHandler (Event e) {
           'keypadSceneButtonHandler()',
           "toggling ${targetVsw}"
         )
-        getScenePbsg().toggleVsw(targetVsw)
+        getScenePbsg()._toggleVsw(targetVsw)
       }
       break
     case 'held':
@@ -862,7 +862,7 @@ void picoButtonHandler (Event e) {
             'picoButtonHandler()',
             "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
           )
-          app.getChildAppByLabel(state.roomScenePbsgAppId).toggleVsw(scenePbsg)
+          app.getChildAppByLabel(state.roomScenePbsgAppId)._toggleVsw(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Ldebug(
             'picoButtonHandler()',

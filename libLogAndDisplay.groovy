@@ -39,7 +39,8 @@ String RED = 'rgba(255, 0, 0, 1.0)'
 
 H1_CSS = 'font-size: 2em; font-weight: bold;'
 H2_CSS = 'font-size: 1em; font-weight: bold;'
-BULLET_CSS = 'font-size: 1.0em; margin-left: 10px;'
+//BULLET1_CSS = 'font-size: 1.0em;'  // margin-left: 10px;
+//BULLET1_CSS = 'font-size: 1.0em;'  // margin-left: 20px;
 EMPHASIS_CSS = "font-size: 1.3em; color: ${BLUE}; margin-left: 0px;"
 COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
 
@@ -54,10 +55,13 @@ String heading2(String s) {
   return """<span style="${H2_CSS}">${s}</span>"""
 }
 
-String bullet(String s) {
-  return """<span style="${BULLET_CSS}">&#x2022;&nbsp;&nbsp;${s}</span>"""
+String bullet1(String s) {
+  return "&#x2022;&nbsp;&nbsp;${s}"
 }
 
+String bullet2(String s) {
+  return "&nbsp;&nbsp;&nbsp;&#x2022;&nbsp;&nbsp;${s}"
+}
 
 String emphasis(String s) {
   return """<span style="${EMPHASIS_CSS}">${s}</span>"""
@@ -76,7 +80,7 @@ String comment(String s) {
 // L O G G I N G
 // -------------
 
-void setLogLevels (String logThreshold) {
+void _setLogLevels (String logThreshold) {
   // IMPORTANT
   //   - The switch statement "FALL THROUGHs" are intentional.
   //   - A 'default' is avoided to reduce spurious noise.
@@ -101,7 +105,7 @@ void solicitLogThreshold () {
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     submitOnChange: true
   )
-  if (settings.logThreshold) setLogLevels(settings.logThreshold)
+  if (settings.logThreshold) _setLogLevels(settings.logThreshold)
 }
 
 

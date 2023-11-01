@@ -17,6 +17,12 @@ import com.hubitat.app.DeviceWrapper as DevW
 #include wesmc.libUtils
 #include wesmc.libLogAndDisplay
 
+//----
+//---- GUI SUPPORT
+//----   See getOrCreateModePbsg() in libPbsgBase.groovy
+//----   The whaPage() in wha.groovy incorporates a single Mode PBSG instance.
+//----
+
 definition (
   parent: 'wesmc:wha',
   name: 'modePBSG',
@@ -36,10 +42,10 @@ definition (
 )
 
 preferences {
-  page (name: 'modePbsgPage')
+  page (name: '_modePbsgPage')
 }
 
-Map modePbsgPage () {
+Map _modePbsgPage () {
   // Norally, this page IS NOT presented.
   //   - This page can be viewed via an instance link from the main
   //     Hubitat Apps menu.
@@ -47,22 +53,26 @@ Map modePbsgPage () {
   //     along with a button that can be used to force update() the App
   //     instance.
   return dynamicPage (
-    name: 'modePbsgPage',
+    name: '_modePbsgPage',
     install: true,
     uninstall: true
   ) {
-    defaultPage()
+    _pbsgBasePage()
   }
 }
 
+//----
+//---- EXPECTED APP METHODS
+//----
+
 void installed () {
   Ltrace('installed()', 'At entry')
-  modePbsgInit()
+  _modePbsgInit()
 }
 
 void updated () {
   Ltrace('updated()', 'At entry')
-  modePbsgInit()
+  _modePbsgInit()
 }
 
 void uninstalled () {
@@ -73,6 +83,10 @@ void uninstalled () {
   }
 }
 
+//----
+//---- STANDALONE METHODS (no inherent "this")
+//----
+
 void modeVswEventHandler (Event e) {
   // Process events for Mode PGSG child VSWs.
   //   - The received e.displayName is the DNI of the reporting child VSW.
@@ -82,19 +96,22 @@ void modeVswEventHandler (Event e) {
   //--DEEP-DEBUGGING-> Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
+      InstAppW modePbsg = getOrCreateModePbsg()
+      XXX
       if (state.previousVswDni == e.displayName) {
         Lerror(
           'modeVswEventHandler()',
           "The active Mode VSW '${state.activeVswDni}' did not change."
         )
       }
+
       state.previousVswDni = state.activeVswDni ?: state.defaultVswDni
       state.activeVswDni = e.displayName
       Ldebug(
         'modeVswEventHandler()',
         "${state.previousVswDni} -> ${state.activeVswDni}"
       )
-      turnOnVswExclusively(state.activeVswDni)
+      _turnOnVswExclusivelyByName(e.displayName)
       // Adjust the Hubitat mode.
       String mode = getModeNameForVswDni(e.displayName)
       Ldebug(
@@ -113,17 +130,23 @@ void modeVswEventHandler (Event e) {
   }
 }
 
-void modePbsgInit() {
-  Ltrace('modePbsgInit()', 'At entry')
+
+
+//----
+//---- CUSTOM APP METHODS
+//----
+
+void _modePbsgInit() {
+  Ltrace('_modePbsgInit()', 'At entry')
   unsubscribe()
-  List<DevW> vsws = getVsws()
-  //--PRIVATE-> manageChildDevices()
+  List<DevW> vsws = _getVsws()
+  //--PRIVATE-> _manageChildDevices()
   if (!vsws) {
-    Lerror('modePbsgInit()', 'The child VSW instances are MISSING.')
+    Lerror('_modePbsgInit()', 'The child VSW instances are MISSING.')
   }
   vsws.each{ vsw ->
     Ltrace(
-      'modePbsgInit()',
+      '_modePbsgInit()',
       "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
     )
     subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
@@ -131,12 +154,12 @@ void modePbsgInit() {
   // The initially "on" PBSG VSW should be consistent with the Hubitat mode.
   String mode = getLocation().getMode()
   Ldebug(
-    'modePbsgInit()',
+    '_modePbsgInit()',
     "Activating VSW for mode: <b>${mode}</b>"
   )
-  Ltrace('modePbsgInit()', 'B E F O R E')
-  turnOnVswExclusively(mode)
-  Ltrace('modePbsgInit()', 'A F T E R')
+  Ltrace('_modePbsgInit()', 'B E F O R E')
+  _turnOnVswExclusivelyByName(mode)
+  Ltrace('_modePbsgInit()', 'A F T E R')
 }
 
 /*
@@ -165,14 +188,14 @@ InstAppW getOrCreateModePbsg (
     //-> if (modePbsg.isPbsgHealthy() == false) {
     Ltrace(
       'getOrCreateModePbsg()',
-      modePbsg.pbsgStateAndSettings('PEEK AT EXISTING MODE PBSG')
+      modePbsg._pbsgStateAndSettings('PEEK AT EXISTING MODE PBSG')
     )
-    configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+    _configPbsg(modePbsgName, modes, defaultMode, logThreshold)
     Ltrace(
       'getOrCreateModePbsg()',
-      modePbsg.pbsgStateAndSettings('PEEK AFTER FRESH createModePbsg() CALL')
+      modePbsg._pbsgStateAndSettings('PEEK AFTER FRESH createModePbsg() CALL')
     )
-    configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+    _configPbsg(modePbsgName, modes, defaultMode, logThreshold)
   } else {
     modePbsg = app.addChildApp(
       'wesmc',      // See modePBSG.groovy 'definition.namespace'
@@ -180,7 +203,7 @@ InstAppW getOrCreateModePbsg (
       modePbsgName  // PBSG's label/name (id will be a generated integer)
     )
     Ldebug('getOrCreateModePbsg()', "created new '${getAppInfo(modePbsg)}'")
-    configPbsg(modePbsgName, modes, defaultMode, logThreshold)
+    _configPbsg(modePbsgName, modes, defaultMode, logThreshold)
   }
   return modePbsg
 }*/

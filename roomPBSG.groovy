@@ -47,7 +47,7 @@ Map roomPbsgPage () {
     install: true,
     uninstall: false
   ) {
-    defaultPage()
+    _pbsgBasePage()
   }
 }
 
@@ -91,7 +91,7 @@ void roomSceneVswEventHandler (Event e) {
         'roomSceneVswEventHandler()',
         "${state.previousVswDni} -> ${state.activeVswDni}"
       )
-      String scene = vswDnitoName(state.activeVswDni)
+      String scene = _vswDnitoName(state.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
       // Take no action when a VSW turns off
@@ -111,7 +111,7 @@ void roomScenePbsgInit() {
   //     Room Scene. If null, the Room Scene 'AUTOMATIC' is assumed.
   Ltrace('roomScenePbsgInit()', 'At entry')
   unsubscribe()
-  getVsws().each{ vsw ->
+  _getVsws().each{ vsw ->
     Ltrace(
       'roomScenePbsgInit()',
       "Subscribe <b>${vsw.dni} (${vsw.id})</b> to roomSceneVswEventHandler()"
@@ -124,5 +124,5 @@ void roomScenePbsgInit() {
     'roomScenePbsgInit()',
     "Activating VSW for roomScene: <b>${roomScene}</b>"
   )
-  getVswByName(roomScene).turnOnVswExclusively()
+  _getVswByName(roomScene)._turnOnVswExclusivelyByName()
 }

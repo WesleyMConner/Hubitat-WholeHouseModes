@@ -197,7 +197,7 @@ Everything else should respond to mode changes (not the modePBSG VSWs).
 /*
 void showDevicesByRoom (String label, Map<String, List<DevW>> roomToDevice) {
   String summary = roomToDevice.collect{ r, dList ->
-    bullet("<b>${r}</b>: ${dList.collect{it.displayName}.join(', ')}")
+    bullet1("<b>${r}</b>: ${dList.collect{it.displayName}.join(', ')}")
   }.join('<br/>')
   paragraph "<b>${label}:</b><br/>${summary}"
 }
