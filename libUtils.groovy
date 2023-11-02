@@ -220,3 +220,7 @@ void removeAllChildApps () {
     deleteChildApp(child.getId())
   }
 }
+
+List<String> getModeNames () {
+  return getLocation().getModes().collect{ it.name }
+}

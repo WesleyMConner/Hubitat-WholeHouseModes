@@ -94,7 +94,7 @@ void _setLogLevels (String logThreshold) {
   }
 }
 
-void solicitLogThreshold () {
+void _solicitLogThreshold () {
   input (
     name: 'logThreshold',
     type: 'enum',

@@ -61,7 +61,7 @@ void installed () {
 }
 
 void updated () {
-  Ltrace('updated()', 'At entry')
+  Ltrace('updated()', 'At entry, calling _roomScenePbsgInit()')
   _roomScenePbsgInit()
 }
 
@@ -76,6 +76,16 @@ void uninstalled () {
 //----
 //---- CUSTOM APP METHODS
 //----
+
+void _configRoomScenePbsgInit() {
+  // Used for initial configuration AND refresh of configuration.
+  _configPbsg (
+    app.getLabel(),                                               // pbsgName
+    [*parent._getRoomScenes(), 'AUTOMATIC', 'MANUAL_OVERRIDE'],   // vswNames
+    'AUTOMATIC',                                                  // defaultVswName
+    parent.getLogLevel() ?: 'Debug'                               // PBSG Log Level
+  )
+}
 
 void _subscribeToRoomSceneVswChanges() {
   app.unsubscribe()

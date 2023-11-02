@@ -38,17 +38,23 @@ preferences {
 }
 
 InstAppW createModePbsg () {
-  return addChildApp(
+  InstAppW modePbsg = addChildApp(
     'wesmc',       // See modePBSG.groovy definition's (App) namespace.
     'modePBSG',    // See modePBSG.groovy definition's (App) name.
     'whaModePbsg'  // Label used to create or get the child App.
   )
+  // Ensure Pbsg state exists on creation.
+  modePbsg._configModePbsg()
+  return modePbsg
 }
 
 InstAppW getModePbsg () {
   return getChildAppByLabel('whaModePbsg')
 }
 
+String getLogLevel() {
+  return settings.logThreshold
+}
 
 void _removeLegacySettingsAndState () {
   settings.remove('log')
@@ -116,13 +122,13 @@ void _wireButtonsToSpecialFunctions () {
   if (settings?.specialFnButtons == null) {
     paragraph('No specialty activation buttons are selected.')
   } else {
-    identifyLedButtonsForListItems(              // Wire
+    identifyLedButtonsForListItems(               // Wire
       state.specialFnButtons,                    //   - to Special Functions
       settings.specialFnButtons,                 //   - from Keypad Button
       'specialFnButton'                          //   - prefix
     )
     _populateStateKpadButtons('specialFnButton')  // specialFnButton_*
-    Map<String, String> result = [:]             // kpadButtonDniToSpecialtyFn
+    Map<String, String> result = [:]              // kpadButtonDniToSpecialtyFn
     state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
       buttonMap.each{ buttonNumber, specialtyFn ->
         result["${kpadDni}-${buttonNumber}"] = specialtyFn
@@ -207,10 +213,38 @@ void _displayInstantiatedRoomHrefs () {
   }
 }
 
+void _displayWhaDebugData() {
+  paragraph (
+    [
+      '<h2><b>whaPage Debug</b></h2>',
+      '<h3><b>STATE</b></h3>',
+      _getStateBulletsAsIs(),
+      '<h3><b>SETTINGS</b></h3>',
+      _getSettingsBulletsAsIs()
+    ].join()
+  )
+}
+
+void _displayModePbsgDebugData () {
+  if (modePbsg) {
+    paragraph (
+      [
+        "<h2><b>${getAppInfo(modePbsg)} Debug</b></h2>",
+        '<h3><b>STATE</b></h3>',
+        modePbsg._getPbsgStateBullets() ?: '<b>DATA NOT YET AVAILABLE</b>',
+        '<h3><b>SETTINGS</b></h3>',
+        modePbsg._getSettingsBulletsAsIs()
+      ].join()
+    )
+  } else {
+
+  }
+}
+
 Map _whaPage () {
-  _removeLegacySettingsAndState()
-  InstAppW modePbsg = getModePbsg() ?: createModePbsg()
-  return dynamicPage(
+    _removeLegacySettingsAndState()
+    InstAppW modePbsg = getModePbsg() ?: createModePbsg()
+    return dynamicPage(
     name: '_whaPage',
     title: [
       heading1("Whole House Automation - ${getAppInfo(app)}"),
@@ -222,11 +256,7 @@ Map _whaPage () {
   ) {
     app.updateLabel('Whole House Automation (WHA)')
     section {
-      solicitLogThreshold()                                           // Utils.groovy
-      //-> DON'T MAKE ADJUSTMENTS HERE, INSTEAD WAIT FOR updated().
-      //-> if (settings.logThreshold) {
-      //->   modePbsg._setLogLevels(settings.logThreshold)
-      //-> }
+      _solicitLogThreshold()                                           // Utils.groovy
       _authorizeMainRepeater()
       _authorizeSeeTouchKeypads()
       _identifySpecialFunctionButtons()
@@ -235,28 +265,8 @@ Map _whaPage () {
       _wireButtonsToModes()
       _solicitParticipatingRooms()
       _displayInstantiatedRoomHrefs()
-      //--xx-> modePbsg._displayStateAndSettings() ?: heading1('modePbsg IS NOT present')
-      //-> NEED TO DISPLAY CHILD PBSG DETAILS HERE
-      paragraph (
-        [
-          '<h2><b>whaPage Debug</b></h2>',
-          '<h3><b>STATE</b></h3>',
-          _getStateBulletsAsIs(),
-          '<h3><b>SETTINGS</b></h3>',
-          _getSettingsBulletsAsIs()
-        ].join()
-      )
-      if (modePbsg) {
-        paragraph (
-          [
-            "<h2><b>${getAppInfo(modePbsg)} Debug</b></h2>",
-            '<h3><b>STATE</b></h3>',
-            modePbsg._getPbsgStateBullets(),
-            '<h3><b>SETTINGS</b></h3>',
-            modePbsg._getSettingsBulletsAsIs()
-          ].join()
-        )
-      }
+      _displayWhaDebugData()
+      _displayModePbsgDebugData()
     }
   }
 }
@@ -281,9 +291,8 @@ void pruneOrphanedChildApps () {
   List<InstAppW> kids = app.getAllChildApps()
   Ldebug(
     'pruneOrphanedChildApps()',
-    "processing ${kids.collect{it.getLabel()}.join(', ')}"
+    "processing ${kids.collect{ it.getLabel() }.join(', ')}"
   )
-  //--xx-> List<String> modeNames =
   kids.each{ kid ->
     if (settings.rooms?.contains(kid)) {
       Ldebug(
@@ -295,7 +304,8 @@ void pruneOrphanedChildApps () {
         'pruneOrphanedChildApps()',
         "deleting ${kid.getLabel()} (orphan)"
       )
-      deleteChildApp(kid.getId())
+      Linfo('pruneOrphanedChildApps()', "app.deleteChildApp(${kid.getId()}) on hold")
+      //-> app.deleteChildApp(kid.getId())
     }
   }
 }
@@ -309,6 +319,10 @@ void pruneOrphanedChildApps () {
 //->     ].join()
 //->   )
 //-> }
+
+//----
+//---- EXPECTED APP METHODS
+//----
 
 void installed () {
   Ldebug('installed()', 'At entry')
@@ -326,15 +340,9 @@ void uninstalled () {
   removeAllChildApps()
 }
 
-void _allAuto () {
-  // ??? RELOCATE ???
-  settings.rooms.each{ roomName ->
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Ldebug('_allAuto()', "Turning on <b>${manualOverrideSwitchDni}</b>")
-    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDni)
-  }
-}
+//----
+//---- STANDALONE METHODS (no inherent "this")
+//----
 
 void specialFnButtonHandler (Event e) {
   switch (e.name) {
@@ -412,6 +420,10 @@ void modeChangeButtonHandler (Event e) {
   }
 }
 
+//----
+//---- CUSTOM METHODS
+//----
+
 void _whaInitialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
@@ -430,5 +442,14 @@ void _whaInitialize () {
     app.subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
   Ltrace('_whaInitialize()', 'Invoking modePbsg._modePbsgInit()')
-  modePbsg._modePbsgInit()
+  modePbsg._configModePbsg ()
+}
+
+void _allAuto () {
+  settings.rooms.each{ roomName ->
+    InstAppW roomApp = app.getChildAppByLabel(roomName)
+    String manualOverrideSwitchDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
+    Ldebug('_allAuto()', "Turning on <b>${manualOverrideSwitchDni}</b>")
+    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDni)
+  }
 }

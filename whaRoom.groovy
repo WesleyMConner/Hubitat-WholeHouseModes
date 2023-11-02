@@ -39,15 +39,29 @@ preferences {
 }
 
 InstAppW createRoomScenePbsg (String roomName = app.getLabel()) {
-  return addChildApp(
-    'wesmc',     // See modePBSG.groovy definition's (App) namespace.
-    'roomPBSG',  // See modePBSG.groovy definition's (App) name.
-    "${roomName}Pbsg"     // Label used to create or get the child App.
-  )
+  if (_getRoomScenes()) {
+    InstAppW roomScenePbsg = addChildApp(
+      'wesmc',             // See modePBSG.groovy definition's (App) namespace.
+      'roomPBSG',          // See modePBSG.groovy definition's (App) name.
+      "pbsg_${roomName}"   // Label used to create or get the child App.
+    )
+    roomScenePbsg._configRoomScenePbsgInit()
+  } else {
+    Lerror('createRoomScenePbsg()', 'Called before _getRoomScenes() produced values')
+  }
+  return roomScenePbsg
 }
 
 InstAppW getRoomScenePbsg (String roomName = app.getLabel()) {
-  return getChildAppByLabel("${roomName}Pbsg")
+  return getChildAppByLabel("pbsg_${roomName}")
+}
+
+String getLogLevel () {
+  return settings.logThreshold
+}
+
+String _getRoomScenes () {
+  return state.scenes
 }
 
 void _removeLegacySettingsAndState () {
@@ -68,159 +82,23 @@ void _removeLegacySettingsAndState () {
   state.roomName = app.getLabel()
 }
 
-
-Map _whaRoomPage () {
-  // The parent application (Whole House Automation) assigns a unique label
-  // to each WHA Rooms instance. Capture app.getLabel() as state.roomName.
-  return dynamicPage(
-    name: '_whaRoomPage',
+void _authorizeMotionSensor () {
+  input(
+    name: 'motionSensor',
     title: [
-      heading1("WHA Room - ${getAppInfo(app)}"),
-      bullet1("Click <b>'Done'</b> to enable subscriptions."),
-      bullet1('Tab to register changes.')
+      heading2('motionSensor'),
+      bullet1('Identify one Motion Sensor if desired.'),
+      bullet1('The Custom Scene "<b>Off</b>" is automatically added below.')
     ].join('<br/>'),
-    install: true,
-    uninstall: false
-  ) {
-    // Forcibly remove unused settings and state, a missing Hubitat feature.
-    _removeLegacySettingsAndState()
-    InstAppW roomScenePbsg = getRoomScenePbsg() ?: createRoomScenePbsg()
-    section {
-      solicitLogThreshold()                            // <- provided by Utils
-      input(
-        name: 'motionSensor',
-        title: [
-          heading2('motionSensor'),
-          bullet1('Identify one Motion Sensor if desired.'),
-          bullet1('The Custom Scene "<b>Off</b>" is automatically added below.')
-        ].join('<br/>'),
-        type: 'device.LutronMotionSensor',
-        submitOnChange: true,
-        required: false,
-        multiple: false
-      )
-      _selectModeNamesAsSceneNames()
-      _identifyCustomScenes()
-      _populateStateScenes()
-      _selectScenePerMode()
-      input(
-        name: 'seeTouchKeypads',
-        title: [
-          heading2('seeTouchKeypads'),
-          bullet1('Authorize Keypads with buttons that activate room scenes.')
-        ].join('<br/>'),
-        type: 'device.LutronSeeTouchKeypad',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      input(
-        name: 'sceneButtons',
-        title: [
-          heading2('sceneButtons'),
-          bullet1('Authorize Keypad LEDs/Buttons that activate room scenes.')
-        ].join('<br/>'),
-        type: 'device.LutronComponentSwitch',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      if (state.scenes == null || settings?.sceneButtons == null) {
-        paragraph('Scene activation buttons are pending pre-requisites.')
-      } else {
-        identifyLedButtonsForListItems(
-          state.scenes,
-          settings.sceneButtons,
-          'sceneButton'
-        )
-        _populateStateKpadButtons('sceneButton')
-        _populateStateKpadButtonDniToTargetScene()
-      }
-      input(
-        name: 'picos',
-        title: [
-          'lutronPicos',
-          bullet1('Identify Picos with buttons that change the Room scene.')
-        ].join('<br/>'),
-        type: 'device.LutronFastPico',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      if (settings.picos == null) {
-        paragraph(
-          'Selection of pico buttons to activate scenes is pending pre-requisites.'
-        )
-      } else {
-        _selectPicoButtonsForScene(settings.picos)
-        _populateStatePicoButtonToTargetScene()
-      }
-      input(
-        name: 'mainRepeater',
-        title: [
-          'mainRepeater',
-          bullet1('Identify Repeaters that host integration buttons for Room scenes')
-        ].join('<br/>'),
-        type: 'device.LutronKeypad',
-        submitOnChange: true,
-        required: false,
-        multiple: false
-      )
-      input(
-        name: 'independentDevices',
-        title: [
-          'independentDevices',
-          bullet1('Identify Repeaters that host integration buttons for Room scenes.')
-        ].join('<br/>'),
-        type: 'capability.switch',
-        submitOnChange: true,
-        required: false,
-        multiple: true
-      )
-      if (state.scenes && (settings.independentDevices || settings.mainRepeater)) {
-        _configureRoomScene()
-        _populateStateSceneToDeviceValues()
-      } else {
-        paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
-      }
-      if (!state.roomName || !state.scenes || !settings.logThreshold) {
-        paragraph(
-          [
-            'Creation of Room Scene PBSG is pending prerequites.',
-            "<b>state.roomName:</b> ${state.roomName}",
-            "<b>state.scenes:</b> ${state.scenes}",
-            "<b>settings.logThreshold:</b> ${settings.logThreshold}"
-          ].join('<br/>')
-        )
-      } else {
-        List roomScenes = [ *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE' ]
-      }
-      paragraph(
-        [
-          '<h2><b>whaRoomPage Debug</b></h2>',
-          '<h3><b>STATE</b></h3>',
-          _getStateBulletsAsIs(),
-          '<h3><b>SETTINGS</b></h3>',
-          _getSettingsBulletsAsIs()
-        ].join()
-      )
-      if (roomScenePbsg) {
-        paragraph (
-          [
-            "<h2><b>${getAppInfo(roomScenePbsg)} Debug</b></h2>",
-            '<h3><b>STATE</b></h3>',
-            roomScenePbsg._getPbsgStateBullets(),
-            '<h3><b>SETTINGS</b></h3>',
-            roomScenePbsg._getSettingsBulletsAsIs()
-          ].join()
-        )
-      }
-    }
-  }
+    type: 'device.LutronMotionSensor',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
 }
 
 void _selectModeNamesAsSceneNames () {
-  List<String> sceneNames = getLocation().getModes().collect{ mode -> mode.name }
+  List<String> sceneNames = getModeNames()
   input(
     name: 'modeNamesAsSceneNames',
     type: 'enum',
@@ -289,22 +167,7 @@ void _populateStateScenes () {
   state.scenes = scenes.size() > 0 ? scenes : null
 }
 
-void _solicitNonLutronDevicesForWhaRoom () {
-  input(
-    name: 'nonLutronDevices',
-    title: emphasis('Identify Required Non-Lutron Devices'),
-    type: 'enum',
-    width: 6,
-    options: parent.getNonLutronDevicesForRoom(state.roomName).collectEntries{ d ->
-      [d, d.displayName]
-    },
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void _selectScenePerMode () {
+void _solicitScenePerMode () {
   if (state.scenes == null) {
     paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
   } else {
@@ -328,65 +191,110 @@ void _selectScenePerMode () {
   }
 }
 
-Map<String,String> _namePicoButtons (DevW pico) {
-  String label = pico.getLabel()
-  String id = pico.getId()
-  return [
-    "${id}^1": "${label}^1",
-    "${id}^2": "${label}^2",
-    "${id}^3": "${label}^3",
-    "${id}^4": "${label}^4",
-    "${id}^5": "${label}^5"
-  ]
+void _authorizeKeypadLedButtonAccess () {
+  input(
+    name: 'sceneButtons',
+    title: [
+      heading2('sceneButtons'),
+      bullet1('Authorize Keypad LEDs/Buttons that activate room scenes.')
+    ].join('<br/>'),
+    type: 'device.LutronComponentSwitch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
 }
 
-Map<String, String> _picoButtonPicklist (List<DevW> picos) {
-  Map<String, String> results = [:]
-  picos.each{ pico -> results << _namePicoButtons(pico) }
-  return results
+void _authorizeSeeTouchKeypads() {
+  input(
+    name: 'seeTouchKeypads',
+    title: [
+      heading2('seeTouchKeypads'),
+      bullet1('Authorize Keypads with buttons that activate room scenes.')
+    ].join('<br/>'),
+    type: 'device.LutronSeeTouchKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
 }
 
-void _selectPicoButtonsForScene (List<DevW> picos) {
-  if (state.scenes == null) {
-    paragraph(
-      'Once scene names exist, this section will solicit affiliated pico buttons.'
-    )
-  } else {
-    List<String> picoScenes = ['AUTOMATIC'] << state.scenes
-    picoScenes.flatten().each{ sceneName ->
-      input(
-          name: "picoButtons_${sceneName}",
-          type: 'enum',
-          title: emphasis("Pico Buttons activating <b>${sceneName}</b>"),
-          width: 6,
-          submitOnChange: true,
-          required: false,
-          multiple: true,
-          options: _picoButtonPicklist(picos)
-        )
+void _populateStateKpadButtonDniToTargetScene () {
+  Map<String, String> result = [:]
+  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
+    buttonMap.each{ buttonNumber, targetScene ->
+      result["${kpadDni}-${buttonNumber}"] = targetScene
     }
+  }
+  state.kpadButtonDniToTargetScene = result
+}
+
+void _wireButtonsToScenes () {
+  if (state.scenes == null || settings?.sceneButtons == null) {
+    paragraph('Scene activation buttons are pending pre-requisites.')
+  } else {
+    identifyLedButtonsForListItems(
+      state.scenes,
+      settings.sceneButtons,
+      'sceneButton'
+    )
+    _populateStateKpadButtons('sceneButton')
+    _populateStateKpadButtonDniToTargetScene()
+
   }
 }
 
-void _populateStatePicoButtonToTargetScene () {
-  state.picoButtonToTargetScene = [:]
-  settings.findAll{ key, value -> key.contains('picoButtons_') }
-          .each{ key, value ->
-            String scene = key.tokenize('_')[1]
-            value.each{ idAndButton ->
-              List<String> valTok = idAndButton.tokenize('^')
-              String deviceId = valTok[0]
-              String buttonNumber = valTok[1]
-              if (state.picoButtonToTargetScene[deviceId] == null) {
-                state.picoButtonToTargetScene[deviceId] = [:]
-              }
-              state.picoButtonToTargetScene[deviceId][buttonNumber] = scene
-            }
-          }
+void _authorizePicos () {
+  input(
+    name: 'picos',
+    title: [
+      'lutronPicos',
+      bullet1('Identify Picos with buttons that change the Room scene.')
+    ].join('<br/>'),
+    type: 'device.LutronFastPico',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
 }
 
-Set<String> _getSettingsSceneKeys () {
-  return settings.findAll{ key, value -> key.contains('scene^') }.keySet()
+void _wirePicoButtonsToScenes () {
+  if (settings.picos == null) {
+    paragraph(
+      'Selection of pico buttons to activate scenes is pending pre-requisites.'
+    )
+  } else {
+    _selectPicoButtonsForScene(settings.picos)
+    _populateStatePicoButtonToTargetScene()
+  }
+}
+
+void _authorizeRepeaterAccess () {
+  input(
+    name: 'mainRepeater',
+    title: [
+      'mainRepeater',
+      bullet1('Identify Repeaters that host integration buttons for Room scenes')
+    ].join('<br/>'),
+    type: 'device.LutronKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
+}
+
+void _authorizeIndependentDevicesAccess () {
+  input(
+    name: 'independentDevices',
+    title: [
+      'independentDevices',
+      bullet1('Identify Repeaters that host integration buttons for Room scenes.')
+    ].join('<br/>'),
+    type: 'capability.switch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
 }
 
 void _configureRoomScene () {
@@ -459,14 +367,148 @@ void _configureRoomScene () {
   }
 }
 
-void _populateStateKpadButtonDniToTargetScene () {
-  Map<String, String> result = [:]
-  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, targetScene ->
-      result["${kpadDni}-${buttonNumber}"] = targetScene
+void _populateStateSceneToDeviceValues () {
+  // Reset state for the Repeater/Independent per-scene device values.
+  state['sceneToRepeater'] = [:]
+  state['sceneToIndependent'] = [:]
+  settings.each{ key, value ->
+    //  key w/ delimited data "scene^Night^Independent^Ra2D-59-1848"
+    //                               sceneName
+    //                                     deviceType
+    //                                                 deviceDni
+    List<String> parsedKey = key.tokenize('^')
+    // Only process settings keys with the "scene" prefix.
+    if (parsedKey[0] == 'scene') {
+      // Circa 2023-Sep, no object destructuring syntax in Grooy.
+      String sceneName = parsedKey[1]
+      String deviceType = parsedKey[2]
+      String deviceDni = parsedKey[3]
+      // If missing, create an empty map for the scene's deviceDni->value data.
+      // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
+      String stateKey = "sceneTo${deviceType}"
+      if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
+      // Populate the current deviceDni->value data.
+      state[stateKey][sceneName][deviceDni] = value
     }
   }
-  state.kpadButtonDniToTargetScene = result
+}
+
+void _solicitRoomSceneDetails () {
+  if (state.scenes && (settings.independentDevices || settings.mainRepeater)) {
+    _configureRoomScene()
+    _populateStateSceneToDeviceValues()
+  } else {
+    paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
+  }
+}
+
+void _displayWhaRoomDebugData () {
+  paragraph(
+    [
+      '<h2><b>whaRoomPage Debug</b></h2>',
+      '<h3><b>STATE</b></h3>',
+      _getStateBulletsAsIs(),
+      '<h3><b>SETTINGS</b></h3>',
+      _getSettingsBulletsAsIs()
+    ].join()
+  )
+}
+
+void _displayRoomScenePbsgDebugData () {
+  if (roomScenePbsg) {
+    paragraph (
+      [
+        "<h2><b>${getAppInfo(roomScenePbsg)} Debug</b></h2>",
+        '<h3><b>STATE</b></h3>',
+        roomScenePbsg._getPbsgStateBullets(),
+        '<h3><b>SETTINGS</b></h3>',
+        roomScenePbsg._getSettingsBulletsAsIs()
+      ].join()
+    )
+  } else {
+    paragraph (
+      [
+        "<h2><b>${getAppInfo(roomScenePbsg)} Debug</b></h2>",
+        bullet2('Pending availability of Room Scenes')
+      ].join()
+    )
+  }
+}
+
+void _authorizeNonLutronDevicesForWhaRoom () {
+  input(
+    name: 'nonLutronDevices',
+    title: emphasis('Identify Required Non-Lutron Devices'),
+    type: 'enum',
+    width: 6,
+    options: parent.getNonLutronDevicesForRoom(state.roomName).collectEntries{ d ->
+      [d, d.displayName]
+    },
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+Map<String,String> _namePicoButtons (DevW pico) {
+  String label = pico.getLabel()
+  String id = pico.getId()
+  return [
+    "${id}^1": "${label}^1",
+    "${id}^2": "${label}^2",
+    "${id}^3": "${label}^3",
+    "${id}^4": "${label}^4",
+    "${id}^5": "${label}^5"
+  ]
+}
+
+Map<String, String> _picoButtonPicklist (List<DevW> picos) {
+  Map<String, String> results = [:]
+  picos.each{ pico -> results << _namePicoButtons(pico) }
+  return results
+}
+
+void _selectPicoButtonsForScene (List<DevW> picos) {
+  if (state.scenes == null) {
+    paragraph(
+      'Once scene names exist, this section will solicit affiliated pico buttons.'
+    )
+  } else {
+    List<String> picoScenes = ['AUTOMATIC'] << state.scenes
+    picoScenes.flatten().each{ sceneName ->
+      input(
+          name: "picoButtons_${sceneName}",
+          type: 'enum',
+          title: emphasis("Pico Buttons activating <b>${sceneName}</b>"),
+          width: 6,
+          submitOnChange: true,
+          required: false,
+          multiple: true,
+          options: _picoButtonPicklist(picos)
+        )
+    }
+  }
+}
+
+void _populateStatePicoButtonToTargetScene () {
+  state.picoButtonToTargetScene = [:]
+  settings.findAll{ key, value -> key.contains('picoButtons_') }
+          .each{ key, value ->
+            String scene = key.tokenize('_')[1]
+            value.each{ idAndButton ->
+              List<String> valTok = idAndButton.tokenize('^')
+              String deviceId = valTok[0]
+              String buttonNumber = valTok[1]
+              if (state.picoButtonToTargetScene[deviceId] == null) {
+                state.picoButtonToTargetScene[deviceId] = [:]
+              }
+              state.picoButtonToTargetScene[deviceId][buttonNumber] = scene
+            }
+          }
+}
+
+Set<String> _getSettingsSceneKeys () {
+  return settings.findAll{ key, value -> key.contains('scene^') }.keySet()
 }
 
 void _updateLutronKpadLeds (String currScene) {
@@ -528,31 +570,236 @@ void _pbsgVswTurnedOnCallback (String currScene) {
   }
 }
 
-void _populateStateSceneToDeviceValues () {
-  // Reset state for the Repeater/Independent per-scene device values.
-  state['sceneToRepeater'] = [:]
-  state['sceneToIndependent'] = [:]
-  settings.each{ key, value ->
-    //  key w/ delimited data "scene^Night^Independent^Ra2D-59-1848"
-    //                               sceneName
-    //                                     deviceType
-    //                                                 deviceDni
-    List<String> parsedKey = key.tokenize('^')
-    // Only process settings keys with the "scene" prefix.
-    if (parsedKey[0] == 'scene') {
-      // Circa 2023-Sep, no object destructuring syntax in Grooy.
-      String sceneName = parsedKey[1]
-      String deviceType = parsedKey[2]
-      String deviceDni = parsedKey[3]
-      // If missing, create an empty map for the scene's deviceDni->value data.
-      // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
-      String stateKey = "sceneTo${deviceType}"
-      if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
-      // Populate the current deviceDni->value data.
-      state[stateKey][sceneName][deviceDni] = value
+Map _whaRoomPage () {
+  // The parent application (Whole House Automation) assigns a unique label
+  // to each WHA Rooms instance. Capture app.getLabel() as state.roomName.
+  return dynamicPage(
+    name: '_whaRoomPage',
+    title: [
+      heading1("WHA Room - ${getAppInfo(app)}"),
+      bullet1("Click <b>'Done'</b> to enable subscriptions."),
+      bullet1('Tab to register changes.')
+    ].join('<br/>'),
+    install: true,
+    uninstall: false
+  ) {
+    // Forcibly remove unused settings and state, a missing Hubitat feature.
+    _removeLegacySettingsAndState()
+    //-> InstAppW roomScenePbsg = getRoomScenePbsg() ?: createRoomScenePbsg()
+    InstAppW roomScenePbsg = getRoomScenePbsg()
+    section {
+      _solicitLogThreshold()                            // <- provided by Utils
+      _authorizeMotionSensor()
+      _selectModeNamesAsSceneNames()
+      _identifyCustomScenes()
+      _populateStateScenes()
+      if (_getRoomScenes()) {
+        roomScenePbsg = createRoomScenePbsg()
+        //-> roomScenePbsg._configRoomScenePbsgInit()
+      } else {
+        paragraph(
+          [
+            heading1('Creation of Room Scene PBSG is pending:'),
+            bullet2("<b>state.scenes:</b> ${state.scenes}"),
+            bullet2("<b>settings.logThreshold:</b> ${settings.logThreshold}")
+          ].join('<br/>')
+        )
+      }
+      _solicitScenePerMode()
+      _authorizeKeypadLedButtonAccess()
+      _authorizeSeeTouchKeypads()
+      _wireButtonsToScenes ()
+      _authorizePicos()
+      _wirePicoButtonsToScenes()
+      _authorizeRepeaterAccess()
+      _authorizeIndependentDevicesAccess()
+      _solicitRoomSceneDetails()
+      _displayWhaRoomDebugData()
+      _displayRoomScenePbsgDebugData()
     }
   }
 }
+
+//----
+//---- STANDALONE METHODS (no inherent "this")
+//----
+
+void repeaterLedHandler (Event e) {
+  // - The field e.deviceId arrives as a number and must be cast toString().
+  // - This subscription processes Main Repeater events, which is applicable
+  //   to Rooms that leverage an RA2 Main Repeater (virtual) Integration
+  //   Button and corresponding (virtual) LED. Work is delegated to
+  //   _detectManualOverride()
+  if (
+       (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
+       && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
+       && (e.isStateChange == true)
+  ) {
+    Ldebug(
+      'repeaterLedHandler()',
+      'calling _detectManualOverride()'
+    )
+    _detectManualOverride()
+  }
+}
+
+void independentDeviceHandler (Event e) {
+  // - This subscription processes Independent Device events. Work is delegated
+  //   to _detectManualOverride.
+  Ldebug(
+    'independentDeviceHandler()',
+    'calling _detectManualOverride()'
+  )
+  _detectManualOverride()
+}
+
+void hubitatModeChangeHandler (Event e) {
+  // Abstract
+  //   When the Hubitat mode changes AND state.currScenePerVsw == 'AUTOMATIC':
+  //     - Identify the appropriate scene for the Hubitat mode.
+  //     - Turn on the roomPBSG VSW for that scene.
+  //   State changes are deferred to _pbsgVswTurnedOnCallback().
+  Ltrace(
+    'hubitatModeChangeHandler()',
+    [
+      "At entry,",
+      "<b>event name:</b> ${e.name},",
+      "<b>event value:</b> ${e.value},",
+      "state.currentScene: ${state.currentScene}"
+    ].join(' ')
+  )
+  if (e.name == 'mode' && state.currentScene == 'AUTOMATIC') {
+    if (!settings.motionSensor) {
+      turnOnRoomSceneVsw (state.roomName, _getSceneForMode(e.value))
+    }
+  }
+}
+
+void keypadSceneButtonHandler (Event e) {
+  // Design Note
+  //   - The field e.deviceId arrives as a number and must be cast toString().
+  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
+  //   - Keypad buttons are matched to state data to activate a target VSW.
+  switch (e.name) {
+    case 'pushed':
+      // Toggle the corresponding pbsg-modes-X VSW for the keypad button.
+      String targetScene = state.sceneButtonMap?.getAt(e.deviceId.toString())
+                                               ?.getAt(e.value)
+      if (targetScene) {
+        String targetVsw = "${state.roomScenePbsgAppId}_${targetScene}"
+        Ldebug(
+          'keypadSceneButtonHandler()',
+          "toggling ${targetVsw}"
+        )
+        getScenePbsg()._toggleVsw(targetVsw)
+      }
+      break
+    case 'held':
+    case 'released':
+      // Ignore without logging
+      break
+    default:
+      Lwarn(
+        'keypadSceneButtonHandler()',
+        "for '${state.roomName}' unexpected event name '${e.name}' for Dni '${e.deviceId}'"
+      )
+  }
+}
+
+void picoButtonHandler (Event e) {
+  Integer changePercentage = 10
+  if (e.isStateChange == true) {
+    switch (e.name) {
+      case 'pushed':
+        // Check to see if the received button is assigned to a scene.
+        String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
+                                                    ?.getAt(e.value)
+        String scenePbsg = "${state.roomScenePbsgAppId}_${scene}"
+        if (scene) {
+          Ldebug(
+            'picoButtonHandler()',
+            "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
+          )
+          app.getChildAppByLabel(state.roomScenePbsgAppId)._toggleVsw(scenePbsg)
+        } else if (e.value == '2') {  // Default "Raise" behavior
+          Ldebug(
+            'picoButtonHandler()',
+            "Raising ${settings.independentDevices}"
+          )
+          settings.independentDevices.each{ d ->
+            if (getSwitchState(d) == 'off') {
+              d.setLevel(5)
+              //d.on()
+             } else {
+              d.setLevel(Math.min(
+                (d.currentValue('level') as Integer) + changePercentage,
+                100
+              ))
+            }
+          }
+        } else if (e.value == '4') {  // Default "Lower" behavior
+          Ldebug(
+            'picoButtonHandler()',
+            "Lowering ${settings.independentDevices}"
+          )
+          settings.independentDevices.each{ d ->
+              d.setLevel(Math.max(
+                (d.currentValue('level') as Integer) - changePercentage,
+                0
+              ))
+          }
+        } else {
+          Ldebug(
+            'picoButtonHandler()',
+            "R_${state.roomName} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
+          )
+        }
+        break
+      // case 'held':
+      // case 'released':
+      // default:
+    }
+  }
+  // Ignore non-state change events.
+}
+
+void motionSensorHandler (Event e) {
+  if (e.name == 'motion' && e.isStateChange == true) {
+    if (e.value == 'active') {
+      String targetScene = (state.currScenePerVsw == 'AUTOMATIC')
+        ? _getSceneForMode() : state.currScenePerVsw
+      _activateScene(targetScene)
+    } else if (e.value == 'inactive') {
+      // Use brute-force to ensure automation is restored when the room is empty.
+      state.currScenePerVsw = 'AUTOMATIC'
+      _activateScene('Off')
+    }
+  }
+}
+
+//----
+//---- EXPECTED APP METHODS
+//----
+
+void installed () {
+  Ltrace('installed()', '')
+  _whaRoomInitialize()
+}
+
+void updated () {
+  Ltrace('updated()', '')
+  app.unsubscribe()  // Suspend event processing to rebuild state variables.
+  _whaRoomInitialize()
+}
+
+void uninstalled () {
+  Ldebug('uninstalled()', '')
+  removeAllChildApps()
+}
+
+//----
+//---- CUSTOM METHODS
+//----
 
 void _activateScene (String scene) {
   // Push Repeater buttons and execute Independent switch/dimmer levels.
@@ -741,15 +988,6 @@ Boolean _areRoomSceneDevLevelsCorrect () {
   return retVal
 }
 
-//-> InstAppW getScenePbsg () {
-//->   InstAppW retVal = app.getChildAppByLabel(state.roomScenePbsgAppId)
-//->     ?: Lerror(
-//->       'getScenePbsg()',
-//->       "<b>FAILED</b> to locate scenePbsg App"
-//->     )
-//->   return retVal
-//-> }
-
 Boolean _detectManualOverride () {
   // Turning a PBSG switch on/off that's already on/off WILL NOT generate a
   // change event; so, don't worry about suppressing redundant switch state for now.
@@ -758,175 +996,6 @@ Boolean _detectManualOverride () {
   } else {
     getScenePbsg()._turnOffVswByName('MANUAL_OVERRIDE')
   }
-}
-
-void repeaterLedHandler (Event e) {
-  // - The field e.deviceId arrives as a number and must be cast toString().
-  // - This subscription processes Main Repeater events, which is applicable
-  //   to Rooms that leverage an RA2 Main Repeater (virtual) Integration
-  //   Button and corresponding (virtual) LED. Work is delegated to
-  //   _detectManualOverride()
-  if (
-       (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
-       && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
-       && (e.isStateChange == true)
-  ) {
-    Ldebug(
-      'repeaterLedHandler()',
-      'calling _detectManualOverride()'
-    )
-    _detectManualOverride()
-  }
-}
-
-void independentDeviceHandler (Event e) {
-  // - This subscription processes Independent Device events. Work is delegated
-  //   to _detectManualOverride.
-  Ldebug(
-    'independentDeviceHandler()',
-    'calling _detectManualOverride()'
-  )
-  _detectManualOverride()
-}
-
-void hubitatModeChangeHandler (Event e) {
-  // Abstract
-  //   When the Hubitat mode changes AND state.currScenePerVsw == 'AUTOMATIC':
-  //     - Identify the appropriate scene for the Hubitat mode.
-  //     - Turn on the roomPBSG VSW for that scene.
-  //   State changes are deferred to _pbsgVswTurnedOnCallback().
-  Ltrace(
-    'hubitatModeChangeHandler()',
-    [
-      "At entry,",
-      "<b>event name:</b> ${e.name},",
-      "<b>event value:</b> ${e.value},",
-      "state.currentScene: ${state.currentScene}"
-    ].join(' ')
-  )
-  if (e.name == 'mode' && state.currentScene == 'AUTOMATIC') {
-    if (!settings.motionSensor) {
-      turnOnRoomSceneVsw (state.roomName, _getSceneForMode(e.value))
-    }
-  }
-}
-
-void keypadSceneButtonHandler (Event e) {
-  // Design Note
-  //   - The field e.deviceId arrives as a number and must be cast toString().
-  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Keypad buttons are matched to state data to activate a target VSW.
-  switch (e.name) {
-    case 'pushed':
-      // Toggle the corresponding pbsg-modes-X VSW for the keypad button.
-      String targetScene = state.sceneButtonMap?.getAt(e.deviceId.toString())
-                                               ?.getAt(e.value)
-      if (targetScene) {
-        String targetVsw = "${state.roomScenePbsgAppId}_${targetScene}"
-        Ldebug(
-          'keypadSceneButtonHandler()',
-          "toggling ${targetVsw}"
-        )
-        getScenePbsg()._toggleVsw(targetVsw)
-      }
-      break
-    case 'held':
-    case 'released':
-      // Ignore without logging
-      break
-    default:
-      Lwarn(
-        'keypadSceneButtonHandler()',
-        "for '${state.roomName}' unexpected event name '${e.name}' for Dni '${e.deviceId}'"
-      )
-  }
-}
-
-void picoButtonHandler (Event e) {
-  Integer changePercentage = 10
-  if (e.isStateChange == true) {
-    switch (e.name) {
-      case 'pushed':
-        // Check to see if the received button is assigned to a scene.
-        String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
-                                                    ?.getAt(e.value)
-        String scenePbsg = "${state.roomScenePbsgAppId}_${scene}"
-        if (scene) {
-          Ldebug(
-            'picoButtonHandler()',
-            "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
-          )
-          app.getChildAppByLabel(state.roomScenePbsgAppId)._toggleVsw(scenePbsg)
-        } else if (e.value == '2') {  // Default "Raise" behavior
-          Ldebug(
-            'picoButtonHandler()',
-            "Raising ${settings.independentDevices}"
-          )
-          settings.independentDevices.each{ d ->
-            if (getSwitchState(d) == 'off') {
-              d.setLevel(5)
-              //d.on()
-             } else {
-              d.setLevel(Math.min(
-                (d.currentValue('level') as Integer) + changePercentage,
-                100
-              ))
-            }
-          }
-        } else if (e.value == '4') {  // Default "Lower" behavior
-          Ldebug(
-            'picoButtonHandler()',
-            "Lowering ${settings.independentDevices}"
-          )
-          settings.independentDevices.each{ d ->
-              d.setLevel(Math.max(
-                (d.currentValue('level') as Integer) - changePercentage,
-                0
-              ))
-          }
-        } else {
-          Ldebug(
-            'picoButtonHandler()',
-            "R_${state.roomName} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
-          )
-        }
-        break
-      // case 'held':
-      // case 'released':
-      // default:
-    }
-  }
-  // Ignore non-state change events.
-}
-
-void motionSensorHandler (Event e) {
-  if (e.name == 'motion' && e.isStateChange == true) {
-    if (e.value == 'active') {
-      String targetScene = (state.currScenePerVsw == 'AUTOMATIC')
-        ? _getSceneForMode() : state.currScenePerVsw
-      _activateScene(targetScene)
-    } else if (e.value == 'inactive') {
-      // Use brute-force to ensure automation is restored when the room is empty.
-      state.currScenePerVsw = 'AUTOMATIC'
-      _activateScene('Off')
-    }
-  }
-}
-
-void installed () {
-  Ltrace('installed()', '')
-  _whaRoomInitialize()
-}
-
-void updated () {
-  Ltrace('updated()', '')
-  app.unsubscribe()  // Suspend event processing to rebuild state variables.
-  _whaRoomInitialize()
-}
-
-void uninstalled () {
-  Ldebug('uninstalled()', '')
-  removeAllChildApps()
 }
 
 void _whaRoomInitialize () {
@@ -970,5 +1039,5 @@ void _whaRoomInitialize () {
     )
     app.subscribe(device, independentDeviceHandler, ['filterEvents': true])
   }
-  roomScenePbsg._roomScenePbsgInit()
+  roomScenePbsg._configRoomScenePbsgInit()
 }

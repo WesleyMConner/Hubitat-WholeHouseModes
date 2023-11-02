@@ -63,16 +63,15 @@ void _configPbsg (
   Ltrace(
     '_configPbsg()',
     [
+      '',
       "<b>pbsgName:</b> ${pbsgName}",
       "<b>vswNames:</b> ${vswNames}",
       "<b>defaultVswName:</b> ${defaultVswName}",
       "<b>logLevel:</b> ${logLevel}"
     ].join('<br/>&nbsp;&nbsp;')
   )
-  state.pbsgName = pbsgName
-  state.vswDniPrefix = "${state.pbsgName}_"
+  state.vswDniPrefix = "${pbsgName}_"
   state.vswNames = vswNames
-  populateStateVswDnis()
   state.defaultVswName = defaultVswName
   state.defaultVswDni = _vswNameToDni(defaultVswName)
   settings.logThreshold = logLevel
@@ -137,7 +136,7 @@ void _pbsgBasePage () {
         emphasis('Use the browser back button to return to the parent page.')
       ].join('<br/>')
     )
-    solicitLogThreshold()                                     // Fn provided by Utils
+    _solicitLogThreshold()                                     // Fn provided by Utils
     paragraph paragraph (
       [
         "<h2><b>Debug</b></h2>",
@@ -157,11 +156,11 @@ String _getPbsgStateBullets () {
       result += bullet1("<b>${k}</b>")
       v.each{ dni ->
         DevW vsw = app.getChildDevice(dni)
-        String state = getSwitchState(vsw)
-        //state = (state == 'on') ? "<b>on</b>" : "<i>${state}</i>"
-        String vswWithState = "→ ${state} - ${vsw.name}"
-        //result += vswWithState
-        result += (state == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}</i>"
+        String vswState = vsw ? getSwitchState(vsw) : null
+        String vswWithState = vsw
+          ? "→ ${vswState} - ${vsw.name}"
+          : "VSW DNI '${dni}' DOES NOT EXIST"
+        result += (vswState == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}</i>"
       }
     } else {
       result += bullet1("<b>${k}</b> → ${v}")
@@ -198,7 +197,11 @@ void _removeLegacyPbsgSettingsAndState () {
 }
 
 List<String> _expectedVswDnis () {
-  return state.vswNames.collect{ name -> _vswNameToDni(name) }
+  List<String> retVal = state.vswNames.collect{ _vswNameToDni(it) }
+  if (!retVal) {
+    Lerror('_expectedVswDnis', "Produced '${retVal}'")
+  }
+  return retVal
 }
 
 void _manageChildDevices () {

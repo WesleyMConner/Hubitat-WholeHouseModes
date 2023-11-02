@@ -61,11 +61,13 @@ Map _modePbsgPage () {
 
 void installed () {
   Ltrace('installed()', 'At entry')
+  // Note: Parent is responsible for initial _configModePbsg() call.
   _modePbsgInit()
 }
 
 void updated () {
   Ltrace('updated()', 'At entry')
+  _configModePbsg()   // Refresh in case VSWs have been manually removed.
   _modePbsgInit()
 }
 
@@ -133,6 +135,25 @@ void modeVswEventHandler (Event e) {
 //----
 //---- CUSTOM APP METHODS
 //----
+
+void _configModePbsg () {
+  // Used for initial configuration AND refresh of configuration.
+  String pbsgName = app.getLabel()
+  List<String> vswNames = getModeNames()
+  String defaultVswName = getGlobalVar('DEFAULT_MODE').value
+  String logLevel = parent.getLogLevel() ?: 'Debug'
+  Ldebug(
+    '_configModePbsg()',
+    [
+      '',
+      "<b>pbsgName</b>: ${pbsgName}",
+      "<b>vswNames</b>: ${vswNames}",
+      "<b>defaultVswName</b>: ${defaultVswName}",
+      "<b>logLevel</b>: ${logLevel}",
+    ].join('<br/>')
+  )
+  _configPbsg (pbsgName, vswNames, defaultVswName, logLevel)
+}
 
 void _subscribeToModeVswChanges() {
   app.unsubscribe()
