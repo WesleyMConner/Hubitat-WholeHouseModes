@@ -152,7 +152,7 @@ Everything else should respond to mode changes (not the modePBSG VSWs).
 //import com.hubitat.hub.domain.State as State
 
 // - This file (effectively) extends an existing application or existing
-//   child application - allowing it to subscribe to and process events.
+//   child application - allowing it to app.subscribe to and process events.
 // - An intermediate application isn't appropriate as there is no user
 //   input to solicit.
 // - An intermediate device would not be able to process events.
@@ -169,25 +169,25 @@ Everything else should respond to mode changes (not the modePBSG VSWs).
 */
 
   // https://docs2.hubitat.com/developer/app/app-object
-  //   void subscribe(
+  //   void app.subscribe(
   //     devices,           // DevWL
   //     handlerMethod,     // String
   //     options = null     // Map
   //   )
-  //   void subscribe(
+  //   void app.subscribe(
   //     devices,           // DevWL
   //     attributeName,     // String
   //     handlerMethod,     // String
   //     options = null     // Map
   //   )
-  //   void unsubscribe(
+  //   void app.unsubscribe(
   //     deviceList         // List<DevW>
   //   )
-  //   void unsubscribe(
+  //   void app.unsubscribe(
   //     deviceList,        // List<DevW>
   //     attributeName      // String
   //   )
-  //   void unsubscribe(
+  //   void app.unsubscribe(
   //     deviceList,        // List<DevW>
   //     attributeName,     // String
   //     handlerMethod      // String
@@ -263,12 +263,12 @@ PRIOR_pbsgVswEventHandler = { event, pbsgInst ->
     //       between types 'DevWL' and 'List<DevW>'.
     //     - No device event signature accepts an actual handler function.
     //       All device options require the name (String) of the callback.
-    //     - void subscribe(DevW device, String handlerMethod, Map options = null)
+    //     - void app.subscribe(DevW device, String handlerMethod, Map options = null)
     // --------------------------------------------------------------------
     //--take1->String callbackFn = "{ e -> pbsgVswEventHandler.call(e, '${pbsg.name}') }"
     //--take1->if (settings.log) log.trace "createPBSG() w/ callbackFn: ${callbackFn}"
     //--take1->pbsg.scene2Vsw.each{ scene, vsw ->
-    //--take1->  subscribe(
+    //--take1->  app.subscribe(
     //--take1->    vsw,                     // DevW
     //--take1->    callbackFn,              // String
     //--take1->    [ filterEvents: false ]  // Map (of subsription options)

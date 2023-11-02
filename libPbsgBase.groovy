@@ -26,30 +26,22 @@ library (
 )
 
 //----
-//---- I N S T A N C E   C O N S T R U C T O R S
-//----   - For App instance (singleton) modePBSG.groovy
-//----   - For App instances defined in roomPBSG.groovy
-//----
+//---- I N S T A N C E   R E T R I E V A L
+//----   - There are two types of PBSG App instances:
+//----     - modePBSG.groovy (one per WHA App instance)
+//----     - roomPBSG.groovy (one per whaRoom App instance)
+//----   - The App instances are created by, configured by and owned by
+//----     WHA App or whaRoom App.
+//----   - The following routines facilitate discovering existing PBSGs
 
-InstAppW getOrCreateModePbsg (
-    String modePbsgName = 'whaModePbsg',
-    String defaultMode = 'Day',
-    String logThreshold = 'Debug'
-  ) {
-  // I M P O R T A N T
-  //   - Functionally, a Mode PBSG is a singleton.
-  //   - Any real work should occur in modePBSG.groovy (the App definition).
-  //   - On creation, a Mode PBSG should create all of its child VSWs.
-  //   - If an existing Mode PBSG is available, it is returned "AS IS".
-  //   - The Mode PBSG's update() process will refresh child VSWs, but at
-  //     some performance cost.
-  return modePbsg = getChildAppByLabel(modePbsgName)
-    ?:  addChildApp(
-          'wesmc',      // See modePBSG.groovy definition's (App) namespace.
-          'modePBSG',   // See modePBSG.groovy definition's (App) name.
-          modePbsgName  // Label used to create or get the child App.
-        )
-}
+//--xx-> InstAppW getModePbsg (String modePbsgName = 'whaModePbsg') {
+//--xx->   return getChildAppByLabel(modePbsgName)
+//--xx->     ?:  addChildApp(
+//--xx->           'wesmc',      // See modePBSG.groovy definition's (App) namespace.
+//--xx->           'modePBSG',   // See modePBSG.groovy definition's (App) name.
+//--xx->           modePbsgName  // Label used to create or get the child App.
+//--xx->         )
+//--xx-> }
 
 //----
 //---- P U B L I C   P B S G   M E T H O D S
@@ -89,7 +81,8 @@ void _configPbsg (
 
 void _turnOffVswByName (String vswName) {
   DevW vsw = app.getChildDevice(_vswNameToDni(vswName))
-  if (!vsw) Lerror('turnOffVsw()', "vsw named '${vswName}' is missing")
+  if (!vsw) Lerror('turnOffVswByName()', "vsw named '${vswName}' is missing")
+  Ltrace('turnOffVswByName()', "turning off vsw named '${vswName}'")
   vsw.off()
   _enforceDefaultSwitch()
 }
@@ -101,10 +94,15 @@ void _turnOnVswExclusivelyByName (String vswName) {
   if (!vsw) {
     Lerror(
       '_turnOnVswExclusivelyByName()',
-      "vswName: '<b>${vswName}</b>' not found"
+      "Cannot find vswName: '<b>${vswName}</b>' to turn on"
     )
+  } else {
+    Ltrace(
+      '_turnOnVswExclusivelyByName()',
+      "turning on vsw named '${vswName}'"
+    )
+    vsw.on()
   }
-  vsw.on()
 }
 
 void _toggleVsw (String vswName, passedVsw = null) {
@@ -140,7 +138,15 @@ void _pbsgBasePage () {
       ].join('<br/>')
     )
     solicitLogThreshold()                                     // Fn provided by Utils
-    paragraph _pbsgStateAndSettings('DEBUG')
+    paragraph paragraph (
+      [
+        "<h2><b>Debug</b></h2>",
+        '<h3><b>STATE</b></h3>',
+        _getPbsgStateBullets(),
+        '<h3><b>SETTINGS</b></h3>',
+        _getSettingsBulletsAsIs()
+      ].join()
+    )
   }
 }
 
@@ -155,7 +161,7 @@ String _getPbsgStateBullets () {
         //state = (state == 'on') ? "<b>on</b>" : "<i>${state}</i>"
         String vswWithState = "→ ${state} - ${vsw.name}"
         //result += vswWithState
-        result += (state == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}}</i>"
+        result += (state == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}</i>"
       }
     } else {
       result += bullet1("<b>${k}</b> → ${v}")
@@ -164,29 +170,6 @@ String _getPbsgStateBullets () {
   return result.join('<br/>')
 }
 
-/*
-  List<String> results = []
-  results += "<h2><b>${title}</b></h2>"
-  results += "<b>${state ? 'STATE' : 'N O   S T A T E'}</b>"
-  state.sort().collect{ k, v ->
-    if (k == 'vswDnis') {
-      if (!v) {
-        Lerror('_pbsgStateAndSettings()', 'At key vswDnis, encountered null.')
-      }
-      v.each{ vswDni ->
-        DevW vsw = app.getChildDevice(vswDni)
-        String state = getSwitchState(vsw)
-        state = (state == 'on') ? "<b>on</b>" : "<i>${state}</i>"
-        results += bullet2("${vswDni} (${state})")
-      }
-    } else {
-      results += bullet1("<b>${k}</b> → ${v}")
-    }
-  }
-  results += _getSettingsBulletsAsIs()
-  return results.join('<br/>')
-}
-*/
 //----
 //---- P R I V A T E   P B S G   M E T H O D S
 //----   Hubitat does not facilitate Grooy classes or similar advanced
@@ -274,7 +257,6 @@ DevW _getVswByName (String vswName) {
 }
 
 List<DevW> _getVsws (String option = null) {
-  //--DEEP-DEBUGGING-> Ldebug('_getVsws', "<br/>${_pbsgStateAndSettings('INSIDE _getVsws()')}")
   List<DevW> vsws = []
   _expectedVswDnis().collect{ vswDni ->
     DevW vsw = app.getChildDevice(vswDni)
@@ -300,7 +282,10 @@ void _enforceMutualExclusion () {
       device.off()
       onVsws = onVsws.drop(1)
     } else {
-       Ltrace('_enforceMutualExclusion()', 'taking no action')
+       Ltrace(
+        '_enforceMutualExclusion()',
+        "taking no action for onVsws: ${onVsws}"
+      )
     }
   }
 }
@@ -314,6 +299,8 @@ void _enforceDefaultSwitch () {
     )
     DevW vsw = app.getChildDevice(_vswNameToDni(vswName))
     vsw.on()
+    state.prevOnVswName = state.currOnVswName
+    state.currOnVswName = vswName
   } else {
     Ltrace(
       '_enforceDefaultSwitch()',

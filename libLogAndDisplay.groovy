@@ -39,8 +39,6 @@ String RED = 'rgba(255, 0, 0, 1.0)'
 
 H1_CSS = 'font-size: 2em; font-weight: bold;'
 H2_CSS = 'font-size: 1em; font-weight: bold;'
-//BULLET1_CSS = 'font-size: 1.0em;'  // margin-left: 10px;
-//BULLET1_CSS = 'font-size: 1.0em;'  // margin-left: 20px;
 EMPHASIS_CSS = "font-size: 1.3em; color: ${BLUE}; margin-left: 0px;"
 COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
 

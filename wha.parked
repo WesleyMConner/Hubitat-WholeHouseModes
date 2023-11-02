@@ -1,0 +1,32 @@
+/*
+void _insertForceUpdateButton () {
+  input(
+    name: 'updateModePbsg',
+    type: 'button',
+    title: '<b>Force Mode PBSG Re-Init</b>'
+  )
+}
+
+void appButtonHandler (def b) {
+  // THE NAME OF THIS METHOD IS FIXED BY HUBITAT !!!
+  //   - No manual process is required to register an input button handler.
+  //   - Clicking the 'Done' button, or manually invoking updated(), appears
+  //     to be required to register the handler (behind the scenes).
+  Ltrace('appButtonHandler()', "Received '${b}'")
+  switch (b) {
+    case 'updateModePbsg':
+      Ldebug('updateModePbsgButtonHandler()', "received 'updateModePbsg'")
+      InstAppW modePbsg = getModePbsg()
+      if (!modePbsg) {
+        Lerror(
+          'updateModePbsgButtonHandler()',
+          'Unable to locate modePbsg App instance'
+        )
+      }
+      modePbsg._modePbsgInit()
+      break
+    default:
+      Lerror('updateModePbsgButtonHandler()', "unexpected button '${b}'")
+  }
+}
+*/

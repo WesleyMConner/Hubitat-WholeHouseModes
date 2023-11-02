@@ -35,15 +35,15 @@ definition (
 )
 
 preferences {
-  page(name: 'roomPbsgPage')
+  page(name: '_roomPbsgPage')
 }
 
-Map roomPbsgPage () {
+Map _roomPbsgPage () {
   // Norally, this page IS NOT presented.
   //   - This page can be viewed via an instance link on the main Hubitat Apps menu.
   //   - Instance state & settings are rendered on the parent App's page.
   return dynamicPage (
-    name: 'roomPbsgPage',
+    name: '_roomPbsgPage',
     install: true,
     uninstall: false
   ) {
@@ -51,14 +51,18 @@ Map roomPbsgPage () {
   }
 }
 
+//----
+//---- EXPECTED APP METHODS
+//----
+
 void installed () {
   Ltrace('installed()', 'At entry')
-  roomScenePbsgInit()
+  _roomScenePbsgInit()
 }
 
 void updated () {
   Ltrace('updated()', 'At entry')
-  roomScenePbsgInit()
+  _roomScenePbsgInit()
 }
 
 void uninstalled () {
@@ -66,6 +70,25 @@ void uninstalled () {
   Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
     deleteChildDevice(device.deviceNetworkId)
+  }
+}
+
+//----
+//---- CUSTOM APP METHODS
+//----
+
+void _subscribeToRoomSceneVswChanges() {
+  app.unsubscribe()
+  List<DevW> vsws = _getVsws()
+  if (!vsws) {
+    Lerror('_subscribeToRoomSceneVswChanges()', 'The child VSW instances are MISSING.')
+  }
+  vsws.each{ vsw ->
+    Ltrace(
+      '_subscribeToRoomSceneVswChanges()',
+      "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
+    )
+    app.subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
   }
 }
 
@@ -94,6 +117,7 @@ void roomSceneVswEventHandler (Event e) {
       String scene = _vswDnitoName(state.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
+      Linfo()
       // Take no action when a VSW turns off
     } else {
       Lwarn(
@@ -104,25 +128,19 @@ void roomSceneVswEventHandler (Event e) {
   }
 }
 
-void roomScenePbsgInit() {
+void _roomScenePbsgInit () {
   // P A R E N T   R E Q U I R E M E N T
   //   - Parent must provide 'getCurrentRoomScene()'. If non-null, the
   //     Room Scene VSW is set so as to be consistent with the current
   //     Room Scene. If null, the Room Scene 'AUTOMATIC' is assumed.
-  Ltrace('roomScenePbsgInit()', 'At entry')
-  unsubscribe()
-  _getVsws().each{ vsw ->
-    Ltrace(
-      'roomScenePbsgInit()',
-      "Subscribe <b>${vsw.dni} (${vsw.id})</b> to roomSceneVswEventHandler()"
-    )
-    subscribe(vsw, "switch", roomSceneVswEventHandler, ['filterEvents': false])
-  }
+  Ltrace('_roomScenePbsgInit()', 'At entry')
+  _subscribeToRoomSceneVswChanges()
   // The initially "on" PBSG VSW should be consistent with the current Room Scene.
   String roomScene = parent.getCurrentRoomScene() ?: 'AUTOMATIC'
   Ldebug(
-    'roomScenePbsgInit()',
+    '_roomScenePbsgInit()',
     "Activating VSW for roomScene: <b>${roomScene}</b>"
   )
-  _getVswByName(roomScene)._turnOnVswExclusivelyByName()
+  _turnOnVswExclusivelyByName(roomScene)
 }
+

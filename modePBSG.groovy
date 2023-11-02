@@ -17,12 +17,6 @@ import com.hubitat.app.DeviceWrapper as DevW
 #include wesmc.libUtils
 #include wesmc.libLogAndDisplay
 
-//----
-//---- GUI SUPPORT
-//----   See getOrCreateModePbsg() in libPbsgBase.groovy
-//----   The whaPage() in wha.groovy incorporates a single Mode PBSG instance.
-//----
-
 definition (
   parent: 'wesmc:wha',
   name: 'modePBSG',
@@ -91,35 +85,41 @@ void modeVswEventHandler (Event e) {
   // Process events for Mode PGSG child VSWs.
   //   - The received e.displayName is the DNI of the reporting child VSW.
   //   - When a Mode VSW turns on, change the Hubitat mode accordingly.
-  //   - Clients DO NOT get a callback for this event.
-  //   - Clients SHOULD subscribe to Hubitat Mode change events.
+  //   - The whaRoom clients DO NOT get a callback for this event and
+  //     should instead app.subscribe to Hubitat Mode change events.
   //--DEEP-DEBUGGING-> Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
-      InstAppW modePbsg = getOrCreateModePbsg()
-      XXX
       if (state.previousVswDni == e.displayName) {
         Lerror(
           'modeVswEventHandler()',
           "The active Mode VSW '${state.activeVswDni}' did not change."
         )
       }
-
+      Linfo(
+        'roomSceneVswEventHandler()',
+        'T B D - OPERARIONS ON state DO NOT MAKE SENSE IN THE EVENT HANDLER.'
+      )
       state.previousVswDni = state.activeVswDni ?: state.defaultVswDni
       state.activeVswDni = e.displayName
       Ldebug(
         'modeVswEventHandler()',
         "${state.previousVswDni} -> ${state.activeVswDni}"
       )
-      _turnOnVswExclusivelyByName(e.displayName)
+      // The vswName is the target mode.
+      String vswName = _vswDnitoName(e.displayName)
+      _turnOnVswExclusivelyByName(vswName)
       // Adjust the Hubitat mode.
-      String mode = getModeNameForVswDni(e.displayName)
       Ldebug(
         'modeVswEventHandler()',
-        "Setting mode to <b>${mode}</b>"
+        "Setting mode to <b>${vswName}</b>"
       )
-      getLocation().setMode(mode)
+      getLocation().setMode(vswName)
     } else if (e.value == 'off') {
+      Linfo(
+        'roomSceneVswEventHandler()',
+        'T B D - CHECK, IF NO MODE VSW IS "on", SOMETHING WENT WRONG.'
+      )
       // Take no action when a VSW turns off
     } else {
       Lwarn(
@@ -130,80 +130,37 @@ void modeVswEventHandler (Event e) {
   }
 }
 
-
-
 //----
 //---- CUSTOM APP METHODS
 //----
 
-void _modePbsgInit() {
-  Ltrace('_modePbsgInit()', 'At entry')
-  unsubscribe()
+void _subscribeToModeVswChanges() {
+  app.unsubscribe()
   List<DevW> vsws = _getVsws()
-  //--PRIVATE-> _manageChildDevices()
   if (!vsws) {
-    Lerror('_modePbsgInit()', 'The child VSW instances are MISSING.')
+    Lerror('_subscribeToModeVswChanges()', 'The child VSW instances are MISSING.')
   }
   vsws.each{ vsw ->
     Ltrace(
-      '_modePbsgInit()',
+      '_subscribeToModeVswChanges()',
       "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
     )
-    subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
+    app.subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
   }
-  // The initially "on" PBSG VSW should be consistent with the Hubitat mode.
+}
+
+void _modePbsgInit() {
+  // Three mechanisms invoke this method:
+  //   - modePBSG installed() via _modePbsgPage() initialization
+  //   - modePBSG updated() via _modePbsgPage() revision
+  //   - modePBSG updated() via _whaPage() custom button press
+  Ltrace('_modePbsgInit()', 'At entry')
+  _subscribeToModeVswChanges()
+  // Ensure that the initially "on" VSW is consistent with the Hubitat mode.
   String mode = getLocation().getMode()
   Ldebug(
     '_modePbsgInit()',
     "Activating VSW for mode: <b>${mode}</b>"
   )
-  Ltrace('_modePbsgInit()', 'B E F O R E')
   _turnOnVswExclusivelyByName(mode)
-  Ltrace('_modePbsgInit()', 'A F T E R')
 }
-
-/*
-InstAppW getOrCreateModePbsg (
-    String modePbsgName = 'whaModePbsg',
-    String defaultMode = 'Day',
-    String logThreshold = 'Debug'
-  ) {
-  // I M P O R T A N T
-  //   - Functionally, a Mode PBSG is a singleton.
-  //   - Any real work should occur in modePBSG.groovy (the App definition).
-  //   - If modes are changed OR the pbsg's VSWs are manually, force a
-  //     modePBSG.groovy update().
-  //   - For efficienctm, DO NOT automatically invoke modePBSG.groovy update().
-  List<String> modes = getLocation().getModes().collect{ it.name }
-  if ( modes.contains(defaultMode) == false ) {
-    Lerror(
-      'getOrCreateModePbsg()',
-      "The defaultMode (${defaultMode}) is not present in modes (${modes})"
-    )
-  }
-  //-> Ltrace('createModePbsg()', "At entry")
-  InstAppW modePbsg = getChildAppByLabel(modePbsgName)
-  if (modePbsg) {
-    Ltrace('getOrCreateModePbsg()', "Using existing '${getAppInfo(modePbsg)}'")
-    //-> if (modePbsg.isPbsgHealthy() == false) {
-    Ltrace(
-      'getOrCreateModePbsg()',
-      modePbsg._pbsgStateAndSettings('PEEK AT EXISTING MODE PBSG')
-    )
-    _configPbsg(modePbsgName, modes, defaultMode, logThreshold)
-    Ltrace(
-      'getOrCreateModePbsg()',
-      modePbsg._pbsgStateAndSettings('PEEK AFTER FRESH createModePbsg() CALL')
-    )
-    _configPbsg(modePbsgName, modes, defaultMode, logThreshold)
-  } else {
-    modePbsg = app.addChildApp(
-      'wesmc',      // See modePBSG.groovy 'definition.namespace'
-      'modePBSG',   // See modePBSG.groovy 'definition.name'
-      modePbsgName  // PBSG's label/name (id will be a generated integer)
-    )
-    Ldebug('getOrCreateModePbsg()', "created new '${getAppInfo(modePbsg)}'")
-    _configPbsg(modePbsgName, modes, defaultMode, logThreshold)
-  }
-  return modePbsg
-}*/
