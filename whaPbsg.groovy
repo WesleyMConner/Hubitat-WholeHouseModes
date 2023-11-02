@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// modePBSG (an instsantiation of libPbsgBase)
+// whaPbsg (an instsantiation of libPbsgBase)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -19,7 +19,7 @@ import com.hubitat.app.DeviceWrapper as DevW
 
 definition (
   parent: 'wesmc:wha',
-  name: 'modePBSG',
+  name: 'whaPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A PBSG (extends libPbsgBase) designed for use in wha.groovy',
@@ -141,7 +141,7 @@ void _configModePbsg () {
   String pbsgName = app.getLabel()
   List<String> vswNames = getModeNames()
   String defaultVswName = getGlobalVar('DEFAULT_MODE').value
-  String logLevel = parent.getLogLevel() ?: 'Debug'
+  String logLevel = parent.getLogLevel() ?: 'TRACE'
   Ldebug(
     '_configModePbsg()',
     [
@@ -172,9 +172,9 @@ void _subscribeToModeVswChanges() {
 
 void _modePbsgInit() {
   // Three mechanisms invoke this method:
-  //   - modePBSG installed() via _modePbsgPage() initialization
-  //   - modePBSG updated() via _modePbsgPage() revision
-  //   - modePBSG updated() via _whaPage() custom button press
+  //   - whaPbsg installed() via _modePbsgPage() initialization
+  //   - whaPbsg updated() via _modePbsgPage() revision
+  //   - whaPbsg updated() via _whaPage() custom button press
   Ltrace('_modePbsgInit()', 'At entry')
   _subscribeToModeVswChanges()
   // Ensure that the initially "on" VSW is consistent with the Hubitat mode.

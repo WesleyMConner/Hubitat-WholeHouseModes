@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// roomPBSG (an instsantiation of libPbsgBase)
+// whaRoomPbsg (an instsantiation of libPbsgBase)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -18,7 +18,7 @@
 
 definition (
   parent: 'wesmc:whaRoom',
-  name: 'roomPBSG',
+  name: 'whaRoomPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A PBSG (extends libPbsgBase) designed for use in whaRoom.groovy',
@@ -83,7 +83,7 @@ void _configRoomScenePbsgInit() {
     app.getLabel(),                                               // pbsgName
     [*parent._getRoomScenes(), 'AUTOMATIC', 'MANUAL_OVERRIDE'],   // vswNames
     'AUTOMATIC',                                                  // defaultVswName
-    parent.getLogLevel() ?: 'Debug'                               // PBSG Log Level
+    parent.getLogLevel() ?: 'TRACE'                               // PBSG Log Level
   )
 }
 

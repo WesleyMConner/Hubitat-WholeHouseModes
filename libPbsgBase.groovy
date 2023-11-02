@@ -28,17 +28,17 @@ library (
 //----
 //---- I N S T A N C E   R E T R I E V A L
 //----   - There are two types of PBSG App instances:
-//----     - modePBSG.groovy (one per WHA App instance)
-//----     - roomPBSG.groovy (one per whaRoom App instance)
+//----     - whaPbsg.groovy (one per WHA App instance)
+//----     - whaRoomPbsg.groovy (one per whaRoom App instance)
 //----   - The App instances are created by, configured by and owned by
 //----     WHA App or whaRoom App.
 //----   - The following routines facilitate discovering existing PBSGs
 
-//--xx-> InstAppW getModePbsg (String modePbsgName = 'whaModePbsg') {
+//--xx-> InstAppW getModePbsg (String modePbsgName = 'whaPbsg') {
 //--xx->   return getChildAppByLabel(modePbsgName)
 //--xx->     ?:  addChildApp(
-//--xx->           'wesmc',      // See modePBSG.groovy definition's (App) namespace.
-//--xx->           'modePBSG',   // See modePBSG.groovy definition's (App) name.
+//--xx->           'wesmc',      // See whaPbsg.groovy definition's (App) namespace.
+//--xx->           'whaPbsg',   // See whaPbsg.groovy definition's (App) name.
 //--xx->           modePbsgName  // Label used to create or get the child App.
 //--xx->         )
 //--xx-> }
@@ -137,13 +137,13 @@ void _pbsgBasePage () {
       ].join('<br/>')
     )
     _solicitLogThreshold()                                     // Fn provided by Utils
-    paragraph paragraph (
+    paragraph (
       [
         "<h2><b>Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
-        _getPbsgStateBullets(),
+        _getPbsgStateBullets() ?: bullet('<i>NO DATA AVAILABLE</i>'),
         '<h3><b>SETTINGS</b></h3>',
-        _getSettingsBulletsAsIs()
+        _getSettingsBulletsAsIs() ?: bullet('<i>NO DATA AVAILABLE</i>')
       ].join()
     )
   }
@@ -166,7 +166,7 @@ String _getPbsgStateBullets () {
       result += bullet1("<b>${k}</b> → ${v}")
     }
   }
-  return result.join('<br/>')
+  return result.size() != 0 ? result.join('<br/>') : bullet1('<i>NO DATA AVAILABLE</i>')
 }
 
 //----
@@ -197,6 +197,10 @@ void _removeLegacyPbsgSettingsAndState () {
 }
 
 List<String> _expectedVswDnis () {
+  Ltrace(
+    '_expectedVswDnis ()',
+    "At entry, <b>state.vswNames:</b> ${state.vswNames}"
+  )
   List<String> retVal = state.vswNames.collect{ _vswNameToDni(it) }
   if (!retVal) {
     Lerror('_expectedVswDnis', "Produced '${retVal}'")

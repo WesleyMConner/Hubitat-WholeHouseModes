@@ -71,7 +71,7 @@ String _getStateBulletsAsIs() {
   state.sort().each{ k, v ->
     result += bullet1("<b>${k}</b> → ${v}")
   }
-  return result.join('<br/>')
+  return result.size() != 0 ? result.join('<br/>') : bullet1('<i>NO DATA AVAILABLE</i>')
 }
 
 String _getSettingsBulletsAsIs() {
@@ -79,7 +79,7 @@ String _getSettingsBulletsAsIs() {
   settings.sort().each{ k, v ->
     result += bullet1("<b>${k}</b> → ${v}")
   }
-  return result.join('<br/>')
+  return result.size() != 0 ? result.join('<br/>') : bullet1('<i>NO DATA AVAILABLE</i>')
 }
 
 void _populateStateKpadButtons (String prefix) {

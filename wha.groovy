@@ -39,17 +39,18 @@ preferences {
 
 InstAppW createModePbsg () {
   InstAppW modePbsg = addChildApp(
-    'wesmc',       // See modePBSG.groovy definition's (App) namespace.
-    'modePBSG',    // See modePBSG.groovy definition's (App) name.
-    'whaModePbsg'  // Label used to create or get the child App.
+    'wesmc',       // See whaPbsg.groovy definition's (App) namespace.
+    'whaPbsg',    // See whaPbsg.groovy definition's (App) name.
+    'whaPbsg'  // Label used to create or get the child App.
   )
   // Ensure Pbsg state exists on creation.
   modePbsg._configModePbsg()
+  modePbsg._installed()
   return modePbsg
 }
 
 InstAppW getModePbsg () {
-  return getChildAppByLabel('whaModePbsg')
+  return getChildAppByLabel('whaPbsg')
 }
 
 String getLogLevel() {

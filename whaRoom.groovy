@@ -41,8 +41,8 @@ preferences {
 InstAppW createRoomScenePbsg (String roomName = app.getLabel()) {
   if (_getRoomScenes()) {
     InstAppW roomScenePbsg = addChildApp(
-      'wesmc',             // See modePBSG.groovy definition's (App) namespace.
-      'roomPBSG',          // See modePBSG.groovy definition's (App) name.
+      'wesmc',             // See whaPbsg.groovy definition's (App) namespace.
+      'whaRoomPbsg',          // See whaPbsg.groovy definition's (App) name.
       "pbsg_${roomName}"   // Label used to create or get the child App.
     )
     roomScenePbsg._configRoomScenePbsgInit()
@@ -657,7 +657,7 @@ void hubitatModeChangeHandler (Event e) {
   // Abstract
   //   When the Hubitat mode changes AND state.currScenePerVsw == 'AUTOMATIC':
   //     - Identify the appropriate scene for the Hubitat mode.
-  //     - Turn on the roomPBSG VSW for that scene.
+  //     - Turn on the whaRoomPbsg VSW for that scene.
   //   State changes are deferred to _pbsgVswTurnedOnCallback().
   Ltrace(
     'hubitatModeChangeHandler()',
