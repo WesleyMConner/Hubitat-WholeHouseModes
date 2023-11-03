@@ -26,24 +26,6 @@ library (
 )
 
 //----
-//---- I N S T A N C E   R E T R I E V A L
-//----   - There are two types of PBSG App instances:
-//----     - whaPbsg.groovy (one per WHA App instance)
-//----     - whaRoomPbsg.groovy (one per whaRoom App instance)
-//----   - The App instances are created by, configured by and owned by
-//----     WHA App or whaRoom App.
-//----   - The following routines facilitate discovering existing PBSGs
-
-//--xx-> InstAppW getModePbsg (String modePbsgName = 'whaPbsg') {
-//--xx->   return getChildAppByLabel(modePbsgName)
-//--xx->     ?:  addChildApp(
-//--xx->           'wesmc',      // See whaPbsg.groovy definition's (App) namespace.
-//--xx->           'whaPbsg',   // See whaPbsg.groovy definition's (App) name.
-//--xx->           modePbsgName  // Label used to create or get the child App.
-//--xx->         )
-//--xx-> }
-
-//----
 //---- P U B L I C   P B S G   M E T H O D S
 //----   These functions are intended for downstream use.
 //----
@@ -56,7 +38,7 @@ void _configPbsg (
     String pbsgName,
     List<String> vswNames,
     String defaultVswName,
-    String logLevel
+    Integer logLevel = _lookupLogLevel('DEBUG')
   ) {
   // Set core instance fields immediately after PBSG instantiation.
   //   - The pbsgPrefix is used when naming/labeling applications and devices.
@@ -74,7 +56,7 @@ void _configPbsg (
   state.vswNames = vswNames
   state.defaultVswName = defaultVswName
   state.defaultVswDni = _vswNameToDni(defaultVswName)
-  settings.logThreshold = logLevel
+  state.logLevel = logLevel
   _manageChildDevices()
 }
 
@@ -136,14 +118,13 @@ void _pbsgBasePage () {
         emphasis('Use the browser back button to return to the parent page.')
       ].join('<br/>')
     )
-    _solicitLogThreshold()                                     // Fn provided by Utils
     paragraph (
       [
         "<h2><b>Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
         _getPbsgStateBullets() ?: bullet('<i>NO DATA AVAILABLE</i>'),
-        '<h3><b>SETTINGS</b></h3>',
-        _getSettingsBulletsAsIs() ?: bullet('<i>NO DATA AVAILABLE</i>')
+        //-> '<h3><b>SETTINGS</b></h3>',
+        //-> _getSettingsBulletsAsIs() ?: bullet('<i>NO DATA AVAILABLE</i>')
       ].join()
     )
   }
@@ -196,24 +177,25 @@ void _removeLegacyPbsgSettingsAndState () {
   state.remove('switchDnis')
 }
 
-List<String> _expectedVswDnis () {
-  Ltrace(
-    '_expectedVswDnis ()',
-    "At entry, <b>state.vswNames:</b> ${state.vswNames}"
-  )
-  List<String> retVal = state.vswNames.collect{ _vswNameToDni(it) }
-  if (!retVal) {
-    Lerror('_expectedVswDnis', "Produced '${retVal}'")
-  }
-  return retVal
-}
+//-> List<String> _expectedVswDnis () {
+//->   List<String> vswDnis = state.vswNames.collect{ _vswNameToDni(it) }
+//->   Ltrace(
+//->     '_expectedVswDnis ()',
+//->     [
+//->       '',
+//->       "Given <b>state.vswNames:</b> ${state.vswNames}",
+//->       "Proeduced <b>vswDnis:</b> ${vswDnis}"
+//->     ].join('<br/>')
+//->   )
+//->   return vswDnis
+//-> }
 
 void _manageChildDevices () {
   Ltrace('_manageChildDevices()', 'At entry')
   // Uncomment the following to test orphan child app removal.
   //==T E S T I N G   O N L Y==> _addOrphanChild()
   // The ONLY child devices for a PBSG are its managed VSWs.
-  List<String> expectedDnis = _expectedVswDnis()
+  List<String> expectedDnis = state.vswNames.collect{ _vswNameToDni(it) }
   List<String> entryDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
   // Since removeAll() modifies the collection, copy data before application.
   List<String> missingDnis = expectedDnis
@@ -265,7 +247,7 @@ DevW _getVswByName (String vswName) {
 
 List<DevW> _getVsws (String option = null) {
   List<DevW> vsws = []
-  _expectedVswDnis().collect{ vswDni ->
+  state.vswNames.collect{ _vswNameToDni(it) }.each{ vswDni ->
     DevW vsw = app.getChildDevice(vswDni)
     if (option == 'onOnly' && getSwitchState(vsw) == 'on') {
       vsws += vsw

@@ -40,8 +40,8 @@ preferences {
 InstAppW createModePbsg () {
   InstAppW modePbsg = addChildApp(
     'wesmc',       // See whaPbsg.groovy definition's (App) namespace.
-    'whaPbsg',    // See whaPbsg.groovy definition's (App) name.
-    'whaPbsg'  // Label used to create or get the child App.
+    'whaPbsg',     // See whaPbsg.groovy definition's (App) name.
+    'whaPbsg'      // Label used to create or get the child App.
   )
   // Ensure Pbsg state exists on creation.
   modePbsg._configModePbsg()
@@ -54,20 +54,42 @@ InstAppW getModePbsg () {
 }
 
 String getLogLevel() {
-  return settings.logThreshold
+  if (!state.logLevel) Lerror('getLogLevel()', "Missing 'state.logLevel'")
+  return state.logLevel
+}
+
+void _checkForUpdatedLogLevel () {
+  if (settings.logThreshold) {
+    Integer candidateLogLevel = _lookupLogLevel(settings.logThreshold)
+    if (candidateLogLevel && candidateLogLevel != state.logLevel) {
+      Ltrace(
+        '_checkForUpdatedLogLevel()',
+        "Updating logLevel: ${state.logLevel} -> ${candidateLogLevel}"
+      )
+      state.logLevel = candidateLogLevel
+      modePbsg._updateModePbsgLogLevel(state.logLevel)
+    }
+  }
 }
 
 void _removeLegacySettingsAndState () {
   settings.remove('log')
+  state.remove('defaultMode')
   state.remove('LOG_LEVEL1_ERROR')
   state.remove('LOG_LEVEL2_WARN')
   state.remove('LOG_LEVEL3_INFO')
   state.remove('LOG_LEVEL4_DEBUG')
   state.remove('LOG_LEVEL5_TRACE')
   state.remove('LOG_WARN')
+  state.remove('logLevel1Error')
+  state.remove('logLevel2Warn')
+  state.remove('logLevel3Info')
+  state.remove('logLevel4Debug')
+  state.remove('logLevel5Trace')
   state.remove('MODE_PBSG_APP_NAME')
   state.remove('MODES')
   state.remove('PBSGapp')
+  state.remove('roomName')
   state.remove('SPECIALTY_BUTTONS')
   state.remove('specialtyButtons')
   state.remove('specialtyFnButtons')
@@ -244,7 +266,12 @@ void _displayModePbsgDebugData () {
 
 Map _whaPage () {
     _removeLegacySettingsAndState()
-    InstAppW modePbsg = getModePbsg() ?: createModePbsg()
+    if (!state.logLevel) state.logLevel = _lookupLogLevel('DEBUG')
+    InstAppW modePbsg = getModePbsg()
+    if (!modePbsg) {
+      Ldebug('_whaPage()', "Creating Mode PBSG 'whaPbsg'")
+      createModePbsg()
+    }
     return dynamicPage(
     name: '_whaPage',
     title: [
@@ -257,7 +284,8 @@ Map _whaPage () {
   ) {
     app.updateLabel('Whole House Automation (WHA)')
     section {
-      _solicitLogThreshold()                                           // Utils.groovy
+      _solicitLogThreshold()
+      _checkForUpdatedLogLevel()
       _authorizeMainRepeater()
       _authorizeSeeTouchKeypads()
       _identifySpecialFunctionButtons()
@@ -271,22 +299,6 @@ Map _whaPage () {
     }
   }
 }
-
-// No signature of method: java.lang.String.call() is applicable for
-// argument types: (java.lang.String) values: [updateModePbsg]
-// ossible solutions: wait(), chars(), any(), wait(long),
-// split(java.lang.String), each(groovy.lang.Closure) on line 279 (method appButtonHandler)
-
-//-> void updateLutronKpadLeds (String currMode) {
-//->   settings.lutronModeButtons.each{ ledObj ->
-//->     String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
-//->     if (currMode == modeTarget) {
-//->       ledObj.on()
-//->     } else {
-//->       ledObj.off()
-//->     }
-//->   }
-//-> }
 
 void pruneOrphanedChildApps () {
   List<InstAppW> kids = app.getAllChildApps()
@@ -449,8 +461,8 @@ void _whaInitialize () {
 void _allAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Ldebug('_allAuto()', "Turning on <b>${manualOverrideSwitchDni}</b>")
-    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDni)
+    String manualOverrideVswDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
+    Ldebug('_allAuto()', "Turning on <b>${manualOverrideVswDni}</b>")
+    roomApp.getRoomScenePbsg().turnOnSwitch(manualOverrideVswDni)
   }
 }

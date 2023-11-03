@@ -41,8 +41,8 @@ preferences {
 InstAppW createRoomScenePbsg (String roomName = app.getLabel()) {
   if (_getRoomScenes()) {
     InstAppW roomScenePbsg = addChildApp(
-      'wesmc',             // See whaPbsg.groovy definition's (App) namespace.
-      'whaRoomPbsg',          // See whaPbsg.groovy definition's (App) name.
+      'wesmc',             // See whaModePbsg.groovy definition's (App) namespace.
+      'whaRoomPbsg',          // See whaModePbsg.groovy definition's (App) name.
       "pbsg_${roomName}"   // Label used to create or get the child App.
     )
     roomScenePbsg._configRoomScenePbsgInit()
@@ -56,8 +56,23 @@ InstAppW getRoomScenePbsg (String roomName = app.getLabel()) {
   return getChildAppByLabel("pbsg_${roomName}")
 }
 
-String getLogLevel () {
-  return settings.logThreshold
+String getLogLevel() {
+  if (!state.logLevel) Lerror('getLogLevel()', "Missing 'state.logLevel'")
+  return state.logLevel
+}
+
+void _checkForUpdatedLogLevel () {
+  if (settings.logThreshold) {
+    Integer candidateLogLevel = _lookupLogLevel(settings.logThreshold)
+    if (candidateLogLevel && candidateLogLevel != state.logLevel) {
+      Ltrace(
+        '_checkForUpdatedLogLevel()',
+        "Updating logLevel: ${state.logLevel} -> ${candidateLogLevel}"
+      )
+      state.logLevel = candidateLogLevel
+      roomScenePbsg._updateRoomScenePbsgLogLevel(state.logLevel)
+    }
+  }
 }
 
 String _getRoomScenes () {
@@ -75,11 +90,16 @@ void _removeLegacySettingsAndState () {
   state.remove('LOG_LEVEL3_INFO')
   state.remove('LOG_LEVEL4_DEBUG')
   state.remove('LOG_LEVEL5_TRACE')
+  state.remove('logLevel1Error')
+  state.remove('logLevel2Warn')
+  state.remove('logLevel3Info')
+  state.remove('logLevel4Debug')
+  state.remove('logLevel5Trace')
   state.remove('ManualOverrideDevice')
   state.remove('PBSGapp')
   state.remove('ROOM_NAME')
+  state.remove('roomName')
   state.remove('SCENE_PBSG_APP_NAME')
-  state.roomName = app.getLabel()
 }
 
 void _authorizeMotionSensor () {
@@ -583,9 +603,8 @@ Map _whaRoomPage () {
     install: true,
     uninstall: false
   ) {
-    // Forcibly remove unused settings and state, a missing Hubitat feature.
     _removeLegacySettingsAndState()
-    //-> InstAppW roomScenePbsg = getRoomScenePbsg() ?: createRoomScenePbsg()
+    if (!state.logLevel) state.logLevel = 1
     InstAppW roomScenePbsg = getRoomScenePbsg()
     section {
       _solicitLogThreshold()                            // <- provided by Utils
@@ -691,7 +710,7 @@ void keypadSceneButtonHandler (Event e) {
           'keypadSceneButtonHandler()',
           "toggling ${targetVsw}"
         )
-        getScenePbsg()._toggleVsw(targetVsw)
+        getRoomScenePbsg()._toggleVsw(targetVsw)
       }
       break
     case 'held':
@@ -992,9 +1011,9 @@ Boolean _detectManualOverride () {
   // Turning a PBSG switch on/off that's already on/off WILL NOT generate a
   // change event; so, don't worry about suppressing redundant switch state for now.
   if (!_isRoomSceneLedActive() || !_areRoomSceneDevLevelsCorrect()) {
-    getScenePbsg().turnOnSwitch("${state.roomScenePbsgAppId}_MANUAL_OVERRIDE")
+    getRoomScenePbsg().turnOnSwitch("${state.roomScenePbsgAppId}_MANUAL_OVERRIDE")
   } else {
-    getScenePbsg()._turnOffVswByName('MANUAL_OVERRIDE')
+    getRoomScenePbsg()._turnOffVswByName('MANUAL_OVERRIDE')
   }
 }
 

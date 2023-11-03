@@ -78,19 +78,23 @@ String comment(String s) {
 // L O G G I N G
 // -------------
 
-void _setLogLevels (String logThreshold) {
-  // IMPORTANT
-  //   - The switch statement "FALL THROUGHs" are intentional.
-  //   - A 'default' is avoided to reduce spurious noise.
+void _lookupLogLevel (String logThreshold) {
+  Integer
   switch(logThreshold) {
     case 'TRACE':
-      state.logLevel5Trace = true
+      state.logLevel = 5
+      break
     case 'DEBUG':
-      state.logLevel4Debug = true
+      state.logLevel = 4
+      break
     case 'INFO':
-      state.logLevel3Info = true
+      state.logLevel = 3
+      break
     case 'WARN':
-      state.logLevel2Warn = true
+      state.logLevel = 2
+      break
+    default:   // 'ERROR'
+      state.logLevel = 1
   }
 }
 
@@ -103,37 +107,35 @@ void _solicitLogThreshold () {
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     submitOnChange: true
   )
-  if (settings.logThreshold) _setLogLevels(settings.logThreshold)
 }
 
-
 void Lerror (String fnName, String s) {
+  // No conditional test to ensure all errors appear.
   log.error(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Lwarn (String fnName, String s) {
-  if (state.logLevel2Warn) log.warn(
+  if (state.logLevel > 1) log.warn(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Linfo (String fnName, String s) {
-  if (state.logLevel3Info) log.info(
+  if (state.logLevel > 2) log.info(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Ldebug (String fnName, String s) {
-  if (state.logLevel4Debug) log.debug(
+  if (state.logLevel > 3) log.debug(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Ltrace (String fnName, String s) {
-  if (state.logLevel5Trace) log.trace(
+  if (state.logLevel > 4) log.trace(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
-

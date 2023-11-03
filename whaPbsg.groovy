@@ -59,6 +59,15 @@ Map _modePbsgPage () {
 //---- EXPECTED APP METHODS
 //----
 
+void _removeLegacySettingsAndState () {
+  state.remove('logLevel1Error')
+  state.remove('logLevel2Warn')
+  state.remove('logLevel3Info')
+  state.remove('logLevel4Debug')
+  state.remove('logLevel5Trace')
+  state.remove('roomName')
+}
+
 void installed () {
   Ltrace('installed()', 'At entry')
   // Note: Parent is responsible for initial _configModePbsg() call.
@@ -136,22 +145,26 @@ void modeVswEventHandler (Event e) {
 //---- CUSTOM APP METHODS
 //----
 
+void _updateModePbsgLogLevel (Integer logLevel) {
+  state.logLevel = logLevel
+}
+
 void _configModePbsg () {
   // Used for initial configuration AND refresh of configuration.
   String pbsgName = app.getLabel()
   List<String> vswNames = getModeNames()
   String defaultVswName = getGlobalVar('DEFAULT_MODE').value
-  String logLevel = parent.getLogLevel() ?: 'TRACE'
-  Ldebug(
-    '_configModePbsg()',
-    [
-      '',
-      "<b>pbsgName</b>: ${pbsgName}",
-      "<b>vswNames</b>: ${vswNames}",
-      "<b>defaultVswName</b>: ${defaultVswName}",
-      "<b>logLevel</b>: ${logLevel}",
-    ].join('<br/>')
-  )
+  Integer logLevel = parent.getLogLevel() ?: _lookupLogLevel('TRACE')   // PBSG Log Level
+  //-> Ldebug(
+  //->   '_configModePbsg()',
+  //->   [
+  //->     '',
+  //->     "<b>pbsgName</b>: ${pbsgName}",
+  //->     "<b>vswNames</b>: ${vswNames}",
+  //->     "<b>defaultVswName</b>: ${defaultVswName}",
+  //->     "<b>logLevel</b>: ${logLevel}",
+  //->   ].join('<br/>')
+  //-> )
   _configPbsg (pbsgName, vswNames, defaultVswName, logLevel)
 }
 
@@ -176,6 +189,7 @@ void _modePbsgInit() {
   //   - whaPbsg updated() via _modePbsgPage() revision
   //   - whaPbsg updated() via _whaPage() custom button press
   Ltrace('_modePbsgInit()', 'At entry')
+  _removeLegacySettingsAndState()
   _subscribeToModeVswChanges()
   // Ensure that the initially "on" VSW is consistent with the Hubitat mode.
   String mode = getLocation().getMode()

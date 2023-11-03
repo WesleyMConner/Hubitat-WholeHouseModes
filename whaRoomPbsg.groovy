@@ -77,13 +77,17 @@ void uninstalled () {
 //---- CUSTOM APP METHODS
 //----
 
+void _updateRoomScenePbsgLogLevel (Integer logLevel) {
+  state.logLevel = logLevel
+}
+
 void _configRoomScenePbsgInit() {
   // Used for initial configuration AND refresh of configuration.
   _configPbsg (
     app.getLabel(),                                               // pbsgName
     [*parent._getRoomScenes(), 'AUTOMATIC', 'MANUAL_OVERRIDE'],   // vswNames
     'AUTOMATIC',                                                  // defaultVswName
-    parent.getLogLevel() ?: 'TRACE'                               // PBSG Log Level
+    parent.getLogLevel() ?: _setLogLevel('TRACE')                 // PBSG Log Level
   )
 }
 
@@ -144,6 +148,7 @@ void _roomScenePbsgInit () {
   //     Room Scene VSW is set so as to be consistent with the current
   //     Room Scene. If null, the Room Scene 'AUTOMATIC' is assumed.
   Ltrace('_roomScenePbsgInit()', 'At entry')
+  _removeLegacySettingsAndState()
   _subscribeToRoomSceneVswChanges()
   // The initially "on" PBSG VSW should be consistent with the current Room Scene.
   String roomScene = parent.getCurrentRoomScene() ?: 'AUTOMATIC'
