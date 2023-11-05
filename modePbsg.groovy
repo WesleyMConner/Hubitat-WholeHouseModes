@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// whaPbsg (an instsantiation of libPbsgBase)
+// modePbsg (an instsantiation of libPbsgBase)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -19,7 +19,7 @@ import com.hubitat.app.DeviceWrapper as DevW
 
 definition (
   parent: 'wesmc:wha',
-  name: 'whaPbsg',
+  name: 'modePbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A PBSG (extends libPbsgBase) designed for use in wha.groovy',
@@ -39,52 +39,21 @@ preferences {
   page (name: '_modePbsgPage')
 }
 
+//----
+//---- PAGE DISPLAY AND SUPPORT
+//----
+
 Map _modePbsgPage () {
-  // Norally, this page IS NOT presented.
-  //   - This page can be viewed via an instance link from the main
-  //     Hubitat Apps menu.
-  //   - Instance state & settings are rendered on the parent App's page
-  //     along with a button that can be used to force update() the App
-  //     instance.
+  // While IT IS POSSIBLE to view a Mode PBSG instance using this function,
+  // THIS PAGE IS NOT NORMALLY PRESENTED and NO SETTINGS ARE EXPECTED.
+  //   - Use the Hubitat Apps menu to view this page.
+  //   - The WHA page displays Mode PBSG state if the Mode PBSG exists.
   return dynamicPage (
     name: '_modePbsgPage',
     install: true,
     uninstall: true
   ) {
     _pbsgBasePage()
-  }
-}
-
-//----
-//---- EXPECTED APP METHODS
-//----
-
-void _removeLegacySettingsAndState () {
-  state.remove('logLevel1Error')
-  state.remove('logLevel2Warn')
-  state.remove('logLevel3Info')
-  state.remove('logLevel4Debug')
-  state.remove('logLevel5Trace')
-  state.remove('roomName')
-}
-
-void installed () {
-  Ltrace('installed()', 'At entry')
-  // Note: Parent is responsible for initial _configModePbsg() call.
-  _modePbsgInit()
-}
-
-void updated () {
-  Ltrace('updated()', 'At entry')
-  _configModePbsg()   // Refresh in case VSWs have been manually removed.
-  _modePbsgInit()
-}
-
-void uninstalled () {
-  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
-  getAllChildDevices().collect{ device ->
-    Ldebug('uninstalled()', "Deleting '${device.deviceNetworkId}'")
-    deleteChildDevice(device.deviceNetworkId)
   }
 }
 
@@ -96,7 +65,7 @@ void modeVswEventHandler (Event e) {
   // Process events for Mode PGSG child VSWs.
   //   - The received e.displayName is the DNI of the reporting child VSW.
   //   - When a Mode VSW turns on, change the Hubitat mode accordingly.
-  //   - The whaRoom clients DO NOT get a callback for this event and
+  //   - The Room Scene clients DO NOT get a callback for this event and
   //     should instead app.subscribe to Hubitat Mode change events.
   //--DEEP-DEBUGGING-> Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
@@ -109,9 +78,9 @@ void modeVswEventHandler (Event e) {
       }
       Linfo(
         'roomSceneVswEventHandler()',
-        'T B D - OPERARIONS ON state DO NOT MAKE SENSE IN THE EVENT HANDLER.'
+        'T B D - OPERATIONS ON state DO NOT MAKE SENSE IN THE EVENT HANDLER.'
       )
-      state.previousVswDni = state.activeVswDni ?: state.defaultVswDni
+      state.previousVswDni = state.activeVswDni ?: getDefaultVswDni()
       state.activeVswDni = e.displayName
       Ldebug(
         'modeVswEventHandler()',
@@ -142,60 +111,106 @@ void modeVswEventHandler (Event e) {
 }
 
 //----
+//---- EXPECTED APP METHODS
+//----
+
+void installed () {
+  Ltrace('installed()', 'Calling _configureModePbsg()')
+  _configureModePbsg()
+}
+
+void updated () {
+  Ltrace('updated()', 'Calling _configureModePbsg()')
+  _configureModePbsg()
+}
+
+void uninstalled () {
+  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
+  getAllChildDevices().collect{ device ->
+    Ldebug('uninstalled()', "Deleting '${device.deviceNetworkId}'")
+    deleteChildDevice(device.deviceNetworkId)
+  }
+}
+
+//----
 //---- CUSTOM APP METHODS
 //----
 
-void _updateModePbsgLogLevel (Integer logLevel) {
-  state.logLevel = logLevel
-}
-
-void _configModePbsg () {
-  // Used for initial configuration AND refresh of configuration.
-  String pbsgName = app.getLabel()
-  List<String> vswNames = getModeNames()
-  String defaultVswName = getGlobalVar('DEFAULT_MODE').value
-  Integer logLevel = parent.getLogLevel() ?: _lookupLogLevel('TRACE')   // PBSG Log Level
-  //-> Ldebug(
-  //->   '_configModePbsg()',
-  //->   [
-  //->     '',
-  //->     "<b>pbsgName</b>: ${pbsgName}",
-  //->     "<b>vswNames</b>: ${vswNames}",
-  //->     "<b>defaultVswName</b>: ${defaultVswName}",
-  //->     "<b>logLevel</b>: ${logLevel}",
-  //->   ].join('<br/>')
-  //-> )
-  _configPbsg (pbsgName, vswNames, defaultVswName, logLevel)
-}
-
-void _subscribeToModeVswChanges() {
+void _configureModePbsg() {
+  Linfo(
+    '_configureModePbsg()',
+    "Updating ${app.getLabel()} state, devices and subscriptions"
+  )
+  Ltrace('_configureModePbsg()', 'stopping event subscriptions')
   app.unsubscribe()
+  Ltrace('_configureModePbsg()', 'updating state values')
+  _updateModePbsgState()
+  Ltrace('_configureModePbsg()', 'managing child devices')
+  _manageChildDevices('_configureModePbsg()')
+  Ltrace(
+    '_configureModePbsg()',
+    "ensuring active VSW matches current mode (${mode})"
+  )
+  _activateVswForCurrentMode()
+  Ltrace('_configureModePbsg()', 'subscribing to VSW changes')
+  _subscribeToModeVswChanges()
+}
+
+void _removeLegacyModePbsgState () {
+  state.remove('activeVswDni')
+  state.remove('defaultVswDni')
+  state.remove('defaultVswName')
+  state.remove('inspectScene')
+  state.remove('LOG_LEVEL1_ERROR')
+  state.remove('LOG_LEVEL2_WARN')
+  state.remove('LOG_LEVEL3_INFO')
+  state.remove('LOG_LEVEL4_DEBUG')
+  state.remove('LOG_LEVEL5_TRACE')
+  state.remove('logLevel1Error')
+  state.remove('logLevel2Warn')
+  state.remove('logLevel3Info')
+  state.remove('logLevel4Debug')
+  state.remove('logLevel5Trace')
+  state.remove('previousVswDni')
+  state.remove('roomName')
+  state.remove('roomScene')
+  state.remove('switchDnis')
+}
+
+void _updateModePbsgState () {
+  // Used for initial configuration AND configuration refresh.
+  _removeLegacyModePbsgState()
+  state.vswDniPrefix = "${app.getLabel()}_"
+  state.vswNames = getModeNames()
+  state.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
+  state.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
+  //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
+  Ltrace(
+    '_updateModePbsgState()',
+    [
+      '',
+      _getPbsgStateBullets()
+    ].join('<br/>')
+  )
+}
+
+void _activateVswForCurrentMode () {
+  String mode = getLocation().getMode()
+  Ltrace('_modePbsgInit()', "Activating VSW for current mode: ${mode}")
+  _turnOnVswExclusivelyByName(mode)
+}
+
+void _subscribeToModeVswChanges () {
   List<DevW> vsws = _getVsws()
   if (!vsws) {
     Lerror('_subscribeToModeVswChanges()', 'The child VSW instances are MISSING.')
   }
   vsws.each{ vsw ->
-    Ltrace(
-      '_subscribeToModeVswChanges()',
-      "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
-    )
+    //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
+    //-> Ltrace(
+    //->   '_subscribeToModeVswChanges()',
+    //->   "Subscribe <b>${vsw.deviceNetworkId} (${vsw.id})</b> to modeVswEventHandler()"
+    //-> )
     app.subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
   }
-}
-
-void _modePbsgInit() {
-  // Three mechanisms invoke this method:
-  //   - whaPbsg installed() via _modePbsgPage() initialization
-  //   - whaPbsg updated() via _modePbsgPage() revision
-  //   - whaPbsg updated() via _whaPage() custom button press
-  Ltrace('_modePbsgInit()', 'At entry')
-  _removeLegacySettingsAndState()
-  _subscribeToModeVswChanges()
-  // Ensure that the initially "on" VSW is consistent with the Hubitat mode.
-  String mode = getLocation().getMode()
-  Ldebug(
-    '_modePbsgInit()',
-    "Activating VSW for mode: <b>${mode}</b>"
-  )
-  _turnOnVswExclusivelyByName(mode)
 }

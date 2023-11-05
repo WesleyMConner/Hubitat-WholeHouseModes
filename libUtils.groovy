@@ -133,40 +133,65 @@ String getDeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-/*
-void detectChildAppDupsForLabel (List<String> keepLabels) {
+void detectChildAppDupsForLabels (List<String> keepLabels) {
+  List<String> result = []
+  result += '<table>'
+  result += '<tr><th>LABEL</th><th>ID</th><th>DEVICES</th></tr>'
+  app.getAllChildApps().each{ a ->
+    result += "<tr><td>${a.getLabel()}</td><td>${a.getId()}</td><td>${a.getChildDevices().size()}</td></tr>"
+  }
+  result += '</table>'
+  Linfo(
+    'detectChildAppDupsForLabels()',
+    result.join()
+  )
+}
+
+void detectChildAppDupsForLabelsX (List<String> keepLabels) {
   // Abstract
-  //   - No new application should have the same label as an existing application.
-  //   - Tactically generate an error for any new, duplicated applications.
+  //   - Ideally, child Apps would have unique labels.
+  //   - Hubitat can create a new App Id with an existing App label.
+  //--xx-> Ldebug(
+  //--xx->   'detectChildAppDupsForLabels()',
+  //--xx->   "<b>keepLabels:</b> ${keepLabels}"
+  //--xx-> )
   app.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, appObjs ->
-    if (keepLabels?.findAll{ it -> it == label }) {
+    List<Long> appIds = appObjs.collect{ it.getId() }
+    Ldebug(
+      'detectChildAppDupsForLabels()',
+      appObjs.sort{ it.getId() }.collect{ getAppInfo(it) }.join()
+    )
+    if (keepLabels.contains(label)) {
       appObjs = appObjs.sort{}.reverse()
       appObjs.eachWithIndex{ appObj, index ->
         if (index == 0) {
-          //-> Ldebug(
-          //->   'detectChildAppDupsForLabel()',
-          //->   "retaining <b>${getAppInfo(appObj)}</b>"
-          //-> )
+          Ltrace(
+            'detectChildAppDupsForLabels()',
+            "retaining <b>${getAppInfo(appObj)}</b>"
+          )
         } else {
-          Lerror(
-            'detectChildAppDupsForLabel()',
-            "<b>${getAppInfo(appObj)}</b> duplicates ${getAppInfo(appObjs.first())}"
+          Ldebug(
+            'detectChildAppDupsForLabels()',
+            "deleting <b>${getAppInfo(appObj)}</b>, which duplicates ${getAppInfo(appObjs.first())}"
           )
           //-> deleteChildApp(appObj.getId())
         }
       }
     } else {
       appObjs.each{ appObj ->
-        Ldebug(
-          'detectChildAppDupsForLabel()',
+        Lwarn(
+          'detectChildAppDupsForLabels()',
           "dropping orphaned <b>${getAppInfo(appObj)}</b>"
         )
-        deleteChildApp(appObj.getId())
+        //-> deleteChildApp(appObj.getId())
       }
     }
+    //Linfo(
+    //  'detectChildAppDupsForLabels()',
+    //  "For <b>label:</b> '${label}', <b>isKeeper:</b> ${keepLabels.contains(label)}, <b>appIds:</b> ${appIds}"
+    //)
   }
 }
-*/
 
 String eventDetails (Event e, Boolean DEEP = false) {
   String rows = """
@@ -215,7 +240,7 @@ void removeAllChildApps () {
   app.getAllChildApps().each{ child ->
     Ldebug(
       'removeAllChildApps()',
-      "child: >${child.getId()}< >${child.getLabel()}<"
+      "deleting child: <b>${getAppInfo(appObj)}</b>"
     )
     deleteChildApp(child.getId())
   }

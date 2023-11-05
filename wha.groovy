@@ -37,37 +37,40 @@ preferences {
   page(name: '_whaPage')
 }
 
-InstAppW createModePbsg () {
-  InstAppW modePbsg = addChildApp(
-    'wesmc',       // See whaPbsg.groovy definition's (App) namespace.
-    'whaPbsg',     // See whaPbsg.groovy definition's (App) name.
-    'whaPbsg'      // Label used to create or get the child App.
-  )
-  // Ensure Pbsg state exists on creation.
-  modePbsg._configModePbsg()
-  modePbsg._installed()
-  return modePbsg
-}
+//----
+//---- PAGE DISPLAY AND SUPPORT
+//----
 
-InstAppW getModePbsg () {
-  return getChildAppByLabel('whaPbsg')
-}
-
-String getLogLevel() {
-  if (!state.logLevel) Lerror('getLogLevel()', "Missing 'state.logLevel'")
-  return state.logLevel
-}
-
-void _checkForUpdatedLogLevel () {
-  if (settings.logThreshold) {
-    Integer candidateLogLevel = _lookupLogLevel(settings.logThreshold)
-    if (candidateLogLevel && candidateLogLevel != state.logLevel) {
-      Ltrace(
-        '_checkForUpdatedLogLevel()',
-        "Updating logLevel: ${state.logLevel} -> ${candidateLogLevel}"
-      )
-      state.logLevel = candidateLogLevel
-      modePbsg._updateModePbsgLogLevel(state.logLevel)
+Map _whaPage () {
+  // The whaPage() SHOULD NOT create or interact with the Mode PBSG instance.
+  // The whaPage() DOES PRESENT Mode PBSG state if the Mode PBSG exists.
+    _removeLegacySettingsAndState()
+    // This App instance is NEVER retrieved by its label, so an update is okay.
+    app.updateLabel('Whole House Automation (WHA)')
+    if (!state.logLevel) state.logLevel = _lookupLogLevel('DEBUG')
+    return dynamicPage(
+    name: '_whaPage',
+    title: [
+      heading1(getAppInfo(app)),
+      bullet1('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
+      bullet1('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
+    ].join('<br/>'),
+    install: true,
+    uninstall: false,
+  ) {
+    section {
+      _solicitLogThreshold()
+      //-> _checkForUpdatedLogLevel()
+      _authorizeMainRepeater()
+      _authorizeSeeTouchKeypads()
+      _identifySpecialFunctionButtons()
+      _wireButtonsToSpecialFunctions()
+      _identifyModeButtons()
+      _wireButtonsToModes()
+      _solicitParticipatingRooms()
+      _displayInstantiatedRoomHrefs()
+      _displayWhaDebugData()
+      _displayModePbsgDebugData()
     }
   }
 }
@@ -218,16 +221,13 @@ void _displayInstantiatedRoomHrefs () {
     settings.rooms.each{ roomName ->
       InstAppW roomApp = app.getChildAppByLabel(roomName)
       if (!roomApp) {
-        Ldebug(
-          'addRoomAppsIfMissing()',
-          "Adding room ${roomName}"
-        )
-        roomApp = addChildApp('wesmc', 'whaRoom', roomName)
+        Linfo('addRoomAppsIfMissing()', "Adding room <b>${roomName}</b>")
+        roomApp = addChildApp('wesmc', 'roomScene', roomName)
       }
       href (
         name: roomName,
         width: 2,
-        url: "/installedapp/configure/${roomApp?.getId()}/_whaRoomPage",
+        url: "/installedapp/configure/${roomApp?.getId()}/_roomScenePage",
         style: 'internal',
         title: "<b>${getAppInfo(roomApp)}</b> Scenes",
         state: null, //'complete'
@@ -249,113 +249,53 @@ void _displayWhaDebugData() {
 }
 
 void _displayModePbsgDebugData () {
+  // Use the Mode PBSG if it exists, but DO NOT create it if missing.
+  InstAppW modePbsg = getModePbsg()
   if (modePbsg) {
     paragraph (
       [
         "<h2><b>${getAppInfo(modePbsg)} Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
-        modePbsg._getPbsgStateBullets() ?: '<b>DATA NOT YET AVAILABLE</b>',
-        '<h3><b>SETTINGS</b></h3>',
-        modePbsg._getSettingsBulletsAsIs()
+        modePbsg._getPbsgStateBullets(),
       ].join()
     )
   } else {
-
+    paragraph '<h2><b>No Mode PBSG (yet)</b></h2>'
   }
-}
-
-Map _whaPage () {
-    _removeLegacySettingsAndState()
-    if (!state.logLevel) state.logLevel = _lookupLogLevel('DEBUG')
-    InstAppW modePbsg = getModePbsg()
-    if (!modePbsg) {
-      Ldebug('_whaPage()', "Creating Mode PBSG 'whaPbsg'")
-      createModePbsg()
-    }
-    return dynamicPage(
-    name: '_whaPage',
-    title: [
-      heading1("Whole House Automation - ${getAppInfo(app)}"),
-      bullet1('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
-      bullet1('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
-    ].join('<br/>'),
-    install: true,
-    uninstall: false,
-  ) {
-    app.updateLabel('Whole House Automation (WHA)')
-    section {
-      _solicitLogThreshold()
-      _checkForUpdatedLogLevel()
-      _authorizeMainRepeater()
-      _authorizeSeeTouchKeypads()
-      _identifySpecialFunctionButtons()
-      _wireButtonsToSpecialFunctions()
-      _identifyModeButtons()
-      _wireButtonsToModes()
-      _solicitParticipatingRooms()
-      _displayInstantiatedRoomHrefs()
-      _displayWhaDebugData()
-      _displayModePbsgDebugData()
-    }
-  }
-}
-
-void pruneOrphanedChildApps () {
-  List<InstAppW> kids = app.getAllChildApps()
-  Ldebug(
-    'pruneOrphanedChildApps()',
-    "processing ${kids.collect{ it.getLabel() }.join(', ')}"
-  )
-  kids.each{ kid ->
-    if (settings.rooms?.contains(kid)) {
-      Ldebug(
-        'pruneOrphanedChildApps()',
-        "skipping ${kid.getLabel()} (room)"
-      )
-    } else {
-      Ldebug(
-        'pruneOrphanedChildApps()',
-        "deleting ${kid.getLabel()} (orphan)"
-      )
-      Linfo('pruneOrphanedChildApps()', "app.deleteChildApp(${kid.getId()}) on hold")
-      //-> app.deleteChildApp(kid.getId())
-    }
-  }
-}
-
-//-> void displayAppInfoLink () {
-//->   paragraph comment(
-//->     [
-//->       'Whole House Automation - @wesmc, ',
-//->       '<a href="https://github.com/WesleyMConner/Hubitat-wha" ',
-//->       'target="_blank"><br/>Click for more information</a>'
-//->     ].join()
-//->   )
-//-> }
-
-//----
-//---- EXPECTED APP METHODS
-//----
-
-void installed () {
-  Ldebug('installed()', 'At entry')
-  _whaInitialize()
-}
-
-void updated () {
-  Ltrace('updated()', 'At entry')
-  app.unsubscribe()  // Suspend event processing to rebuild state variables.
-  _whaInitialize()
-}
-
-void uninstalled () {
-  Ltrace('uninstalled()', 'At entry')
-  removeAllChildApps()
 }
 
 //----
 //---- STANDALONE METHODS (no inherent "this")
 //----
+
+InstAppW getModePbsg () {
+  String pbsgLabel = 'MODE_PBSG'
+  //--xx-> App dup detection is deferred to _displayInstantiatedRoomHrefs().
+  // Prune any per-label dups that may have slipped in.
+  Linfo('getModePbsg()', 'Calling App Dup Detection')
+  detectChildAppDupsForLabels([*settings.rooms, 'MODE_PBSG'])
+  InstAppW modePbsg = getChildAppByLabel(pbsgLabel)
+  if (modePbsg) {
+    // PERFORMANCE HIT - Temporarily refresh PBSG configuration.
+    modePbsg._configureModePbsg()
+  }
+  return modePbsg
+}
+
+InstAppW getOrCreateModePbsg () {
+  InstAppW modePbsg = getModePbsg()
+  if (!modePbsg) {
+    //--xx-> App dup detection is deferred to _displayInstantiatedRoomHrefs().
+    // Prune any per-label dups that may have slipped in.
+    modePbsg = addChildApp(
+      'wesmc',      // See modePbsg.groovy definition's (App) namespace.
+      'modePbsg',   // See modePbsg.groovy definition's (App) name.
+      'MODE_PBSG'   // Label used to create or get the child App.
+    )
+    modePbsg._configureModePbsg()
+  }
+  return modePbsg
+}
 
 void specialFnButtonHandler (Event e) {
   switch (e.name) {
@@ -405,16 +345,27 @@ void modeChangeButtonHandler (Event e) {
   //   - Keypad buttons are matched to state data to activate a target VSW.
   switch (e.name) {
     case 'pushed':
-      String targetVsw = state.modeButtonMap?.getAt(e.deviceId.toString())
-                                            ?.getAt(e.value)
-      if (targetVsw) {
+      String targetVswName = state.modeButtonMap?.getAt(e.deviceId.toString())
+                                                ?.getAt(e.value)
+      //-> Ltrace(
+      //->   'modeChangeButtonHandler()',
+      //->   [
+      //->     "<b>state.modeButtonMap:</b> ${state.modeButtonMap}",
+      //->     "<b>e.deviceId:</b> ${e.deviceId}",
+      //->     "<b>state.modeButtonMap?.getAt(e.deviceId.toString()):</b> ${state.modeButtonMap?.getAt(e.deviceId.toString())}",
+      //->     "<b>e.value:</b> ${e.value}"
+      //->     "<b>targetVswName:</b> ${targetVswName}",
+      //->   ].join('<br/>')
+      //-> )
+      if (targetVswName) {
         Ldebug(
           'modeChangeButtonHandler()',
-          "turning on ${targetVsw}"
+          "turning ${targetVswName} on (exclusively)"
         )
-        app.getChildAppByLabel(state.MODE_PBSG_APP_NAME).turnOnSwitch(targetVsw)
+        InstAppW modePbsg = getModePbsg()
+        modePbsg.turnOnVswExclusivelyByName(targetVswName)
       }
-      if (targetVsw == 'Day') {
+      if (targetVswName == 'Day') {
         Ldebug(
           'modeChangeButtonHandler()',
           "executing ALL_AUTO"
@@ -434,28 +385,81 @@ void modeChangeButtonHandler (Event e) {
 }
 
 //----
+//---- EXPECTED APP METHODS
+//----
+
+void installed () {
+  Ldebug('installed()', 'Calling _whaInitialize()')
+  _whaInitialize()
+}
+
+void updated () {
+  Ldebug('updated()', 'Calling _whaInitialize()')
+  _whaInitialize()
+}
+
+void uninstalled () {
+  Ltrace('uninstalled()', 'Calling removeAllChildApps()')
+  removeAllChildApps()
+}
+
+//----
 //---- CUSTOM METHODS
 //----
 
+/*
+void _pruneOrphanedChildApps () {
+  List<InstAppW> kids = app.getAllChildApps()
+  Ldebug(
+    'pruneOrphanedChildApps()',
+    "processing ${kids.collect{ it.getLabel() }.join(', ')}"
+  )
+  kids.each{ kid ->
+    if (settings.rooms?.contains(kid)) {
+      Ldebug(
+        'pruneOrphanedChildApps()',
+        "skipping ${kid.getLabel()} (room)"
+      )
+    } else {
+      Ldebug(
+        'pruneOrphanedChildApps()',
+        "deleting ${kid.getLabel()} (orphan)"
+      )
+      Linfo('pruneOrphanedChildApps()', "app.deleteChildApp(${kid.getId()}) on hold")
+      //-> app.deleteChildApp(kid.getId())
+    }
+  }
+}
+*/
+
+String _getLogLevel() {
+  if (!state.logLevel) Lerror('_getLogLevel()', "Missing 'state.logLevel'")
+  return state.logLevel
+}
+
 void _whaInitialize () {
-  // - The same keypad may be associated with two different, specialized handlers
-  //   (e.g., mode changing buttons vs special functionalily buttons).
-  Ltrace('_whaInitialize()', 'At entry')
+  Linfo(
+    '_whaInitialize()',
+    "Updating ${app.getLabel()} state, devices and subscriptions"
+  )
+  // Limit creation or update of the Mode PBSG instance to this (parent) method.
+  Ltrace('_whaInitialize()', 'stopping event subscriptions')
+  app.unsubscribe()  // Suspend event processing to rebuild state variables.
+  Ltrace(
+    '_whaInitialize()',
+    [
+      '',
+      bullet2('subscribing seeTouchKeypads to modeChangeButtonHandler()'),
+      bullet2('subscribing seeTouchKeypads to specialFnButtonHandler()')
+    ].join('<br/>&nbsp;&nbsp;')
+  )
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    Ltrace(
-      '_whaInitialize()',
-      "subscribing seeTouchKeypad '${getDeviceInfo(device)}' to modeChangeButtonHandler()."
-    )
     app.subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
-    Ltrace(
-      '_whaInitialize()',
-      "subscribing seeTouchKeypad '${getDeviceInfo(device)}' to specialFnButtonHandler()"
-    )
     app.subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
-  Ltrace('_whaInitialize()', 'Invoking modePbsg._modePbsgInit()')
-  modePbsg._configModePbsg ()
+  Ltrace('_whaInitialize()', 'Calling getOrCreateModePbsg()')
+  InstAppW modePbsg = getOrCreateModePbsg()
 }
 
 void _allAuto () {

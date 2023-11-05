@@ -34,32 +34,6 @@ String _vswDnitoName (String modeVswDni) {
   modeVswDni.minus("${state.vswDniPrefix}")
 }
 
-void _configPbsg (
-    String pbsgName,
-    List<String> vswNames,
-    String defaultVswName,
-    Integer logLevel = _lookupLogLevel('DEBUG')
-  ) {
-  // Set core instance fields immediately after PBSG instantiation.
-  //   - The pbsgPrefix is used when naming/labeling applications and devices.
-  Ltrace(
-    '_configPbsg()',
-    [
-      '',
-      "<b>pbsgName:</b> ${pbsgName}",
-      "<b>vswNames:</b> ${vswNames}",
-      "<b>defaultVswName:</b> ${defaultVswName}",
-      "<b>logLevel:</b> ${logLevel}"
-    ].join('<br/>&nbsp;&nbsp;')
-  )
-  state.vswDniPrefix = "${pbsgName}_"
-  state.vswNames = vswNames
-  state.defaultVswName = defaultVswName
-  state.defaultVswDni = _vswNameToDni(defaultVswName)
-  state.logLevel = logLevel
-  _manageChildDevices()
-}
-
 void _turnOffVswByName (String vswName) {
   DevW vsw = app.getChildDevice(_vswNameToDni(vswName))
   if (!vsw) Lerror('turnOffVswByName()', "vsw named '${vswName}' is missing")
@@ -69,8 +43,21 @@ void _turnOffVswByName (String vswName) {
 }
 
 void _turnOnVswExclusivelyByName (String vswName) {
+  // The child devices of a PBSG should be limited to its managed VSWs.
+  Linfo('_turnOnVswExclusivelyByName()', "Turning on <b>${vswName}</b> exclusively")
   // Turn off peers BEFORE turning on vswDni!
-  _turnOffVswPeers(vswName)
+  List<String> peers = state.vswNames?.findAll{ name -> name != vswName }
+  Ltrace('_turnOnVswExclusivelyByName()', "turning off '${peers}'")
+  peers.each{ peerName ->
+    DevW peerVsw = app.getChildDevice(_vswNameToDni(peerName))
+    if (!peerVsw) {
+      Lerror(
+        '_turnOnVswExclusivelyByName()',
+        "peerVsw named '${peerName}' is missing"
+      )
+    }
+    peerVsw.off()
+  }
   DevW vsw = app.getChildDevice(_vswNameToDni(vswName))
   if (!vsw) {
     Lerror(
@@ -110,21 +97,13 @@ void _pbsgBasePage () {
   //   - Include this page content when instantiating PBSG instances.
   //   - Then, call _configPbsg(), see below, to complete device configuration.
   // Forcibly remove unused settings and state, a missing Hubitat feature.
-  _removeLegacyPbsgSettingsAndState()
+  //-> _removeLegacyPbsgSettingsAndState()
   section {
-    paragraph(
-      [
-        heading2("${app.getLabel()} a PBSG (Pushbutton Switch Group)"),
-        emphasis('Use the browser back button to return to the parent page.')
-      ].join('<br/>')
-    )
+    paragraph heading1(getAppInfo(app))
     paragraph (
       [
-        "<h2><b>Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
         _getPbsgStateBullets() ?: bullet('<i>NO DATA AVAILABLE</i>'),
-        //-> '<h3><b>SETTINGS</b></h3>',
-        //-> _getSettingsBulletsAsIs() ?: bullet('<i>NO DATA AVAILABLE</i>')
       ].join()
     )
   }
@@ -162,21 +141,6 @@ String _vswNameToDni (String name) {
   return "${state.vswDniPrefix}${name}"
 }
 
-void _removeLegacyPbsgSettingsAndState () {
-  settings.remove('log')
-  state.remove('activeVswDni')
-  state.remove('defaultVswDni')
-  state.remove('inspectScene')
-  state.remove('LOG_LEVEL1_ERROR')
-  state.remove('LOG_LEVEL2_WARN')
-  state.remove('LOG_LEVEL3_INFO')
-  state.remove('LOG_LEVEL4_DEBUG')
-  state.remove('LOG_LEVEL5_TRACE')
-  state.remove('previousVswDni')
-  state.remove('roomScene')
-  state.remove('switchDnis')
-}
-
 //-> List<String> _expectedVswDnis () {
 //->   List<String> vswDnis = state.vswNames.collect{ _vswNameToDni(it) }
 //->   Ltrace(
@@ -190,52 +154,73 @@ void _removeLegacyPbsgSettingsAndState () {
 //->   return vswDnis
 //-> }
 
-void _manageChildDevices () {
-  Ltrace('_manageChildDevices()', 'At entry')
+void _manageChildDevices (String caller = "UNKNOWN_CALLER") {
   // Uncomment the following to test orphan child app removal.
   //==T E S T I N G   O N L Y==> _addOrphanChild()
   // The ONLY child devices for a PBSG are its managed VSWs.
   List<String> expectedDnis = state.vswNames.collect{ _vswNameToDni(it) }
-  List<String> entryDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
-  // Since removeAll() modifies the collection, copy data before application.
-  List<String> missingDnis = expectedDnis
-  missingDnis.removeAll(entryDnis)
-  List<String> orphanDnis = entryDnis
-  orphanDnis.removeAll(expectedDnis)
-  //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
-  Ltrace(
-    '_manageChildDevices()',
-    [
-      '<table>',
-      "<tr><th>expectedDnis</th><td>${expectedDnis}</td></tr>",
-      "<tr><th>entryDnis</th><td>${entryDnis}</td></tr>",
-      "<tr><th>missingDnis</th><td>${missingDnis}</td></tr>",
-      "<tr><th>orphanDnis:</th><td>${orphanDnis}</td></tr>",
-      '</table>'
-    ].join()
-  )
-  missingDnis.each{ dni ->
-    Ldebug('_manageChildDevices()', "adding '<b>${dni}'</b>")
-    addChildDevice(
-      'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
-    )}
-  orphanDnis.each{ dni ->
-    Ldebug('_manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
-    deleteChildDevice(dni)
+  //-> Ltrace(
+  //->   '_manageChildDevices() [002a]',
+  //->   [
+  //->     "Called by '${caller}'",
+  //->     _getPbsgStateBullets(),
+  //->     "<b>expectedDnis:</b> ${expectedDnis} (${expectedDnis.size()})"
+  //->   ].join('<br/>')
+  //-> )
+  if (expectedDnis.size() > 0) {
+    List<String> entryDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
+    // Clone lists with .collect() to avoid shallow copies OR removeAll()
+    // will impact the shallow copy AND the original.
+    List<String> missingDnis = expectedDnis.collect()
+    missingDnis.removeAll(entryDnis)
+    List<String> orphanDnis = entryDnis.collect()
+    orphanDnis.removeAll(expectedDnis)
+    //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
+    Ltrace(
+      '_manageChildDevices() [002b]',
+      [
+        '<table>',
+        "<tr><th>expectedDnis</th><td>${expectedDnis} (${expectedDnis.size()})</td></tr>",
+        "<tr><th>entryDnis</th><td>${entryDnis} (${entryDnis.size()})</td></tr>",
+        "<tr><th>missingDnis</th><td>${missingDnis} (${missingDnis.size()})</td></tr>",
+        "<tr><th>orphanDnis:</th><td>${orphanDnis} (${orphanDnis.size()})</td></tr>",
+        '</table>'
+      ].join()
+    )
+    missingDnis.each{ dni ->
+      Lwarn('_manageChildDevices()', "adding '<b>${dni}'</b>")
+      addChildDevice(
+        'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
+      )}
+    orphanDnis.each{ dni ->
+      Lwarn('_manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
+      deleteChildDevice(dni)
+    }
+  } else {
+    Lerror(
+      '_manageChildDevices()',
+      [
+        "Called by '${caller}'",
+        "Missing <b>${expectedDnis}</b>, taking <b>NO ACTION</b>"
+      ].join('<br/>&nbsp;&nbsp;')
+    )
   }
 }
 
+/*
 void _turnOffVswPeers (String vswName) {
   // The child devices of a PBSG should be limited to its managed VSWs.
-  state.vswNames?.findAll{ name -> name != vswName }.each{ peerName ->
+  List<String> peers = state.vswNames?.findAll{ name -> name != vswName }
+  Ltrace('_turnOffVswPeers()', "turning off '${peers}'")
+  peers.each{ peerName ->
     DevW peerVsw = app.getChildDevice(_vswNameToDni(peerName))
     if (!peerVsw) {
       Lerror('_turnOffVswPeers()', "peerVsw named '${peerName}' is missing")
     }
-    Ltrace('_turnOffVswPeers()', "turning off '${peerName}'")
     peerVsw.off()
   }
 }
+*/
 
 DevW getVswByDni (String vswDni) {
   return app.getChildDevice(vswDni)
@@ -279,14 +264,19 @@ void _enforceMutualExclusion () {
   }
 }
 
+String getDefaultVswDni () {
+  return _vswNameToDni(state.vswDefaultName)
+}
+
 void _enforceDefaultSwitch () {
   List<DevW> onVsws = _getVsws('onOnly')
-  if (state.defaultVswDni && !onVsws) {
+  String defaultVswDni = getDefaultVswDni()
+  if (defaultVswDni && !onVsws) {
     Ldebug(
       '_enforceDefaultSwitch()',
-      "turning on <b>${state.defaultVswDni}</b>"
+      "turning on <b>${defaultVswDni}</b>"
     )
-    DevW vsw = app.getChildDevice(_vswNameToDni(vswName))
+    DevW vsw = app.getChildDevice(defaultVswDni)
     vsw.on()
     state.prevOnVswName = state.currOnVswName
     state.currOnVswName = vswName

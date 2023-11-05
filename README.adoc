@@ -4,12 +4,12 @@
 
 == KEY DECISIONS
 
-* The WHA-owned PBSG instance (whaPbsg) manages the VSWs which are
+* The WHA-owned PBSG instance (modePbsg) manages the VSWs which are
 authoritative Hubitat mode. +
 Changes to mode must be via these VSWs exclusively.
 * WHA-is exclusively responsible for setting mode as the mode VSWs change.
-* Only WHA-should depend on the whaPbsg VSWs. +
-Everything else should respond to mode changes (not the whaPbsg VSWs).
+* Only WHA-should depend on the modePbsg VSWs. +
+Everything else should respond to mode changes (not the modePbsg VSWs).
 
 == Sample Received Button Press Events
 
