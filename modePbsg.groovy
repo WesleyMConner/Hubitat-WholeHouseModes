@@ -70,21 +70,21 @@ void modeVswEventHandler (Event e) {
   //--DEEP-DEBUGGING-> Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
-      if (state.previousVswDni == e.displayName) {
+      if (atomicState.previousVswDni == e.displayName) {
         Lerror(
           'modeVswEventHandler()',
-          "The active Mode VSW '${state.activeVswDni}' did not change."
+          "The active Mode VSW '${atomicState.activeVswDni}' did not change."
         )
       }
       Linfo(
         'roomSceneVswEventHandler()',
         'T B D - OPERATIONS ON state DO NOT MAKE SENSE IN THE EVENT HANDLER.'
       )
-      state.previousVswDni = state.activeVswDni ?: getDefaultVswDni()
-      state.activeVswDni = e.displayName
+      atomicState.previousVswDni = atomicState.activeVswDni ?: getDefaultVswDni()
+      atomicState.activeVswDni = e.displayName
       Ldebug(
         'modeVswEventHandler()',
-        "${state.previousVswDni} -> ${state.activeVswDni}"
+        "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
       // The vswName is the target mode.
       String vswName = _vswDnitoName(e.displayName)
@@ -157,33 +157,33 @@ void _configureModePbsg() {
 }
 
 void _removeLegacyModePbsgState () {
-  state.remove('activeVswDni')
-  state.remove('defaultVswDni')
-  state.remove('defaultVswName')
-  state.remove('inspectScene')
-  state.remove('LOG_LEVEL1_ERROR')
-  state.remove('LOG_LEVEL2_WARN')
-  state.remove('LOG_LEVEL3_INFO')
-  state.remove('LOG_LEVEL4_DEBUG')
-  state.remove('LOG_LEVEL5_TRACE')
-  state.remove('logLevel1Error')
-  state.remove('logLevel2Warn')
-  state.remove('logLevel3Info')
-  state.remove('logLevel4Debug')
-  state.remove('logLevel5Trace')
-  state.remove('previousVswDni')
-  state.remove('roomName')
-  state.remove('roomScene')
-  state.remove('switchDnis')
+  atomicState.remove('activeVswDni')
+  atomicState.remove('defaultVswDni')
+  atomicState.remove('defaultVswName')
+  atomicState.remove('inspectScene')
+  atomicState.remove('LOG_LEVEL1_ERROR')
+  atomicState.remove('LOG_LEVEL2_WARN')
+  atomicState.remove('LOG_LEVEL3_INFO')
+  atomicState.remove('LOG_LEVEL4_DEBUG')
+  atomicState.remove('LOG_LEVEL5_TRACE')
+  atomicState.remove('logLevel1Error')
+  atomicState.remove('logLevel2Warn')
+  atomicState.remove('logLevel3Info')
+  atomicState.remove('logLevel4Debug')
+  atomicState.remove('logLevel5Trace')
+  atomicState.remove('previousVswDni')
+  atomicState.remove('roomName')
+  atomicState.remove('roomScene')
+  atomicState.remove('switchDnis')
 }
 
 void _updateModePbsgState () {
   // Used for initial configuration AND configuration refresh.
   _removeLegacyModePbsgState()
-  state.vswDniPrefix = "${app.getLabel()}_"
-  state.vswNames = getModeNames()
-  state.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
-  state.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
+  atomicState.vswDniPrefix = "${app.getLabel()}_"
+  atomicState.vswNames = getModeNames()
+  atomicState.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
+  atomicState.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
   //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
   Ltrace(
     '_updateModePbsgState()',

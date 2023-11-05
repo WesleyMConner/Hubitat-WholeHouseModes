@@ -157,7 +157,7 @@ Everything else should respond to mode changes (not the modePbsg VSWs).
 //   input to solicit.
 // - An intermediate device would not be able to process events.
 // - An instance of this quasi-application's state footprint exists
-//   under a single key in the enclosing application's state.
+//   under a single key in the enclosing application's atomicState.
 // - The parent App must have settings.log == TRUE for non-error logging.
 
 /*

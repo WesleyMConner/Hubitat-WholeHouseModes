@@ -47,7 +47,7 @@ Map _whaPage () {
     _removeLegacySettingsAndState()
     // This App instance is NEVER retrieved by its label, so an update is okay.
     app.updateLabel('Whole House Automation (WHA)')
-    if (!state.logLevel) state.logLevel = _lookupLogLevel('DEBUG')
+    if (!atomicState.logLevel) atomicState.logLevel = _lookupLogLevel('DEBUG')
     return dynamicPage(
     name: '_whaPage',
     title: [
@@ -77,25 +77,25 @@ Map _whaPage () {
 
 void _removeLegacySettingsAndState () {
   settings.remove('log')
-  state.remove('defaultMode')
-  state.remove('LOG_LEVEL1_ERROR')
-  state.remove('LOG_LEVEL2_WARN')
-  state.remove('LOG_LEVEL3_INFO')
-  state.remove('LOG_LEVEL4_DEBUG')
-  state.remove('LOG_LEVEL5_TRACE')
-  state.remove('LOG_WARN')
-  state.remove('logLevel1Error')
-  state.remove('logLevel2Warn')
-  state.remove('logLevel3Info')
-  state.remove('logLevel4Debug')
-  state.remove('logLevel5Trace')
-  state.remove('MODE_PBSG_APP_NAME')
-  state.remove('MODES')
-  state.remove('PBSGapp')
-  state.remove('roomName')
-  state.remove('SPECIALTY_BUTTONS')
-  state.remove('specialtyButtons')
-  state.remove('specialtyFnButtons')
+  atomicState.remove('defaultMode')
+  atomicState.remove('LOG_LEVEL1_ERROR')
+  atomicState.remove('LOG_LEVEL2_WARN')
+  atomicState.remove('LOG_LEVEL3_INFO')
+  atomicState.remove('LOG_LEVEL4_DEBUG')
+  atomicState.remove('LOG_LEVEL5_TRACE')
+  atomicState.remove('LOG_WARN')
+  atomicState.remove('logLevel1Error')
+  atomicState.remove('logLevel2Warn')
+  atomicState.remove('logLevel3Info')
+  atomicState.remove('logLevel4Debug')
+  atomicState.remove('logLevel5Trace')
+  atomicState.remove('MODE_PBSG_APP_NAME')
+  atomicState.remove('MODES')
+  atomicState.remove('PBSGapp')
+  atomicState.remove('roomName')
+  atomicState.remove('SPECIALTY_BUTTONS')
+  atomicState.remove('specialtyButtons')
+  atomicState.remove('specialtyFnButtons')
 }
 
 void _authorizeMainRepeater () {
@@ -132,7 +132,7 @@ void _identifySpecialFunctionButtons() {
     name: 'specialFnButtons',
     title: [
       heading2('Identify Special Function Buttons'),
-      bullet1("Examples: ${state.specialFnButtons}")
+      bullet1("Examples: ${atomicState.specialFnButtons}")
     ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
@@ -142,24 +142,24 @@ void _identifySpecialFunctionButtons() {
 }
 
 void _wireButtonsToSpecialFunctions () {
-  state.specialFnButtons = [
+  atomicState.specialFnButtons = [
     'ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY', 'FLASH', 'PANIC', 'QUIET'
   ]
   if (settings?.specialFnButtons == null) {
     paragraph('No specialty activation buttons are selected.')
   } else {
     identifyLedButtonsForListItems(               // Wire
-      state.specialFnButtons,                    //   - to Special Functions
+      atomicState.specialFnButtons,                    //   - to Special Functions
       settings.specialFnButtons,                 //   - from Keypad Button
       'specialFnButton'                          //   - prefix
     )
     _populateStateKpadButtons('specialFnButton')  // specialFnButton_*
     Map<String, String> result = [:]              // kpadButtonDniToSpecialtyFn
-    state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
+    atomicState.specialFnButtonMap.collect{ kpadDni, buttonMap ->
       buttonMap.each{ buttonNumber, specialtyFn ->
         result["${kpadDni}-${buttonNumber}"] = specialtyFn
       }
-      state.kpadButtonDniToSpecialtyFn = result
+      atomicState.kpadButtonDniToSpecialtyFn = result
     }
   }
 }
@@ -179,22 +179,22 @@ void _identifyModeButtons () {
 }
 
 void _wireButtonsToModes () {
-  if (state.modes == null || settings?.lutronModeButtons == null) {
+  if (atomicState.modes == null || settings?.lutronModeButtons == null) {
     paragraph('Mode activation buttons are pending pre-requisites.')
   } else {
     identifyLedButtonsForListItems(            // Wire
-      state.modes,                             //   - to Hubitat Mode
+      atomicState.modes,                             //   - to Hubitat Mode
       settings.lutronModeButtons,              //   - from Keypad Button
       'modeButton'                             //   - prefix
     )
     _populateStateKpadButtons('modeButton')     // modeButton_*
     Map<String, String> result = [:]           // kpadButtonDniToTargetMode
-    state.modeButtonMap.collect{ kpadDni, buttonMap ->
+    atomicState.modeButtonMap.collect{ kpadDni, buttonMap ->
       buttonMap.each{ buttonNumber, targetMode ->
         result["${kpadDni}-${buttonNumber}"] = targetMode
       }
     }
-    state.kpadButtonDniToTargetMode = result
+    atomicState.kpadButtonDniToTargetMode = result
   }
 }
 
@@ -300,7 +300,7 @@ InstAppW getOrCreateModePbsg () {
 void specialFnButtonHandler (Event e) {
   switch (e.name) {
     case 'pushed':
-      String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
+      String specialtyFunction = atomicState.specialFnButtonMap?.getAt(e.deviceId.toString())
                                                          ?.getAt(e.value)
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
@@ -345,14 +345,14 @@ void modeChangeButtonHandler (Event e) {
   //   - Keypad buttons are matched to state data to activate a target VSW.
   switch (e.name) {
     case 'pushed':
-      String targetVswName = state.modeButtonMap?.getAt(e.deviceId.toString())
+      String targetVswName = atomicState.modeButtonMap?.getAt(e.deviceId.toString())
                                                 ?.getAt(e.value)
       //-> Ltrace(
       //->   'modeChangeButtonHandler()',
       //->   [
-      //->     "<b>state.modeButtonMap:</b> ${state.modeButtonMap}",
+      //->     "<b>atomicState.modeButtonMap:</b> ${atomicState.modeButtonMap}",
       //->     "<b>e.deviceId:</b> ${e.deviceId}",
-      //->     "<b>state.modeButtonMap?.getAt(e.deviceId.toString()):</b> ${state.modeButtonMap?.getAt(e.deviceId.toString())}",
+      //->     "<b>atomicState.modeButtonMap?.getAt(e.deviceId.toString()):</b> ${atomicState.modeButtonMap?.getAt(e.deviceId.toString())}",
       //->     "<b>e.value:</b> ${e.value}"
       //->     "<b>targetVswName:</b> ${targetVswName}",
       //->   ].join('<br/>')
@@ -433,8 +433,8 @@ void _pruneOrphanedChildApps () {
 */
 
 String _getLogLevel() {
-  if (!state.logLevel) Lerror('_getLogLevel()', "Missing 'state.logLevel'")
-  return state.logLevel
+  if (!atomicState.logLevel) Lerror('_getLogLevel()', "Missing 'atomicState.logLevel'")
+  return atomicState.logLevel
 }
 
 void _whaInitialize () {

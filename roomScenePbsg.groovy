@@ -69,19 +69,19 @@ void roomSceneVswEventHandler (Event e) {
   Ltrace('roomSceneVswEventHandler', "eventDetails: ${eventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
-      if (state.previousVswDni == e.displayName) {
+      if (atomicState.previousVswDni == e.displayName) {
         Lerror(
           'roomSceneVswEventHandler()',
-          "The active Room Scene VSW '${state.activeVswDni}' did not change."
+          "The active Room Scene VSW '${atomicState.activeVswDni}' did not change."
         )
       }
-      state.previousVswDni = state.activeVswDni ?: getDefaultVswDni()
-      state.activeVswDni = e.displayName
+      atomicState.previousVswDni = atomicState.activeVswDni ?: getDefaultVswDni()
+      atomicState.activeVswDni = e.displayName
       Ldebug(
         'roomSceneVswEventHandler()',
-        "${state.previousVswDni} -> ${state.activeVswDni}"
+        "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
-      String scene = _vswDnitoName(state.activeVswDni)
+      String scene = _vswDnitoName(atomicState.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
       Linfo()
@@ -146,34 +146,34 @@ void _configureRoomScenePbsg() {
 }
 
 void _removeLegacyRoomScenePbsgState () {
-  state.remove('activeVswDni')
-  state.remove('defaultVswDni')
-  state.remove('defaultVswName')
-  state.remove('inspectScene')
-  state.remove('LOG_LEVEL1_ERROR')
-  state.remove('LOG_LEVEL2_WARN')
-  state.remove('LOG_LEVEL3_INFO')
-  state.remove('LOG_LEVEL4_DEBUG')
-  state.remove('LOG_LEVEL5_TRACE')
-  state.remove('logLevel1Error')
-  state.remove('logLevel2Warn')
-  state.remove('logLevel3Info')
-  state.remove('logLevel4Debug')
-  state.remove('logLevel5Trace')
-  state.remove('previousVswDni')
-  state.remove('roomName')
-  state.remove('roomScene')
-  state.remove('switchDnis')
+  atomicState.remove('activeVswDni')
+  atomicState.remove('defaultVswDni')
+  atomicState.remove('defaultVswName')
+  atomicState.remove('inspectScene')
+  atomicState.remove('LOG_LEVEL1_ERROR')
+  atomicState.remove('LOG_LEVEL2_WARN')
+  atomicState.remove('LOG_LEVEL3_INFO')
+  atomicState.remove('LOG_LEVEL4_DEBUG')
+  atomicState.remove('LOG_LEVEL5_TRACE')
+  atomicState.remove('logLevel1Error')
+  atomicState.remove('logLevel2Warn')
+  atomicState.remove('logLevel3Info')
+  atomicState.remove('logLevel4Debug')
+  atomicState.remove('logLevel5Trace')
+  atomicState.remove('previousVswDni')
+  atomicState.remove('roomName')
+  atomicState.remove('roomScene')
+  atomicState.remove('switchDnis')
 }
 
 void _updateRoomScenePbsgState() {
   // Used for initial configuration AND configuration refresh.
   _removeLegacyRoomScenePbsgState()
-  state.vswDniPrefix = "${app.getLabel()}_"
+  atomicState.vswDniPrefix = "${app.getLabel()}_"
   List<String> roomScenes = parent._getRoomScenes()
-  state.vswNames = [*roomScenes, 'AUTOMATIC', 'MANUAL_OVERRIDE']
-  state.vswDefaultName = 'AUTOMATIC'
-  state.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
+  atomicState.vswNames = [*roomScenes, 'AUTOMATIC', 'MANUAL_OVERRIDE']
+  atomicState.vswDefaultName = 'AUTOMATIC'
+  atomicState.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
   Ltrace(
     '_updateRoomScenePbsgState()',
     [

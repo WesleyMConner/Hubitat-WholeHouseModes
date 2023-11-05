@@ -68,7 +68,7 @@ String getSwitchState (DevW d) {
 
 String _getStateBulletsAsIs() {
   List<String> result = []
-  state.sort().each{ k, v ->
+  atomicState.sort().each{ k, v ->
     result += bullet1("<b>${k}</b> → ${v}")
   }
   return result.size() != 0 ? result.join('<br/>') : bullet1('<i>NO DATA AVAILABLE</i>')
@@ -88,7 +88,7 @@ void _populateStateKpadButtons (String prefix) {
   //   Keypad button presses. Settings data includes the user-friendly
   //   LED displayName and the LED device ID, which is comprised of 'Keypad
   //   Device Id' and 'Button Number', concatenated with a hyphen. This
-  //   method populates "state.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
+  //   method populates "atomicState.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
   //
   // Sample Settings Data
   //     key: LEDs_Day,

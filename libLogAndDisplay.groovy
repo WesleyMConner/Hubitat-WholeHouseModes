@@ -82,19 +82,19 @@ void _lookupLogLevel (String logThreshold) {
   Integer
   switch(logThreshold) {
     case 'TRACE':
-      state.logLevel = 5
+      atomicState.logLevel = 5
       break
     case 'DEBUG':
-      state.logLevel = 4
+      atomicState.logLevel = 4
       break
     case 'INFO':
-      state.logLevel = 3
+      atomicState.logLevel = 3
       break
     case 'WARN':
-      state.logLevel = 2
+      atomicState.logLevel = 2
       break
     default:   // 'ERROR'
-      state.logLevel = 1
+      atomicState.logLevel = 1
   }
 }
 
@@ -117,25 +117,25 @@ void Lerror (String fnName, String s) {
 }
 
 void Lwarn (String fnName, String s) {
-  if (state.logLevel > 1) log.warn(
+  if (atomicState.logLevel > 1) log.warn(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Linfo (String fnName, String s) {
-  if (state.logLevel > 2) log.info(
+  if (atomicState.logLevel > 2) log.info(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Ldebug (String fnName, String s) {
-  if (state.logLevel > 3) log.debug(
+  if (atomicState.logLevel > 3) log.debug(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Ltrace (String fnName, String s) {
-  if (state.logLevel > 4) log.trace(
+  if (atomicState.logLevel > 4) log.trace(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }

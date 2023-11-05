@@ -59,7 +59,7 @@ Map _roomScenePage () {
     uninstall: false
   ) {
     _removeLegacySettingsAndState()
-    if (!state.logLevel) state.logLevel = 1
+    if (!atomicState.logLevel) atomicState.logLevel = 1
     InstAppW roomScenePbsg = getRoomScenePbsg()
     section {
       _solicitLogThreshold()                            // <- provided by Utils
@@ -84,26 +84,26 @@ Map _roomScenePage () {
 
 void _removeLegacySettingsAndState () {
   settings.remove('log')
-  state.remove('currentScene')
-  state.remove('currentSceneRepeaterDeviceId')
-  state.remove('currentSceneRepeaterLED')
-  state.remove('defaultVswDni')
-  state.remove('inspectScene')
-  state.remove('LOG_LEVEL1_ERROR')
-  state.remove('LOG_LEVEL2_WARN')
-  state.remove('LOG_LEVEL3_INFO')
-  state.remove('LOG_LEVEL4_DEBUG')
-  state.remove('LOG_LEVEL5_TRACE')
-  state.remove('logLevel1Error')
-  state.remove('logLevel2Warn')
-  state.remove('logLevel3Info')
-  state.remove('logLevel4Debug')
-  state.remove('logLevel5Trace')
-  state.remove('ManualOverrideDevice')
-  state.remove('PBSGapp')
-  state.remove('ROOM_NAME')
-  state.remove('roomName')
-  state.remove('SCENE_PBSG_APP_NAME')
+  atomicState.remove('currentScene')
+  atomicState.remove('currentSceneRepeaterDeviceId')
+  atomicState.remove('currentSceneRepeaterLED')
+  atomicState.remove('defaultVswDni')
+  atomicState.remove('inspectScene')
+  atomicState.remove('LOG_LEVEL1_ERROR')
+  atomicState.remove('LOG_LEVEL2_WARN')
+  atomicState.remove('LOG_LEVEL3_INFO')
+  atomicState.remove('LOG_LEVEL4_DEBUG')
+  atomicState.remove('LOG_LEVEL5_TRACE')
+  atomicState.remove('logLevel1Error')
+  atomicState.remove('logLevel2Warn')
+  atomicState.remove('logLevel3Info')
+  atomicState.remove('logLevel4Debug')
+  atomicState.remove('logLevel5Trace')
+  atomicState.remove('ManualOverrideDevice')
+  atomicState.remove('PBSGapp')
+  atomicState.remove('ROOM_NAME')
+  atomicState.remove('roomName')
+  atomicState.remove('SCENE_PBSG_APP_NAME')
 }
 
 void _authorizeMotionSensor () {
@@ -185,18 +185,18 @@ void _populateStateScenes () {
     scenes = scenes.flatten().toUnique()
   }
   scenes = scenes.sort()
-  state.scenes = scenes.size() > 0 ? scenes : null
+  atomicState.scenes = scenes.size() > 0 ? scenes : null
 }
 
 void _solicitScenePerMode () {
-  if (state.scenes == null) {
+  if (atomicState.scenes == null) {
     paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
   } else {
     paragraph heading2('Select the Automatic Scene for each Hubitat Mode:')
     getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
       String inputName = "modeToScene^${modeName}"
       String defaultValue = settings[inputName]
-        ?: state.scenes.contains(modeName) ? modeName : null
+        ?: atomicState.scenes.contains(modeName) ? modeName : null
       input(
         name: inputName,
         type: 'enum',
@@ -205,7 +205,7 @@ void _solicitScenePerMode () {
         submitOnChange: true,
         required: true,
         multiple: false,
-        options: state.scenes,
+        options: atomicState.scenes,
         defaultValue: defaultValue
       )
     }
@@ -236,20 +236,20 @@ void _identifyKeypadSceneButtons () {
 
 void _populateStateKpadButtonDniToTargetScene () {
   Map<String, String> result = [:]
-  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
+  atomicState.sceneButtonMap.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, targetScene ->
       result["${kpadDni}-${buttonNumber}"] = targetScene
     }
   }
-  state.kpadButtonDniToTargetScene = result
+  atomicState.kpadButtonDniToTargetScene = result
 }
 
 void _wireButtonsToScenes () {
-  if (state.scenes == null || settings?.sceneButtons == null) {
+  if (atomicState.scenes == null || settings?.sceneButtons == null) {
     paragraph('Scene activation buttons are pending pre-requisites.')
   } else {
     identifyLedButtonsForListItems(
-      state.scenes,
+      atomicState.scenes,
       settings.sceneButtons,
       'sceneButton'
     )
@@ -312,10 +312,10 @@ void _configureRoomScene () {
   //->   sceneKeysAtStart.join('<br/>')
   //-> )
   Set<String> currentSceneKeys = []
-  if (state.scenes == null) {
+  if (atomicState.scenes == null) {
     paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
   } else {
-    state.scenes?.each{ sceneName ->
+    atomicState.scenes?.each{ sceneName ->
       Integer col = 2
       paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.independentDevices?.each{ d ->
@@ -400,7 +400,7 @@ void _populateStateSceneToDeviceValues () {
 }
 
 void _solicitRoomSceneDetails () {
-  if (state.scenes && (settings.independentDevices || settings.mainRepeater)) {
+  if (atomicState.scenes && (settings.independentDevices || settings.mainRepeater)) {
     _configureRoomScene()
     _populateStateSceneToDeviceValues()
   } else {
@@ -449,7 +449,7 @@ void _authorizeNonLutronDevicesForWhaRoom () {
     title: heading2('Identify Required Non-Lutron Devices'),
     type: 'enum',
     width: 6,
-    options: parent.getNonLutronDevicesForRoom(state.roomName).collectEntries{ d ->
+    options: parent.getNonLutronDevicesForRoom(atomicState.roomName).collectEntries{ d ->
       [d, d.displayName]
     },
     submitOnChange: true,
@@ -477,12 +477,12 @@ Map<String, String> _picoButtonPicklist (List<DevW> picos) {
 }
 
 void _selectPicoButtonsForScene (List<DevW> picos) {
-  if (state.scenes == null) {
+  if (atomicState.scenes == null) {
     paragraph(
       'Once scene names exist, this section will solicit affiliated pico buttons.'
     )
   } else {
-    List<String> picoScenes = ['AUTOMATIC'] << state.scenes
+    List<String> picoScenes = ['AUTOMATIC'] << atomicState.scenes
     picoScenes.flatten().each{ sceneName ->
       input(
           name: "picoButtons_${sceneName}",
@@ -499,7 +499,7 @@ void _selectPicoButtonsForScene (List<DevW> picos) {
 }
 
 void _populateStatePicoButtonToTargetScene () {
-  state.picoButtonToTargetScene = [:]
+  atomicState.picoButtonToTargetScene = [:]
   settings.findAll{ key, value -> key.contains('picoButtons_') }
           .each{ key, value ->
             String scene = key.tokenize('_')[1]
@@ -507,10 +507,10 @@ void _populateStatePicoButtonToTargetScene () {
               List<String> valTok = idAndButton.tokenize('^')
               String deviceId = valTok[0]
               String buttonNumber = valTok[1]
-              if (state.picoButtonToTargetScene[deviceId] == null) {
-                state.picoButtonToTargetScene[deviceId] = [:]
+              if (atomicState.picoButtonToTargetScene[deviceId] == null) {
+                atomicState.picoButtonToTargetScene[deviceId] = [:]
               }
-              state.picoButtonToTargetScene[deviceId][buttonNumber] = scene
+              atomicState.picoButtonToTargetScene[deviceId][buttonNumber] = scene
             }
           }
 }
@@ -522,17 +522,17 @@ Set<String> _getSettingsSceneKeys () {
 void _updateLutronKpadLeds (String currScene) {
   settings.sceneButtons.each{ ledObj ->
     String dni = ledObj.getDeviceNetworkId()
-    String sceneTarget = state.kpadButtonDniToTargetScene[dni]
+    String sceneTarget = atomicState.kpadButtonDniToTargetScene[dni]
     if (currScene == sceneTarget) {
       Ldebug(
         '_updateLutronKpadLeds()',
-        "Turning on LED ${dni} for ${state.roomName} scene ${sceneTarget}"
+        "Turning on LED ${dni} for ${atomicState.roomName} scene ${sceneTarget}"
       )
       ledObj.on()
     } else {
       Ldebug(
         '_updateLutronKpadLeds()',
-        "Turning off LED ${dni} for ${state.roomName} scene ${sceneTarget}"
+        "Turning off LED ${dni} for ${atomicState.roomName} scene ${sceneTarget}"
       )
       ledObj.off()
     }
@@ -549,15 +549,15 @@ String _getSceneForMode (String mode = getLocation().getMode()) {
 }
 
 void _pbsgVswTurnedOnCallback (String currScene) {
-  // If 'state.roomScene' is observed, MANUAL_OVERRIDE is resolved.
-  state.roomScene = (currScene == 'MANUAL_OVERRIDE') ? state.roomScene : currScene
-  if (state.roomScene == 'MANUAL_OVERRIDE') {
-    Lerror('_pbsgVswTurnedOnCallback()', 'state.roomScene == MANUAL_OVERRIDE')
+  // If 'atomicState.roomScene' is observed, MANUAL_OVERRIDE is resolved.
+  atomicState.roomScene = (currScene == 'MANUAL_OVERRIDE') ? atomicState.roomScene : currScene
+  if (atomicState.roomScene == 'MANUAL_OVERRIDE') {
+    Lerror('_pbsgVswTurnedOnCallback()', 'atomicState.roomScene == MANUAL_OVERRIDE')
   }
-  state.currScenePerVsw = currScene
+  atomicState.currScenePerVsw = currScene
   Ldebug(
     '_pbsgVswTurnedOnCallback()',
-    "currPbsgSwitch: ${currPbsgSwitch}, currScene: ${currScene}, inspectScene: ${state.roomScene}"
+    "currPbsgSwitch: ${currPbsgSwitch}, currScene: ${currScene}, inspectScene: ${atomicState.roomScene}"
   )
   //-----> _updateLutronKpadLeds(currScene)
   switch(currScene) {
@@ -621,8 +621,8 @@ void repeaterLedHandler (Event e) {
   //   Button and corresponding (virtual) LED. Work is delegated to
   //   _detectManualOverride()
   if (
-       (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
-       && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
+       (e.deviceId.toString() == atomicState.roomSceneRepeaterDeviceId)
+       && (e.name == "buttonLed-${atomicState.roomSceneRepeaterLED}")
        && (e.isStateChange == true)
   ) {
     Ldebug(
@@ -645,7 +645,7 @@ void independentDeviceHandler (Event e) {
 
 void hubitatModeChangeHandler (Event e) {
   // Abstract
-  //   When the Hubitat mode changes AND state.currScenePerVsw == 'AUTOMATIC':
+  //   When the Hubitat mode changes AND atomicState.currScenePerVsw == 'AUTOMATIC':
   //     - Identify the appropriate scene for the Hubitat mode.
   //     - Turn on the roomScenePbsg VSW for that scene.
   //   State changes are deferred to _pbsgVswTurnedOnCallback().
@@ -655,12 +655,12 @@ void hubitatModeChangeHandler (Event e) {
       "At entry,",
       "<b>event name:</b> ${e.name},",
       "<b>event value:</b> ${e.value},",
-      "state.currentScene: ${state.currentScene}"
+      "atomicState.currentScene: ${atomicState.currentScene}"
     ].join(' ')
   )
-  if (e.name == 'mode' && state.currentScene == 'AUTOMATIC') {
+  if (e.name == 'mode' && atomicState.currentScene == 'AUTOMATIC') {
     if (!settings.motionSensor) {
-      turnOnRoomSceneVsw (state.roomName, _getSceneForMode(e.value))
+      turnOnRoomSceneVsw (atomicState.roomName, _getSceneForMode(e.value))
     }
   }
 }
@@ -673,13 +673,13 @@ void keypadSceneButtonHandler (Event e) {
   switch (e.name) {
     case 'pushed':
       // Toggle the corresponding pbsg-modes-X VSW for the keypad button.
-      String targetScene = state.sceneButtonMap?.getAt(e.deviceId.toString())
+      String targetScene = atomicState.sceneButtonMap?.getAt(e.deviceId.toString())
                                                ?.getAt(e.value)
-      if (!state.roomScenePbsgAppId) {
-        Lerror('keypadSceneButtonHandler()', "Cannot find 'state.roomScenePbsgAppId'")
+      if (!atomicState.roomScenePbsgAppId) {
+        Lerror('keypadSceneButtonHandler()', "Cannot find 'atomicState.roomScenePbsgAppId'")
       }
       if (targetScene) {
-        String targetVsw = "${state.roomScenePbsgAppId}_${targetScene}"
+        String targetVsw = "${atomicState.roomScenePbsgAppId}_${targetScene}"
         Ldebug(
           'keypadSceneButtonHandler()',
           "toggling ${targetVsw}"
@@ -694,7 +694,7 @@ void keypadSceneButtonHandler (Event e) {
     default:
       Lwarn(
         'keypadSceneButtonHandler()',
-        "for '${state.roomName}' unexpected event name '${e.name}' for Dni '${e.deviceId}'"
+        "for '${atomicState.roomName}' unexpected event name '${e.name}' for Dni '${e.deviceId}'"
       )
   }
 }
@@ -705,18 +705,18 @@ void picoButtonHandler (Event e) {
     switch (e.name) {
       case 'pushed':
         // Check to see if the received button is assigned to a scene.
-        String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
+        String scene = atomicState.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value)
-        if (!state.roomScenePbsgAppId) {
-          Lerror('picoButtonHandler()', "Cannot find 'state.roomScenePbsgAppId'")
+        if (!atomicState.roomScenePbsgAppId) {
+          Lerror('picoButtonHandler()', "Cannot find 'atomicState.roomScenePbsgAppId'")
         }
-        String scenePbsg = "${state.roomScenePbsgAppId}_${scene}"
+        String scenePbsg = "${atomicState.roomScenePbsgAppId}_${scene}"
         if (scene) {
           Ldebug(
             'picoButtonHandler()',
             "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
           )
-          app.getChildAppByLabel(state.roomScenePbsgAppId)._toggleVsw(scenePbsg)
+          app.getChildAppByLabel(atomicState.roomScenePbsgAppId)._toggleVsw(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Ldebug(
             'picoButtonHandler()',
@@ -747,7 +747,7 @@ void picoButtonHandler (Event e) {
         } else {
           Ldebug(
             'picoButtonHandler()',
-            "R_${state.roomName} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
+            "R_${atomicState.roomName} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
         break
@@ -762,12 +762,12 @@ void picoButtonHandler (Event e) {
 void motionSensorHandler (Event e) {
   if (e.name == 'motion' && e.isStateChange == true) {
     if (e.value == 'active') {
-      String targetScene = (state.currScenePerVsw == 'AUTOMATIC')
-        ? _getSceneForMode() : state.currScenePerVsw
+      String targetScene = (atomicState.currScenePerVsw == 'AUTOMATIC')
+        ? _getSceneForMode() : atomicState.currScenePerVsw
       _activateScene(targetScene)
     } else if (e.value == 'inactive') {
       // Use brute-force to ensure automation is restored when the room is empty.
-      state.currScenePerVsw = 'AUTOMATIC'
+      atomicState.currScenePerVsw = 'AUTOMATIC'
       _activateScene('Off')
     }
   }
@@ -798,12 +798,12 @@ void uninstalled () {
 //----
 
 String _getLogLevel() {
-  if (!state.logLevel) Lerror('_getLogLevel()', "Missing 'state.logLevel'")
-  return state.logLevel
+  if (!atomicState.logLevel) Lerror('_getLogLevel()', "Missing 'atomicState.logLevel'")
+  return atomicState.logLevel
 }
 
 List<String> _getRoomScenes () {
-  List<String> result = state.scenes
+  List<String> result = atomicState.scenes
   //->result.each{ scene ->
   //->  Lerror('_getRoomScenes()', "<b>scene:</b> ${scene}")
   //->}
@@ -814,17 +814,17 @@ void _activateScene (String scene) {
   // Push Repeater buttons and execute Independent switch/dimmer levels.
   Ldebug('_activateScene()', "scene: <b>${scene}</b>")
   // Values are expected at ...
-  //   state.sceneToRepeater[sceneName][dni]
-  //   state.sceneToIndependent[sceneName][dni]
+  //   atomicState.sceneToRepeater[sceneName][dni]
+  //   atomicState.sceneToIndependent[sceneName][dni]
   // THIS APPLICATION ALLOWS A SINGLE LUTRON MAIN REPEATER PER ROOM
-  state.sceneToRepeater?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
+  atomicState.sceneToRepeater?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
     Ldebug(
       '_activateScene()',
       "${scene}: repeater: ${repeaterDni}, button: ${buttonNumber}"
     )
     // Note: The repeater's Id (not Dni) and button are required to track the scene's
     //       LED on the Main Repeater.
-    state.roomSceneRepeaterLED = buttonNumber
+    atomicState.roomSceneRepeaterLED = buttonNumber
     DevW matchedRepeater = settings.mainRepeater?.findAll{ repeater ->
       repeater.getDeviceNetworkId() == repeaterDni
     }?.first() ?: {
@@ -833,10 +833,10 @@ void _activateScene (String scene) {
         "no repeater w/ Dni: ${repeaterDni}"
       )
     }
-    state.roomSceneRepeaterDeviceId = matchedRepeater.getId()
+    atomicState.roomSceneRepeaterDeviceId = matchedRepeater.getId()
     matchedRepeater.push(buttonNumber)
   }
-  state.sceneToIndependent?.getAt(scene)?.each{ deviceDni, level ->
+  atomicState.sceneToIndependent?.getAt(scene)?.each{ deviceDni, level ->
     Ldebug(
       '_activateScene()',
       "${scene}': device: ${deviceDni}, level: ${level}"
@@ -863,7 +863,7 @@ Boolean _isRoomSceneLedActive () {
   // Fail true if the current room's scenes DO NOT leverage an
   // "RA2 Shared Scene" (via an RA2 Main Repeater Integration Button).
   Boolean retVal = true
-  if (!state.roomSceneRepeaterDeviceId) {
+  if (!atomicState.roomSceneRepeaterDeviceId) {
     Ldebug(
       '_isRoomSceneLedActive()',
       'No RA2 Shared Scene in use.'
@@ -872,14 +872,14 @@ Boolean _isRoomSceneLedActive () {
     // LEDs will light if (a) they match an explicitly set Room Scene or
     // (b) they match the room's current AUTOMATIC scene. No LEDs should
     // light if the room's scene is MANUAL_OVERRIDE.
-    String ledScene = (state.currScenePerVsw == 'AUTOMATIC')
+    String ledScene = (atomicState.currScenePerVsw == 'AUTOMATIC')
       ? _getSceneForMode()
-      : state.currScenePerVsw
+      : atomicState.currScenePerVsw
     Ldebug(
       '_isRoomSceneLedActive()',
       "ledScene: ${ledScene}"
     )
-    Map repeaterData = state.sceneToRepeater?.getAt(ledScene)
+    Map repeaterData = atomicState.sceneToRepeater?.getAt(ledScene)
     if (repeaterData) {
       Ldebug(
         '_isRoomSceneLedActive()',
@@ -919,18 +919,18 @@ Boolean _isRoomSceneLedActive () {
   }
   Ldebug(
     '_isRoomSceneLedActive()',
-    "R_${state.roomName} _isRoomSceneLedActive() -> ${retVal}"
+    "R_${atomicState.roomName} _isRoomSceneLedActive() -> ${retVal}"
   )
   return retVal
 }
 
 Boolean _areRoomSceneDevLevelsCorrect () {
   // Fail true if the current room's scenes DO NOT leverage Independent Devices.
-  // Note that device level comparisons are made to state.roomScene (and
-  // NOT state.currScenePerVsw). When state.currScenePerVsw == MANUAL_OVERRIDE,
-  // state.roomScene will retain the critera required to release the OVERRIDE.
+  // Note that device level comparisons are made to atomicState.roomScene (and
+  // NOT atomicState.currScenePerVsw). When atomicState.currScenePerVsw == MANUAL_OVERRIDE,
+  // atomicState.roomScene will retain the critera required to release the OVERRIDE.
   Boolean retVal = true
-  if (!state.sceneToIndependent) {
+  if (!atomicState.sceneToIndependent) {
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
       "No Independent Devices."
@@ -938,25 +938,25 @@ Boolean _areRoomSceneDevLevelsCorrect () {
   } else {
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
-      "sceneToIndependent: ${state.sceneToIndependent}"               // SEEN IN LOGS
+      "sceneToIndependent: ${atomicState.sceneToIndependent}"               // SEEN IN LOGS
     )
-    if (!state.roomScene) {
-      if (!state.currScenePerVsw) {
-        Lerror(_areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! state.roomScene IS NOT populated')
+    if (!atomicState.roomScene) {
+      if (!atomicState.currScenePerVsw) {
+        Lerror(_areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! atomicState.roomScene IS NOT populated')
       }
     }
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
-      "state.roomScene: ${state.roomScene}"                     // NOT AVAILABLE
+      "atomicState.roomScene: ${atomicState.roomScene}"                     // NOT AVAILABLE
     )
-    String restoreScene = (state.roomScene == 'AUTOMATIC')
+    String restoreScene = (atomicState.roomScene == 'AUTOMATIC')
       ? _getSceneForMode()
-      : state.roomScene
+      : atomicState.roomScene
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
       "restoreScene: ${restoreScene}"
     )
-    Map indepDevData = state.sceneToIndependent?.getAt(restoreScene)
+    Map indepDevData = atomicState.sceneToIndependent?.getAt(restoreScene)
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
       "indepDevData: ${indepDevData}"
@@ -1002,8 +1002,8 @@ Boolean _detectManualOverride () {
   // change event; so, don't worry about suppressing redundant switch state for now.
   if (!_isRoomSceneLedActive() || !_areRoomSceneDevLevelsCorrect()) {
     InstAppW roomScenePbsg = getRoomScenePbsg()
-    if (!state.roomScenePbsgAppId) {
-      Lerror('_detectManualOverride()', "Cannot find 'state.roomScenePbsgAppId'")
+    if (!atomicState.roomScenePbsgAppId) {
+      Lerror('_detectManualOverride()', "Cannot find 'atomicState.roomScenePbsgAppId'")
     }
     roomScenePbsg.turnOnVswExclusivelyByName('MANUAL_OVERRIDE')
   } else {
@@ -1016,41 +1016,41 @@ void _roomSceneInitialize () {
   getOrCreateRoomScenePbsg()
   Ltrace(
     '_roomSceneInitialize()',
-    "R_${state.roomName} subscribing to hubitatModeChangeHandler()"
+    "R_${atomicState.roomName} subscribing to hubitatModeChangeHandler()"
   )
   app.subscribe(location, "mode", hubitatModeChangeHandler)
   settings.seeTouchKeypads.each{ device ->
     Ltrace(
       '_roomSceneInitialize()',
-      "R_${state.roomName} subscribing seeTouchKeypad '${getDeviceInfo(device)}' to keypadSceneButtonHandler()"
+      "R_${atomicState.roomName} subscribing seeTouchKeypad '${getDeviceInfo(device)}' to keypadSceneButtonHandler()"
     )
     app.subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     Ltrace(
       '_roomSceneInitialize()',
-      "R_${state.roomName} subscribing to mainRepeater '${getDeviceInfo(device)}' to repeaterLedHandler()"
+      "R_${atomicState.roomName} subscribing to mainRepeater '${getDeviceInfo(device)}' to repeaterLedHandler()"
     )
     app.subscribe(device, repeaterLedHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     Ltrace(
       '_roomSceneInitialize()',
-      "R_${state.roomName} subscribing to Pico '${getDeviceInfo(device)}' to picoButtonHandler()"
+      "R_${atomicState.roomName} subscribing to Pico '${getDeviceInfo(device)}' to picoButtonHandler()"
     )
     app.subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     Ltrace(
       '_roomSceneInitialize()',
-      "R_${state.roomName} subscribing to motionSensor '${getDeviceInfo(device)}' to motionSensorHandler()"
+      "R_${atomicState.roomName} subscribing to motionSensor '${getDeviceInfo(device)}' to motionSensorHandler()"
     )
     app.subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
   settings.independentDevices.each{ device ->
     Ltrace(
       '_roomSceneInitialize()',
-      "R_${state.roomName} subscribing to independentDevice '${getDeviceInfo(device)}' to independentDeviceHandler()"
+      "R_${atomicState.roomName} subscribing to independentDevice '${getDeviceInfo(device)}' to independentDeviceHandler()"
     )
     app.subscribe(device, independentDeviceHandler, ['filterEvents': true])
   }

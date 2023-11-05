@@ -31,7 +31,7 @@ library (
 //----
 
 String _vswDnitoName (String modeVswDni) {
-  modeVswDni.minus("${state.vswDniPrefix}")
+  modeVswDni.minus("${atomicState.vswDniPrefix}")
 }
 
 void _turnOffVswByName (String vswName) {
@@ -46,7 +46,7 @@ void _turnOnVswExclusivelyByName (String vswName) {
   // The child devices of a PBSG should be limited to its managed VSWs.
   Linfo('_turnOnVswExclusivelyByName()', "Turning on <b>${vswName}</b> exclusively")
   // Turn off peers BEFORE turning on vswDni!
-  List<String> peers = state.vswNames?.findAll{ name -> name != vswName }
+  List<String> peers = atomicState.vswNames?.findAll{ name -> name != vswName }
   Ltrace('_turnOnVswExclusivelyByName()', "turning off '${peers}'")
   peers.each{ peerName ->
     DevW peerVsw = app.getChildDevice(_vswNameToDni(peerName))
@@ -111,7 +111,7 @@ void _pbsgBasePage () {
 
 String _getPbsgStateBullets () {
   List<String> result = []
-  state.sort().each{ k, v ->
+  atomicState.sort().each{ k, v ->
     if (k == 'vswDnis') {
       result += bullet1("<b>${k}</b>")
       v.each{ dni ->
@@ -138,16 +138,16 @@ String _getPbsgStateBullets () {
 //----
 
 String _vswNameToDni (String name) {
-  return "${state.vswDniPrefix}${name}"
+  return "${atomicState.vswDniPrefix}${name}"
 }
 
 //-> List<String> _expectedVswDnis () {
-//->   List<String> vswDnis = state.vswNames.collect{ _vswNameToDni(it) }
+//->   List<String> vswDnis = atomicState.vswNames.collect{ _vswNameToDni(it) }
 //->   Ltrace(
 //->     '_expectedVswDnis ()',
 //->     [
 //->       '',
-//->       "Given <b>state.vswNames:</b> ${state.vswNames}",
+//->       "Given <b>atomicState.vswNames:</b> ${atomicState.vswNames}",
 //->       "Proeduced <b>vswDnis:</b> ${vswDnis}"
 //->     ].join('<br/>')
 //->   )
@@ -158,7 +158,7 @@ void _manageChildDevices (String caller = "UNKNOWN_CALLER") {
   // Uncomment the following to test orphan child app removal.
   //==T E S T I N G   O N L Y==> _addOrphanChild()
   // The ONLY child devices for a PBSG are its managed VSWs.
-  List<String> expectedDnis = state.vswNames.collect{ _vswNameToDni(it) }
+  List<String> expectedDnis = atomicState.vswNames.collect{ _vswNameToDni(it) }
   //-> Ltrace(
   //->   '_manageChildDevices() [002a]',
   //->   [
@@ -210,7 +210,7 @@ void _manageChildDevices (String caller = "UNKNOWN_CALLER") {
 /*
 void _turnOffVswPeers (String vswName) {
   // The child devices of a PBSG should be limited to its managed VSWs.
-  List<String> peers = state.vswNames?.findAll{ name -> name != vswName }
+  List<String> peers = atomicState.vswNames?.findAll{ name -> name != vswName }
   Ltrace('_turnOffVswPeers()', "turning off '${peers}'")
   peers.each{ peerName ->
     DevW peerVsw = app.getChildDevice(_vswNameToDni(peerName))
@@ -232,7 +232,7 @@ DevW _getVswByName (String vswName) {
 
 List<DevW> _getVsws (String option = null) {
   List<DevW> vsws = []
-  state.vswNames.collect{ _vswNameToDni(it) }.each{ vswDni ->
+  atomicState.vswNames.collect{ _vswNameToDni(it) }.each{ vswDni ->
     DevW vsw = app.getChildDevice(vswDni)
     if (option == 'onOnly' && getSwitchState(vsw) == 'on') {
       vsws += vsw
@@ -265,7 +265,7 @@ void _enforceMutualExclusion () {
 }
 
 String getDefaultVswDni () {
-  return _vswNameToDni(state.vswDefaultName)
+  return _vswNameToDni(atomicState.vswDefaultName)
 }
 
 void _enforceDefaultSwitch () {
@@ -278,8 +278,8 @@ void _enforceDefaultSwitch () {
     )
     DevW vsw = app.getChildDevice(defaultVswDni)
     vsw.on()
-    state.prevOnVswName = state.currOnVswName
-    state.currOnVswName = vswName
+    atomicState.prevOnVswName = atomicState.currOnVswName
+    atomicState.currOnVswName = vswName
   } else {
     Ltrace(
       '_enforceDefaultSwitch()',
