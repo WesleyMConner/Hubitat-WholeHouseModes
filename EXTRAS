@@ -1,0 +1,47 @@
+InstAppW getChildAppForLabel (InstAppW appInst, String childAppLabel, Boolean keepNewest = true) {
+  // Child apps may have different Ids with duplicated Labels.
+  // If (keepNewest == false) { keep oldest }
+  List<String> kids = appInst.getAllChildApps().findAll{ it.getLabel() == childAppLabel }
+  Linfo(
+    'getChildAppForLabel()',
+    [
+      childAppLabel,
+      "<b>appInst</b>: ${getAppInfo(appInst)}",
+      "<b>keepNewest</b>: ${keepNewest}",
+      "<b>kids</b>: ${kids}",
+      "<b>kids size</b>: ${kids.size()}",
+    ].join('<br/>&nbsp;&nbsp;')
+  )
+  switch (kids.size()) {
+    case 0:
+      Linfo('getChildAppForLabel()', "appInst</b>: ${getAppInfo(appInst)} Exit 0")
+      return null
+    case 1:
+      Linfo('getChildAppForLabel()', "appInst</b>: ${getAppInfo(appInst)} Exit 1")
+      return kids.first()
+      break
+    default:
+      kids.sort()
+      if (keepNewest) kids.reverse(true)
+      // Keep only the first app on the list.
+      String result = '<table><tr><th>LABEL</th><th>ID</th><th>DEVICES</th><th>TREATMENT</th></tr>'
+      kids.eachWithIndex{ a, idx ->
+        result += "<tr><td>${a.getLabel()}</td><td>${a.getId()}</td><td>${a.getChildDevices().size()}</td>"
+        if (idx == 0) {
+          result += '</td>Kept</td></tr>'
+        } else {
+          result += "</td>Deleted</td></tr>"
+          // deleteChildApp(a.getId())
+        }
+        result += '</table>'
+        Linfo(
+          'getChildAppForLabel()',
+          [
+            "r ${childAppLabel}, Keeping ${ keepNewest == true ? 'newest' : 'oldest' }",
+            result.join('<br/>')
+          ].join('<br/>')
+        )
+      }
+  }
+  return kids.first()
+}

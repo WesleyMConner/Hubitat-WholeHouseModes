@@ -126,8 +126,9 @@ void _configureRoomScenePbsg() {
     "Updating ${app.getLabel()} state, devices and subscriptions"
   )
 
-  Ltrace('_configureRoomScenePbsg()', 'doing App dup checking')
-  detectChildAppDupsForLabels([roomScenePbsgLabel])
+  //--xx-> THIS IS WRONG! NEED TO DO DEVICE DUP CHECKING NOT APP DUP CHECKING
+  //--xx-> Ltrace('_configureRoomScenePbsg()', 'doing App dup checking')
+  //--xx-> detectChildAppDupsForLabels([roomScenePbsgLabel])
 
 
   Ltrace('_configureRoomScenePbsg()', 'stopping event subscriptions')
