@@ -70,7 +70,7 @@ InstAppW getModePbsg () {
   //--xx-> App dup detection is deferred to displayInstantiatedRoomHrefs().
   // Prune any per-label dups that may have slipped in.
   Linfo('getModePbsg()', 'Calling App Dup Detection')
-  detectChildAppDupsForLabels([*settings.rooms, 'MODE_PBSG'], app)
+  detectChildAppDupsForLabels([*settings.rooms, 'MODE_PBSG'], false, app)
   InstAppW modePbsg = getChildAppByLabel(pbsgLabel)
   if (modePbsg) {
     // PERFORMANCE HIT - Temporarily refresh PBSG configuration.
@@ -312,7 +312,7 @@ Map whaPage () {
       identifyModeButtons()
       wireButtonsToModes()
       solicitParticipatingRooms()
-//--temporary-hold->      displayInstantiatedRoomHrefs()
+      // displayInstantiatedRoomHrefs()
       displayWhaDebugData()
       displayModePbsgDebugData()
     }

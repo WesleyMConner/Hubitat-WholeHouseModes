@@ -100,7 +100,7 @@ InstAppW getRoomScenePbsg () {
   String roomScenePbsgLabel = "pbsg_${app.getLabel()}"
   // PERFORMANCE HIT - Temporarily perform App dup detection.
   Linfo('getRoomScenePbsg()', 'Calling App Dup Detection')
-  detectChildAppDupsForLabels([roomScenePbsgLabel], app)
+  detectChildAppDupsForLabels([roomScenePbsgLabel], false, app)
   InstAppW roomScenePbsg = getChildAppByLabel(roomScenePbsgLabel)
   if (roomScenePbsg) {
     // PERFORMANCE HIT - Temporarily refresh PBSG configuration.

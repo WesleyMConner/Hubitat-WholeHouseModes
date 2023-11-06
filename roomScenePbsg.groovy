@@ -72,7 +72,7 @@ void configureRoomScenePbsg() {
 
   //--xx-> THIS IS WRONG! NEED TO DO DEVICE DUP CHECKING NOT APP DUP CHECKING
   //--xx-> Ltrace('configureRoomScenePbsg()', 'doing App dup checking')
-  //--xx-> detectChildAppDupsForLabels([roomScenePbsgLabel], app)
+  //--xx-> detectChildAppDupsForLabels([roomScenePbsgLabel], false, app)
 
 
   Ltrace('configureRoomScenePbsg()', 'stopping event subscriptions')

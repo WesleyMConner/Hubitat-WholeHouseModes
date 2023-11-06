@@ -138,7 +138,7 @@ void detectChildAppDupsForLabelsV3 (List<String> keepLabels) {
   )
 }
 
-void detectChildAppDupsForLabels (List<String> keepLabels, InstAppW appBase) {
+void detectChildAppDupsForLabelsV4 (List<String> keepLabels, InstAppW appBase) {
   List<String> result = []
   result += '<table>'
   result += '<tr><th>LABEL</th><th>DUP</th><th>ID</th><th>DEVICES</th></tr>'
@@ -155,8 +155,40 @@ void detectChildAppDupsForLabels (List<String> keepLabels, InstAppW appBase) {
   )
 }
 
-//  app.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, appObjs ->
-
+void detectChildAppDupsForLabels (
+    List<String> keepLabels,
+    Boolean keepLatest,
+    InstAppW appBase
+  ) {
+  // if keepLatest is false, it implies "Keep Oldest"
+  Boolean isWarning = false
+  List<String> result = []
+  result += '<table>'
+  result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
+  appBase.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, apps ->
+    apps.eachWithIndex{ a, index ->
+      Boolean isOrphan = keepLabels.contains(label) == false
+      Boolean isDup = index > 0
+      if (isOrphan) {
+        isWarning = true
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN (PENDING)', 'font-weight: bold;')}</tr>"
+  //--ON-HOLD-> deleteChildApp(a.getId())
+      } else if (isDup) {
+        isWarning = true
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE (PENDING)', 'font-weight: bold;')}</tr>"
+  //--ON-HOLD-> deleteChildApp(a.getId())
+      } else {
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
+      }
+    }
+  }
+  result += '</table>'
+  if (isWarning) {
+    Lwarn('detectChildAppDupsForLabels()', result.join())
+  } else {
+    Linfo('detectChildAppDupsForLabels()', result.join())
+  }
+}
 
 void removeAllChildApps () {
   app.getAllChildApps().each{ child ->

@@ -37,6 +37,8 @@ String BLUE = 'rgba(51, 92, 255, 1.0)'
 String LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
 String RED = 'rgba(255, 0, 0, 1.0)'
 
+String CSS_HIGHLIGHT = 'background-color: yellow; font-weight: bold;'
+
 String heading1(String s) {
   return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
 }
@@ -120,19 +122,18 @@ void Ltrace (String fnName, String s) {
 //---- TABLES
 //----
 
+// font-size: 1em; font-weight: normal;
+
 String tdLft (def x) {
-  return """<td style="text-align: left; padding-left: 10px; padding-right: 10px;
-    font-size: 1em; font-weight: normal;">${x}</td>"""
+  return "<td style='text-align: left; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
 
-String tdCtr (def x) {
-  return """<td style="text-align: center; padding-left: 10px; padding-right: 10px;
-    font-size: 1em; font-weight: normal;">${x}</td>"""
+String tdCtr (def x, String css = null) {
+  return "<td style='text-align: center; padding-left: 10px; padding-right: 10px; ${css}'>${x}</td>"
 }
 
 String tdRght (def x) {
-  return """<td style="text-align: right; padding-left: 10px; padding-right: 10px;
-    font-size: 1em; font-weight: normal;">${x}</td>"""
+  return "<td style='text-align: right; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
 
 //----
