@@ -65,12 +65,29 @@ void removeLegacySettingsAndState () {
   atomicState.remove('specialtyFnButtons')
 }
 
+void manageNestedChildApps () {
+  // Prune any orphaned or duplicated apps in the WHA App hierarchy.
+  // (1) Begin with direct children of WHA (the MODE_PBSG and Room Scene instances).
+  Ltrace(
+    'manageNestedChildApps()',
+    'At root level, calling pruneAppDups()'
+  )
+  pruneAppDups(['MODE_PBSG', *settings.rooms], false, app)
+  // (2) Drill into each RoomScene and manage its PBSG Instance
+  settings.rooms?.each{ roomName ->
+    Ltrace(
+      'manageNestedChildApps()',
+      "For ${roomName}, calling pruneAppDups()."
+    )
+    InstAppW roomApp = app.getChildAppByLabel(roomName)
+    pruneAppDups(["pbsg_${roomName}"], false, roomApp)
+  }
+}
+
 InstAppW getModePbsg () {
   String pbsgLabel = 'MODE_PBSG'
-  //--xx-> App dup detection is deferred to displayInstantiatedRoomHrefs().
-  // Prune any per-label dups that may have slipped in.
-  Linfo('getModePbsg()', 'Calling App Dup Detection')
-  detectChildAppDupsForLabels([*settings.rooms, 'MODE_PBSG'], false, app)
+  Ltrace('getModePbsg()', 'Calling manageNestedChildApps()')
+  manageNestedChildApps()
   InstAppW modePbsg = getChildAppByLabel(pbsgLabel)
   if (modePbsg) {
     // PERFORMANCE HIT - Temporarily refresh PBSG configuration.
@@ -106,9 +123,7 @@ InstAppW getOrCreateModePbsg () {
   //--TESTING-ONLY-> addFakeChildAppsForTesting()
   InstAppW modePbsg = getModePbsg()
   if (!modePbsg) {
-    //--xx-> App dup detection is deferred to displayInstantiatedRoomHrefs().
-    // Prune any per-label dups that may have slipped in.
-    Linfo('getOrCreateModePbsg()', "SUPPRESSED addChildApp 'MODE_PBSG'")
+    Linfo('getOrCreateModePbsg()', 'Calling addChildApp() for MODE_PBSG (ON HOLD)')
     //-> modePbsg = addChildApp(
     //->   'wesmc',      // See modePbsg.groovy definition's (App) namespace.
     //->   'modePbsg',   // See modePbsg.groovy definition's (App) name.
@@ -312,7 +327,7 @@ Map whaPage () {
       identifyModeButtons()
       wireButtonsToModes()
       solicitParticipatingRooms()
-      // displayInstantiatedRoomHrefs()
+      displayInstantiatedRoomHrefs()
       displayWhaDebugData()
       displayModePbsgDebugData()
     }
@@ -441,10 +456,13 @@ void displayInstantiatedRoomHrefs () {
     paragraph '<h2><b>Room Scene Configuration</b></h2>'
     settings.rooms.each{ roomName ->
       InstAppW roomApp = app.getChildAppByLabel(roomName)
+      String roomScenePbsgName = "pbsg_${roomName}"
       if (!roomApp) {
-        Linfo('displayInstantiatedRoomHrefs()', "SUPPRESSED addChildApp '${roomName}'")
-        //-> Linfo('addRoomAppsIfMissing()', "Adding room <b>${roomName}</b>")
-        //-> roomApp = addChildApp('wesmc', 'roomScene', roomName)
+        Lwarn(
+          'displayInstantiatedRoomHrefs()',
+          "Calling addChildApp() for '${roomScenePbsgName}' (ON HOLD)"
+        )
+        //-> roomApp.addChildApp('wesmc', 'roomScene', roomScenePbsgName)
       }
       href (
         name: roomName,

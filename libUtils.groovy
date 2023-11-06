@@ -93,7 +93,7 @@ String getDeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-void detectChildAppDupsForLabelsV1 (List<String> keepLabels) {
+void pruneAppDupsV1 (List<String> keepLabels) {
   List<String> result = []
   result += '<table>'
   result += '<tr><th>LABEL</th><th>ID</th><th>DEVICES</th></tr>'
@@ -102,12 +102,12 @@ void detectChildAppDupsForLabelsV1 (List<String> keepLabels) {
   }
   result += '</table>'
   Linfo(
-    'detectChildAppDupsForLabelsV1()',
+    'pruneAppDupsV1()',
     result.join()
   )
 }
 
-void detectChildAppDupsForLabelsV2 (List<String> keepLabels) {
+void pruneAppDupsV2 (List<String> keepLabels) {
   List<String> result = []
   result += '<table>'
   result += '<tr><th>LABEL</th><th>ID</th><th>DEVICES</th></tr>'
@@ -116,12 +116,12 @@ void detectChildAppDupsForLabelsV2 (List<String> keepLabels) {
   }
   result += '</table>'
   Linfo(
-    'detectChildAppDupsForLabels()',
+    'pruneAppDups()',
     result.join()
   )
 }
 
-void detectChildAppDupsForLabelsV3 (List<String> keepLabels) {
+void pruneAppDupsV3 (List<String> keepLabels) {
   List<String> result = []
   result += '<table>'
   result += '<tr><th>LABEL</th><th>DUP</th><th>ID</th><th>DEVICES</th></tr>'
@@ -133,12 +133,12 @@ void detectChildAppDupsForLabelsV3 (List<String> keepLabels) {
   }
   result += '</table>'
   Linfo(
-    'detectChildAppDupsForLabels()',
+    'pruneAppDups()',
     result.join()
   )
 }
 
-void detectChildAppDupsForLabelsV4 (List<String> keepLabels, InstAppW appBase) {
+void pruneAppDupsV4 (List<String> keepLabels, InstAppW appBase) {
   List<String> result = []
   result += '<table>'
   result += '<tr><th>LABEL</th><th>DUP</th><th>ID</th><th>DEVICES</th></tr>'
@@ -150,32 +150,39 @@ void detectChildAppDupsForLabelsV4 (List<String> keepLabels, InstAppW appBase) {
   }
   result += '</table>'
   Linfo(
-    'detectChildAppDupsForLabels()',
+    'pruneAppDups()',
     result.join()
   )
 }
 
-void detectChildAppDupsForLabels (
+void pruneAppDups (
     List<String> keepLabels,
     Boolean keepLatest,
     InstAppW appBase
   ) {
   // if keepLatest is false, it implies "Keep Oldest"
+Linfo('pruneAppDups()', "<b>keepLabels:</b> ${keepLabels}")
   Boolean isWarning = false
   List<String> result = []
   result += '<table>'
   result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
-  appBase.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, apps ->
+  appBase.getAllChildApps()?.groupBy{ it.getLabel() }.each{ label, apps ->
+    Boolean isOrphan = keepLabels.findIndexOf{ it == label } == -1
     apps.eachWithIndex{ a, index ->
-      Boolean isOrphan = keepLabels.contains(label) == false
       Boolean isDup = index > 0
+Linfo('pruneAppDups()', """<br/>
+<b>label:</b> ${label},<br/>
+<b>isOrphan</b>: ${isOrphan},<br/>
+<b>isDup</b>: ${isDup},<br/>
+<b>index:</b> ${index},<br/>
+<b>a:</b> ${getAppInfo(a)}""")
       if (isOrphan) {
         isWarning = true
-        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN (PENDING)', 'font-weight: bold;')}</tr>"
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN (ON HOLD)', 'font-weight: bold;')}</tr>"
   //--ON-HOLD-> deleteChildApp(a.getId())
       } else if (isDup) {
         isWarning = true
-        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE (PENDING)', 'font-weight: bold;')}</tr>"
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE (ON HOLD)', 'font-weight: bold;')}</tr>"
   //--ON-HOLD-> deleteChildApp(a.getId())
       } else {
         result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
@@ -184,9 +191,9 @@ void detectChildAppDupsForLabels (
   }
   result += '</table>'
   if (isWarning) {
-    Lwarn('detectChildAppDupsForLabels()', result.join())
+    Lwarn('pruneAppDups()', result.join())
   } else {
-    Linfo('detectChildAppDupsForLabels()', result.join())
+    Linfo('pruneAppDups()', result.join())
   }
 }
 

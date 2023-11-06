@@ -88,34 +88,38 @@ void lookupLogLevel (String logThreshold) {
 }
 
 void Lerror (String fnName, String s) {
-  // No conditional test to ensure all errors appear.
+  // No conditional test ensures errors appear.
   log.error(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Lwarn (String fnName, String s) {
-  if (atomicState.logLevel > 1) log.warn(
-    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
-  )
+  // Fail closed if logLevel is missing.
+  if ((atomicState.logLevel ?: 5) > 1) {
+    log.warn("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+  }
 }
 
 void Linfo (String fnName, String s) {
-  if (atomicState.logLevel > 2) log.info(
-    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
-  )
+  // Fail closed if logLevel is missing.
+  if ((atomicState.logLevel ?: 5) > 2) {
+    log.info("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+  }
 }
 
 void Ldebug (String fnName, String s) {
-  if (atomicState.logLevel > 3) log.debug(
-    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
-  )
+  // Fail closed if logLevel is missing.
+  if ((atomicState.logLevel ?: 5) > 3) {
+    log.debug("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+  }
 }
 
 void Ltrace (String fnName, String s) {
-  if (atomicState.logLevel > 4) log.trace(
-    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
-  )
+  // Fail closed if logLevel is missing.
+  if ((atomicState.logLevel ?: 5) > 4) {
+    log.trace("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+  }
 }
 
 //----
