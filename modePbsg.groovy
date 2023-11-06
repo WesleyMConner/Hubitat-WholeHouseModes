@@ -36,29 +36,119 @@ definition (
 )
 
 preferences {
-  page (name: '_modePbsgPage')
+  page (name: 'modePbsgPage')
 }
 
 //----
-//---- PAGE DISPLAY AND SUPPORT
+//---- CORE APPLICATION
+//----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
-Map _modePbsgPage () {
-  // While IT IS POSSIBLE to view a Mode PBSG instance using this function,
-  // THIS PAGE IS NOT NORMALLY PRESENTED and NO SETTINGS ARE EXPECTED.
-  //   - Use the Hubitat Apps menu to view this page.
-  //   - The WHA page displays Mode PBSG state if the Mode PBSG exists.
-  return dynamicPage (
-    name: '_modePbsgPage',
-    install: true,
-    uninstall: true
-  ) {
-    _pbsgBasePage()
+void removeLegacyModePbsgState () {
+  atomicState.remove('activeVswDni')
+  atomicState.remove('defaultVswDni')
+  atomicState.remove('defaultVswName')
+  atomicState.remove('inspectScene')
+  atomicState.remove('LOG_LEVEL1_ERROR')
+  atomicState.remove('LOG_LEVEL2_WARN')
+  atomicState.remove('LOG_LEVEL3_INFO')
+  atomicState.remove('LOG_LEVEL4_DEBUG')
+  atomicState.remove('LOG_LEVEL5_TRACE')
+  atomicState.remove('logLevel1Error')
+  atomicState.remove('logLevel2Warn')
+  atomicState.remove('logLevel3Info')
+  atomicState.remove('logLevel4Debug')
+  atomicState.remove('logLevel5Trace')
+  atomicState.remove('previousVswDni')
+  atomicState.remove('roomName')
+  atomicState.remove('roomScene')
+  atomicState.remove('switchDnis')
+}
+
+void configureModePbsg() {
+  Linfo(
+    'configureModePbsg()',
+    "Updating ${app.getLabel()} state, devices and subscriptions"
+  )
+  Ltrace('configureModePbsg()', 'stopping event subscriptions')
+  app.unsubscribe()
+  Ltrace('configureModePbsg()', 'updating state values')
+  updateModePbsgState()
+  Ltrace('configureModePbsg()', 'managing child devices')
+  manageChildDevices('configureModePbsg()')
+  Ltrace(
+    'configureModePbsg()',
+    "ensuring active VSW matches current mode (${mode})"
+  )
+  activateVswForCurrentMode()
+  Ltrace('configureModePbsg()', 'subscribing to VSW changes')
+  subscribeToModeVswChanges()
+}
+
+void updateModePbsgState () {
+  // Used for initial configuration AND configuration refresh.
+  removeLegacyModePbsgState()
+  atomicState.vswDniPrefix = "${app.getLabel()}_"
+  atomicState.vswNames = getModeNames()
+  atomicState.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
+  atomicState.logLevel = parent.getLogLevel() ?: lookupLogLevel('TRACE')
+  //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
+  Ltrace(
+    'updateModePbsgState()', getPbsgStateBullets()
+    //[
+    //  '',
+    //  getPbsgStateBullets()
+    //].join('<br/>')
+  )
+}
+
+void activateVswForCurrentMode () {
+  String mode = getLocation().getMode()
+  Ltrace('modePbsgInit()', "Activating VSW for current mode: ${mode}")
+  turnOnVswExclusivelyByName(mode)
+}
+
+void subscribeToModeVswChanges () {
+  List<DevW> vsws = getVsws()
+  if (!vsws) {
+    Lerror('subscribeToModeVswChanges()', 'The child VSW instances are MISSING.')
+  }
+  vsws.each{ vsw ->
+    //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
+    //-> Ltrace(
+    //->   'subscribeToModeVswChanges()',
+    //->   "Subscribe <b>${vsw.deviceNetworkId} (${vsw.id})</b> to modeVswEventHandler()"
+    //-> )
+    app.subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
   }
 }
 
 //----
-//---- STANDALONE METHODS (no inherent "this")
+//---- SYSTEM CALLBACKS
+//----   Methods specific to this execution context
+//----
+
+void installed () {
+  Ltrace('installed()', 'Calling configureModePbsg()')
+  configureModePbsg()
+}
+
+void updated () {
+  Ltrace('updated()', 'Calling configureModePbsg()')
+  configureModePbsg()
+}
+
+void uninstalled () {
+  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
+  getAllChildDevices().collect{ device ->
+    Ldebug('uninstalled()', "Deleting '${device.deviceNetworkId}'")
+    deleteChildDevice(device.deviceNetworkId)
+  }
+}
+
+//----
+//---- EVENT HANDLERS
+//----   Methods specific to this execution context
 //----
 
 void modeVswEventHandler (Event e) {
@@ -87,8 +177,8 @@ void modeVswEventHandler (Event e) {
         "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
       // The vswName is the target mode.
-      String vswName = _vswDnitoName(e.displayName)
-      _turnOnVswExclusivelyByName(vswName)
+      String vswName = vswDnitoName(e.displayName)
+      turnOnVswExclusivelyByName(vswName)
       // Adjust the Hubitat mode.
       Ldebug(
         'modeVswEventHandler()',
@@ -111,106 +201,30 @@ void modeVswEventHandler (Event e) {
 }
 
 //----
-//---- EXPECTED APP METHODS
+//---- SCHEDULED ROUTINES
+//----   Methods specific to this execution context
 //----
 
-void installed () {
-  Ltrace('installed()', 'Calling _configureModePbsg()')
-  _configureModePbsg()
-}
-
-void updated () {
-  Ltrace('updated()', 'Calling _configureModePbsg()')
-  _configureModePbsg()
-}
-
-void uninstalled () {
-  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
-  getAllChildDevices().collect{ device ->
-    Ldebug('uninstalled()', "Deleting '${device.deviceNetworkId}'")
-    deleteChildDevice(device.deviceNetworkId)
-  }
-}
-
 //----
-//---- CUSTOM APP METHODS
+//---- HTTP ENDPOINTS
+//----   Methods specific to this execution context
 //----
 
-void _configureModePbsg() {
-  Linfo(
-    '_configureModePbsg()',
-    "Updating ${app.getLabel()} state, devices and subscriptions"
-  )
-  Ltrace('_configureModePbsg()', 'stopping event subscriptions')
-  app.unsubscribe()
-  Ltrace('_configureModePbsg()', 'updating state values')
-  _updateModePbsgState()
-  Ltrace('_configureModePbsg()', 'managing child devices')
-  _manageChildDevices('_configureModePbsg()')
-  Ltrace(
-    '_configureModePbsg()',
-    "ensuring active VSW matches current mode (${mode})"
-  )
-  _activateVswForCurrentMode()
-  Ltrace('_configureModePbsg()', 'subscribing to VSW changes')
-  _subscribeToModeVswChanges()
-}
+//----
+//---- RENDERING AND DISPLAY
+//----   Methods specific to this execution context
+//----
 
-void _removeLegacyModePbsgState () {
-  atomicState.remove('activeVswDni')
-  atomicState.remove('defaultVswDni')
-  atomicState.remove('defaultVswName')
-  atomicState.remove('inspectScene')
-  atomicState.remove('LOG_LEVEL1_ERROR')
-  atomicState.remove('LOG_LEVEL2_WARN')
-  atomicState.remove('LOG_LEVEL3_INFO')
-  atomicState.remove('LOG_LEVEL4_DEBUG')
-  atomicState.remove('LOG_LEVEL5_TRACE')
-  atomicState.remove('logLevel1Error')
-  atomicState.remove('logLevel2Warn')
-  atomicState.remove('logLevel3Info')
-  atomicState.remove('logLevel4Debug')
-  atomicState.remove('logLevel5Trace')
-  atomicState.remove('previousVswDni')
-  atomicState.remove('roomName')
-  atomicState.remove('roomScene')
-  atomicState.remove('switchDnis')
-}
-
-void _updateModePbsgState () {
-  // Used for initial configuration AND configuration refresh.
-  _removeLegacyModePbsgState()
-  atomicState.vswDniPrefix = "${app.getLabel()}_"
-  atomicState.vswNames = getModeNames()
-  atomicState.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
-  atomicState.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
-  //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
-  Ltrace(
-    '_updateModePbsgState()',
-    [
-      '',
-      _getPbsgStateBullets()
-    ].join('<br/>')
-  )
-}
-
-void _activateVswForCurrentMode () {
-  String mode = getLocation().getMode()
-  Ltrace('_modePbsgInit()', "Activating VSW for current mode: ${mode}")
-  _turnOnVswExclusivelyByName(mode)
-}
-
-void _subscribeToModeVswChanges () {
-  List<DevW> vsws = _getVsws()
-  if (!vsws) {
-    Lerror('_subscribeToModeVswChanges()', 'The child VSW instances are MISSING.')
-  }
-  vsws.each{ vsw ->
-    //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
-    //-> Ltrace(
-    //->   '_subscribeToModeVswChanges()',
-    //->   "Subscribe <b>${vsw.deviceNetworkId} (${vsw.id})</b> to modeVswEventHandler()"
-    //-> )
-    app.subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
+Map modePbsgPage () {
+  // While IT IS POSSIBLE to view a Mode PBSG instance using this function,
+  // THIS PAGE IS NOT NORMALLY PRESENTED and NO SETTINGS ARE EXPECTED.
+  //   - Use the Hubitat Apps menu to view this page.
+  //   - The WHA page displays Mode PBSG state if the Mode PBSG exists.
+  return dynamicPage (
+    name: 'modePbsgPage',
+    install: true,
+    uninstall: true
+  ) {
+    pbsgBasePage()
   }
 }

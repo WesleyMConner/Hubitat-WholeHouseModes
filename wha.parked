@@ -1,5 +1,5 @@
 /*
-void _insertForceUpdateButton () {
+void insertForceUpdateButton () {
   input(
     name: 'updateModePbsg',
     type: 'button',
@@ -23,7 +23,7 @@ void appButtonHandler (def b) {
           'Unable to locate modePbsg App instance'
         )
       }
-      modePbsg._modePbsgInit()
+      modePbsg.modePbsgInit()
       break
     default:
       Lerror('updateModePbsgButtonHandler()', "unexpected button '${b}'")

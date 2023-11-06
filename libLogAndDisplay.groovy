@@ -29,28 +29,20 @@ library (
  importUrl: 'TBD'
 )
 
-// -------------
-// G L O B A L S
-// -------------
-String BLACK = 'rgba(0, 0, 0, 1.0)'
+//----
+//---- HTML FORMATTING
+//----
+
 String BLUE = 'rgba(51, 92, 255, 1.0)'
 String LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
 String RED = 'rgba(255, 0, 0, 1.0)'
 
-H1_CSS = 'font-size: 2em; font-weight: bold;'
-H2_CSS = 'font-size: 1em; font-weight: bold;'
-EMPHASIS_CSS = "font-size: 1.3em; color: ${BLUE}; margin-left: 0px;"
-COMMENT_CSS = "font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic"
-
-// ---------------------------------------
-// P A R A G R A P H   F O R M A T T I N G
-// ---------------------------------------
 String heading1(String s) {
-  return """<span style="${H1_CSS}">${s}</span>"""
+  return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
 }
 
 String heading2(String s) {
-  return """<span style="${H2_CSS}">${s}</span>"""
+  return """<span style='font-size: 1em; font-weight: bold;'>${s}</span>"""
 }
 
 String bullet1(String s) {
@@ -61,24 +53,19 @@ String bullet2(String s) {
   return "&nbsp;&nbsp;&nbsp;&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String emphasis(String s) {
-  return """<span style="${EMPHASIS_CSS}">${s}</span>"""
-}
-
 String comment(String s) {
-  return """<span style="${COMMENT_CSS}">${s}</span>"""
+  return """<span style="font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic">${s}</span>"""
 }
 
-//-> String red(String s) {
-//->   RED_BOLD = "color: ${RED}; font-style: bold"
-//->   return """<span style="${RED_BOLD}">${s}</span>"""
-//-> }
+String red(String s) {
+  return """<span style="color: ${RED}; font-style: bold">${s}</span>"""
+}
 
-// -------------
-// L O G G I N G
-// -------------
+//----
+//---- LOGGING
+//----
 
-void _lookupLogLevel (String logThreshold) {
+void lookupLogLevel (String logThreshold) {
   Integer
   switch(logThreshold) {
     case 'TRACE':
@@ -96,17 +83,6 @@ void _lookupLogLevel (String logThreshold) {
     default:   // 'ERROR'
       atomicState.logLevel = 1
   }
-}
-
-void _solicitLogThreshold () {
-  input (
-    name: 'logThreshold',
-    type: 'enum',
-    title: 'Log Threshold',
-    defaultValue: 'DEBUG',
-    options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
-    submitOnChange: true
-  )
 }
 
 void Lerror (String fnName, String s) {
@@ -137,5 +113,40 @@ void Ldebug (String fnName, String s) {
 void Ltrace (String fnName, String s) {
   if (atomicState.logLevel > 4) log.trace(
     "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+  )
+}
+
+//----
+//---- TABLES
+//----
+
+String tdLft (def x) {
+  return """<td style="text-align: left; padding-left: 10px; padding-right: 10px;
+    font-size: 1em; font-weight: normal;">${x}</td>"""
+}
+
+String tdCtr (def x) {
+  return """<td style="text-align: center; padding-left: 10px; padding-right: 10px;
+    font-size: 1em; font-weight: normal;">${x}</td>"""
+}
+
+String tdRght (def x) {
+  return """<td style="text-align: right; padding-left: 10px; padding-right: 10px;
+    font-size: 1em; font-weight: normal;">${x}</td>"""
+}
+
+//----
+//---- RENDERING AND DISPLAY
+//----   Methods specific to this execution context
+//----
+
+void solicitLogThreshold () {
+  input (
+    name: 'logThreshold',
+    type: 'enum',
+    title: 'Log Threshold',
+    defaultValue: 'DEBUG',
+    options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
+    submitOnChange: true
   )
 }

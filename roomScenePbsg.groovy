@@ -35,28 +35,134 @@ definition (
 )
 
 preferences {
-  page(name: '_roomScenePbsgPage')
+  page(name: 'roomScenePbsgPage')
 }
 
 //----
-//---- PAGE DISPLAY AND SUPPORT
+//---- CORE APPLICATION
+//----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
-Map _roomScenePbsgPage () {
-  // Norally, this page IS NOT presented.
-  //   - This page can be viewed via an instance link on the main Hubitat Apps menu.
-  //   - Instance state & settings are rendered on the parent App's page.
-  return dynamicPage (
-    name: '_roomScenePbsgPage',
-    install: true,
-    uninstall: false
-  ) {
-    _pbsgBasePage()
+void removeLegacyRoomScenePbsgState () {
+  atomicState.remove('activeVswDni')
+  atomicState.remove('defaultVswDni')
+  atomicState.remove('defaultVswName')
+  atomicState.remove('inspectScene')
+  atomicState.remove('LOG_LEVEL1_ERROR')
+  atomicState.remove('LOG_LEVEL2_WARN')
+  atomicState.remove('LOG_LEVEL3_INFO')
+  atomicState.remove('LOG_LEVEL4_DEBUG')
+  atomicState.remove('LOG_LEVEL5_TRACE')
+  atomicState.remove('logLevel1Error')
+  atomicState.remove('logLevel2Warn')
+  atomicState.remove('logLevel3Info')
+  atomicState.remove('logLevel4Debug')
+  atomicState.remove('logLevel5Trace')
+  atomicState.remove('previousVswDni')
+  atomicState.remove('roomName')
+  atomicState.remove('roomScene')
+  atomicState.remove('switchDnis')
+}
+
+void configureRoomScenePbsg() {
+  Linfo(
+    'configureRoomScenePbsg()',
+    "Updating ${app.getLabel()} state, devices and subscriptions"
+  )
+
+  //--xx-> THIS IS WRONG! NEED TO DO DEVICE DUP CHECKING NOT APP DUP CHECKING
+  //--xx-> Ltrace('configureRoomScenePbsg()', 'doing App dup checking')
+  //--xx-> detectChildAppDupsForLabels([roomScenePbsgLabel], app)
+
+
+  Ltrace('configureRoomScenePbsg()', 'stopping event subscriptions')
+  app.unsubscribe()
+  Ltrace('configureRoomScenePbsg()', 'updating state values')
+  updateRoomScenePbsgState()
+  Ltrace('configureRoomScenePbsg()', 'managing child devices')
+  manageChildDevices('configureRoomScenePbsg()')
+  Ltrace(
+    'configureRoomScenePbsg()',
+    "ensuring active VSW matches current mode (${mode})"
+  )
+  activateVswForCurrentMode()
+  Ltrace('configureRoomScenePbsg()', 'subscribing to VSW changes')
+  subscribeToModeVswChanges()
+}
+
+void updateRoomScenePbsgState() {
+  // Used for initial configuration AND configuration refresh.
+  removeLegacyRoomScenePbsgState()
+  atomicState.vswDniPrefix = "${app.getLabel()}_"
+  List<String> roomScenes = parent.getRoomScenes()
+  atomicState.vswNames = [*roomScenes, 'AUTOMATIC', 'MANUAL_OVERRIDE']
+  atomicState.vswDefaultName = 'AUTOMATIC'
+  atomicState.logLevel = parent.getLogLevel() ?: lookupLogLevel('TRACE')
+  Ltrace(
+    'updateRoomScenePbsgState()',
+    [
+      getAppInfo(app),
+      getPbsgStateBullets()
+    ].join('<br/>')
+  )
+}
+
+void subscribeToRoomSceneVswChanges() {
+  app.unsubscribe()
+  List<DevW> vsws = getVsws()
+  if (!vsws) {
+    Lerror('subscribeToRoomSceneVswChanges()', 'The child VSW instances are MISSING.')
+  }
+  vsws.each{ vsw ->
+    Ltrace(
+      'subscribeToRoomSceneVswChanges()',
+      "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
+    )
+    app.subscribe(vsw, "switch", roomSceneVswEventHandler, ['filterEvents': false])
+  }
+}
+
+void activateVswForCurrentRoomScene () {
+  // P A R E N T   R E Q U I R E M E N T
+  //   - Parent must provide 'getCurrentRoomScene()'. If non-null, the
+  //     Room Scene VSW is set so as to be consistent with the current
+  //     Room Scene. If null, the Room Scene 'AUTOMATIC' is assumed.
+  Linfo('activateVswForCurrentRoomScene', 'I M P L E M E N T A T I O N   P E N D I N G')
+  // The initially "on" PBSG VSW should be consistent with the current Room Scene.
+  //--PENDING-> String roomScene = parent.getCurrentRoomScene() ?: 'AUTOMATIC'
+  //--PENDING-> Ldebug(
+  //--PENDING->   'roomScenePbsgInit()',
+  //--PENDING->   "Activating VSW for roomScene: <b>${roomScene}</b>"
+  //--PENDING-> )
+  //--PENDING-> turnOnVswExclusivelyByName(roomScene)
+}
+
+
+//----
+//---- SYSTEM CALLBACKS
+//----   Methods specific to this execution context
+//----
+
+void installed () {
+  Ltrace('installed()', 'Calling configureRoomScenePbsg()')
+  configureRoomScenePbsg()
+}
+
+void updated () {
+  Ltrace('updated()', 'Calling configureRoomScenePbsg()')
+  configureRoomScenePbsg()
+}
+
+void uninstalled () {
+  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
+  getAllChildDevices().collect{ device ->
+    deleteChildDevice(device.deviceNetworkId)
   }
 }
 
 //----
-//---- STANDALONE METHODS (no inherent "this")
+//---- EVENT HANDLERS
+//----   Methods specific to this execution context
 //----
 
 void roomSceneVswEventHandler (Event e) {
@@ -81,7 +187,7 @@ void roomSceneVswEventHandler (Event e) {
         'roomSceneVswEventHandler()',
         "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
-      String scene = _vswDnitoName(atomicState.activeVswDni)
+      String scene = vswDnitoName(atomicState.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
       Linfo()
@@ -96,120 +202,29 @@ void roomSceneVswEventHandler (Event e) {
 }
 
 //----
-//---- EXPECTED APP METHODS
+//---- SCHEDULED ROUTINES
+//----   Methods specific to this execution context
 //----
 
-void installed () {
-  Ltrace('installed()', 'Calling _configureRoomScenePbsg()')
-  _configureRoomScenePbsg()
-}
-
-void updated () {
-  Ltrace('updated()', 'Calling _configureRoomScenePbsg()')
-  _configureRoomScenePbsg()
-}
-
-void uninstalled () {
-  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
-  getAllChildDevices().collect{ device ->
-    deleteChildDevice(device.deviceNetworkId)
-  }
-}
-
 //----
-//---- CUSTOM APP METHODS
+//---- HTTP ENDPOINTS
+//----   Methods specific to this execution context
 //----
 
-void _configureRoomScenePbsg() {
-  Linfo(
-    '_configureRoomScenePbsg()',
-    "Updating ${app.getLabel()} state, devices and subscriptions"
-  )
+//----
+//---- RENDERING AND DISPLAY
+//----   Methods specific to this execution context
+//----
 
-  //--xx-> THIS IS WRONG! NEED TO DO DEVICE DUP CHECKING NOT APP DUP CHECKING
-  //--xx-> Ltrace('_configureRoomScenePbsg()', 'doing App dup checking')
-  //--xx-> detectChildAppDupsForLabels([roomScenePbsgLabel])
-
-
-  Ltrace('_configureRoomScenePbsg()', 'stopping event subscriptions')
-  app.unsubscribe()
-  Ltrace('_configureRoomScenePbsg()', 'updating state values')
-  _updateRoomScenePbsgState()
-  Ltrace('_configureRoomScenePbsg()', 'managing child devices')
-  _manageChildDevices('_configureRoomScenePbsg()')
-  Ltrace(
-    '_configureRoomScenePbsg()',
-    "ensuring active VSW matches current mode (${mode})"
-  )
-  _activateVswForCurrentMode()
-  Ltrace('_configureRoomScenePbsg()', 'subscribing to VSW changes')
-  _subscribeToModeVswChanges()
-}
-
-void _removeLegacyRoomScenePbsgState () {
-  atomicState.remove('activeVswDni')
-  atomicState.remove('defaultVswDni')
-  atomicState.remove('defaultVswName')
-  atomicState.remove('inspectScene')
-  atomicState.remove('LOG_LEVEL1_ERROR')
-  atomicState.remove('LOG_LEVEL2_WARN')
-  atomicState.remove('LOG_LEVEL3_INFO')
-  atomicState.remove('LOG_LEVEL4_DEBUG')
-  atomicState.remove('LOG_LEVEL5_TRACE')
-  atomicState.remove('logLevel1Error')
-  atomicState.remove('logLevel2Warn')
-  atomicState.remove('logLevel3Info')
-  atomicState.remove('logLevel4Debug')
-  atomicState.remove('logLevel5Trace')
-  atomicState.remove('previousVswDni')
-  atomicState.remove('roomName')
-  atomicState.remove('roomScene')
-  atomicState.remove('switchDnis')
-}
-
-void _updateRoomScenePbsgState() {
-  // Used for initial configuration AND configuration refresh.
-  _removeLegacyRoomScenePbsgState()
-  atomicState.vswDniPrefix = "${app.getLabel()}_"
-  List<String> roomScenes = parent._getRoomScenes()
-  atomicState.vswNames = [*roomScenes, 'AUTOMATIC', 'MANUAL_OVERRIDE']
-  atomicState.vswDefaultName = 'AUTOMATIC'
-  atomicState.logLevel = parent._getLogLevel() ?: _lookupLogLevel('TRACE')
-  Ltrace(
-    '_updateRoomScenePbsgState()',
-    [
-      '',
-      _getPbsgStateBullets()
-    ].join('<br/>')
-  )
-}
-
-void _subscribeToRoomSceneVswChanges() {
-  app.unsubscribe()
-  List<DevW> vsws = _getVsws()
-  if (!vsws) {
-    Lerror('_subscribeToRoomSceneVswChanges()', 'The child VSW instances are MISSING.')
+Map roomScenePbsgPage () {
+  // Norally, this page IS NOT presented.
+  //   - This page can be viewed via an instance link on the main Hubitat Apps menu.
+  //   - Instance state & settings are rendered on the parent App's page.
+  return dynamicPage (
+    name: 'roomScenePbsgPage',
+    install: true,
+    uninstall: false
+  ) {
+    pbsgBasePage()
   }
-  vsws.each{ vsw ->
-    Ltrace(
-      '_subscribeToRoomSceneVswChanges()',
-      "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
-    )
-    app.subscribe(vsw, "switch", roomSceneVswEventHandler, ['filterEvents': false])
-  }
-}
-
-void _activateVswForCurrentRoomScene () {
-  // P A R E N T   R E Q U I R E M E N T
-  //   - Parent must provide 'getCurrentRoomScene()'. If non-null, the
-  //     Room Scene VSW is set so as to be consistent with the current
-  //     Room Scene. If null, the Room Scene 'AUTOMATIC' is assumed.
-  Linfo('_activateVswForCurrentRoomScene', 'I M P L E M E N T A T I O N   P E N D I N G')
-  // The initially "on" PBSG VSW should be consistent with the current Room Scene.
-  //--PENDING-> String roomScene = parent.getCurrentRoomScene() ?: 'AUTOMATIC'
-  //--PENDING-> Ldebug(
-  //--PENDING->   '_roomScenePbsgInit()',
-  //--PENDING->   "Activating VSW for roomScene: <b>${roomScene}</b>"
-  //--PENDING-> )
-  //--PENDING-> _turnOnVswExclusivelyByName(roomScene)
 }
