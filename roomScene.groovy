@@ -99,7 +99,7 @@ String getSceneForMode (String mode = getLocation().getMode()) {
 InstAppW getRoomScenePbsg () {
   String roomScenePbsgLabel = "pbsg_${app.getLabel()}"
   // PERFORMANCE HIT - Temporarily perform App dup detection.
-  Linfo('getRoomScenePbsg()', 'Calling App Dup Detection')
+  Linfo('getRoomScenePbsg()', 'calling App Dup Detection')
   pruneAppDups([roomScenePbsgLabel], false, app)
   InstAppW roomScenePbsg = getChildAppByLabel(roomScenePbsgLabel)
   if (roomScenePbsg) {
@@ -395,18 +395,18 @@ void roomSceneInitialize () {
 //----
 
 void installed () {
-  Ltrace('installed()', 'Calling roomSceneInitialize()')
+  Ltrace('installed()', 'calling roomSceneInitialize()')
   roomSceneInitialize()
 }
 
 void updated () {
-  Ltrace('updated()', 'Calling roomSceneInitialize()')
+  Ltrace('updated()', 'calling roomSceneInitialize()')
   app.unsubscribe()  // Suspend event processing to rebuild state variables.
   roomSceneInitialize()
 }
 
 void uninstalled () {
-  Ldebug('uninstalled()', 'Calling removeAllChildApps()')
+  Lwarn('uninstalled()', 'calling removeAllChildApps()')
   removeAllChildApps()
 }
 

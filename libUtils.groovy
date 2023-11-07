@@ -93,75 +93,13 @@ String getDeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-void pruneAppDupsV1 (List<String> keepLabels) {
-  List<String> result = []
-  result += '<table>'
-  result += '<tr><th>LABEL</th><th>ID</th><th>DEVICES</th></tr>'
-  app.getAllChildApps().each{ a ->
-    result += "<tr><td>${a.getLabel()}</td><td>${a.getId()}</td><td>${a.getChildDevices().size()}</td></tr>"
-  }
-  result += '</table>'
-  Linfo(
-    'pruneAppDupsV1()',
-    result.join()
-  )
-}
-
-void pruneAppDupsV2 (List<String> keepLabels) {
-  List<String> result = []
-  result += '<table>'
-  result += '<tr><th>LABEL</th><th>ID</th><th>DEVICES</th></tr>'
-  app.getAllChildApps().each{ a ->
-    result += "<tr>${tdCtr(a.getLabel())}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}</tr>"
-  }
-  result += '</table>'
-  Linfo(
-    'pruneAppDups()',
-    result.join()
-  )
-}
-
-void pruneAppDupsV3 (List<String> keepLabels) {
-  List<String> result = []
-  result += '<table>'
-  result += '<tr><th>LABEL</th><th>DUP</th><th>ID</th><th>DEVICES</th></tr>'
-  app.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, apps ->
-    apps.eachWithIndex{ a, index ->
-      Boolean isDup = index > 0
-      result += "<tr>${tdCtr(label)}${tdCtr(isDup)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}</tr>"
-    }
-  }
-  result += '</table>'
-  Linfo(
-    'pruneAppDups()',
-    result.join()
-  )
-}
-
-void pruneAppDupsV4 (List<String> keepLabels, InstAppW appBase) {
-  List<String> result = []
-  result += '<table>'
-  result += '<tr><th>LABEL</th><th>DUP</th><th>ID</th><th>DEVICES</th></tr>'
-  appBase.getAllChildApps()?.groupBy{ app -> app.getLabel() }.each{ label, apps ->
-    apps.eachWithIndex{ a, index ->
-      Boolean isDup = index > 0
-      result += "<tr>${tdCtr(label)}${tdCtr(isDup)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}</tr>"
-    }
-  }
-  result += '</table>'
-  Linfo(
-    'pruneAppDups()',
-    result.join()
-  )
-}
-
 void pruneAppDups (
     List<String> keepLabels,
     Boolean keepLatest,
     InstAppW appBase
   ) {
   // if keepLatest is false, it implies "Keep Oldest"
-Linfo('pruneAppDups()', "<b>keepLabels:</b> ${keepLabels}")
+  Linfo('pruneAppDups()', "<b>keepLabels:</b> ${keepLabels}")
   Boolean isWarning = false
   List<String> result = []
   result += '<table>'
@@ -170,20 +108,57 @@ Linfo('pruneAppDups()', "<b>keepLabels:</b> ${keepLabels}")
     Boolean isOrphan = keepLabels.findIndexOf{ it == label } == -1
     apps.eachWithIndex{ a, index ->
       Boolean isDup = index > 0
-Linfo('pruneAppDups()', """<br/>
-<b>label:</b> ${label},<br/>
-<b>isOrphan</b>: ${isOrphan},<br/>
-<b>isDup</b>: ${isDup},<br/>
-<b>index:</b> ${index},<br/>
-<b>a:</b> ${getAppInfo(a)}""")
+      if (isOrphan) {
+        isWarning = true
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
+        appBase.deleteChildApp(a.getId())
+      } else if (isDup) {
+        isWarning = true
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE', 'font-weight: bold;')}</tr>"
+        appBase.deleteChildApp(a.getId())
+      } else {
+        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
+      }
+    }
+  }
+  result += '</table>'
+  if (isWarning) {
+    Lwarn('pruneAppDups()', result.join())
+  } else {
+    Ltrace('pruneAppDups()', result.join())
+  }
+}
+
+
+void pruneAppDupsChildIssue (
+    List<String> keepLabels,
+    Boolean keepLatest
+  ) {
+  // if keepLatest is false, it implies "Keep Oldest"
+  Linfo('pruneAppDups()', "<b>app:</b> ${getAppInfo(app)}, <b>keepLabels:</b> ${keepLabels}")
+  Boolean isWarning = false
+  List<String> result = []
+  result += '<table>'
+  result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
+  app.getAllChildApps()?.groupBy{ it.getLabel() }.each{ label, apps ->
+    Boolean isOrphan = keepLabels.findIndexOf{ it == label } == -1
+    apps.eachWithIndex{ a, index ->
+      Boolean isDup = index > 0
+        Linfo('pruneAppDups()', """<br/>
+          <b>label:</b> ${label},<br/>
+          <b>isOrphan</b>: ${isOrphan},<br/>
+          <b>isDup</b>: ${isDup},<br/>
+          <b>index:</b> ${index},<br/>
+          <b>a:</b> ${getAppInfo(a)}"""
+      )
       if (isOrphan) {
         isWarning = true
         result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN (ON HOLD)', 'font-weight: bold;')}</tr>"
-  //--ON-HOLD-> deleteChildApp(a.getId())
+    //--ON-HOLD-> deleteChildApp(a.getId())
       } else if (isDup) {
         isWarning = true
         result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE (ON HOLD)', 'font-weight: bold;')}</tr>"
-  //--ON-HOLD-> deleteChildApp(a.getId())
+    //--ON-HOLD-> deleteChildApp(a.getId())
       } else {
         result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
       }

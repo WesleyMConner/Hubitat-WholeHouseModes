@@ -86,7 +86,7 @@ void manageNestedChildApps () {
 
 InstAppW getModePbsg () {
   String pbsgLabel = 'MODE_PBSG'
-  Ltrace('getModePbsg()', 'Calling manageNestedChildApps()')
+  Ltrace('getModePbsg()', 'calling manageNestedChildApps()')
   manageNestedChildApps()
   InstAppW modePbsg = getChildAppByLabel(pbsgLabel)
   if (modePbsg) {
@@ -123,7 +123,7 @@ InstAppW getOrCreateModePbsg () {
   //--TESTING-ONLY-> addFakeChildAppsForTesting()
   InstAppW modePbsg = getModePbsg()
   if (!modePbsg) {
-    Linfo('getOrCreateModePbsg()', 'Calling addChildApp() for MODE_PBSG (ON HOLD)')
+    Linfo('getOrCreateModePbsg()', 'calling addChildApp() for MODE_PBSG (ON HOLD)')
     //-> modePbsg = addChildApp(
     //->   'wesmc',      // See modePbsg.groovy definition's (App) namespace.
     //->   'modePbsg',   // See modePbsg.groovy definition's (App) name.
@@ -160,7 +160,7 @@ void whaInitialize () {
     app.subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
     app.subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
-  Ltrace('whaInitialize()', 'Calling getOrCreateModePbsg()')
+  Ltrace('whaInitialize()', 'calling getOrCreateModePbsg()')
   InstAppW modePbsg = getOrCreateModePbsg()
 }
 
@@ -276,18 +276,18 @@ void modeChangeButtonHandler (Event e) {
 //----
 
 void installed () {
-  Ldebug('installed()', 'Calling whaInitialize()')
+  Ldebug('installed()', 'calling whaInitialize()')
   whaInitialize()
 }
 
 void updated () {
-  Ldebug('updated()', 'Calling whaInitialize()')
+  Ldebug('updated()', 'calling whaInitialize()')
   whaInitialize()
 }
 
 void uninstalled () {
-  Ltrace('uninstalled()', 'Calling removeAllChildApps()')
-  removeAllChildApps()
+  Lwarn('uninstalled()', 'calling removeAllChildApps()')
+  app.removeAllChildApps()
 }
 
 //----
@@ -460,7 +460,7 @@ void displayInstantiatedRoomHrefs () {
       if (!roomApp) {
         Lwarn(
           'displayInstantiatedRoomHrefs()',
-          "Calling addChildApp() for '${roomScenePbsgName}' (ON HOLD)"
+          "calling addChildApp() for '${roomScenePbsgName}' (ON HOLD)"
         )
         //-> roomApp.addChildApp('wesmc', 'roomScene', roomScenePbsgName)
       }

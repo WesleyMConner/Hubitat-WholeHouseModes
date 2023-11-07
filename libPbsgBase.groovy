@@ -194,7 +194,7 @@ void manageChildDevices (String caller = "UNKNOWN_CALLER") {
       )}
     orphanDnis.each{ dni ->
       Lwarn('manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
-      deleteChildDevice(dni)
+      app.deleteChildDevice(dni)
     }
   } else {
     Lerror(

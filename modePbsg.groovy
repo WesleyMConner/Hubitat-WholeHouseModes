@@ -129,20 +129,20 @@ void subscribeToModeVswChanges () {
 //----
 
 void installed () {
-  Ltrace('installed()', 'Calling configureModePbsg()')
+  Ltrace('installed()', 'calling configureModePbsg()')
   configureModePbsg()
 }
 
 void updated () {
-  Ltrace('updated()', 'Calling configureModePbsg()')
+  Ltrace('updated()', 'calling configureModePbsg()')
   configureModePbsg()
 }
 
 void uninstalled () {
-  Ldebug('uninstalled()', 'DELETING CHILD DEVICES')
+  Lwarn('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
-    Ldebug('uninstalled()', "Deleting '${device.deviceNetworkId}'")
-    deleteChildDevice(device.deviceNetworkId)
+    Lwarn('uninstalled()', "Deleting '${device.deviceNetworkId}'")
+    app.deleteChildDevice(device.deviceNetworkId)
   }
 }
 
