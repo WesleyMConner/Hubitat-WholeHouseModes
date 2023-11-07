@@ -66,7 +66,7 @@ void removeLegacyModePbsgState () {
 }
 
 void configureModePbsg() {
-  Linfo(
+  Ltrace(
     'configureModePbsg()',
     "Updating ${app.getLabel()} state, devices and subscriptions"
   )
@@ -92,19 +92,12 @@ void updateModePbsgState () {
   atomicState.vswNames = getModeNames()
   atomicState.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
   atomicState.logLevel = parent.getLogLevel() ?: lookupLogLevel('TRACE')
-  //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
-  Ltrace(
-    'updateModePbsgState()', getPbsgStateBullets()
-    //[
-    //  '',
-    //  getPbsgStateBullets()
-    //].join('<br/>')
-  )
+  //--DEEP-DIVE-> Ldebug('updateModePbsgState()', "<br/>${getPbsgStateBullets()}")
 }
 
 void activateVswForCurrentMode () {
   String mode = getLocation().getMode()
-  Ltrace('modePbsgInit()', "Activating VSW for current mode: ${mode}")
+  Ltrace('activateVswForCurrentMode()', "Activating VSW for current mode: ${mode}")
   turnOnVswExclusivelyByName(mode)
 }
 

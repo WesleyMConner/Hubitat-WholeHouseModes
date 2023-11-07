@@ -99,7 +99,7 @@ String getSceneForMode (String mode = getLocation().getMode()) {
 InstAppW getRoomScenePbsg () {
   String roomScenePbsgLabel = "pbsg_${app.getLabel()}"
   // PERFORMANCE HIT - Temporarily perform App dup detection.
-  Linfo('getRoomScenePbsg()', 'calling App Dup Detection')
+  Ltrace('getRoomScenePbsg()', 'calling App Dup Detection')
   pruneAppDups([roomScenePbsgLabel], false, app)
   InstAppW roomScenePbsg = getChildAppByLabel(roomScenePbsgLabel)
   if (roomScenePbsg) {
@@ -456,10 +456,7 @@ void repeaterLedHandler (Event e) {
        && (e.name == "buttonLed-${atomicState.roomSceneRepeaterLED}")
        && (e.isStateChange == true)
   ) {
-    Ldebug(
-      'repeaterLedHandler()',
-      'calling detectManualOverride()'
-    )
+    Ldebug('repeaterLedHandler()', 'calling detectManualOverride()')
     detectManualOverride()
   }
 }
@@ -467,10 +464,7 @@ void repeaterLedHandler (Event e) {
 void independentDeviceHandler (Event e) {
   // - This subscription processes Independent Device events. Work is delegated
   //   to detectManualOverride.
-  Ldebug(
-    'independentDeviceHandler()',
-    'calling detectManualOverride()'
-  )
+  Ldebug('independentDeviceHandler()', 'calling detectManualOverride()')
   detectManualOverride()
 }
 
@@ -511,10 +505,7 @@ void keypadSceneButtonHandler (Event e) {
       }
       if (targetScene) {
         String targetVsw = "${atomicState.roomScenePbsgAppId}_${targetScene}"
-        Ldebug(
-          'keypadSceneButtonHandler()',
-          "toggling ${targetVsw}"
-        )
+        Ldebug('keypadSceneButtonHandler()', "toggling ${targetVsw}")
         getRoomScenePbsg().toggleVsw(targetVsw)
       }
       break
@@ -549,10 +540,7 @@ void picoButtonHandler (Event e) {
           )
           app.getChildAppByLabel(atomicState.roomScenePbsgAppId).toggleVsw(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
-          Ldebug(
-            'picoButtonHandler()',
-            "Raising ${settings.independentDevices}"
-          )
+          Ldebug('picoButtonHandler()', "Raising ${settings.independentDevices}")
           settings.independentDevices.each{ d ->
             if (getSwitchState(d) == 'off') {
               d.setLevel(5)
@@ -565,10 +553,7 @@ void picoButtonHandler (Event e) {
             }
           }
         } else if (e.value == '4') {  // Default "Lower" behavior
-          Ldebug(
-            'picoButtonHandler()',
-            "Lowering ${settings.independentDevices}"
-          )
+          Ldebug('picoButtonHandler()', "Lowering ${settings.independentDevices}")
           settings.independentDevices.each{ d ->
               d.setLevel(Math.max(
                 (d.currentValue('level') as Integer) - changePercentage,
@@ -1064,10 +1049,7 @@ void configureRoomScene () {
   //->   ].join('<br/>')
   //-> )
   sceneKeysAtStart.minus(currentSceneKeys).each{ key ->
-    Ldebug(
-      'configureRoomScene()',
-      "removing setting ${key}"
-    )
+    Ldebug('configureRoomScene()', "removing setting ${key}")
     settings.remove(key)
   }
 }

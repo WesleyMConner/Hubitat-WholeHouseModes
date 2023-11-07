@@ -141,32 +141,19 @@ String vswNameToDni (String name) {
   return "${atomicState.vswDniPrefix}${name}"
 }
 
-//-> List<String> expectedVswDnis () {
-//->   List<String> vswDnis = atomicState.vswNames.collect{ vswNameToDni(it) }
-//->   Ltrace(
-//->     'expectedVswDnis ()',
-//->     [
-//->       '',
-//->       "Given <b>atomicState.vswNames:</b> ${atomicState.vswNames}",
-//->       "Proeduced <b>vswDnis:</b> ${vswDnis}"
-//->     ].join('<br/>')
-//->   )
-//->   return vswDnis
-//-> }
-
 void manageChildDevices (String caller = "UNKNOWN_CALLER") {
   // Uncomment the following to test orphan child app removal.
   //==T E S T I N G   O N L Y==> addOrphanChild()
   // The ONLY child devices for a PBSG are its managed VSWs.
   List<String> expectedDnis = atomicState.vswNames.collect{ vswNameToDni(it) }
-  //-> Ltrace(
-  //->   'manageChildDevices() [002a]',
-  //->   [
-  //->     "Called by '${caller}'",
-  //->     getPbsgStateBullets(),
-  //->     "<b>expectedDnis:</b> ${expectedDnis} (${expectedDnis.size()})"
-  //->   ].join('<br/>')
-  //-> )
+  //--DEEP-DIVE-> Ltrace(
+  //--DEEP-DIVE->   'manageChildDevices() [002a]',
+  //--DEEP-DIVE->   [
+  //--DEEP-DIVE->     "Called by '${caller}'",
+  //--DEEP-DIVE->     getPbsgStateBullets(),
+  //--DEEP-DIVE->     "<b>expectedDnis:</b> ${expectedDnis} (${expectedDnis.size()})"
+  //--DEEP-DIVE->   ].join('<br/>')
+  //--DEEP-DIVE-> )
   if (expectedDnis.size() > 0) {
     List<String> entryDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
     // Clone lists with .collect() to avoid shallow copies OR removeAll()
@@ -175,18 +162,17 @@ void manageChildDevices (String caller = "UNKNOWN_CALLER") {
     missingDnis.removeAll(entryDnis)
     List<String> orphanDnis = entryDnis.collect()
     orphanDnis.removeAll(expectedDnis)
-    //-> USE THE FOLLOWING FOR HEAVY DEBUGGING ONLY
-    Ltrace(
-      'manageChildDevices() [002b]',
-      [
-        '<table>',
-        "<tr><th>expectedDnis</th><td>${expectedDnis} (${expectedDnis.size()})</td></tr>",
-        "<tr><th>entryDnis</th><td>${entryDnis} (${entryDnis.size()})</td></tr>",
-        "<tr><th>missingDnis</th><td>${missingDnis} (${missingDnis.size()})</td></tr>",
-        "<tr><th>orphanDnis:</th><td>${orphanDnis} (${orphanDnis.size()})</td></tr>",
-        '</table>'
-      ].join()
-    )
+    //--DEEP-DIVE-> Ltrace(
+    //--DEEP-DIVE->   'manageChildDevices()',
+    //--DEEP-DIVE->   [
+    //--DEEP-DIVE->     '<table>',
+    //--DEEP-DIVE->     "<tr><th>expectedDnis</th><td>${expectedDnis} (${expectedDnis.size()})</td></tr>",
+    //--DEEP-DIVE->     "<tr><th>entryDnis</th><td>${entryDnis} (${entryDnis.size()})</td></tr>",
+    //--DEEP-DIVE->     "<tr><th>missingDnis</th><td>${missingDnis} (${missingDnis.size()})</td></tr>",
+    //--DEEP-DIVE->     "<tr><th>orphanDnis:</th><td>${orphanDnis} (${orphanDnis.size()})</td></tr>",
+    //--DEEP-DIVE->     '</table>'
+    //--DEEP-DIVE->   ].join()
+    //--DEEP-DIVE-> )
     missingDnis.each{ dni ->
       Lwarn('manageChildDevices()', "adding '<b>${dni}'</b>")
       addChildDevice(
