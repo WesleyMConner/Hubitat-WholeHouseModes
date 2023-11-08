@@ -168,7 +168,7 @@ void allAuto () {
     InstAppW roomApp = getChildAppByLabel(roomName)
     String manualOverrideVswDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
     Ldebug('allAuto()', 'Turning on <b>MANUAL_OVERRIDE</b>')
-    roomApp.getRoomScenePbsg().turnOnExclusivelyByName('MANUAL_OVERRIDE')
+    roomApp.getRoomScenePbsg().turnButtonOn('MANUAL_OVERRIDE')
   }
 }
 
@@ -263,7 +263,7 @@ void modeChangeButtonHandler (Event e) {
           "turning ${targetVswName} on (exclusively)"
         )
         InstAppW modePbsg = getModePbsg()
-        modePbsg.turnOnExclusivelyByName(targetVswName)
+        modePbsg.turnButtonOn(targetVswName)
       }
       if (targetVswName == 'Day') {
         Ltrace(
@@ -302,7 +302,7 @@ void modeChangeButtonHandler (Event e) {
 Map whaPage () {
   // The whaPage() SHOULD NOT create or interact with the Mode PBSG instance.
   // The whaPage() DOES PRESENT Mode PBSG state if the Mode PBSG exists.
-    removeLegacySettingsAndState()
+  removeLegacySettingsAndState()
     // This App instance is NEVER retrieved by its label, so an update is okay.
     app.updateLabel('Whole House Automation (WHA)')
     if (!atomicState.logLevel) atomicState.logLevel = lookupLogLevel('DEBUG')

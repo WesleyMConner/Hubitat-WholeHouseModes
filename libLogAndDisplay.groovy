@@ -39,20 +39,24 @@ String RED = 'rgba(255, 0, 0, 1.0)'
 
 String CSS_HIGHLIGHT = 'background-color: yellow; font-weight: bold;'
 
-String Heading1(String s) {
+String Heading1 (String s) {
   return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
 }
 
-String Heading2(String s) {
+String Heading2 (String s) {
   return """<span style='font-size: 1em; font-weight: bold;'>${s}</span>"""
 }
 
-String Bullet1(String s) {
+String Bullet1 (String s) {
   return "&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String Bullet2(String s) {
+String Bullet2 (String s) {
   return "&nbsp;&nbsp;&nbsp;&#x2022;&nbsp;&nbsp;${s}"
+}
+
+String b (def val) {
+  return "'<b>val</b>'"
 }
 
 //--UNUSED-> String Comment(String s) {

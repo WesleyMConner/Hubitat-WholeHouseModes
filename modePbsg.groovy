@@ -74,14 +74,14 @@ void configureModePbsg() {
   unsubscribe()
   Ltrace('configureModePbsg()', 'updating state values')
   removeLegacyModePbsgState()  //--TBD-> What can migrate to libPbsgBase?
-  configurePbsg (
+  createPbsg (
     "${app.getLabel()}_",                 // String dniPrefix
     GetModeNames(),                       // List<String> buttonNames,
     getGlobalVar('DEFAULT_MODE').value,   // String defaultButton
     'TRACE'                               // String logThreshold
   )
   Ltrace('configureModePbsg()', "Active switch for current Hubitat mode (${mode})")
-  turnOnExclusivelyByName(mode)
+  turnButtonOn(mode)
   Ltrace('configureModePbsg()', 'subscribing to PBSG events')
   subscribe(vsw, "PbsgCurrentSwitch", modeVswEventHandler, ['filterEvents': false])
 }
