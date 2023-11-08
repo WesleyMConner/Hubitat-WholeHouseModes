@@ -33,11 +33,11 @@ library (
 //---- HUBITAT EXTENSIONS
 //----
 
-List<String> getModeNames () {
+List<String> GetModeNames () {
   return getLocation().getModes().collect{ it.name }
 }
 
-String eventDetails (Event e, Boolean DEEP = false) {
+String EventDetails (Event e, Boolean DEEP = false) {
   String rows = """
     <tr>
       <th align='right'>descriptionText</th>
@@ -80,11 +80,11 @@ String eventDetails (Event e, Boolean DEEP = false) {
   return "<table>${rows}</table>"
 }
 
-String getAppInfo (InstAppW app) {
+String GetAppInfo (InstAppW app) {
   return "${app?.getLabel() ?: 'MISSING_LABEL'} (${app?.getId() ?: 'MISSING_ID'})"
 }
 
-String getDeviceInfo (def device) {
+String GetDeviceInfo (def device) {
   // Design Note:
   //   - The parameter is passed as 'def' in lieu of 'DevW'.
   //   - When devices are used from a LinkedHashMap (e.g., settings, state),
@@ -93,7 +93,7 @@ String getDeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-void pruneAppDups (
+void PruneAppDups (
     List<String> keepLabels,
     Boolean keepLatest,
     InstAppW appBase
@@ -122,23 +122,13 @@ void pruneAppDups (
   }
   result += '</table>'
   if (isWarning) {
-    Lwarn('pruneAppDups()', result.join())
+    Lwarn('PruneAppDups()', result.join())
   } else {
-    Ltrace('pruneAppDups()', result.join())
+    Ltrace('PruneAppDups()', result.join())
   }
 }
 
-void removeAllChildApps () {
-  app.getAllChildApps().each{ child ->
-    Ldebug(
-      'removeAllChildApps()',
-      "deleting child: <b>${getAppInfo(appObj)}</b>"
-    )
-    deleteChildApp(child.getId())
-  }
-}
-
-String getSwitchState (DevW d) {
+String GetSwitchState (DevW d) {
   List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
   return stateValues.contains('on')
       ? 'on'
@@ -147,20 +137,35 @@ String getSwitchState (DevW d) {
         : 'unknown'
 }
 
+//----
+//---- CORE APPLICATION
+//----   Methods that ARE NOT constrained to any specific execution context.
+//----
+
+void removeAllChildApps () {
+  getAllChildApps().each{ child ->
+    Ldebug(
+      'removeAllChildApps()',
+      "deleting child: <b>${GetAppInfo(appObj)}</b>"
+    )
+    deleteChildApp(child.getId())
+  }
+}
+
 String getStateBulletsAsIs() {
   List<String> result = []
   atomicState.sort().each{ k, v ->
-    result += bullet1("<b>${k}</b> → ${v}")
+    result += Bullet1("<b>${k}</b> → ${v}")
   }
-  return result.size() != 0 ? result.join('<br/>') : bullet1('<i>NO DATA AVAILABLE</i>')
+  return result.size() != 0 ? result.join('<br/>') : Bullet1('<i>NO DATA AVAILABLE</i>')
 }
 
 String getSettingsBulletsAsIs() {
   List<String> result = []
   settings.sort().each{ k, v ->
-    result += bullet1("<b>${k}</b> → ${v}")
+    result += Bullet1("<b>${k}</b> → ${v}")
   }
-  return result.size() != 0 ? result.join('<br/>') : bullet1('<i>NO DATA AVAILABLE</i>')
+  return result.size() != 0 ? result.join('<br/>') : Bullet1('<i>NO DATA AVAILABLE</i>')
 }
 
 void identifyLedButtonsForListItems(
@@ -174,7 +179,7 @@ void identifyLedButtonsForListItems(
   list.each{ item ->
     input(
       name: "${prefix}_${item}",
-      title: heading2("Identify LEDs/Buttons for <b>${item}</b>"),
+      title: Heading2("Identify LEDs/Buttons for <b>${item}</b>"),
       type: 'enum',
       width: 6,
       submitOnChange: true,
@@ -208,17 +213,17 @@ void populateStateKpadButtons (String prefix) {
   //   - Keypad DNI
   //   - Keypad Button number
   String stateKey = "${prefix}Map"
-  state[stateKey] = [:]
+  atomicState[stateKey] = [:]
   settings.each{ key, value ->
     if (key.contains("${prefix}_")) {
       String base = key.minus("${prefix}_")
       value.each{ item ->
         List<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
-          if (state[stateKey][kpadDniAndButtons[0]] == null) {
-            state[stateKey][kpadDniAndButtons[0]] = [:]
+          if (atomicState[stateKey][kpadDniAndButtons[0]] == null) {
+            atomicState[stateKey][kpadDniAndButtons[0]] = [:]
           }
-          state[stateKey][kpadDniAndButtons[0]][kpadDniAndButtons[1]] = base
+          atomicState[stateKey][kpadDniAndButtons[0]][kpadDniAndButtons[1]] = base
         }
       }
     }

@@ -65,19 +65,19 @@ void removeLegacyRoomScenePbsgState () {
 }
 
 void configureRoomScenePbsg() {
-  Linfo(
+  Ltrace(
     'configureRoomScenePbsg()',
     "Updating ${app.getLabel()} state, devices and subscriptions"
   )
   Ltrace('configureRoomScenePbsg()', 'stopping event subscriptions')
-  app.unsubscribe()
+  unsubscribe()
   Ltrace('configureRoomScenePbsg()', 'updating state values')
   updateRoomScenePbsgState()
   Ltrace('configureRoomScenePbsg()', 'managing child devices')
-  manageChildDevices('configureRoomScenePbsg()')
+  managePbsgChildDevices()
   Ltrace(
     'configureRoomScenePbsg()',
-    "ensuring active VSW matches current mode (${mode})"
+    "ensuring active VSW matches current mode (${getLocation().getMode()})"
   )
   activateVswForCurrentMode()
   Ltrace('configureRoomScenePbsg()', 'subscribing to VSW changes')
@@ -95,15 +95,17 @@ void updateRoomScenePbsgState() {
   Ltrace(
     'updateRoomScenePbsgState()',
     [
-      getAppInfo(app),
+      '',
+      GetAppInfo(app),
       getPbsgStateBullets()
     ].join('<br/>')
   )
 }
 
 void subscribeToRoomSceneVswChanges() {
-  app.unsubscribe()
-  List<DevW> vsws = getVsws()
+  unsubscribe()
+  //--TBD-> TREAT 'getPbsgVsws' AS PRIVATE
+  List<DevW> vsws = getPbsgVsws()
   if (!vsws) {
     Lerror('subscribeToRoomSceneVswChanges()', 'The child VSW instances are MISSING.')
   }
@@ -112,7 +114,7 @@ void subscribeToRoomSceneVswChanges() {
       'subscribeToRoomSceneVswChanges()',
       "Subscribe <b>${vsw.dni} (${vsw.id})</b> to modeVswEventHandler()"
     )
-    app.subscribe(vsw, "switch", roomSceneVswEventHandler, ['filterEvents': false])
+    subscribe(vsw, "switch", roomSceneVswEventHandler, ['filterEvents': false])
   }
 }
 
@@ -128,7 +130,7 @@ void activateVswForCurrentRoomScene () {
   //--PENDING->   'roomScenePbsgInit()',
   //--PENDING->   "Activating VSW for roomScene: <b>${roomScene}</b>"
   //--PENDING-> )
-  //--PENDING-> turnOnVswExclusivelyByName(roomScene)
+  //--PENDING-> turnOnExclusivelyByName(roomScene)
 }
 
 
@@ -151,7 +153,7 @@ void uninstalled () {
   Lwarn('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
     Lwarn('uninstalled()', "Deleting '${device.deviceNetworkId}'")
-    app.deleteChildDevice(device.deviceNetworkId)
+    deleteChildDevice(device.deviceNetworkId)
   }
 }
 
@@ -167,7 +169,7 @@ void roomSceneVswEventHandler (Event e) {
   // P A R E N T   R E Q U I R E M E N T
   //   - Parent must provide 'activateRoomScene(String roomScene)' which is
   //     invoked when a pbsgVswTurnedOnCallback()'
-  Ltrace('roomSceneVswEventHandler', "eventDetails: ${eventDetails(e)}")
+  Ltrace('roomSceneVswEventHandler', "EventDetails: ${EventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
       if (atomicState.previousVswDni == e.displayName) {
@@ -176,16 +178,18 @@ void roomSceneVswEventHandler (Event e) {
           "The active Room Scene VSW '${atomicState.activeVswDni}' did not change."
         )
       }
+      //--TBD-> TREAT 'getDefaultVswDni' AS PRIVATE
       atomicState.previousVswDni = atomicState.activeVswDni ?: getDefaultVswDni()
       atomicState.activeVswDni = e.displayName
-      Ldebug(
+      Linfo(
         'roomSceneVswEventHandler()',
         "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
+      //--TBD-> TREAT 'vswDniToName' AS PRIVATE
       String scene = vswDnitoName(atomicState.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
-      Linfo()
+      Ltrace()
       // Take no action when a VSW turns off
     } else {
       Lwarn(

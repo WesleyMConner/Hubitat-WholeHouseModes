@@ -1,4 +1,3 @@
-
 // ---------------------------------------------------------------------------------
 // W H O L E   H O U S E   A U T O M A T I O N
 //
@@ -43,7 +42,7 @@ preferences {
 //----
 
 void removeLegacySettingsAndState () {
-  settings.remove('log')
+  settings?.remove('log')
   atomicState.remove('defaultMode')
   atomicState.remove('LOG_LEVEL1_ERROR')
   atomicState.remove('LOG_LEVEL2_WARN')
@@ -70,17 +69,17 @@ void manageNestedChildApps () {
   // (1) Begin with direct children of WHA (the MODE_PBSG and Room Scene instances).
   Ltrace(
     'manageNestedChildApps()',
-    'At root level, calling pruneAppDups()'
+    'At root level, calling PruneAppDups()'
   )
-  pruneAppDups(['MODE_PBSG', *settings.rooms], false, app)
+  PruneAppDups(['MODE_PBSG', *settings.rooms], false, app)
   // (2) Drill into each RoomScene and manage its PBSG Instance
   settings.rooms?.each{ roomName ->
     Ltrace(
       'manageNestedChildApps()',
-      "For ${roomName}, calling pruneAppDups()."
+      "For ${roomName}, calling PruneAppDups()."
     )
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
-    pruneAppDups(["pbsg_${roomName}"], false, roomApp)
+    InstAppW roomApp = getChildAppByLabel(roomName)
+    PruneAppDups(["pbsg_${roomName}"], false, roomApp)
   }
 }
 
@@ -96,40 +95,40 @@ InstAppW getModePbsg () {
   return modePbsg
 }
 
-void addFakeChildAppsForTesting () {
+void addFakeChildApps_TESTING_ONLY () {
   InstAppW pbsg
   pbsg = addChildApp(
     'wesmc',      // See modePbsg.groovy definition's (App) namespace.
     'modePbsg',   // See modePbsg.groovy definition's (App) name.
     'MODE_PBSG'   // Label used to create or get the child App.
   )
-  Linfo('addFakeChildAppsForTesting()', "Added ${getAppInfo(pbsg)}")
+  Lwarn('addFakeChildApps_TESTING_ONLY()', "Added ${GetAppInfo(pbsg)}")
   pbsg = addChildApp(
     'wesmc',      // See modePbsg.groovy definition's (App) namespace.
     'modePbsg',   // See modePbsg.groovy definition's (App) name.
     'MODE_PBSG'   // Label used to create or get the child App.
   )
-  Linfo('addFakeChildAppsForTesting()', "Added ${getAppInfo(pbsg)}")
+  Lwarn('addFakeChildApps_TESTING_ONLY()', "Added ${GetAppInfo(pbsg)}")
   pbsg = addChildApp(
     'wesmc',      // See modePbsg.groovy definition's (App) namespace.
     'modePbsg',   // See modePbsg.groovy definition's (App) name.
     'BADLY_NAMED_PBSG'   // Label used to create or get the child App.
   )
-  Linfo('addFakeChildAppsForTesting()', "Added ${getAppInfo(pbsg)}")
+  Lwarn('addFakeChildApps_TESTING_ONLY()', "Added ${GetAppInfo(pbsg)}")
 }
 
 InstAppW getOrCreateModePbsg () {
-  Ltrace('getOrCreateModePbsg()', getAppInfo(app))
-  //--TESTING-ONLY-> addFakeChildAppsForTesting()
+  Ltrace('getOrCreateModePbsg()', GetAppInfo(app))
+  //--TESTING-ONLY-> addFakeChildApps_TESTING_ONLY()
   InstAppW modePbsg = getModePbsg()
   if (!modePbsg) {
-    Linfo('getOrCreateModePbsg()', 'calling addChildApp() for MODE_PBSG (ON HOLD)')
-    //-> modePbsg = addChildApp(
-    //->   'wesmc',      // See modePbsg.groovy definition's (App) namespace.
-    //->   'modePbsg',   // See modePbsg.groovy definition's (App) name.
-    //->   'MODE_PBSG'   // Label used to create or get the child App.
-    //-> )
-    //-> modePbsg.configureModePbsg()
+    Lwarn('getOrCreateModePbsg()', 'calling addChildApp() for MODE_PBSG')
+    modePbsg = addChildApp(
+      'wesmc',      // See modePbsg.groovy definition's (App) namespace.
+      'modePbsg',   // See modePbsg.groovy definition's (App) name.
+      'MODE_PBSG'   // Label used to create or get the child App.
+    )
+    modePbsg.configureModePbsg()
   }
   return modePbsg
 }
@@ -140,25 +139,25 @@ String getLogLevel() {
 }
 
 void whaInitialize () {
-  Linfo(
+  Ltrace(
     'whaInitialize()',
     "Updating ${app.getLabel()} state, devices and subscriptions"
   )
   // Limit creation or update of the Mode PBSG instance to this (parent) method.
   Ltrace('whaInitialize()', 'stopping event subscriptions')
-  app.unsubscribe()  // Suspend event processing to rebuild state variables.
+  unsubscribe()  // Suspend event processing to rebuild state variables.
   Ltrace(
     'whaInitialize()',
     [
-      getAppInfo(app),
-      bullet2('subscribing seeTouchKeypads to modeChangeButtonHandler()'),
-      bullet2('subscribing seeTouchKeypads to specialFnButtonHandler()')
+      GetAppInfo(app),
+      Bullet2('subscribing seeTouchKeypads to modeChangeButtonHandler()'),
+      Bullet2('subscribing seeTouchKeypads to specialFnButtonHandler()')
     ].join('<br/>&nbsp;&nbsp;')
   )
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    app.subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
-    app.subscribe(device, specialFnButtonHandler, ['filterEvents': true])
+    subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
+    subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
   Ltrace('whaInitialize()', 'calling getOrCreateModePbsg()')
   InstAppW modePbsg = getOrCreateModePbsg()
@@ -166,10 +165,10 @@ void whaInitialize () {
 
 void allAuto () {
   settings.rooms.each{ roomName ->
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
+    InstAppW roomApp = getChildAppByLabel(roomName)
     String manualOverrideVswDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Ldebug('allAuto()', "Turning on <b>${manualOverrideVswDni}</b>")
-    roomApp.getRoomScenePbsg().turnOnSwitch(manualOverrideVswDni)
+    Ldebug('allAuto()', 'Turning on <b>MANUAL_OVERRIDE</b>')
+    roomApp.getRoomScenePbsg().turnOnExclusivelyByName('MANUAL_OVERRIDE')
   }
 }
 
@@ -177,6 +176,21 @@ void allAuto () {
 //---- SYSTEM CALLBACKS
 //----   Methods specific to this execution context
 //----
+
+void installed () {
+  Ltrace('installed()', 'calling whaInitialize()')
+  whaInitialize()
+}
+
+void updated () {
+  Ltrace('updated()', 'calling whaInitialize()')
+  whaInitialize()
+}
+
+void uninstalled () {
+  Lwarn('uninstalled()', 'calling removeAllChildApps()')
+  removeAllChildApps()
+}
 
 //----
 //---- EVENT HANDLERS
@@ -191,7 +205,7 @@ void specialFnButtonHandler (Event e) {
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
         case 'ALL_AUTO':
-          Ldebug('specialFnButtonHandler()', 'executing ALL_AUTO')
+          Ltrace('specialFnButtonHandler()', 'executing ALL_AUTO')
           allAuto()
           //--TBD--> Update of Keypad LEDs
           break;
@@ -200,7 +214,7 @@ void specialFnButtonHandler (Event e) {
         case 'FLASH':
         case 'PANIC':
         case 'QUIET':
-          Ldebug(
+          Ltrace(
             'specialFnButtonHandler()',
             "<b>${specialtyFunction}</b> "
               + "function execution is <b>TBD</b>"
@@ -217,7 +231,7 @@ void specialFnButtonHandler (Event e) {
     case 'held':
     case 'released':
     default:
-      Ldebug(
+      Lwarn(
         'specialFnButtonHandler()',
         "ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
@@ -244,15 +258,15 @@ void modeChangeButtonHandler (Event e) {
       //->   ].join('<br/>')
       //-> )
       if (targetVswName) {
-        Ldebug(
+        Ltrace(
           'modeChangeButtonHandler()',
           "turning ${targetVswName} on (exclusively)"
         )
         InstAppW modePbsg = getModePbsg()
-        modePbsg.turnOnVswExclusivelyByName(targetVswName)
+        modePbsg.turnOnExclusivelyByName(targetVswName)
       }
       if (targetVswName == 'Day') {
-        Ldebug(
+        Ltrace(
           'modeChangeButtonHandler()',
           "executing ALL_AUTO"
         )
@@ -263,7 +277,7 @@ void modeChangeButtonHandler (Event e) {
     case 'held':
     case 'released':
     default:
-      Ldebug(
+      Lwarn(
         'modeChangeButtonHandler()',
         "ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
@@ -274,21 +288,6 @@ void modeChangeButtonHandler (Event e) {
 //---- SCHEDULED ROUTINES
 //----   Methods specific to this execution context
 //----
-
-void installed () {
-  Ldebug('installed()', 'calling whaInitialize()')
-  whaInitialize()
-}
-
-void updated () {
-  Ldebug('updated()', 'calling whaInitialize()')
-  whaInitialize()
-}
-
-void uninstalled () {
-  Lwarn('uninstalled()', 'calling removeAllChildApps()')
-  app.removeAllChildApps()
-}
 
 //----
 //---- HTTP ENDPOINTS
@@ -310,9 +309,9 @@ Map whaPage () {
     return dynamicPage(
     name: 'whaPage',
     title: [
-      heading1(getAppInfo(app)),
-      bullet1('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
-      bullet1('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
+      Heading1(GetAppInfo(app)),
+      Bullet1('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
+      Bullet1('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
     ].join('<br/>'),
     install: true,
     uninstall: false,
@@ -338,8 +337,8 @@ void authorizeMainRepeater () {
   input(
     name: 'specialtyFnMainRepeater',
     title: [
-      heading2('Authorize Specialty Function Repeater Access'),
-      bullet1('Identify repeaters supporting special function implementation.')
+      Heading2('Authorize Specialty Function Repeater Access'),
+      Bullet1('Identify repeaters supporting special function implementation.')
     ].join('<br/>'),
     type: 'device.LutronKeypad',
     submitOnChange: true,
@@ -352,9 +351,9 @@ void authorizeSeeTouchKeypads () {
   input(
     name: 'seeTouchKeypads',
     title: [
-      heading2('Authorize SeeTouch Keypad Access'),
-      bullet1('Identify Specialty Function keypad buttons.'),
-      bullet1('Identify keypad buttons used to change the Hubitat Mode.')
+      Heading2('Authorize SeeTouch Keypad Access'),
+      Bullet1('Identify Specialty Function keypad buttons.'),
+      Bullet1('Identify keypad buttons used to change the Hubitat Mode.')
     ].join('<br/>'),
     type: 'device.LutronSeeTouchKeypad',
     submitOnChange: true,
@@ -367,8 +366,8 @@ void identifySpecialFunctionButtons() {
   input(
     name: 'specialFnButtons',
     title: [
-      heading2('Identify Special Function Buttons'),
-      bullet1("Examples: ${atomicState.specialFnButtons}")
+      Heading2('Identify Special Function Buttons'),
+      Bullet1("Examples: ${atomicState.specialFnButtons}")
     ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
@@ -404,8 +403,8 @@ void identifyModeButtons () {
   input(
     name: 'lutronModeButtons',
     title: [
-      heading2('Identify Hubitat Mode Buttons'),
-      bullet1('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
+      Heading2('Identify Hubitat Mode Buttons'),
+      Bullet1('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
     ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
@@ -436,12 +435,12 @@ void wireButtonsToModes () {
 
 void solicitParticipatingRooms () {
   // By convention, Hubitat room names DO NOT have whitespace.
-  roomPicklist = app.getRooms().collect{it.name}.sort()
+  roomPicklist = getRooms().collect{it.name}.sort()
   input(
     name: 'rooms',
     type: 'enum',
     title: '<h2><b>Select Participating Rooms</b></h2>',
-    //title: heading2('Select Participating Rooms'),
+    //title: Heading2('Select Participating Rooms'),
     options: roomPicklist,
     submitOnChange: true,
     required: false,
@@ -455,21 +454,21 @@ void displayInstantiatedRoomHrefs () {
   } else {
     paragraph '<h2><b>Room Scene Configuration</b></h2>'
     settings.rooms.each{ roomName ->
-      InstAppW roomApp = app.getChildAppByLabel(roomName)
+      InstAppW roomApp = getChildAppByLabel(roomName)
       String roomScenePbsgName = "pbsg_${roomName}"
       if (!roomApp) {
         Lwarn(
           'displayInstantiatedRoomHrefs()',
-          "calling addChildApp() for '${roomScenePbsgName}' (ON HOLD)"
+          "adding child App '${roomScenePbsgName}'"
         )
-        //-> roomApp.addChildApp('wesmc', 'roomScene', roomScenePbsgName)
+        roomApp.addChildApp('wesmc', 'roomScene', roomScenePbsgName)
       }
       href (
         name: roomName,
         width: 2,
         url: "/installedapp/configure/${roomApp?.getId()}/roomScenePage",
         style: 'internal',
-        title: "<b>${getAppInfo(roomApp)}</b> Scenes",
+        title: "<b>${GetAppInfo(roomApp)}</b> Scenes",
         state: null, //'complete'
       )
     }
@@ -494,7 +493,7 @@ void displayModePbsgDebugData () {
   if (modePbsg) {
     paragraph (
       [
-        "<h2><b>${getAppInfo(modePbsg)} Debug</b></h2>",
+        "<h2><b>${GetAppInfo(modePbsg)} Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
         modePbsg.getPbsgStateBullets(),
       ].join()

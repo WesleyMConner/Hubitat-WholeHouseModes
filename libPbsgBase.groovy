@@ -26,226 +26,224 @@ library (
 )
 
 //----
-//---- P U B L I C   P B S G   M E T H O D S
-//----   These functions are intended for downstream use.
+//---- CORE APPLICATION
+//----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
-String vswDnitoName (String modeVswDni) {
-  modeVswDni.minus("${atomicState.vswDniPrefix}")
-}
+//--
+//-- EXTERNAL METHODS
+//--
 
-void turnOffVswByName (String vswName) {
-  DevW vsw = app.getChildDevice(vswNameToDni(vswName))
-  if (!vsw) Lerror('turnOffVswByName()', "vsw named '${vswName}' is missing")
-  Ltrace('turnOffVswByName()', "turning off vsw named '${vswName}'")
-  vsw.off()
-  enforceDefaultSwitch()
-}
-
-void turnOnVswExclusivelyByName (String vswName) {
+void turnOnExclusivelyByName (String vswName) {
   // The child devices of a PBSG should be limited to its managed VSWs.
-  Linfo('turnOnVswExclusivelyByName()', "Turning on <b>${vswName}</b> exclusively")
+  Linfo('turnOnExclusivelyByName()', "Turning on <b>${vswName}</b> exclusively")
   // Turn off peers BEFORE turning on vswDni!
   List<String> peers = atomicState.vswNames?.findAll{ name -> name != vswName }
-  Ltrace('turnOnVswExclusivelyByName()', "turning off '${peers}'")
+  //--DEEP-DIVE-> Ltrace('turnOnExclusivelyByName()', "turning off '${peers}'")
   peers.each{ peerName ->
-    DevW peerVsw = app.getChildDevice(vswNameToDni(peerName))
+    DevW peerVsw = getChildDevice(vswNameToDni(peerName))
     if (!peerVsw) {
       Lerror(
-        'turnOnVswExclusivelyByName()',
+        'turnOnExclusivelyByName()',
         "peerVsw named '${peerName}' is missing"
       )
     }
     peerVsw.off()
   }
-  DevW vsw = app.getChildDevice(vswNameToDni(vswName))
+  DevW vsw = getChildDevice(vswNameToDni(vswName))
   if (!vsw) {
     Lerror(
-      'turnOnVswExclusivelyByName()',
+      'turnOnExclusivelyByName()',
       "Cannot find vswName: '<b>${vswName}</b>' to turn on"
     )
   } else {
-    Ltrace(
-      'turnOnVswExclusivelyByName()',
-      "turning on vsw named '${vswName}'"
-    )
+    //--DEEP-DIVE-> Linfo(
+    //--DEEP-DIVE->   'turnOnExclusivelyByName()',
+    //--DEEP-DIVE->   "turning on vsw named '${vswName}'"
+    //--DEEP-DIVE-> )
     vsw.on()
   }
 }
 
-void toggleVsw (String vswName, passedVsw = null) {
-  DevW vsw = passedVsw ?: app.getChildDevice(vswNameToDni(vswName))
-  if (!vsw) Lerror('toggleVsw()', "vsw named '${vswName}' is missing")
-  String switchState = getSwitchState(vsw)
+void turnOffByName (String vswName) {
+  DevW vsw = getChildDevice(vswNameToDni(vswName))
+  if (!vsw) Lerror('turnOffByName()', "vsw named '${vswName}' is missing")
+  Linfo('turnOffByName()', "turning off vsw named '${vswName}'")
+  vsw.off()
+  enforceDefaultVsw()
+}
+
+void toggleByName (String vswName) {
+  DevW vsw = getChildDevice(vswNameToDni(vswName))
+  if (!vsw) Lerror('toggleByName()', "vsw named '${vswName}' is missing")
+  String switchState = GetSwitchState(vsw)
   switch (switchState) {
     case 'on':
-      Ldebug('toggleVsw()', "vswName: ${vswName} on() -> off()")
+      Linfo('toggleByName()', "vswName: ${vswName} on() -> off()")
       vsw.off()
       break;
     case 'off':
-      Ldebug('toggleVsw()', "vswDni: ${vswDni} off() -> on()")
+      Linfo('toggleByName()', "vswDni: ${vswDni} off() -> on()")
       vsw.on()
       //-> vsw.on()
       break;
     default:
-      Lerror('toggleVsw()', "unexpected switchState: ${switchState}")
+      Lerror('toggleByName()', "unexpected switchState: ${switchState}")
   }
 }
 
-void pbsgBasePage () {
-  // Abstract
-  //   - Include this page content when instantiating PBSG instances.
-  //   - Then, call configPbsg(), see below, to complete device configuration.
-  // Forcibly remove unused settings and state, a missing Hubitat feature.
-  //-> removeLegacyPbsgSettingsAndState()
-  section {
-    paragraph heading1(getAppInfo(app))
-    paragraph (
-      [
-        '<h3><b>STATE</b></h3>',
-        getPbsgStateBullets() ?: bullet('<i>NO DATA AVAILABLE</i>'),
-      ].join()
-    )
-  }
+void configurePbsg (
+    String dniPrefix,
+    List<String> buttonNames,
+    String defaultButton = null,
+    String logThreshold = 'TRACE'
+  ) {
+  removeLegacyModePbsgState()
+  atomicState.vswDniPrefix = "${app.getLabel()}_"
+  atomicState.vswNames = GetModeNames()
+  atomicState.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
+  atomicState.logLevel = parent.getLogLevel() ?: lookupLogLevel('TRACE')
 }
+
+
 
 String getPbsgStateBullets () {
+  // Include the state of the PBSG itself AND a summary of current VSW
+  // switch values.
   List<String> result = []
   atomicState.sort().each{ k, v ->
     if (k == 'vswDnis') {
-      result += bullet1("<b>${k}</b>")
+      result += Bullet1("<b>${k}</b>")
       v.each{ dni ->
-        DevW vsw = app.getChildDevice(dni)
-        String vswState = vsw ? getSwitchState(vsw) : null
+        DevW vsw = getChildDevice(dni)
+        String vswState = vsw ? GetSwitchState(vsw) : null
         String vswWithState = vsw
           ? "→ ${vswState} - ${vsw.name}"
           : "VSW DNI '${dni}' DOES NOT EXIST"
         result += (vswState == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}</i>"
       }
     } else {
-      result += bullet1("<b>${k}</b> → ${v}")
+      result += Bullet1("<b>${k}</b> → ${v}")
     }
   }
-  return result.join('<br/>') //result.size() != 0 ? result.join('<br/>') : '<i>NO DATA AVAILABLE</i>' //bullet1('<i>NO DATA AVAILABLE</i>')
+  return result.join('<br/>')
 }
 
-//----
-//---- P R I V A T E   P B S G   M E T H O D S
-//----   Hubitat does not facilitate Grooy classes or similar advanced
-//----   developer tools. The functions below SHOULD NOT be used directly,
-//----   but are included in the library since PUBLIC methods incorporate
-//----   them (directly or indirectly).
-//----
+//--
+//-- INTERNAL METHODS
+//--
+
+String vswDnitoName (String vswDni) {
+  return vswDni.minus("${atomicState.vswDniPrefix}")
+}
 
 String vswNameToDni (String name) {
   return "${atomicState.vswDniPrefix}${name}"
 }
 
-void manageChildDevices (String caller = "UNKNOWN_CALLER") {
-  // Uncomment the following to test orphan child app removal.
-  //==T E S T I N G   O N L Y==> addOrphanChild()
-  // The ONLY child devices for a PBSG are its managed VSWs.
+DevW getVswByDni (String vswDni) {
+  return getChildDevice(vswDni)
+}
+
+Map<String, List<DevW>> getChildDevicesByState () {
+  // States:
+  //   'nonSwitch': Does not support capability 'switch'
+  //      'orphan': Unexpected devices per PBSG state
+  //          'on': Expected devices that are 'on'
+  //         'off': Expected devices that are 'off'
+  // Device DNIs are unique !!!
+  List<DevW> foundDevices = getAllChildDevices()
   List<String> expectedDnis = atomicState.vswNames.collect{ vswNameToDni(it) }
-  //--DEEP-DIVE-> Ltrace(
-  //--DEEP-DIVE->   'manageChildDevices() [002a]',
-  //--DEEP-DIVE->   [
-  //--DEEP-DIVE->     "Called by '${caller}'",
-  //--DEEP-DIVE->     getPbsgStateBullets(),
-  //--DEEP-DIVE->     "<b>expectedDnis:</b> ${expectedDnis} (${expectedDnis.size()})"
-  //--DEEP-DIVE->   ].join('<br/>')
-  //--DEEP-DIVE-> )
-  if (expectedDnis.size() > 0) {
-    List<String> entryDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
-    // Clone lists with .collect() to avoid shallow copies OR removeAll()
-    // will impact the shallow copy AND the original.
-    List<String> missingDnis = expectedDnis.collect()
-    missingDnis.removeAll(entryDnis)
-    List<String> orphanDnis = entryDnis.collect()
-    orphanDnis.removeAll(expectedDnis)
-    //--DEEP-DIVE-> Ltrace(
-    //--DEEP-DIVE->   'manageChildDevices()',
-    //--DEEP-DIVE->   [
-    //--DEEP-DIVE->     '<table>',
-    //--DEEP-DIVE->     "<tr><th>expectedDnis</th><td>${expectedDnis} (${expectedDnis.size()})</td></tr>",
-    //--DEEP-DIVE->     "<tr><th>entryDnis</th><td>${entryDnis} (${entryDnis.size()})</td></tr>",
-    //--DEEP-DIVE->     "<tr><th>missingDnis</th><td>${missingDnis} (${missingDnis.size()})</td></tr>",
-    //--DEEP-DIVE->     "<tr><th>orphanDnis:</th><td>${orphanDnis} (${orphanDnis.size()})</td></tr>",
-    //--DEEP-DIVE->     '</table>'
-    //--DEEP-DIVE->   ].join()
-    //--DEEP-DIVE-> )
-    missingDnis.each{ dni ->
-      Lwarn('manageChildDevices()', "adding '<b>${dni}'</b>")
-      addChildDevice(
-        'hubitat', 'Virtual Switch', dni, [isComponent: true, name: dni]
-      )}
-    orphanDnis.each{ dni ->
-      Lwarn('manageChildDevices()', "deleting orphaned <b>'${dni}'</b>")
-      app.deleteChildDevice(dni)
+  List<DevW> nonSwitch = []
+  List<DevW> orphan = []
+  List<DevW> onList = []
+  List<DevW> offList = []
+  foundDevices.each{ d ->
+    if (d.hasCapability('switch')) {
+      String dni = d.getDeviceNetworkId()
+      if (expectedDnis.contains(dni)) {
+        if (GetSwitchState(d) == 'on') {
+          onList += d
+        } else {
+          offList += d
+        }
+      } else {
+        orphan += d
+      }
+    } else {
+      nonSwitch += d
     }
-  } else {
-    Lerror(
-      'manageChildDevices()',
+  }
+  return [
+    'nonSwitch': nonSwitch,
+    'orphan': orphan,
+    'onList': onList,
+    'offList': offList
+  ]
+}
+
+Boolean isValidPbsg (Map<String, List<DevW>> buckets = getChildDevicesByState()) {
+  Boolean result = true
+  if (!buckets) return false
+  if (buckets.nonSwitch.size() != 0) {
+    result = false
+    List<String> dnis = buckets.nonSwitch.collect{ it.getDeviceNetworkId() }
+    LError('isValidPbsg()', "nonSwitch DNIs: ${dnis}")
+  }
+  if (buckets.orphan.size() != 0) {
+    result = false
+    List<String> dnis = buckets.orphan.collect{ it.getDeviceNetworkId() }
+    LError('isValidPbsg()', "orphan DNIs: ${dnis}")
+  }
+  if (buckets.onList.size() == 1) {
+    result = false
+    List<String> onNames = buckets.onList.collect{ vswDnitoName(it.getDeviceNetworkId()) }
+    List<String> offNames = buckets.offList.collect{ vswDnitoName(it.getDeviceNetworkId()) }
+    LError(
+      'isValidPbsg()',
       [
-        "Called by '${caller}'",
-        "Missing <b>${expectedDnis}</b>, taking <b>NO ACTION</b>"
+        "onList size (${buckets.onList.size()}) != 1",
+        "<b>on:</b> ${onNames.join(', ')}",
+        "<b>off: ${offNames.join(', ')}"
       ].join('<br/>&nbsp;&nbsp;')
     )
   }
-}
-
-/*
-void turnOffVswPeers (String vswName) {
-  // The child devices of a PBSG should be limited to its managed VSWs.
-  List<String> peers = atomicState.vswNames?.findAll{ name -> name != vswName }
-  Ltrace('turnOffVswPeers()', "turning off '${peers}'")
-  peers.each{ peerName ->
-    DevW peerVsw = app.getChildDevice(vswNameToDni(peerName))
-    if (!peerVsw) {
-      Lerror('turnOffVswPeers()', "peerVsw named '${peerName}' is missing")
-    }
-    peerVsw.off()
+  List<String> missingNames = addMissingDeviceNames()
+  if (missingNames > 0) {
+    result = false
+    Lerror(
+      'isValidPbsg()', "Missing devices: ${missingNames.join(', ')}"
+    )
   }
-}
-*/
-
-DevW getVswByDni (String vswDni) {
-  return app.getChildDevice(vswDni)
+  return result
 }
 
-DevW getVswByName (String vswName) {
-  return getVswByDni(vswNameToDni(vswName))
-}
-
-List<DevW> getVsws (String option = null) {
-  List<DevW> vsws = []
-  atomicState.vswNames.collect{ vswNameToDni(it) }.each{ vswDni ->
-    DevW vsw = app.getChildDevice(vswDni)
-    if (option == 'onOnly' && getSwitchState(vsw) == 'on') {
-      vsws += vsw
-    } else {
-      vsws += vsw
-    }
-  }
-  return vsws
+void turnOnDefaultVsw () {
+  DevW vsw = app.getChildDevice(vswNameToDni(atomicState.vswDefaultName))
+  vsw.on()
 }
 
 void enforceMutualExclusion () {
   Ltrace('enforceMutualExclusion()', 'At entry')
-  List<DevW> onVsws = getVsws('onOnly')
-  while (onVsws && onVsws.size() > 1) {
-    DevW device = onVsws?.first()
-    if (device) {
-      Ldebug(
+  List<DevW> onVsws = getChildDevicesByState()?.getAt('on')
+  DevW keepDevice = onVsws.pop()
+  if (!keepDevice) {
+    Ldebug(
+      'enforceMutualExclusion()',
+      [
+        '',
+        'Encountered ZERO "on" switches, which is unexpected!',
+        "Turning on default switch name '<b>${atomicState.vswDefaultName}</b>'"
+      ].join('<br/>&nbsp;&nbsp;')
+    )
+    turnOnDefaultVsw()
+  } else {
+    onVsws.each{ vsw ->
+      Linfo(
         'enforceMutualExclusion()',
-        "With <b>onVsws:</b> ${onVsws} turning off <b>${getDeviceInfo(device)}</b>."
+        "turning off <b>${GetDeviceInfo(device)}</b>"
       )
-      device.off()
-      onVsws = onVsws.drop(1)
-    } else {
-       Ltrace(
-        'enforceMutualExclusion()',
-        "taking no action for onVsws: ${onVsws}"
-      )
+      vsw.off()
     }
   }
 }
@@ -254,37 +252,174 @@ String getDefaultVswDni () {
   return vswNameToDni(atomicState.vswDefaultName)
 }
 
-void enforceDefaultSwitch () {
-  List<DevW> onVsws = getVsws('onOnly')
-  String defaultVswDni = getDefaultVswDni()
-  if (defaultVswDni && !onVsws) {
-    Ldebug(
-      'enforceDefaultSwitch()',
-      "turning on <b>${defaultVswDni}</b>"
-    )
-    DevW vsw = app.getChildDevice(defaultVswDni)
-    vsw.on()
-    atomicState.prevOnVswName = atomicState.currOnVswName
-    atomicState.currOnVswName = vswName
-  } else {
-    Ltrace(
-      'enforceDefaultSwitch()',
-      "taking no action for <b>onVsws:</b> ${onVsws}<"
-    )
+void enforceDefaultVsw () {
+  if (getChildDevicesByState()?.getAt('on')?.size() == 0) {
+    turnOnDefaultVsw()
   }
 }
 
-//----
-//---- T E S T I N G   O N L Y
-//----
+void managePbsgChildDevices () {
+  // Remove unwanted devices. See also getMissingDeviceNames().
+  Map<String, List<DevW>> buckets = getChildDevicesByState()
+  buckets.nonSwitch.each{ dni ->
+    Lwarn(
+      'managePbsgChildDevices()',
+      "Deleting <b>non-Switch</b> child device '${dni}'"
+    )
+    deleteChildDevice(dni)
+  }
+  buckets.orphan.each{ dni ->
+    Lwarn(
+      'managePbsgChildDevices()',
+      "Deleting <b>orphan</b> child device '${dni}'"
+    )
+    deleteChildDevice(dni)
+  }
+  // Add missing devices
+  List<String> expectedNames = atomicState.vswNames.collect{}  // Deep copy
+  List<String> foundDeviceNames = getAllChildDevices().collect{
+    vswDnitoName(it.getDeviceNetworkId())
+  }
+  expectedNames.removeAll(foundDeviceNames).each{ name ->
+    String newDni = vswNameToDni(name)
+    addChildDevice(
+      'hubitat',          // namespace
+      'Virtual Switch',   // typeName
+      newDni,             // device's unique DNI
+      [isComponent: true, name: newDni]
+    )
 
-void addOrphanChild () {
+  }
+}
+
+void addOrphanChild_TESTING_ONLY () {
   // T E S T I N G   O N L Y
-  //   - This method supports orphan removal testing. See manageChildDevices().
+  //   - This method supports orphan removal testing. See managePbsgChildDevices().
   addChildDevice(
     'hubitat',         // namespace
     'Virtual Switch',  // typeName
     'bogus_device',
     [isComponent: true, name: 'bogus_device']
   )
+}
+
+void exercisePbsgMethods_TESTING_ONLY () {
+  // Baseline Expected VSWs per State
+  // Confirm Child VSWs match Expected VSWs
+  // Add Orphan VSW
+  // Confirm Child VSWs DO NOT match Expected VSWs
+  // Manage Child Devices
+  // Confirm Child VSWs match Expected VSWs
+  // Get VSW state and confirm a single VSW is active
+  // Per VSW, turn on VSW and confirm expected VSW is the only enabled VSW
+  // Turn off current VSW and ensure default VSW is enabled
+}
+
+//----
+//---- SYSTEM CALLBACKS
+//----   Methods specific to this execution context
+//----   See downstream instances (modePbsg, roomScenePbsg)
+
+// System
+
+/*
+void installed () {
+  Ltrace('installed()', 'calling configureModePbsg()')
+  configureModePbsg()
+}
+
+void updated () {
+  Ltrace('updated()', 'calling configureModePbsg()')
+  configureModePbsg()
+}
+
+void uninstalled () {
+  Lwarn('uninstalled()', 'DELETING CHILD DEVICES')
+  getAllChildDevices().collect{ device ->
+    Lwarn('uninstalled()', "Deleting '${device.deviceNetworkId}'")
+    deleteChildDevice(device.deviceNetworkId)
+  }
+}
+*/
+
+//----
+//---- EVENT HANDLERS
+//----   Methods specific to this execution context
+//----
+
+void vswEventHandler (Event e) {
+  // Key Principles
+  //   - Downstream Apps SHOULD subscribe to PBSG events.
+  //   - Downstream Apps SHOULD NOT subscribe to PBSG VSW events.
+  //   - This event handler determines when (or if) the PBSG should emit
+  //     an event to downstream Apps.
+  //   - The PBSG should ensure constraints (mutual exclusion, default switch)
+  //     are MET before emiting events when possible.
+  //   - As a convention, PBSG turns on a newly active push-button VSW
+  //     BEFORE it turns off a previously active push-button VSW.
+  //   - The PBSG DOES NOT track the currently emited value, relying instead
+  //     on Hubitat to determine if the event IS or IS NOT a state change.
+  DevW d = getChildDevice(e.displayName)
+  Ldebug('modeVswEventHandler()', GetDeviceInfo(d))
+  Ldebug('modeVswEventHandler()', d.getCapabilities().join(', '))
+  // VSW Capabilities are: 'Switch' and 'Refresh'
+  if (e.isStateChange) {
+    if (e.value == 'on') {
+      // The PBSG should only emit an event if the VSW is uniquely on.
+      Map<String, List<DevW>> vswBuckets = getChildDevicesByState()
+      if (isValidPbsg(vswBuckets)) {
+        List<DevW> onSwitches = vswBuckets.getAt('on')
+        if (onSwitches?.size() == 1) {
+          String switchName = vswDnitoName(e.displayName)
+          Linfo('vswEventHandler()', "Publishing PBSG event ")
+          sendEvent([
+            name: 'PbsgCurrentSwitch',
+            value: switchName,
+            descriptionText: "'<b>${switchName}</b>' is exclusively on"
+          ])
+        } else {
+          enforceMutualExclusion()
+        }
+      } else if (e.value == 'off' && vswBuckets.getAt('on')?.size() == 0) {
+        // If all VSWs are off, one of two things happens ...
+        if (atomicState.vswDefaultName) {
+          // (1) The available default VSW is turned on. But, the PBSG
+          //     DOES NOT publish a PBSG event yet - waiting instead for
+          //     Handler to receive the default VSW's 'on' event.
+          // DO NOTHING !
+        } else {
+          // (2) There being no default switch, the PBSG publishes a null.
+          sendEvent([
+            name: 'PbsgCurrentSwitch',
+            value: null,
+            descriptionText: '<b>No PBSG switch is active</b>'
+          ])
+        }
+      }
+    } else {
+      Lwarn('modeVswEventHandler()', "Ignoring '${e.descriptionText}'")
+    }
+  }
+}
+
+//----
+//---- SCHEDULED ROUTINES
+//----   Methods specific to this execution context
+//----
+
+//----
+//---- RENDERING AND DISPLAY
+//----   Methods specific to this execution context
+//----
+
+void pbsgBasePage () {
+  section {
+    paragraph Heading1(GetAppInfo(app))
+    paragraph (
+      [
+        '<h3><b>STATE</b></h3>',
+        getPbsgStateBullets() ?: bullet('<i>NO DATA AVAILABLE</i>'),
+      ].join()
+    )
+  }
 }

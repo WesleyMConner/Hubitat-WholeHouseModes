@@ -39,29 +39,29 @@ String RED = 'rgba(255, 0, 0, 1.0)'
 
 String CSS_HIGHLIGHT = 'background-color: yellow; font-weight: bold;'
 
-String heading1(String s) {
+String Heading1(String s) {
   return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
 }
 
-String heading2(String s) {
+String Heading2(String s) {
   return """<span style='font-size: 1em; font-weight: bold;'>${s}</span>"""
 }
 
-String bullet1(String s) {
+String Bullet1(String s) {
   return "&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String bullet2(String s) {
+String Bullet2(String s) {
   return "&nbsp;&nbsp;&nbsp;&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String comment(String s) {
-  return """<span style="font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic">${s}</span>"""
-}
+//--UNUSED-> String Comment(String s) {
+//--UNUSED->   return """<span style="font-size: 0.8em; color: ${LIGHT_GREY}; font-style: italic">${s}</span>"""
+//--UNUSED-> }
 
-String red(String s) {
-  return """<span style="color: ${RED}; font-style: bold">${s}</span>"""
-}
+//--UNUSED-> String red(String s) {
+//--UNUSED->   return """<span style="color: ${RED}; font-style: bold">${s}</span>"""
+//--UNUSED-> }
 
 //----
 //---- LOGGING
@@ -90,35 +90,35 @@ void lookupLogLevel (String logThreshold) {
 void Lerror (String fnName, String s) {
   // No conditional test ensures errors appear.
   log.error(
-    "${getAppInfo(app)} <b>${fnName}</b> → ${s}"
+    "${GetAppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
 void Lwarn (String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((atomicState.logLevel ?: 5) > 1) {
-    log.warn("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.warn("${GetAppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
 void Linfo (String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((atomicState.logLevel ?: 5) > 2) {
-    log.info("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.info("${GetAppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
 void Ldebug (String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((atomicState.logLevel ?: 5) > 3) {
-    log.debug("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.debug("${GetAppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
 void Ltrace (String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((atomicState.logLevel ?: 5) > 4) {
-    log.trace("${getAppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.trace("${GetAppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 

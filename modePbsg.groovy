@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// modePbsg (an instsantiation of libPbsgBase)
+// modePbsg (an instantiation of libPbsgBase)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -68,52 +68,22 @@ void removeLegacyModePbsgState () {
 void configureModePbsg() {
   Ltrace(
     'configureModePbsg()',
-    "Updating ${app.getLabel()} state, devices and subscriptions"
+    "Updating ${app.getLabel()} state and event subscriptions"
   )
   Ltrace('configureModePbsg()', 'stopping event subscriptions')
-  app.unsubscribe()
+  unsubscribe()
   Ltrace('configureModePbsg()', 'updating state values')
-  updateModePbsgState()
-  Ltrace('configureModePbsg()', 'managing child devices')
-  manageChildDevices('configureModePbsg()')
-  Ltrace(
-    'configureModePbsg()',
-    "ensuring active VSW matches current mode (${mode})"
+  removeLegacyModePbsgState()  //--TBD-> What can migrate to libPbsgBase?
+  configurePbsg (
+    "${app.getLabel()}_",                 // String dniPrefix
+    GetModeNames(),                       // List<String> buttonNames,
+    getGlobalVar('DEFAULT_MODE').value,   // String defaultButton
+    'TRACE'                               // String logThreshold
   )
-  activateVswForCurrentMode()
-  Ltrace('configureModePbsg()', 'subscribing to VSW changes')
-  subscribeToModeVswChanges()
-}
-
-void updateModePbsgState () {
-  // Used for initial configuration AND configuration refresh.
-  removeLegacyModePbsgState()
-  atomicState.vswDniPrefix = "${app.getLabel()}_"
-  atomicState.vswNames = getModeNames()
-  atomicState.vswDefaultName = getGlobalVar('DEFAULT_MODE').value
-  atomicState.logLevel = parent.getLogLevel() ?: lookupLogLevel('TRACE')
-  //--DEEP-DIVE-> Ldebug('updateModePbsgState()', "<br/>${getPbsgStateBullets()}")
-}
-
-void activateVswForCurrentMode () {
-  String mode = getLocation().getMode()
-  Ltrace('activateVswForCurrentMode()', "Activating VSW for current mode: ${mode}")
-  turnOnVswExclusivelyByName(mode)
-}
-
-void subscribeToModeVswChanges () {
-  List<DevW> vsws = getVsws()
-  if (!vsws) {
-    Lerror('subscribeToModeVswChanges()', 'The child VSW instances are MISSING.')
-  }
-  vsws.each{ vsw ->
-    //-> UNCOMMENT FOR ADVANCED DEBUGGING ONLY
-    //-> Ltrace(
-    //->   'subscribeToModeVswChanges()',
-    //->   "Subscribe <b>${vsw.deviceNetworkId} (${vsw.id})</b> to modeVswEventHandler()"
-    //-> )
-    app.subscribe(vsw, "switch", modeVswEventHandler, ['filterEvents': false])
-  }
+  Ltrace('configureModePbsg()', "Active switch for current Hubitat mode (${mode})")
+  turnOnExclusivelyByName(mode)
+  Ltrace('configureModePbsg()', 'subscribing to PBSG events')
+  subscribe(vsw, "PbsgCurrentSwitch", modeVswEventHandler, ['filterEvents': false])
 }
 
 //----
@@ -135,62 +105,18 @@ void uninstalled () {
   Lwarn('uninstalled()', 'DELETING CHILD DEVICES')
   getAllChildDevices().collect{ device ->
     Lwarn('uninstalled()', "Deleting '${device.deviceNetworkId}'")
-    app.deleteChildDevice(device.deviceNetworkId)
+    deleteChildDevice(device.deviceNetworkId)
   }
 }
 
 //----
 //---- EVENT HANDLERS
 //----   Methods specific to this execution context
+//----   The subscribed "app" (its state) is available in the handler.
 //----
 
 void modeVswEventHandler (Event e) {
-  // Process events for Mode PGSG child VSWs.
-  //   - The received e.displayName is the DNI of the reporting child VSW.
-  //   - When a Mode VSW turns on, change the Hubitat mode accordingly.
-  //   - The Room Scene clients DO NOT get a callback for this event and
-  //     should instead app.subscribe to Hubitat Mode change events.
-  //--DEEP-DEBUGGING-> Ltrace('modeVswEventHandler()', "eventDetails: ${eventDetails(e)}")
-  if (e.isStateChange) {
-    if (e.value == 'on') {
-      if (atomicState.previousVswDni == e.displayName) {
-        Lerror(
-          'modeVswEventHandler()',
-          "The active Mode VSW '${atomicState.activeVswDni}' did not change."
-        )
-      }
-      Linfo(
-        'roomSceneVswEventHandler()',
-        'T B D - OPERATIONS ON state DO NOT MAKE SENSE IN THE EVENT HANDLER.'
-      )
-      atomicState.previousVswDni = atomicState.activeVswDni ?: getDefaultVswDni()
-      atomicState.activeVswDni = e.displayName
-      Ldebug(
-        'modeVswEventHandler()',
-        "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
-      )
-      // The vswName is the target mode.
-      String vswName = vswDnitoName(e.displayName)
-      turnOnVswExclusivelyByName(vswName)
-      // Adjust the Hubitat mode.
-      Ldebug(
-        'modeVswEventHandler()',
-        "Setting mode to <b>${vswName}</b>"
-      )
-      getLocation().setMode(vswName)
-    } else if (e.value == 'off') {
-      Linfo(
-        'roomSceneVswEventHandler()',
-        'T B D - CHECK, IF NO MODE VSW IS "on", SOMETHING WENT WRONG.'
-      )
-      // Take no action when a VSW turns off
-    } else {
-      Lwarn(
-        'modeVswEventHandler()',
-        "unexpected event value = >${e.value}<"
-      )
-    }
-  }
+  logDebug('modeVswEventHandler()', e.descriptionText)
 }
 
 //----
