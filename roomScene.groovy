@@ -305,9 +305,9 @@ Boolean detectManualOverride () {
     if (!atomicState.roomScenePbsgAppId) {
       Lerror('detectManualOverride()', "Cannot find 'atomicState.roomScenePbsgAppId'")
     }
-    roomScenePbsg.turnButtonOn('MANUAL_OVERRIDE')
+    roomScenePbsg.pbsgTurnOn('MANUAL_OVERRIDE')
   } else {
-    roomScenePbsg.turnButtonOff('MANUAL_OVERRIDE')
+    roomScenePbsg.pbsgTurnOff('MANUAL_OVERRIDE')
   }
 }
 
@@ -476,7 +476,7 @@ void keypadSceneButtonHandler (Event e) {
       if (targetScene) {
         String targetVsw = "${atomicState.roomScenePbsgAppId}_${targetScene}"
         Ldebug('keypadSceneButtonHandler()', "toggling ${targetVsw}")
-        getRoomScenePbsg().toggleButton(targetVsw)
+        getRoomScenePbsg().pbsgToggle(targetVsw)
       }
       break
     case 'held':
@@ -508,7 +508,7 @@ void picoButtonHandler (Event e) {
             'picoButtonHandler()',
             "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
           )
-          getChildAppByLabel(atomicState.roomScenePbsgAppId).toggleButton(scenePbsg)
+          getChildAppByLabel(atomicState.roomScenePbsgAppId).pbsgToggle(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Lwarn('picoButtonHandler()', "Raising ${settings.independentDevices}")
           settings.independentDevices.each{ d ->
@@ -923,7 +923,7 @@ void displayRoomScenePbsgDebugData () {
       [
         "<h2><b>${GetAppInfo(roomScenePbsg)} Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
-        roomScenePbsg.getPbsgStateBullets(),
+        roomScenePbsg.pbsgGetStateBullets(),
       ].join()
     )
   } else {

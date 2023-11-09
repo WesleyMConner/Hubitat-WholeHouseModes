@@ -1,4 +1,6 @@
-createPbsg (
+
+/*
+pbsgGetOrCreateInstance (
   app.getLabel(),
   [*roomScenes, 'AUTOMATIC', 'MANUAL_OVERRIDE'],
   'AUTOMATIC'
@@ -38,7 +40,7 @@ void roomSceneVswEventHandler (Event e) {
         "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
       //--TBD-> TREAT 'vswDniToName' AS PRIVATE
-      String scene = vswDnitoButtonName(atomicState.activeVswDni)
+      String scene = _vswDnitoButtonName(atomicState.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
       Ltrace()
@@ -51,3 +53,4 @@ void roomSceneVswEventHandler (Event e) {
     }
   }
 }
+*/

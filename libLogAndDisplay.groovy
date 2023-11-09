@@ -73,7 +73,7 @@ String b (def val) {
 
 void lookupLogLevel (String logThreshold) {
   Integer
-  switch(logThreshold) {
+  switch(logThreshold ?: 'TRACE') {
     case 'TRACE':
       atomicState.logLevel = 5
       break
@@ -86,8 +86,12 @@ void lookupLogLevel (String logThreshold) {
     case 'WARN':
       atomicState.logLevel = 2
       break
-    default:   // 'ERROR'
+    case 'ERROR':
       atomicState.logLevel = 1
+      break
+    default:
+      log.error("${GetAppInfo(app)} lookupLogLevel() bad logThreshold: ${b(logThreshold)}")
+      atomicState.logLevel = 5
   }
 }
 
@@ -149,13 +153,16 @@ String tdRght (def x) {
 //----   Methods specific to this execution context
 //----
 
-void solicitLogThreshold () {
+void solicitLogThreshold (String settingsKey) {
+  // By passing in the settings key, clients can:
+  //   - Specify their choice of settings key.
+  //   - Solicit two differentiate keys (e.g., App's level vs child PBSG's level)
   input (
-    name: 'logThreshold',
+    name: settingsKey,
     type: 'enum',
-    title: 'Log Threshold',
-    defaultValue: 'DEBUG',
+    title: "Set the ${settingsKey}",
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
+    defaultValue: 'TRACE',
     submitOnChange: true
   )
 }

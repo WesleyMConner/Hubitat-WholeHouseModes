@@ -19,22 +19,29 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libLogAndDisplay
 #include wesmc.libUtils
 
-definition(
-  parent: 'wesmc:wha',
-  name: 'PBSG',
+// FIX-001 Replace the definition section with a library section.
+//-> definition(
+//->   parent: 'wesmc:wha',
+//->   name: 'PBSG',
+//->   namespace: 'wesmc',
+//->   author: 'WesleyMConner',
+//->   description: 'A PBSG App instance, typically created by other Apps',
+//->   singleInstance: false
+//-> )
+definition (
+  name: 'libPbsg',
   namespace: 'wesmc',
-  author: 'WesleyMConner',
-  description: 'A PBSG App instance, typically created by other Apps',
-  category: '',
+  author: 'Wesley M. Conner',
+  description: 'The guts of a PBSG App instance.',
+  singleInstance: false,
   iconUrl: '',
-  iconX2Url: '',
-  iconX3Url: '',
-  singleInstance: false
+  iconX2Url: ''
 )
 
-preferences {
-  page(name: 'pbsgPage')
-}
+// FIX-002 Note the original preferences section
+//-> preferences {
+//->   page(name: 'pbsgPage')
+//-> }
 
 //----
 //---- CORE APPLICATION
@@ -412,7 +419,8 @@ void vswEventHandler (Event e) {
 //----   Methods specific to this execution context
 //----
 
-Map pbsgPage () {
+// FIX-003 Note your original RENDERING/DISPLAY page
+Map defaultPage () {
   return dynamicPage(
     name: 'pbsgPage',
     title: Heading1(GetAppInfo(app)),

@@ -17,7 +17,6 @@
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
-import com.hubitat.hub.domain.Hub as Hub
 
 library (
  name: 'libUtils',
@@ -136,6 +135,32 @@ String GetSwitchState (DevW d) {
         ? 'off'
         : 'unknown'
 }
+
+/*
+InstAppW addChildAppForUniqueLabel (
+    String definitionNamespace,
+    String definitionName,
+    String instanceLabel
+  ) {
+  // Create a new Child App IFF the 'instanceLabel' is not found.
+  InstAppW newApp = null
+  if (getChildAppByLabel(instanceLabel)) {
+    Lerror(
+      'addChildAppForUniqueLabel()',
+      "The instanceLabel ${b(instanceLabel)} is already in use"
+    )
+  } else {
+    newApp = app.addChildApp(
+      definitionNamespace,
+      definitionName,
+      instanceLabel
+    )
+  }
+  return newApp
+}
+*/
+
+
 
 //----
 //---- CORE APPLICATION

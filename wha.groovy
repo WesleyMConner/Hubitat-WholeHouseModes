@@ -17,7 +17,6 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libLogAndDisplay
-#include wesmc.libPbsgBase
 #include wesmc.libUtils
 
 definition (
@@ -41,96 +40,78 @@ preferences {
 //----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
-void removeLegacySettingsAndState () {
-  settings?.remove('log')
-  atomicState.remove('defaultMode')
-  atomicState.remove('LOG_LEVEL1_ERROR')
-  atomicState.remove('LOG_LEVEL2_WARN')
-  atomicState.remove('LOG_LEVEL3_INFO')
-  atomicState.remove('LOG_LEVEL4_DEBUG')
-  atomicState.remove('LOG_LEVEL5_TRACE')
-  atomicState.remove('LOG_WARN')
-  atomicState.remove('logLevel1Error')
-  atomicState.remove('logLevel2Warn')
-  atomicState.remove('logLevel3Info')
-  atomicState.remove('logLevel4Debug')
-  atomicState.remove('logLevel5Trace')
-  atomicState.remove('MODE_PBSG_APP_NAME')
-  atomicState.remove('MODES')
-  atomicState.remove('PBSGapp')
-  atomicState.remove('roomName')
-  atomicState.remove('SPECIALTY_BUTTONS')
-  atomicState.remove('specialtyButtons')
-  atomicState.remove('specialtyFnButtons')
+InstAppW getModePbsg () {
+  InstAppW pbsg = app.getChildAppByLabel('MODE_PBSG')
+  if (pbsg) {
+    // PBSG Validation
+    //   - Incurs a performance hit.
+    //   - Detects manual manipulation/deletion of VSWs.
+    //   - Spots outlier breaks in PBSG behavior.
+    //   - DOES NOT reconcile the 'on' VSW to downstream expectations.
+    //   - Logs any detected issues.
+    pbsg.isValidPbsg()
+  }
+  return pbsg
+}
+
+InstAppW getOrCreateModePbsg () {
+  InstAppW pbsg = getModePbsg()
+  if (!pbsg) {
+    Lwarn('getOrCreateModePbsg()', "Creating new PBSG '<b>MODE_PBSG</b>'")
+    pbsg = app.addChildApp(
+      'wesmc',      // See 'namespace' definition in pbsg.groovy
+      'libPbsg',    // See 'name' definition in pbsg.groovy
+      'MODE_PBSG'   // The label for the single Mode PBSG instance
+    )
+    pbsg.pbsgConfigure(
+      GetModeNames(),
+      getGlobalVar('defaultMode')?.value,
+      lookupLogLevel('TRACE')
+    )
+    return pbsg
+  }
+}
+
+// getOrCreateModePbsg()
+//   - java.lang.String
+//   - java.util.ArrayList
+//   - java.lang.String
+//   - java.lang.String   values: [MODE_PBSG, [Day, Supplement, Chill, TV, Party, Night, Cleaning], ...] on line 47 (method whaPage)
+
+void removeLegacyWhaData () {
+  // settings?.remove('log')
+  // atomicState.remove('defaultMode')
+  // atomicState.remove('LOG_LEVEL1_ERROR')
+  // atomicState.remove('LOG_LEVEL2_WARN')
+  // atomicState.remove('LOG_LEVEL3_INFO')
+  // atomicState.remove('LOG_LEVEL4_DEBUG')
+  // atomicState.remove('LOG_LEVEL5_TRACE')
+  // atomicState.remove('LOG_WARN')
+  // atomicState.remove('logLevel1Error')
+  // atomicState.remove('logLevel2Warn')
+  // atomicState.remove('logLevel3Info')
+  // atomicState.remove('logLevel4Debug')
+  // atomicState.remove('logLevel5Trace')
+  // atomicState.remove('MODE_PBSG_APP_NAME')
+  // atomicState.remove('MODES')
+  // atomicState.remove('PBSGapp')
+  // atomicState.remove('roomName')
+  // atomicState.remove('SPECIALTY_BUTTONS')
+  // atomicState.remove('specialtyButtons')
+  // atomicState.remove('specialtyFnButtons')
 }
 
 void manageNestedChildApps () {
   // Prune any orphaned or duplicated apps in the WHA App hierarchy.
   // (1) Begin with direct children of WHA (the MODE_PBSG and Room Scene instances).
-  Ltrace(
-    'manageNestedChildApps()',
-    'At root level, calling PruneAppDups()'
-  )
+  Ltrace('manageNestedChildApps()', "Calling PruneAppDups() at ${b(root)} level")
   PruneAppDups(['MODE_PBSG', *settings.rooms], false, app)
   // (2) Drill into each RoomScene and manage its PBSG Instance
   settings.rooms?.each{ roomName ->
-    Ltrace(
-      'manageNestedChildApps()',
-      "For ${roomName}, calling PruneAppDups()."
-    )
+    Ltrace('manageNestedChildApps()', "Calling PruneAppDups() for ${b(roomName)}")
     InstAppW roomApp = getChildAppByLabel(roomName)
     PruneAppDups(["pbsg_${roomName}"], false, roomApp)
   }
-}
-
-InstAppW getModePbsg () {
-  String pbsgLabel = 'MODE_PBSG'
-  Ltrace('getModePbsg()', 'calling manageNestedChildApps()')
-  manageNestedChildApps()
-  InstAppW modePbsg = getChildAppByLabel(pbsgLabel)
-  if (modePbsg) {
-    // PERFORMANCE HIT - Temporarily refresh PBSG configuration.
-    modePbsg.configureModePbsg()
-  }
-  return modePbsg
-}
-
-void addFakeChildApps_TESTING_ONLY () {
-  InstAppW pbsg
-  pbsg = addChildApp(
-    'wesmc',      // See modePbsg.groovy definition's (App) namespace.
-    'modePbsg',   // See modePbsg.groovy definition's (App) name.
-    'MODE_PBSG'   // Label used to create or get the child App.
-  )
-  Lwarn('addFakeChildApps_TESTING_ONLY()', "Added ${GetAppInfo(pbsg)}")
-  pbsg = addChildApp(
-    'wesmc',      // See modePbsg.groovy definition's (App) namespace.
-    'modePbsg',   // See modePbsg.groovy definition's (App) name.
-    'MODE_PBSG'   // Label used to create or get the child App.
-  )
-  Lwarn('addFakeChildApps_TESTING_ONLY()', "Added ${GetAppInfo(pbsg)}")
-  pbsg = addChildApp(
-    'wesmc',      // See modePbsg.groovy definition's (App) namespace.
-    'modePbsg',   // See modePbsg.groovy definition's (App) name.
-    'BADLY_NAMED_PBSG'   // Label used to create or get the child App.
-  )
-  Lwarn('addFakeChildApps_TESTING_ONLY()', "Added ${GetAppInfo(pbsg)}")
-}
-
-InstAppW getOrCreateModePbsg () {
-  Ltrace('getOrCreateModePbsg()', GetAppInfo(app))
-  //--TESTING-ONLY-> addFakeChildApps_TESTING_ONLY()
-  InstAppW modePbsg = getModePbsg()
-  if (!modePbsg) {
-    Lwarn('getOrCreateModePbsg()', 'calling addChildApp() for MODE_PBSG')
-    modePbsg = addChildApp(
-      'wesmc',      // See modePbsg.groovy definition's (App) namespace.
-      'modePbsg',   // See modePbsg.groovy definition's (App) name.
-      'MODE_PBSG'   // Label used to create or get the child App.
-    )
-    modePbsg.configureModePbsg()
-  }
-  return modePbsg
 }
 
 String getLogLevel() {
@@ -168,7 +149,7 @@ void allAuto () {
     InstAppW roomApp = getChildAppByLabel(roomName)
     String manualOverrideVswDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
     Ldebug('allAuto()', 'Turning on <b>MANUAL_OVERRIDE</b>')
-    roomApp.getRoomScenePbsg().turnButtonOn('MANUAL_OVERRIDE')
+    roomApp.getRoomScenePbsg().pbsgTurnOn('MANUAL_OVERRIDE')
   }
 }
 
@@ -185,6 +166,11 @@ void installed () {
 void updated () {
   Ltrace('updated()', 'calling whaInitialize()')
   whaInitialize()
+
+  settingssolicitLogThreshold('appLogThreshold')
+  solicitLogThreshold('modePbsgLogThreshold')
+
+
 }
 
 void uninstalled () {
@@ -262,8 +248,8 @@ void modeChangeButtonHandler (Event e) {
           'modeChangeButtonHandler()',
           "turning ${targetVswName} on (exclusively)"
         )
-        InstAppW modePbsg = getModePbsg()
-        modePbsg.turnButtonOn(targetVswName)
+        InstAppW modePbsg = getOrCreateModePbsg()
+        modePbsg.pbsgTurnOn(targetVswName)
       }
       if (targetVswName == 'Day') {
         Ltrace(
@@ -299,13 +285,18 @@ void modeChangeButtonHandler (Event e) {
 //----   Methods specific to this execution context
 //----
 
+void updateAppAndPbsgLogLevels () {
+  atomicState.logLevel = lookupLogLevel(settings.appLogThreshold ?: 'TRACE')
+  modePbsg.pbsgAdjustLogLevel(
+    lookupLogLevel(settings.modePbsgLogThreshold ?: 'TRACE')
+  )
+}
+
 Map whaPage () {
-  // The whaPage() SHOULD NOT create or interact with the Mode PBSG instance.
-  // The whaPage() DOES PRESENT Mode PBSG state if the Mode PBSG exists.
-  removeLegacySettingsAndState()
-    // This App instance is NEVER retrieved by its label, so an update is okay.
-    app.updateLabel('Whole House Automation (WHA)')
-    if (!atomicState.logLevel) atomicState.logLevel = lookupLogLevel('DEBUG')
+  removeLegacyWhaData()
+  app.updateLabel('Whole House Automation (WHA)')
+  // Ensure a log level is available before App
+  atomicState.logLevel = lookupLogLevel(settings.appLogThreshold ?: 'DEBUG')
     return dynamicPage(
     name: 'whaPage',
     title: [
@@ -317,7 +308,8 @@ Map whaPage () {
     uninstall: false,
   ) {
     section {
-      solicitLogThreshold()
+      solicitLogThreshold('appLogThreshold')
+      solicitLogThreshold('modePbsgLogThreshold')
       //-> checkForUpdatedLogLevel()
       authorizeMainRepeater()
       authorizeSeeTouchKeypads()
@@ -489,13 +481,13 @@ void displayWhaDebugData() {
 
 void displayModePbsgDebugData () {
   // Use the Mode PBSG if it exists, but DO NOT create it if missing.
-  InstAppW modePbsg = getModePbsg()
+  InstAppW modePbsg = getOrCreateModePbsg()
   if (modePbsg) {
     paragraph (
       [
         "<h2><b>${GetAppInfo(modePbsg)} Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
-        modePbsg.getPbsgStateBullets(),
+        modePbsg.pbsgGetStateBullets(),
       ].join()
     )
   } else {
