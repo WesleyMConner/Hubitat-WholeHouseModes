@@ -2,11 +2,11 @@
 /*
 pbsgGetOrCreateInstance (
   'ModePbsg',
-  GetModeNames(),
+  ModeNames(),
   getGlobalVar('defaultMode').value
 )
 
-subscribe(vsw, "PbsgCurrentSwitch", modePbsgHandler, ['filterEvents': false])
+subscribe(vsw, "PbsgCurrentButton", modePbsgHandler, ['filterEvents': false])
 
 void modePbsgHandler (Event e) {
   logDebug('modePbsgHandler()', e.descriptionText)

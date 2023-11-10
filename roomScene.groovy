@@ -17,9 +17,9 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.libLogAndDisplay
+#include wesmc.libHubUI
 #include wesmc.libPbsgBase
-#include wesmc.libUtils
+#include wesmc.libHubExt
 
 definition (
   parent: 'wesmc:wha',
@@ -39,7 +39,7 @@ preferences {
 }
 
 //----
-//---- CORE APPLICATION
+//---- CORE METHODS
 //----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
@@ -322,35 +322,35 @@ void roomSceneInitialize () {
   settings.seeTouchKeypads.each{ device ->
     Ltrace(
       'roomSceneInitialize()',
-      "R_${atomicState.roomName} subscribing seeTouchKeypad '${GetDeviceInfo(device)}' to keypadSceneButtonHandler()"
+      "R_${atomicState.roomName} subscribing seeTouchKeypad '${DeviceInfo(device)}' to keypadSceneButtonHandler()"
     )
     subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     Ltrace(
       'roomSceneInitialize()',
-      "R_${atomicState.roomName} subscribing to mainRepeater '${GetDeviceInfo(device)}' to repeaterLedHandler()"
+      "R_${atomicState.roomName} subscribing to mainRepeater '${DeviceInfo(device)}' to repeaterLedHandler()"
     )
     subscribe(device, repeaterLedHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     Ltrace(
       'roomSceneInitialize()',
-      "R_${atomicState.roomName} subscribing to Pico '${GetDeviceInfo(device)}' to picoButtonHandler()"
+      "R_${atomicState.roomName} subscribing to Pico '${DeviceInfo(device)}' to picoButtonHandler()"
     )
     subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     Ltrace(
       'roomSceneInitialize()',
-      "R_${atomicState.roomName} subscribing to motionSensor '${GetDeviceInfo(device)}' to motionSensorHandler()"
+      "R_${atomicState.roomName} subscribing to motionSensor '${DeviceInfo(device)}' to motionSensorHandler()"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
   settings.independentDevices.each{ device ->
     Ltrace(
       'roomSceneInitialize()',
-      "R_${atomicState.roomName} subscribing to independentDevice '${GetDeviceInfo(device)}' to independentDeviceHandler()"
+      "R_${atomicState.roomName} subscribing to independentDevice '${DeviceInfo(device)}' to independentDeviceHandler()"
     )
     subscribe(device, independentDeviceHandler, ['filterEvents': true])
   }
@@ -374,8 +374,8 @@ void updated () {
 }
 
 void uninstalled () {
-  Lwarn('uninstalled()', 'calling removeAllChildApps()')
-  removeAllChildApps()
+  Lwarn('uninstalled()', 'calling RemoveChildApps()')
+  RemoveChildApps()
 }
 
 //----
@@ -512,7 +512,7 @@ void picoButtonHandler (Event e) {
         } else if (e.value == '2') {  // Default "Raise" behavior
           Lwarn('picoButtonHandler()', "Raising ${settings.independentDevices}")
           settings.independentDevices.each{ d ->
-            if (GetSwitchState(d) == 'off') {
+            if (SwitchState(d) == 'off') {
               d.setLevel(5)
               //d.on()
              } else {
@@ -583,7 +583,7 @@ Map roomScenePage () {
   return dynamicPage(
     name: 'roomScenePage',
     title: [
-      Heading1("WHA Room - ${GetAppInfo(app)}"),
+      Heading1("WHA Room - ${AppInfo(app)}"),
       Bullet1("Click <b>'Done'</b> to enable subscriptions."),
       Bullet1('Tab to register changes.')
     ].join('<br/>'),
@@ -629,7 +629,7 @@ void authorizeMotionSensor () {
 }
 
 void selectModeNamesAsSceneNames () {
-  List<String> sceneNames = GetModeNames()
+  List<String> sceneNames = ModeNames()
   input(
     name: 'modeNamesAsSceneNames',
     type: 'enum',
@@ -908,9 +908,9 @@ void displayWhaRoomDebugData () {
     [
       '<h2><b>roomScenePage Debug</b></h2>',
       '<h3><b>STATE</b></h3>',
-      getStateBulletsAsIs(),
+      AppStateAsBullets(),
       '<h3><b>SETTINGS</b></h3>',
-      getSettingsBulletsAsIs()
+      AppSettingsAsBullets()
     ].join()
   )
 }
@@ -921,7 +921,7 @@ void displayRoomScenePbsgDebugData () {
   if (roomScenePbsg) {
     paragraph (
       [
-        "<h2><b>${GetAppInfo(roomScenePbsg)} Debug</b></h2>",
+        "<h2><b>${AppInfo(roomScenePbsg)} Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
         roomScenePbsg.pbsgGetStateBullets(),
       ].join()
@@ -929,7 +929,7 @@ void displayRoomScenePbsgDebugData () {
   } else {
     paragraph (
       [
-        "<h2><b>${GetAppInfo(roomScenePbsg)} Debug</b></h2>",
+        "<h2><b>${AppInfo(roomScenePbsg)} Debug</b></h2>",
         'The roomScenePbsg does not exist yet.',
       ].join()
     )

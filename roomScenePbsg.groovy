@@ -6,7 +6,7 @@ pbsgGetOrCreateInstance (
   'AUTOMATIC'
 )
 
-subscribe(vsw, "PbsgCurrentSwitch", roomScenePbsgHandler, ['filterEvents': false])
+subscribe(vsw, "PbsgCurrentButton", roomScenePbsgHandler, ['filterEvents': false])
 
 void roomeScenePbsgHandler (Event e) {
   logDebug('modePbsgHandler()', e.descriptionText)
@@ -40,7 +40,7 @@ void roomSceneVswEventHandler (Event e) {
         "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
       )
       //--TBD-> TREAT 'vswDniToName' AS PRIVATE
-      String scene = _vswDnitoButtonName(atomicState.activeVswDni)
+      String scene = _pbsgDnitoButtonName(atomicState.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
       Ltrace()

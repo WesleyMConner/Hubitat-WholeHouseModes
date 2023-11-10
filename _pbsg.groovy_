@@ -16,8 +16,8 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.libLogAndDisplay
-#include wesmc.libUtils
+#include wesmc.libHubUI
+#include wesmc.libHubExt
 
 definition(
   parent: 'wesmc:wha',
@@ -37,7 +37,7 @@ preferences {
 }
 
 //----
-//---- CORE APPLICATION
+//---- CORE METHODS
 //----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
@@ -52,12 +52,12 @@ void pbsgConfigure (
   // No legacy settings to remove
   atomicState.vswDniPrefix = "${app.getLabel()}_"
   atomicState.buttonNames = buttonNames
-  atomicState.vswDefaultButtonName = defaultButton
-  atomicState.logLevel = lookupLogLevel(logThreshold)
+  atomicState.defaultButtonName = defaultButton
+  atomicState.logLevel = logThresholdToLogLevel(logThreshold)
 }
 
 void pbsgAdjustLogLevel (String logThreshold) {
-  atomicState.logLevel = lookupLogLevel(logThreshold)
+  atomicState.logLevel = logThresholdToLogLevel(logThreshold)
 }
 
 void pbsgTurnOn (String buttonName) {
@@ -67,13 +67,13 @@ void pbsgTurnOn (String buttonName) {
     name != buttonName
   }
   peerButtons.each{ peerName ->
-    DevW peerVsw = app.getChildDevice(_buttonNameToDni(peerName))
+    DevW peerVsw = app.getChildDevice(_pbsgButtonNameToDni(peerName))
     if (!peerVsw) {
       Lerror('pbsgTurnOn()', "Cannot find peer button ${b(peerName)}")
     }
     peerVsw.off()
   }
-  DevW vsw = getChildDevice(_buttonNameToDni(buttonName))
+  DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
   if (!vsw) {
     Lerror('pbsgTurnOn()', "Cannot find target button ${b(buttonName)}")
   } else {
@@ -82,23 +82,23 @@ void pbsgTurnOn (String buttonName) {
   }
 }
 
-void turnOnDefault () {
-  DevW vsw = app.getChildDevice(_buttonNameToDni(atomicState.vswDefaultButtonName))
+void pbsgTurnOnDefault () {
+  DevW vsw = app.getChildDevice(_pbsgButtonNameToDni(atomicState.defaultButtonName))
   vsw.on()
 }
 
 void pbsgTurnOff (String buttonName) {
-  DevW vsw = getChildDevice(_buttonNameToDni(buttonName))
+  DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
   if (!vsw) Lerror('pbsgTurnOff()', "Cannot find target button ${b(buttonName)}")
   Linfo('pbsgTurnOff()', "Turning off ${b(buttonName)}")
   vsw.off()
-  _enforceDefaultVsw()
+  _pbsgEnforceDefault()
 }
 
 void pbsgToggle (String buttonName) {
-  DevW vsw = getChildDevice(_buttonNameToDni(buttonName))
+  DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
   if (!vsw) Lerror('pbsgToggle()', "Cannot find target button ${b(buttonName)}")
-  String switchState = GetSwitchState(vsw)
+  String switchState = SwitchState(vsw)
   switch (switchState) {
     case 'on':
       Linfo('pbsgToggle()', "${b(buttonName)} on() -> off()")
@@ -122,7 +122,7 @@ String pbsgGetStateBullets () {
       result += Bullet1("${b(k)}")
       v.each{ dni ->
         DevW vsw = getChildDevice(dni)
-        String vswState = vsw ? GetSwitchState(vsw) : null
+        String vswState = vsw ? SwitchState(vsw) : null
         String vswWithState = vsw
           ? "→ ${vswState} - ${vsw.getLabel()}"
           : "Vsw w/ DNI ${b(dni)} DOES NOT EXIST"
@@ -135,7 +135,7 @@ String pbsgGetStateBullets () {
   return result.join('<br/>')
 }
 
-Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
+Boolean isValidPbsg (Map<String, List<DevW>> buckets = _pbsgDevicesByBucket()) {
   Boolean result = true
   if (!buckets) return false
   if (buckets.nonSwitch.size() != 0) {
@@ -150,8 +150,8 @@ Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
   }
   if (buckets.onList.size() == 1) {
     result = false
-    List<String> onNames = buckets.onList.collect{ _vswDnitoButtonName(it.getDeviceNetworkId()) }
-    List<String> offNames = buckets.offList.collect{ _vswDnitoButtonName(it.getDeviceNetworkId()) }
+    List<String> onNames = buckets.onList.collect{ _pbsgDnitoButtonName(it.getDeviceNetworkId()) }
+    List<String> offNames = buckets.offList.collect{ _pbsgDnitoButtonName(it.getDeviceNetworkId()) }
     LError(
       'isValidPbsg()',
       [
@@ -175,15 +175,15 @@ Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
 //-- INTERNAL METHODS
 //--
 
-String _vswDnitoButtonName (String vswDni) {
+String _pbsgDnitoButtonName (String vswDni) {
   return vswDni.minus("${atomicState.vswDniPrefix}")
 }
 
-String _buttonNameToDni (String name) {
+String _pbsgButtonNameToDni (String name) {
   return "${atomicState.vswDniPrefix}${name}"
 }
 
-Map<String, List<DevW>> _getDevicesByState () {
+Map<String, List<DevW>> _pbsgDevicesByBucket () {
   // This method obtains GROUND TRUTH child device data.
   // States:
   //   'nonSwitch': Does not support capability 'switch'
@@ -192,7 +192,7 @@ Map<String, List<DevW>> _getDevicesByState () {
   //         'off': Expected devices that are 'off'
   // Device DNIs are unique !!!
   List<DevW> foundDevices = getAllChildDevices()
-  List<String> expectedDnis = atomicState.buttonNames.collect{ _buttonNameToDni(it) }
+  List<String> expectedDnis = atomicState.buttonNames.collect{ _pbsgButtonNameToDni(it) }
   List<DevW> nonSwitch = []
   List<DevW> orphan = []
   List<DevW> onList = []
@@ -201,7 +201,7 @@ Map<String, List<DevW>> _getDevicesByState () {
     if (d.hasCapability('switch')) {
       String dni = d.getDeviceNetworkId()
       if (expectedDnis.contains(dni)) {
-        if (GetSwitchState(d) == 'on') {
+        if (SwitchState(d) == 'on') {
           onList += d
         } else {
           offList += d
@@ -221,65 +221,65 @@ Map<String, List<DevW>> _getDevicesByState () {
   ]
 }
 
-void _enforceMutualExclusion () {
-  Ltrace('_enforceMutualExclusion()', 'At entry')
-  List<DevW> onVsws = _getDevicesByState()?.getAt('on')
+void _pbsgMutualExclusion () {
+  Ltrace('_pbsgMutualExclusion()', 'At entry')
+  List<DevW> onVsws = _pbsgDevicesByBucket()?.getAt('on')
   DevW keepDevice = onVsws.pop()
   if (!keepDevice) {
     Ldebug(
-      '_enforceMutualExclusion()',
+      '_pbsgMutualExclusion()',
       [
         '',
         'Found NO "on" buttons, which is unexpected!',
-        "Turning on default button name ${b(atomicState.vswDefaultButtonName)}"
+        "Turning on default button name ${b(atomicState.defaultButtonName)}"
       ].join('<br/>&nbsp;&nbsp;')
     )
-    turnOnDefault()
+    pbsgTurnOnDefault()
   } else {
     onVsws.each{ vsw ->
       Ltrace(
-        '_enforceMutualExclusion()',
-        "turning off ${b(GetDeviceInfo(device))}"
+        '_pbsgMutualExclusion()',
+        "turning off ${b(DeviceInfo(device))}"
       )
       vsw.off()
     }
   }
 }
 
-void _enforceDefaultVsw () {
-  if (_getDevicesByState()?.getAt('on')?.size() == 0) {
+void _pbsgEnforceDefault () {
+  if (_pbsgDevicesByBucket()?.getAt('on')?.size() == 0) {
     Linfo(
-      '_enforceDefaultVsw()',
-      "Turning on default button name ${b(atomicState.vswDefaultButtonName)}"
+      '_pbsgEnforceDefault()',
+      "Turning on default button name ${b(atomicState.defaultButtonName)}"
     )
-    turnOnDefault()
+    pbsgTurnOnDefault()
   }
 }
 
-void _manageChildDevices () {
+void _pbsgManageChildDevices () {
   // Remove unwanted devices. See also getMissingDeviceNames().
-  Map<String, List<DevW>> buckets = _getDevicesByState()
+  Map<String, List<DevW>> buckets = _pbsgDevicesByBucket()
   buckets.nonSwitch.each{ dni ->
     Lwarn(
-      '_manageChildDevices()',
+      '_pbsgManageChildDevices()',
       "Deleting <b>non-Switch</b> child device '${b(dni)}'"
     )
     deleteChildDevice(dni)
   }
   buckets.orphan.each{ dni ->
     Lwarn(
-      '_manageChildDevices()',
+      '_pbsgManageChildDevices()',
       "Deleting <b>orphan</b> child device '${b(dni)}'"
     )
     deleteChildDevice(dni)
   }
   // Add missing devices
-  List<String> expectedNames = atomicState.buttonNames.collect{}  // Deep copy
+  List<String> expectedNames = atomicState.buttonNames.collect{}
   List<String> foundDeviceNames = getAllChildDevices().collect{
-    _vswDnitoButtonName(it.getDeviceNetworkId())
+    _pbsgDnitoButtonName(it.getDeviceNetworkId())
   }
   expectedNames.removeAll(foundDeviceNames).each{ name ->
-    String newDni = _buttonNameToDni(name)
+    String newDni = _pbsgButtonNameToDni(name)
     addChildDevice(
       'hubitat',          // namespace
       'Virtual Switch',   // typeName
@@ -288,14 +288,14 @@ void _manageChildDevices () {
     )
   }
   Lerror(
-    '_manageChildDevices()',
+    '_pbsgManageChildDevices()',
     "PARENT MAY NEED A HANDLER TO ENSURE THE CORRECT BUTTON IS 'on'"
   )
 }
 
 void _addOrphanDevice_TESTING_ONLY () {
   // T E S T I N G   O N L Y
-  //   - This method supports orphan removal testing. See _manageChildDevices().
+  //   - This method supports orphan removal testing. See _pbsgManageChildDevices().
   addChildDevice(
     'hubitat',         // namespace
     'Virtual Switch',  // typeName
@@ -360,17 +360,17 @@ void vswEventHandler (Event e) {
   //   - The PBSG DOES NOT track the currently emited value, relying instead
   //     on Hubitat to determine if the event IS or IS NOT a state change.
   DevW d = getChildDevice(e.displayName)
-  Ldebug('modeVswEventHandler()', GetDeviceInfo(d))
+  Ldebug('modeVswEventHandler()', DeviceInfo(d))
   Ldebug('modeVswEventHandler()', d.getCapabilities().join(', '))
   // VSW Capabilities are: 'Switch' and 'Refresh'
   if (e.isStateChange) {
     if (e.value == 'on') {
       // The PBSG should only emit an event if the VSW is uniquely on.
-      Map<String, List<DevW>> vswBuckets = _getDevicesByState()
+      Map<String, List<DevW>> vswBuckets = _pbsgDevicesByBucket()
       if (isValidPbsg(vswBuckets)) {
         List<DevW> onSwitches = vswBuckets.getAt('on')
         if (onSwitches?.size() == 1) {
-          String switchName = _vswDnitoButtonName(e.displayName)
+          String switchName = _pbsgDnitoButtonName(e.displayName)
           Linfo('vswEventHandler()', "Publishing PBSG event ")
           sendEvent([
             name: 'PbsgCurrentSwitch',
@@ -378,11 +378,11 @@ void vswEventHandler (Event e) {
             descriptionText: "${b(switchName)} is exclusively on"
           ])
         } else {
-          _enforceMutualExclusion()
+          _pbsgMutualExclusion()
         }
       } else if (e.value == 'off' && vswBuckets.getAt('on')?.size() == 0) {
         // If all VSWs are off, one of two things happens ...
-        if (atomicState.vswDefaultButtonName) {
+        if (atomicState.defaultButtonName) {
           // (1) The available default VSW is turned on. But, the PBSG
           //     DOES NOT publish a PBSG event yet - waiting instead for
           //     Handler to receive the default VSW's 'on' event.
@@ -415,7 +415,7 @@ void vswEventHandler (Event e) {
 Map pbsgPage () {
   return dynamicPage(
     name: 'pbsgPage',
-    title: Heading1(GetAppInfo(app)),
+    title: Heading1(AppInfo(app)),
     install: false,
     uninstall: false,
   ) {

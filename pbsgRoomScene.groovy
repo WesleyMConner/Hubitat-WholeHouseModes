@@ -16,15 +16,9 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.libLogAndDisplay
-#include wesmc.libUtils
-// FIX-004 Create one 'Library Instantiation App' per prospective Parent App.
-// FIX-004-A #include your library
-// FIX-004-B Clone your original definition section
-//   - adding a parent key
-//   - modifying the name to something unique
-//   - adjust the description
-// FIX-004-C Clone your original preferences section
+#include wesmc.libHubUI
+#include wesmc.libHubExt
+#include wesmc.libPbsg
 
 definition(
   parent: 'wesmc:wha',

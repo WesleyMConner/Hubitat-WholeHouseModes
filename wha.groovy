@@ -16,8 +16,10 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.libLogAndDisplay
-#include wesmc.libUtils
+#include wesmc.libHubUI
+#include wesmc.libHubExt
+#include wesmc.libFifoQ
+#include wesmc.libLutron
 
 definition (
   name: 'wha',
@@ -36,20 +38,19 @@ preferences {
 }
 
 //----
-//---- CORE APPLICATION
+//---- CORE METHODS
 //----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
 InstAppW getModePbsg () {
   InstAppW pbsg = app.getChildAppByLabel('MODE_PBSG')
   if (pbsg) {
-    // PBSG Validation
-    //   - Incurs a performance hit.
-    //   - Detects manual manipulation/deletion of VSWs.
-    //   - Spots outlier breaks in PBSG behavior.
-    //   - DOES NOT reconcile the 'on' VSW to downstream expectations.
-    //   - Logs any detected issues.
-    pbsg.isValidPbsg()
+    // Tactically, refresh configuration to inspect behavior
+    pbsg.pbsgConfigure(
+      ModeNames(),
+      getGlobalVar('defaultMode')?.value,
+      logThresholdToLogLevel('TRACE')
+    )
   }
   return pbsg
 }
@@ -60,23 +61,17 @@ InstAppW getOrCreateModePbsg () {
     Lwarn('getOrCreateModePbsg()', "Creating new PBSG '<b>MODE_PBSG</b>'")
     pbsg = app.addChildApp(
       'wesmc',      // See 'namespace' definition in pbsg.groovy
-      'libPbsg',    // See 'name' definition in pbsg.groovy
+      'pbsgWha',    // See 'name' definition in pbsg.groovy
       'MODE_PBSG'   // The label for the single Mode PBSG instance
     )
     pbsg.pbsgConfigure(
-      GetModeNames(),
+      ModeNames(),
       getGlobalVar('defaultMode')?.value,
-      lookupLogLevel('TRACE')
+      logThresholdToLogLevel('TRACE')
     )
     return pbsg
   }
 }
-
-// getOrCreateModePbsg()
-//   - java.lang.String
-//   - java.util.ArrayList
-//   - java.lang.String
-//   - java.lang.String   values: [MODE_PBSG, [Day, Supplement, Chill, TV, Party, Night, Cleaning], ...] on line 47 (method whaPage)
 
 void removeLegacyWhaData () {
   // settings?.remove('log')
@@ -130,7 +125,7 @@ void whaInitialize () {
   Ltrace(
     'whaInitialize()',
     [
-      GetAppInfo(app),
+      AppInfo(app),
       Bullet2('subscribing seeTouchKeypads to modeChangeButtonHandler()'),
       Bullet2('subscribing seeTouchKeypads to specialFnButtonHandler()')
     ].join('<br/>&nbsp;&nbsp;')
@@ -167,15 +162,15 @@ void updated () {
   Ltrace('updated()', 'calling whaInitialize()')
   whaInitialize()
 
-  settingssolicitLogThreshold('appLogThreshold')
+  solicitLogThreshold('appLogThreshold')
   solicitLogThreshold('modePbsgLogThreshold')
 
 
 }
 
 void uninstalled () {
-  Lwarn('uninstalled()', 'calling removeAllChildApps()')
-  removeAllChildApps()
+  Lwarn('uninstalled()', 'calling RemoveChildApps()')
+  RemoveChildApps()
 }
 
 //----
@@ -286,9 +281,9 @@ void modeChangeButtonHandler (Event e) {
 //----
 
 void updateAppAndPbsgLogLevels () {
-  atomicState.logLevel = lookupLogLevel(settings.appLogThreshold ?: 'TRACE')
+  atomicState.logLevel = logThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
   modePbsg.pbsgAdjustLogLevel(
-    lookupLogLevel(settings.modePbsgLogThreshold ?: 'TRACE')
+    logThresholdToLogLevel(settings.modePbsgLogThreshold ?: 'TRACE')
   )
 }
 
@@ -296,11 +291,11 @@ Map whaPage () {
   removeLegacyWhaData()
   app.updateLabel('Whole House Automation (WHA)')
   // Ensure a log level is available before App
-  atomicState.logLevel = lookupLogLevel(settings.appLogThreshold ?: 'DEBUG')
+  atomicState.logLevel = logThresholdToLogLevel(settings.appLogThreshold ?: 'DEBUG')
     return dynamicPage(
     name: 'whaPage',
     title: [
-      Heading1(GetAppInfo(app)),
+      Heading1(AppInfo(app)),
       Bullet1('Press <b>Done</b> to call <b>install()</b> for initial data registration.'),
       Bullet1('Press <b>Done</b> to call <b>update()</b> for adjusted data registration.')
     ].join('<br/>'),
@@ -318,7 +313,7 @@ Map whaPage () {
       identifyModeButtons()
       wireButtonsToModes()
       solicitParticipatingRooms()
-      displayInstantiatedRoomHrefs()
+      //-----> displayInstantiatedRoomHrefs()
       displayWhaDebugData()
       displayModePbsgDebugData()
     }
@@ -440,6 +435,7 @@ void solicitParticipatingRooms () {
   )
 }
 
+/*
 void displayInstantiatedRoomHrefs () {
   if (!settings.rooms) {
     paragraph 'Management of child apps is pending selection of Room Names.'
@@ -460,32 +456,33 @@ void displayInstantiatedRoomHrefs () {
         width: 2,
         url: "/installedapp/configure/${roomApp?.getId()}/roomScenePage",
         style: 'internal',
-        title: "<b>${GetAppInfo(roomApp)}</b> Scenes",
+        title: "<b>${AppInfo(roomApp)}</b> Scenes",
         state: null, //'complete'
       )
     }
   }
 }
+*/
 
 void displayWhaDebugData() {
   paragraph (
     [
       '<h2><b>whaPage Debug</b></h2>',
       '<h3><b>STATE</b></h3>',
-      getStateBulletsAsIs(),
+      AppStateAsBullets(),
       '<h3><b>SETTINGS</b></h3>',
-      getSettingsBulletsAsIs()
+      AppSettingsAsBullets()
     ].join()
   )
 }
 
 void displayModePbsgDebugData () {
-  // Use the Mode PBSG if it exists, but DO NOT create it if missing.
-  InstAppW modePbsg = getOrCreateModePbsg()
+  //--hold-> // Use the Mode PBSG if it exists, but DO NOT create it if missing.
+  //--hold-> InstAppW modePbsg = getOrCreateModePbsg()
   if (modePbsg) {
     paragraph (
       [
-        "<h2><b>${GetAppInfo(modePbsg)} Debug</b></h2>",
+        "<h2><b>${AppInfo(modePbsg)} Debug</b></h2>",
         '<h3><b>STATE</b></h3>',
         modePbsg.pbsgGetStateBullets(),
       ].join()

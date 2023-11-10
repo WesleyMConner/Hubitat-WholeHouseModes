@@ -16,71 +16,174 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.libLogAndDisplay
-#include wesmc.libUtils
 
-// FIX-001 Replace the definition section with a library section.
-//-> definition(
-//->   parent: 'wesmc:wha',
-//->   name: 'PBSG',
-//->   namespace: 'wesmc',
-//->   author: 'WesleyMConner',
-//->   description: 'A PBSG App instance, typically created by other Apps',
-//->   singleInstance: false
-//-> )
-definition (
+library (
   name: 'libPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'The guts of a PBSG App instance.',
-  singleInstance: false,
-  iconUrl: '',
-  iconX2Url: ''
+  category: 'general purpose'
 )
 
-// FIX-002 Note the original preferences section
-//-> preferences {
-//->   page(name: 'pbsgPage')
-//-> }
-
 //----
-//---- CORE APPLICATION
-//----   Methods that ARE NOT constrained to any specific execution context.
+//---- CORE METHODS
+//----   Methods that ARE NOT constrained to any specific execution context
+//----   Button state is set by Vsw event handlers exclusively
 //----
-
-//-- EXTERNAL METHODS
 
 void pbsgConfigure (
     List<String> buttonNames,
     String defaultButton,
-    String logThreshold
-) {
-  // No legacy atomicState to remove
-  // No legacy settings to remove
+    String logThreshold,
+    String turnOnButton = null
+  ) {
+  // This function refreshes the PBSG configuration, adjusting child devices
+  // if necessary and refreshing cached data (e.g., on vs off VSWs).
+  //-> PLACEHOLDER FOR REMOVING LEGACY STATE AND/OR SETTIGNS
+  //--------
+  Ltrace('pbsgConfigure()', 'SUSPENDING SUBSCRIPTIONS')
+  _pbsgUnsubscribe()
+  //--------
+  Ltrace('pbsgConfigure()', 'UPDATING CORE STATE DATA')
   atomicState.vswDniPrefix = "${app.getLabel()}_"
   atomicState.buttonNames = buttonNames
-  atomicState.vswDefaultButtonName = defaultButton
-  atomicState.logLevel = lookupLogLevel(logThreshold)
+  atomicState.defaultButtonName = defaultButton
+  atomicState.logLevel = logThresholdToLogLevel(logThreshold)
+  if (atomicState.onButtons == null) {
+    atomicState.onButtons = []
+  }
+  if (atomicState.offButtons == null) {
+    atomicState.offButtons = buttonNames
+  }
+  //--------
+  Ltrace('pbsgConfigure()', 'PROCESSING EXITING CHILD DEVICES')
+  List<String> expectedDnis = atomicState.buttonNames
+                                         .collect{ _pbsgButtonNameToDni(it) }
+  List<String> actualOnButtons = []
+  List<String> actualOffButtons = []
+  List<DevW> foundDevices = app.getAllChildDevices()
+  foundDevices.each{ d ->
+    String dni = d.getDeviceNetworkId()
+    if (d.hasCapability('Switch')) {
+      if (expectedDnis.contains(dni)) {
+        String buttonName = _pbsgDniToButtonName(dni)
+  //-> Ltrace('#70', "buttonName: ${buttonName}")
+        if (SwitchState(d) == 'on') {
+          Ltrace(
+            'pbsgConfigure()',
+            "Observed on button: ${b(buttonName)}"
+          )
+          actualOnButtons += buttonName
+  Ltrace('#77', "actualOnButtons: ${actualOnButtons}")
+        } else {
+          Ltrace(
+            'pbsgConfigure()',
+            "Observed off button: ${b(buttonName)}"
+          )
+          actualOffButtons += buttonName
+  //-> Ltrace('#84', "actualOffButtons: ${actualOffButtons}")
+        }
+      } else {
+        Lwarn(
+          'pbsgConfigure()',
+          "Deleting Orphaned Switch: ${b(dni)}"
+        )
+        app.deleteChildDevice(dni)
+      }
+    } else {
+      Lwarn(
+        'pbsgConfigure()',
+        "Deleting Non-Switch: ${b(dni)}"
+      )
+      app.deleteChildDevice(dni)
+    }
+  }
+  //--------
+  Ltrace('pbsgConfigure()', "ADDING MISSING DEVICES")
+  List<String> missingDNIs = expectedDnis.collect{ it }
+  missingDNIs.removeAll(foundDevices.collect{ it.getDeviceNetworkId() })
+  missingDNIs.each{ dni ->
+    String buttonName = _pbsgDniToButtonName(dni)
+  //-> Ltrace('#107', "buttonName: ${buttonName}")
+    Lwarn(
+      'pbsgConfigure()',
+      "Adding Device for Button: ${b(buttonName)}"
+    )
+    DevW vsw = addChildDevice(
+      'hubitat',          // namespace
+      'Virtual Switch',   // typeName
+      dni,                // device's unique DNI
+      [isComponent: true, name: dni, name: dni]
+    )
+    vsw.off()
+    actualOffButtons += buttonName
+  //-> Ltrace('#120', "actualOffButtons: ${actualOffButtons}")
+  }
+  //--------
+  Ltrace(
+    'pbsgConfigure()',
+    "RECONCILING OBSERVED BUTTON STATE TO CACHED BUTTON STATE"
+  )
+  //-----------------------------------------------------------------------
+  // TBD
+  //   - When re-populated onButton and offButton queues make no attempt
+  //     to order items.
+  //   - The device method 'Date getLastActivity()' could be used to
+  //     order items in the future IF REQUIRED.
+  //-----------------------------------------------------------------------
+  List<String> onAgreement = atomicState.onButtons?.intersect(actualOnButtons)
+  if ( onAgreement?.size() == atomicState.onButtons?.size()
+       && onAgreement?.size() == actualOnButtons?.size() ) {
+    Ltrace('pbsgConfigure()', 'Validated ')
+  } else {
+    Ldebug(
+      'pbsgConfigure()',
+      [
+        '<b>Refreshing </b>',
+        "Old : ${atomicState.onButtons}", //?.join(', ')
+        "New : ${actualOnButtons}", //?.join(', ')
+      ].join('<br/>&nbsp;&nbsp;')
+    )
+    atomicState.onButtons = actualOnButtons
+  }
+  // Step 4 - Reconcile actual off buttons to cache
+  //-> Ltrace(
+  //->   '#151',
+  //->   [
+  //->     '',
+  //->     "atomicState.onButtons: ${atomicState.onButtons}",
+  //->     "atomicState.offButtons: ${atomicState.offButtons}",
+  //->   ].join('<br/>&nbsp;&nbsp;')
+  //-> )
+  List<String> offAgreement = atomicState.offButtons?.intersect(actualOffButtons)
+  if ( offAgreement?.size() == atomicState.offButtons?.size()
+       && offAgreement?.size() == actualOffButtons?.size() ) {
+    Ltrace('pbsgConfigure()', 'Validated atomicState.offButtons')
+  } else {
+    Ldebug(
+      'pbsgConfigure()',
+      [
+        '<b>Refreshing atomicState.offButtons</b>',
+        "Old atomicState.offButtons: ${atomicState.offButtons}",
+        "New atomicState.offButtons: ${actualOffButtons}",
+      ].join('<br/>&nbsp;&nbsp;')
+    )
+    atomicState.offButtons = actualOffButtons
+  }
+  //--------
+  Ltrace('pbsgConfigure()', 'RESUME SUBSCRIPTIONS')
+  _pbsgSubscribe()
+  pbsgTurnOnDefault()
 }
 
+//-- EXTERNAL METHODS
+
 void pbsgAdjustLogLevel (String logThreshold) {
-  atomicState.logLevel = lookupLogLevel(logThreshold)
+  atomicState.logLevel = logThresholdToLogLevel(logThreshold)
 }
 
 void pbsgTurnOn (String buttonName) {
-  // Abstract
-  //   Turns on one of the PBSG's VSWs exclusively.
-  List<String> peerButtons = atomicState.buttonNames?.findAll{ name ->
-    name != buttonName
-  }
-  peerButtons.each{ peerName ->
-    DevW peerVsw = app.getChildDevice(_buttonNameToDni(peerName))
-    if (!peerVsw) {
-      Lerror('pbsgTurnOn()', "Cannot find peer button ${b(peerName)}")
-    }
-    peerVsw.off()
-  }
-  DevW vsw = getChildDevice(_buttonNameToDni(buttonName))
+  DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
   if (!vsw) {
     Lerror('pbsgTurnOn()', "Cannot find target button ${b(buttonName)}")
   } else {
@@ -89,23 +192,28 @@ void pbsgTurnOn (String buttonName) {
   }
 }
 
-void turnOnDefault () {
-  DevW vsw = app.getChildDevice(_buttonNameToDni(atomicState.vswDefaultButtonName))
-  vsw.on()
+void pbsgTurnOnDefault () {
+  if (atomicState.defaultButtonName) {
+    pbsgTurnOn(atomicState.defaultButtonName)
+  }
 }
 
 void pbsgTurnOff (String buttonName) {
-  DevW vsw = getChildDevice(_buttonNameToDni(buttonName))
-  if (!vsw) Lerror('pbsgTurnOff()', "Cannot find target button ${b(buttonName)}")
-  Linfo('pbsgTurnOff()', "Turning off ${b(buttonName)}")
-  vsw.off()
-  _enforceDefaultVsw()
+  DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
+  if (!vsw) {
+    Lerror('pbsgTurnOff()', "Cannot find target button ${b(buttonName)}")
+  } else {
+    Linfo('pbsgTurnOff()', "Turning off ${b(buttonName)}")
+    vsw.off()
+    Linfo('pbsgTurnOff()', "T B D - pbsgEnforceDefault() if no switches are on !!!")
+    //_pbsgEnforceDefault()
+  }
 }
 
 void pbsgToggle (String buttonName) {
-  DevW vsw = getChildDevice(_buttonNameToDni(buttonName))
+  DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
   if (!vsw) Lerror('pbsgToggle()', "Cannot find target button ${b(buttonName)}")
-  String switchState = GetSwitchState(vsw)
+  String switchState = SwitchState(vsw)
   switch (switchState) {
     case 'on':
       Linfo('pbsgToggle()', "${b(buttonName)} on() -> off()")
@@ -129,7 +237,7 @@ String pbsgGetStateBullets () {
       result += Bullet1("${b(k)}")
       v.each{ dni ->
         DevW vsw = getChildDevice(dni)
-        String vswState = vsw ? GetSwitchState(vsw) : null
+        String vswState = vsw ? SwitchState(vsw) : null
         String vswWithState = vsw
           ? "→ ${vswState} - ${vsw.getLabel()}"
           : "Vsw w/ DNI ${b(dni)} DOES NOT EXIST"
@@ -142,7 +250,8 @@ String pbsgGetStateBullets () {
   return result.join('<br/>')
 }
 
-Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
+/*
+Boolean isValidPbsg (Map<String, List<DevW>> buckets) {
   Boolean result = true
   if (!buckets) return false
   if (buckets.nonSwitch.size() != 0) {
@@ -157,8 +266,8 @@ Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
   }
   if (buckets.onList.size() == 1) {
     result = false
-    List<String> onNames = buckets.onList.collect{ _vswDnitoButtonName(it.getDeviceNetworkId()) }
-    List<String> offNames = buckets.offList.collect{ _vswDnitoButtonName(it.getDeviceNetworkId()) }
+    List<String> onNames = buckets.onList.collect{ _pbsgDniToButtonName(it.getDeviceNetworkId()) }
+    List<String> offNames = buckets.offList.collect{ _pbsgDniToButtonName(it.getDeviceNetworkId()) }
     LError(
       'isValidPbsg()',
       [
@@ -168,8 +277,16 @@ Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
       ].join('<br/>&nbsp;&nbsp;')
     )
   }
-  List<String> missingNames = addMissingDeviceNames()
-  if (missingNames > 0) {
+
+  // Make a copy of the expected names, any or all of which may be missing
+  List<String> missingNames = atomicState.buttonNames.collect{ it }
+  // Extract possible button names from current child devices
+  List<String> foundNames = getAllChildDevices().collect{
+    _pbsgDniToButtonName(it.getDeviceNetworkId())
+  }
+  // Adjust the missingNames, dropping foundNames
+  missingNames.removeAll(foundNames)
+  if (missingNames.size() > 0) {
     result = false
     Lerror(
       'isValidPbsg()', "Missing devices: ${missingNames.join(', ')}"
@@ -177,29 +294,37 @@ Boolean isValidPbsg (Map<String, List<DevW>> buckets = _getDevicesByState()) {
   }
   return result
 }
+*/
 
-//--
 //-- INTERNAL METHODS
-//--
 
-String _vswDnitoButtonName (String vswDni) {
-  return vswDni.minus("${atomicState.vswDniPrefix}")
+String _pbsgDniToButtonName (String vswDni) {
+  String result = vswDni?.minus("${atomicState.vswDniPrefix}")
+  //-> Ltrace(
+  //->   '_pbsgDniToButtonName()',
+  //->   [
+  //->     '',
+  //->     "vswDni: ${vswDni}",
+  //->     "result: ${result}"
+  //->   ].join('<br/>&nbsp;&nbsp;')
+  //-> )
+  return result
 }
 
-String _buttonNameToDni (String name) {
+String _pbsgButtonNameToDni (String name) {
   return "${atomicState.vswDniPrefix}${name}"
 }
 
-Map<String, List<DevW>> _getDevicesByState () {
-  // This method obtains GROUND TRUTH child device data.
-  // States:
+/*
+Map<String, List<DevW>> _pbsgDevicesByBucket () {
+  // Bucket Keys:
   //   'nonSwitch': Does not support capability 'switch'
   //      'orphan': Unexpected devices per PBSG state
   //          'on': Expected devices that are 'on'
   //         'off': Expected devices that are 'off'
-  // Device DNIs are unique !!!
+  // This method relies on the fact that Hubitat Device DNIs are unique.
   List<DevW> foundDevices = getAllChildDevices()
-  List<String> expectedDnis = atomicState.buttonNames.collect{ _buttonNameToDni(it) }
+  List<String> expectedDnis = atomicState.buttonNames.collect{ _pbsgButtonNameToDni(it) }
   List<DevW> nonSwitch = []
   List<DevW> orphan = []
   List<DevW> onList = []
@@ -208,7 +333,7 @@ Map<String, List<DevW>> _getDevicesByState () {
     if (d.hasCapability('switch')) {
       String dni = d.getDeviceNetworkId()
       if (expectedDnis.contains(dni)) {
-        if (GetSwitchState(d) == 'on') {
+        if (SwitchState(d) == 'on') {
           onList += d
         } else {
           offList += d
@@ -227,100 +352,48 @@ Map<String, List<DevW>> _getDevicesByState () {
     'offList': offList
   ]
 }
+*/
 
-void _enforceMutualExclusion () {
-  Ltrace('_enforceMutualExclusion()', 'At entry')
-  List<DevW> onVsws = _getDevicesByState()?.getAt('on')
-  DevW keepDevice = onVsws.pop()
-  if (!keepDevice) {
-    Ldebug(
-      '_enforceMutualExclusion()',
-      [
-        '',
-        'Found NO "on" buttons, which is unexpected!',
-        "Turning on default button name ${b(atomicState.vswDefaultButtonName)}"
-      ].join('<br/>&nbsp;&nbsp;')
+void _pbsgTurnOffPeers (String buttonName) {
+  List<String> peerButtons = atomicState.buttonNames?.findAll{ name ->
+    name != buttonName
+  }
+  peerButtons.each{ peerName ->
+    DevW peerVsw = app.getChildDevice(_pbsgButtonNameToDni(peerName))
+    if (!peerVsw) {
+      Lerror('_pbsgTurnOffPeers()', "Cannot find peer button ${b(peerName)}")
+    }
+    peerVsw.off()
+  }
+}
+
+void _pbsgEnforceDefault () {
+  if (_pbsgDevicesByBucket()?.getAt('on')?.size() == 0) {
+    Linfo(
+      '_pbsgEnforceDefault()',
+      "Turning on default button name ${b(atomicState.defaultButtonName)}"
     )
-    turnOnDefault()
-  } else {
-    onVsws.each{ vsw ->
-      Ltrace(
-        '_enforceMutualExclusion()',
-        "turning off ${b(GetDeviceInfo(device))}"
-      )
-      vsw.off()
+    pbsgTurnOnDefault()
+  }
+}
+
+Boolean _pbsgUnsubscribe () {
+  app.unsubscribe('pbsgVswEventHandler')
+}
+
+Boolean _pbsgSubscribe () {
+  // Returns false if an issue arises during subscriptions
+  Boolean result = true
+  atomicState.buttonNames.each{ buttonName ->
+    DevW vsw = getChildDevice(_pbsgButtonNameToDni(buttonName))
+    if (!vsw) {
+      result = false
+      Lerror('_pbsgSubscribe()', "Cannot find target button ${b(buttonName)}")
+    } else {
+      subscribe(vsw, pbsgVswEventHandler, ['filterEvents': true])
     }
   }
-}
-
-void _enforceDefaultVsw () {
-  if (_getDevicesByState()?.getAt('on')?.size() == 0) {
-    Linfo(
-      '_enforceDefaultVsw()',
-      "Turning on default button name ${b(atomicState.vswDefaultButtonName)}"
-    )
-    turnOnDefault()
-  }
-}
-
-void _manageChildDevices () {
-  // Remove unwanted devices. See also getMissingDeviceNames().
-  Map<String, List<DevW>> buckets = _getDevicesByState()
-  buckets.nonSwitch.each{ dni ->
-    Lwarn(
-      '_manageChildDevices()',
-      "Deleting <b>non-Switch</b> child device '${b(dni)}'"
-    )
-    deleteChildDevice(dni)
-  }
-  buckets.orphan.each{ dni ->
-    Lwarn(
-      '_manageChildDevices()',
-      "Deleting <b>orphan</b> child device '${b(dni)}'"
-    )
-    deleteChildDevice(dni)
-  }
-  // Add missing devices
-  List<String> expectedNames = atomicState.buttonNames.collect{}  // Deep copy
-  List<String> foundDeviceNames = getAllChildDevices().collect{
-    _vswDnitoButtonName(it.getDeviceNetworkId())
-  }
-  expectedNames.removeAll(foundDeviceNames).each{ name ->
-    String newDni = _buttonNameToDni(name)
-    addChildDevice(
-      'hubitat',          // namespace
-      'Virtual Switch',   // typeName
-      newDni,             // device's unique DNI
-      [isComponent: true, name: newDni]
-    )
-  }
-  Lerror(
-    '_manageChildDevices()',
-    "PARENT MAY NEED A HANDLER TO ENSURE THE CORRECT BUTTON IS 'on'"
-  )
-}
-
-void _addOrphanDevice_TESTING_ONLY () {
-  // T E S T I N G   O N L Y
-  //   - This method supports orphan removal testing. See _manageChildDevices().
-  addChildDevice(
-    'hubitat',         // namespace
-    'Virtual Switch',  // typeName
-    'bogus_device',
-    [isComponent: true, name: 'bogus_device']
-  )
-}
-
-void _exercisePbsg_TESTING_ONLY () {
-  // Baseline Expected VSWs per State
-  // Confirm Child VSWs match Expected VSWs
-  // Add Orphan VSW
-  // Confirm Child VSWs DO NOT match Expected VSWs
-  // Manage Child Devices
-  // Confirm Child VSWs match Expected VSWs
-  // Get VSW state and confirm a single VSW is active
-  // Per VSW, turn on VSW and confirm expected VSW is the only enabled VSW
-  // Turn off current VSW and ensure default VSW is enabled
+  return result
 }
 
 //----
@@ -329,16 +402,16 @@ void _exercisePbsg_TESTING_ONLY () {
 //----   See downstream instances (modePbsg, roomScenePbsg)
 
 void installed () {
-  Lerror(
+  Ltrace(
     'installed()',
-    'Unexpected: The PBSG UI does not facilitate configuration data'
+    "Called for new ${AppInfo(app)}"
   )
 }
 
 void updated () {
-  Lerror(
+  Ltrace(
     'updated()',
-    'Unexpected: The PBSG UI does not facilitate configuration changes'
+    "Called for revised ${AppInfo(app)}"
   )
 }
 
@@ -349,62 +422,88 @@ void uninstalled () {
   }
 }
 
+void _pbsgEnforceMutualExclusion () {
+  // Turn off all but one currently-on buttons
+  // Adjusting the cached button state
+  while (atomicState.onButtons.size() > 1) {
+    String buttonName = FifoPop(atomicState.onButtons)
+    FifoPush(atomicState.offButtons, buttonName)
+    pbsgTurnOff(buttonName)
+  }
+}
+
 //----
 //---- EVENT HANDLERS
 //----   Methods specific to this execution context
 //----
 
-void vswEventHandler (Event e) {
-  // Key Principles
+List<String> pbsgCacheState () {
+  return [
+    '',
+    "<b>atomicState.offButtons:</b> ${b(atomicState.offButtons)}",
+    "<b>atomicState.defaultButtonName:</b> ${b(atomicState.defaultButtonName)}"
+  ]
+}
+
+void pbsgVswEventHandler (Event e) {
+  // IMPORTANT
   //   - Downstream Apps SHOULD subscribe to PBSG events.
   //   - Downstream Apps SHOULD NOT subscribe to PBSG VSW events.
-  //   - This event handler determines when (or if) the PBSG should emit
-  //     an event to downstream Apps.
-  //   - The PBSG should ensure constraints (mutual exclusion, default switch)
-  //     are MET before emiting events when possible.
-  //   - As a convention, PBSG turns on a newly active push-button VSW
-  //     BEFORE it turns off a previously active push-button VSW.
-  //   - The PBSG DOES NOT track the currently emited value, relying instead
-  //     on Hubitat to determine if the event IS or IS NOT a state change.
   DevW d = getChildDevice(e.displayName)
-  Ldebug('modeVswEventHandler()', GetDeviceInfo(d))
-  Ldebug('modeVswEventHandler()', d.getCapabilities().join(', '))
-  // VSW Capabilities are: 'Switch' and 'Refresh'
+
   if (e.isStateChange) {
     if (e.value == 'on') {
-      // The PBSG should only emit an event if the VSW is uniquely on.
-      Map<String, List<DevW>> vswBuckets = _getDevicesByState()
-      if (isValidPbsg(vswBuckets)) {
-        List<DevW> onSwitches = vswBuckets.getAt('on')
-        if (onSwitches?.size() == 1) {
-          String switchName = _vswDnitoButtonName(e.displayName)
-          Linfo('vswEventHandler()', "Publishing PBSG event ")
-          sendEvent([
-            name: 'PbsgCurrentSwitch',
-            value: switchName,
-            descriptionText: "${b(switchName)} is exclusively on"
-          ])
+      String buttonName = _pbsgDniToButtonName(e.displayName)
+      _pbsgEnforceMutualExclusion()
+      FifoPush(atomicState.onButtons, buttonName)
+      // PBSG EMITS AN EVENT FOR THE NEWLY TURNED ON BUTTON
+      Linfo(
+        'pbsgVswEventHandler()',
+        [
+          "PbsgCurrentButton -> ${b(buttonName)}",
+          *pbsgCacheState()
+        ].join('<br/>&nbsp;&nbsp;')
+      )
+      sendEvent([
+        name: 'PbsgCurrentButton',
+        value: buttonName,
+        descriptionText: "${b(buttonName)} is on (exclusively)"
+      ])
+    } else if (e.value == 'off') {
+      FifoRemove(atomicState.offButtons, buttonName)
+      FifoPushUnique(atomicState.offButtons, buttonName)
+      if (atomicState.offButtons.size() == 0) {
+        if (atomicState.defaultButtonName) {
+          // Adjust cache.
+          FifoRemove(atomicState.offButtons, atomicState.defaultButtonName)
+          FifoPush(atomicState.offButtons, atomicState.defaultButtonName)
+          Linfo(
+            'pbsgVswEventHandler()',
+            [
+              "PbsgCurrentButton -> DEFAULT (${atomicState.defaultButtonName})",
+              *pbsgCacheState()
+            ].join('<br/>&nbsp;&nbsp;')
+          )
+          // No event is published until the handler receives the update.
+          pbsgTurnOnDefault()
         } else {
-          _enforceMutualExclusion()
-        }
-      } else if (e.value == 'off' && vswBuckets.getAt('on')?.size() == 0) {
-        // If all VSWs are off, one of two things happens ...
-        if (atomicState.vswDefaultButtonName) {
-          // (1) The available default VSW is turned on. But, the PBSG
-          //     DOES NOT publish a PBSG event yet - waiting instead for
-          //     Handler to receive the default VSW's 'on' event.
-          // DO NOTHING !
-        } else {
-          // (2) There being no default switch, the PBSG publishes a null.
+          // PBSG EMITS A "null" EVENT WHEN NO DEFAULT BUTTON EXISTS
+          Linfo(
+            'pbsgVswEventHandler()',
+            [
+              'PbsgCurrentButton -> null',
+              *pbsgCacheState()
+            ].join('<br/>&nbsp;&nbsp;')
+          )
           sendEvent([
-            name: 'PbsgCurrentSwitch',
+            name: 'PbsgCurrentButton',
             value: null,
-            descriptionText: '<b>No PBSG switch is active</b>'
+            descriptionText: 'null value (no default button exists)'
           ])
         }
       }
     } else {
-      Lwarn('modeVswEventHandler()', "Ignoring '${e.descriptionText}'")
+      Lwarn('pbsgVswEventHandler()', "Ignoring '${e.descriptionText}'")
     }
   }
 }
@@ -419,11 +518,10 @@ void vswEventHandler (Event e) {
 //----   Methods specific to this execution context
 //----
 
-// FIX-003 Note your original RENDERING/DISPLAY page
 Map defaultPage () {
   return dynamicPage(
     name: 'pbsgPage',
-    title: Heading1(GetAppInfo(app)),
+    title: Heading1(AppInfo(app)),
     install: false,
     uninstall: false,
   ) {
