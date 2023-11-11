@@ -48,7 +48,7 @@ void pbsgConfigure (
   atomicState.vswDniPrefix = "${app.getLabel()}_"
   atomicState.buttonNames = buttonNames
   atomicState.defaultButtonName = defaultButton
-  atomicState.logLevel = logThresholdToLogLevel(logThreshold)
+  atomicState.logLevel = LogThresholdToLogLevel(logThreshold)
   if (atomicState.onButtons == null) {
     atomicState.onButtons = []
   }
@@ -67,21 +67,18 @@ void pbsgConfigure (
     if (d.hasCapability('Switch')) {
       if (expectedDnis.contains(dni)) {
         String buttonName = _pbsgDniToButtonName(dni)
-  //-> Ltrace('#70', "buttonName: ${buttonName}")
         if (SwitchState(d) == 'on') {
           Ltrace(
             'pbsgConfigure()',
             "Observed on button: ${b(buttonName)}"
           )
           actualOnButtons += buttonName
-  Ltrace('#77', "actualOnButtons: ${actualOnButtons}")
         } else {
           Ltrace(
             'pbsgConfigure()',
             "Observed off button: ${b(buttonName)}"
           )
           actualOffButtons += buttonName
-  //-> Ltrace('#84', "actualOffButtons: ${actualOffButtons}")
         }
       } else {
         Lwarn(
@@ -98,6 +95,8 @@ void pbsgConfigure (
       app.deleteChildDevice(dni)
     }
   }
+  Ltrace('pbsgConfigure', "actualOnButtons: ${actualOnButtons}")
+  Ltrace('pbsgConfigure', "actualOffButtons: ${actualOffButtons}")
   //--------
   Ltrace('pbsgConfigure()', "ADDING MISSING DEVICES")
   List<String> missingDNIs = expectedDnis.collect{ it }
@@ -179,7 +178,7 @@ void pbsgConfigure (
 //-- EXTERNAL METHODS
 
 void pbsgAdjustLogLevel (String logThreshold) {
-  atomicState.logLevel = logThresholdToLogLevel(logThreshold)
+  atomicState.logLevel = LogThresholdToLogLevel(logThreshold)
 }
 
 void pbsgTurnOn (String buttonName) {
@@ -250,52 +249,6 @@ String pbsgGetStateBullets () {
   return result.join('<br/>')
 }
 
-/*
-Boolean isValidPbsg (Map<String, List<DevW>> buckets) {
-  Boolean result = true
-  if (!buckets) return false
-  if (buckets.nonSwitch.size() != 0) {
-    result = false
-    List<String> dnis = buckets.nonSwitch.collect{ it.getDeviceNetworkId() }
-    LError('isValidPbsg()', "nonSwitch DNIs: ${dnis}")
-  }
-  if (buckets.orphan.size() != 0) {
-    result = false
-    List<String> dnis = buckets.orphan.collect{ it.getDeviceNetworkId() }
-    LError('isValidPbsg()', "orphan DNIs: ${dnis}")
-  }
-  if (buckets.onList.size() == 1) {
-    result = false
-    List<String> onNames = buckets.onList.collect{ _pbsgDniToButtonName(it.getDeviceNetworkId()) }
-    List<String> offNames = buckets.offList.collect{ _pbsgDniToButtonName(it.getDeviceNetworkId()) }
-    LError(
-      'isValidPbsg()',
-      [
-        "onList size (${buckets.onList.size()}) != 1",
-        "<b>on:</b> ${onNames.join(', ')}",
-        "<b>off: ${offNames.join(', ')}"
-      ].join('<br/>&nbsp;&nbsp;')
-    )
-  }
-
-  // Make a copy of the expected names, any or all of which may be missing
-  List<String> missingNames = atomicState.buttonNames.collect{ it }
-  // Extract possible button names from current child devices
-  List<String> foundNames = getAllChildDevices().collect{
-    _pbsgDniToButtonName(it.getDeviceNetworkId())
-  }
-  // Adjust the missingNames, dropping foundNames
-  missingNames.removeAll(foundNames)
-  if (missingNames.size() > 0) {
-    result = false
-    Lerror(
-      'isValidPbsg()', "Missing devices: ${missingNames.join(', ')}"
-    )
-  }
-  return result
-}
-*/
-
 //-- INTERNAL METHODS
 
 String _pbsgDniToButtonName (String vswDni) {
@@ -314,45 +267,6 @@ String _pbsgDniToButtonName (String vswDni) {
 String _pbsgButtonNameToDni (String name) {
   return "${atomicState.vswDniPrefix}${name}"
 }
-
-/*
-Map<String, List<DevW>> _pbsgDevicesByBucket () {
-  // Bucket Keys:
-  //   'nonSwitch': Does not support capability 'switch'
-  //      'orphan': Unexpected devices per PBSG state
-  //          'on': Expected devices that are 'on'
-  //         'off': Expected devices that are 'off'
-  // This method relies on the fact that Hubitat Device DNIs are unique.
-  List<DevW> foundDevices = getAllChildDevices()
-  List<String> expectedDnis = atomicState.buttonNames.collect{ _pbsgButtonNameToDni(it) }
-  List<DevW> nonSwitch = []
-  List<DevW> orphan = []
-  List<DevW> onList = []
-  List<DevW> offList = []
-  foundDevices.each{ d ->
-    if (d.hasCapability('switch')) {
-      String dni = d.getDeviceNetworkId()
-      if (expectedDnis.contains(dni)) {
-        if (SwitchState(d) == 'on') {
-          onList += d
-        } else {
-          offList += d
-        }
-      } else {
-        orphan += d
-      }
-    } else {
-      nonSwitch += d
-    }
-  }
-  return [
-    'nonSwitch': nonSwitch,
-    'orphan': orphan,
-    'onList': onList,
-    'offList': offList
-  ]
-}
-*/
 
 void _pbsgTurnOffPeers (String buttonName) {
   List<String> peerButtons = atomicState.buttonNames?.findAll{ name ->
@@ -402,10 +316,7 @@ Boolean _pbsgSubscribe () {
 //----   See downstream instances (modePbsg, roomScenePbsg)
 
 void installed () {
-  Ltrace(
-    'installed()',
-    "Called for new ${AppInfo(app)}"
-  )
+  Ltrace('installed()', "No install actions for ${AppInfo(app)}")
 }
 
 void updated () {
@@ -440,8 +351,9 @@ void _pbsgEnforceMutualExclusion () {
 List<String> pbsgCacheState () {
   return [
     '',
-    "<b>atomicState.offButtons:</b> ${b(atomicState.offButtons)}",
-    "<b>atomicState.defaultButtonName:</b> ${b(atomicState.defaultButtonName)}"
+    "<b>atomicState.onButtons:</b> ${b(atomicState.onButtons)}",
+    "<b>atomicState.offButtons:</b> ${b(atomicState.offButtons)}"
+    //"<b>atomicState.defaultButtonName:</b> ${b(atomicState.defaultButtonName)}"
   ]
 }
 
@@ -452,8 +364,8 @@ void pbsgVswEventHandler (Event e) {
   DevW d = getChildDevice(e.displayName)
 
   if (e.isStateChange) {
+    String buttonName = _pbsgDniToButtonName(e.displayName)
     if (e.value == 'on') {
-      String buttonName = _pbsgDniToButtonName(e.displayName)
       _pbsgEnforceMutualExclusion()
       FifoPush(atomicState.onButtons, buttonName)
       // PBSG EMITS AN EVENT FOR THE NEWLY TURNED ON BUTTON
@@ -464,19 +376,32 @@ void pbsgVswEventHandler (Event e) {
           *pbsgCacheState()
         ].join('<br/>&nbsp;&nbsp;')
       )
+
+  Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
+  Ltrace('pbsgVswEventHandler()', "${b(buttonName)} OffButtons -> OnButtons")
+      FifoRemove(atomicState.offButtons, buttonName)
+      FifoPushUnique(atomicState.offButtons, buttonName)
+  Ltrace('pbsgVswEventHandler', "AFTER<br/>${pbsgCacheState().join('<br/>')}")
+
       sendEvent([
         name: 'PbsgCurrentButton',
         value: buttonName,
         descriptionText: "${b(buttonName)} is on (exclusively)"
       ])
     } else if (e.value == 'off') {
-      FifoRemove(atomicState.offButtons, buttonName)
+  Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
+  Ltrace('pbsgVswEventHandler()', "${b(buttonName)} OnButtons -> OffButtons")
+      FifoRemove(atomicState.onButtons, buttonName)
       FifoPushUnique(atomicState.offButtons, buttonName)
+  Ltrace('pbsgVswEventHandler', "AFTER<br/>${pbsgCacheState().join('<br/>')}")
       if (atomicState.offButtons.size() == 0) {
         if (atomicState.defaultButtonName) {
-          // Adjust cache.
+          // Adjust cache
+  Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
+  Ltrace('pbsgVswEventHandler()', "${b(atomicState.defaultButtonName)} OffButtons -> OnButtons")
           FifoRemove(atomicState.offButtons, atomicState.defaultButtonName)
           FifoPush(atomicState.offButtons, atomicState.defaultButtonName)
+  Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
           Linfo(
             'pbsgVswEventHandler()',
             [
@@ -518,24 +443,17 @@ void pbsgVswEventHandler (Event e) {
 //----   Methods specific to this execution context
 //----
 
-Map defaultPage () {
-  return dynamicPage(
-    name: 'pbsgPage',
-    title: Heading1(AppInfo(app)),
-    install: false,
-    uninstall: false,
-  ) {
-    section {
-      paragraph (
-        [
-          Heading1('About this page...'),
-          Bullet1('The parent App configures the log level for this PBSG'),
-          Bullet1('Use your browser to return to the prior-page'),
-          '',
-          Heading1('STATE'),
-          pbsgGetStateBullets() ?: Bullet1('<i>NO DATA AVAILABLE</i>'),
-        ].join('<br/>')
-      )
-    }
+void defaultPage () {
+  section {
+    paragraph (
+      [
+        Heading1('About this page...'),
+        Bullet1('The parent App configures the log level for this PBSG'),
+        Bullet1('Use your browser to return to the prior-page'),
+        '',
+        Heading1('STATE'),
+        pbsgGetStateBullets() ?: Bullet1('<i>NO DATA AVAILABLE</i>'),
+      ].join('<br/>')
+    )
   }
 }

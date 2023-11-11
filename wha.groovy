@@ -42,36 +42,55 @@ preferences {
 //----   Methods that ARE NOT constrained to any specific execution context.
 //----
 
-InstAppW getModePbsg () {
-  InstAppW pbsg = app.getChildAppByLabel('MODE_PBSG')
-  if (pbsg) {
-    // Tactically, refresh configuration to inspect behavior
-    pbsg.pbsgConfigure(
-      ModeNames(),
-      getGlobalVar('defaultMode')?.value,
-      logThresholdToLogLevel('TRACE')
-    )
+InstAppW getModePbsg (Boolean refreshConfig = false) {
+  InstAppW pbsg = null
+  if (state.whaPbsgLabel) {
+    Ltrace('getModePbsg()', "getChildAppByLabel(${b(state.whaPbsgLabel)})")
+    pbsg = app.getChildAppByLabel(state.whaPbsgLabel)
+    if (pbsg) {
+      // Optionally refresh configuration (at a performance cost)
+      Ltrace('getModePbsg()', "Found ${AppInfo(pbsg)}")
+      if (refreshConfig) {
+        Ltrace('getModePbsg()', "Refreshing ${AppInfo(pbsg)} config")
+        pbsg.pbsgConfigure(
+          ModeNames(),
+          getGlobalVar('defaultMode')?.value,
+          settings.pbsgLogThreshold ?: 'TRACE'
+        )
+      }
+    }
+  } else {
+    Lerror('getModePbsg()', "Called before ${b(state.whaPbsgLabel)} exists")
   }
   return pbsg
 }
 
-InstAppW getOrCreateModePbsg () {
-  InstAppW pbsg = getModePbsg()
-  if (!pbsg) {
-    Lwarn('getOrCreateModePbsg()', "Creating new PBSG '<b>MODE_PBSG</b>'")
-    pbsg = app.addChildApp(
-      'wesmc',      // See 'namespace' definition in pbsg.groovy
-      'pbsgWha',    // See 'name' definition in pbsg.groovy
-      'MODE_PBSG'   // The label for the single Mode PBSG instance
-    )
-    pbsg.pbsgConfigure(
-      ModeNames(),
-      getGlobalVar('defaultMode')?.value,
-      logThresholdToLogLevel('TRACE')
-    )
-    return pbsg
+InstAppW getOrCreateModePbsg (Boolean refreshConfig = false) {
+  Ltrace('getOrCreateModePbsg()', 'At entry')
+  InstAppW pbsg = null
+  if (state.whaPbsgLabel) {
+    pbsg = getModePbsg(refreshConfig)
+    if (!pbsg) {
+      Lwarn('getOrCreateModePbsg()', "Creating new PBSG ${b(state.whaPbsgLabel)}")
+      pbsg = app.addChildApp(
+        'wesmc',             // See 'namespace' definition in pbsg.groovy
+        'pbsgWha',           // See 'name' definition in pbsg.groovy
+        state.whaPbsgLabel   // The label for the single Mode PBSG instance
+      )
+      Lwarn('getOrCreateModePbsg()', "Created PBSG ${AppInfo(pbsg)}")
+      // Always configure new instances
+      pbsg.pbsgConfigure(
+        ModeNames(),
+        getGlobalVar('defaultMode')?.value,
+        settings.pbsgLogThreshold ?: 'TRACE'
+      )
+    }
+  } else {
+    Lerror('getOrCreateModePbsg()', 'Called before state.whaPbsgLabel exists')
   }
+  return pbsg
 }
+
 
 void removeLegacyWhaData () {
   // settings?.remove('log')
@@ -100,7 +119,7 @@ void manageNestedChildApps () {
   // Prune any orphaned or duplicated apps in the WHA App hierarchy.
   // (1) Begin with direct children of WHA (the MODE_PBSG and Room Scene instances).
   Ltrace('manageNestedChildApps()', "Calling PruneAppDups() at ${b(root)} level")
-  PruneAppDups(['MODE_PBSG', *settings.rooms], false, app)
+  PruneAppDups([state.whaPbsgLabel, *settings.rooms], false, app)
   // (2) Drill into each RoomScene and manage its PBSG Instance
   settings.rooms?.each{ roomName ->
     Ltrace('manageNestedChildApps()', "Calling PruneAppDups() for ${b(roomName)}")
@@ -135,14 +154,11 @@ void whaInitialize () {
     subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
     subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
-  Ltrace('whaInitialize()', 'calling getOrCreateModePbsg()')
-  InstAppW modePbsg = getOrCreateModePbsg()
 }
 
 void allAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = getChildAppByLabel(roomName)
-    String manualOverrideVswDni = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
     Ldebug('allAuto()', 'Turning on <b>MANUAL_OVERRIDE</b>')
     roomApp.getRoomScenePbsg().pbsgTurnOn('MANUAL_OVERRIDE')
   }
@@ -154,16 +170,29 @@ void allAuto () {
 //----
 
 void installed () {
+  // ON FIRST LOAD OF whaPage() THERE IS NO PBSG
+  Ldebug('installed()', "pbsg is ${AppInfo(pbsg)}")
   Ltrace('installed()', 'calling whaInitialize()')
   whaInitialize()
 }
 
 void updated () {
+  Ldebug('updated()', "pbsg is ${AppInfo(pbsg)}")
+  if (settings.appLogThreshold) {
+    atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold)
+  }
+  if (pbsg && settings.pbsgLogThreshold) {
+    pbsg.pbsgAdjustLogLevel(LogThresholdToLogLevel(settings.pbsgLogThreshold))
+  }
   Ltrace('updated()', 'calling whaInitialize()')
   whaInitialize()
 
   solicitLogThreshold('appLogThreshold')
-  solicitLogThreshold('modePbsgLogThreshold')
+  solicitLogThreshold('pbsgLogThreshold')
+    if (pbsg) atomicState.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
+
+  if (pbsg) atomicState.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
+
 
 
 }
@@ -179,6 +208,7 @@ void uninstalled () {
 //----
 
 void specialFnButtonHandler (Event e) {
+  Ldebug('specialFnButtonHandler()', "pbsg is ${AppInfo(pbsg)}")
   switch (e.name) {
     case 'pushed':
       String specialtyFunction = atomicState.specialFnButtonMap?.getAt(e.deviceId.toString())
@@ -220,10 +250,12 @@ void specialFnButtonHandler (Event e) {
 }
 
 void modeChangeButtonHandler (Event e) {
+  Ldebug('modeChangeButtonHandler()', "pbsg is ${AppInfo(pbsg)}")
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
   //   - Keypad buttons are matched to state data to activate a target VSW.
+  Ldebug('modeChangeButtonHandler()', 'TBD - VSW LEAKAGE ???')
   switch (e.name) {
     case 'pushed':
       String targetVswName = atomicState.modeButtonMap?.getAt(e.deviceId.toString())
@@ -243,7 +275,7 @@ void modeChangeButtonHandler (Event e) {
           'modeChangeButtonHandler()',
           "turning ${targetVswName} on (exclusively)"
         )
-        InstAppW modePbsg = getOrCreateModePbsg()
+        InstAppW modePbsg = getOrCreateModePbsg(true)
         modePbsg.pbsgTurnOn(targetVswName)
       }
       if (targetVswName == 'Day') {
@@ -281,17 +313,20 @@ void modeChangeButtonHandler (Event e) {
 //----
 
 void updateAppAndPbsgLogLevels () {
-  atomicState.logLevel = logThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
+  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
   modePbsg.pbsgAdjustLogLevel(
-    logThresholdToLogLevel(settings.modePbsgLogThreshold ?: 'TRACE')
+    LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'TRACE')
   )
 }
 
 Map whaPage () {
-  removeLegacyWhaData()
   app.updateLabel('Whole House Automation (WHA)')
+  removeLegacyWhaData()
+  state.whaPbsgLabel = 'MODE_PBSG'
+  InstAppW pbsg = getOrCreateModePbsg(true)
+  Ldebug('whaPage()', "pbsg is ${AppInfo(pbsg)}")
   // Ensure a log level is available before App
-  atomicState.logLevel = logThresholdToLogLevel(settings.appLogThreshold ?: 'DEBUG')
+  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'DEBUG')
     return dynamicPage(
     name: 'whaPage',
     title: [
@@ -304,7 +339,7 @@ Map whaPage () {
   ) {
     section {
       solicitLogThreshold('appLogThreshold')
-      solicitLogThreshold('modePbsgLogThreshold')
+      solicitLogThreshold('pbsgLogThreshold')
       //-> checkForUpdatedLogLevel()
       authorizeMainRepeater()
       authorizeSeeTouchKeypads()
@@ -364,6 +399,7 @@ void identifySpecialFunctionButtons() {
 }
 
 void wireButtonsToSpecialFunctions () {
+  Ldebug('wireButtonsToSpecialFunctions()', 'TBD - DNI LEAKAGE ???')
   atomicState.specialFnButtons = [
     'ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY', 'FLASH', 'PANIC', 'QUIET'
   ]
@@ -401,6 +437,7 @@ void identifyModeButtons () {
 }
 
 void wireButtonsToModes () {
+  Ldebug('wireButtonsToModes()', 'TBD - DNI LEAKAGE ???')
   if (atomicState.modes == null || settings?.lutronModeButtons == null) {
     paragraph('Mode activation buttons are pending pre-requisites.')
   } else {

@@ -96,27 +96,27 @@ void solicitLogThreshold (String settingsKey) {
   )
 }
 
-void logThresholdToLogLevel (String logThreshold) {
-  Integer
+Integer LogThresholdToLogLevel (String logThreshold) {
+  Integer retval
   switch(logThreshold ?: 'TRACE') {
     case 'TRACE':
-      atomicState.logLevel = 5
+      retval = 5
       break
     case 'DEBUG':
-      atomicState.logLevel = 4
+      retval = 4
       break
     case 'INFO':
-      atomicState.logLevel = 3
+      retval = 3
       break
     case 'WARN':
-      atomicState.logLevel = 2
+      retval = 2
       break
     case 'ERROR':
-      atomicState.logLevel = 1
+      retval = 1
       break
     default:
-      log.error("${AppInfo(app)} logThresholdToLogLevel() bad logThreshold: ${b(logThreshold)}")
-      atomicState.logLevel = 5
+      log.error("${AppInfo(app)} LogThresholdToLogLevel() bad logThreshold: ${b(logThreshold)}")
+      retval = 5
   }
 }
 

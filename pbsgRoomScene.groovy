@@ -34,5 +34,15 @@ definition(
 )
 
 preferences {
-  page(name: 'pbsgPage')
+  page(name: 'pbsgRoomScenePage')
+}
+
+Map pbsgRoomScenePage () {
+  return dynamicPage (
+    name: 'pbsgRoomScenePage',
+    install: true,
+    uninstall: false
+  ) {
+    defaultPage()
+  }
 }
