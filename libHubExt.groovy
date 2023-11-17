@@ -32,6 +32,33 @@ library (
 //---- CONVENIENCE
 //----
 
+Map<String, List<String>> CompareLists (List<String> existing, List<String> revised) {
+  // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
+  Map<String, List<String>> map = [:]
+  Ltrace('CompareList #38', "existing: ${existing}, revised: ${revised}")
+  if (!existing) {
+    map.added = revised.collect{ it }
+    Ldebug('CompareLists #41', "!existing, map.added: ${map.added}")
+  } else if (!revised) {
+    map.retained = existing.collect{ it }
+    Ldebug('CompareLists #44', "!revised, map.retained: ${map.retained}")
+  } else {
+    map.retained = existing.collect{ it }
+    Ldebug('CompareLists #47', "map.retained: ${map.retained}")
+    map.retained.retainAll(revised)
+    Ldebug('CompareLists #49', "map.retained: ${map.retained}")
+    map.dropped = existing.collect{ it }
+    Ldebug('CompareLists #51', "map.dropped: ${map.dropped}")
+    map.dropped.removeAll(revised)
+    Ldebug('CompareLists #53', "map.dropped: ${map.dropped}")
+    map.added = revised.collect{ it }
+    Ldebug('CompareLists #55', "map.added: ${map.added}")
+    map.added.removeAll(existing)
+    Ldebug('CompareLists #57', "map.added: ${map.added}")
+  }
+  return map
+}
+
 List<String> ModeNames () {
   return getLocation().getModes().collect{ it.name }
 }
@@ -44,6 +71,35 @@ String SwitchState (DevW d) {
         ? 'off'
         : 'unknown'
 }
+
+String ShowSwitchAndState (String name, String state) {
+  state = state ?: 'unk'
+  String emphasizedState = (state == 'on') ? "${b(state)}" : "<i>${state}</i>"
+  return "→ ${emphasizedState} - ${swName}"
+}
+
+//----
+//---- NESTED STATE MAP OPERATIONS
+//----   Extend and mimic the following built-in method.
+//----     atomicState.updateMapValue(stateKey, innerKey, value)
+//----       stateKey - isolates the User Map inside State
+//----       innerKey - isolates an Entry in that User Map
+//----       value is - the new value to associate with that key
+//----     asUpdateMapValue() - Local shorthand wrapper
+//----
+
+/*
+void asUpdateMapValue(String stateKey, String innerKey, def value) {
+  atomicState.updateMapValue(stateKey, innerKey, value)
+}
+
+void asGetMapValue(String stateKey, String innerKey) {
+  atomicState.stateKey.
+}
+
+void asRemoveMapKey(String stateKey, String innerKey)
+  atomicState.updateMapValue(stateKey, innerKey, value)
+*/
 
 //----
 //---- APP MANAGEMENT

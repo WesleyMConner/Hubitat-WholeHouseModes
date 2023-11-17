@@ -235,12 +235,14 @@ String pbsgGetStateBullets () {
     if (k == 'vswDnis') {
       result += Bullet1("${b(k)}")
       v.each{ dni ->
+
         DevW vsw = getChildDevice(dni)
         String vswState = vsw ? SwitchState(vsw) : null
-        String vswWithState = vsw
-          ? "→ ${vswState} - ${vsw.getLabel()}"
-          : "Vsw w/ DNI ${b(dni)} DOES NOT EXIST"
-        result += (vswState == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}</i>"
+        result += ShowSwitchAndState(vsw.getLabel(), vswState)
+        //--xx-> String vswWithState = vsw
+        //--xx->   ? "→ ${vswState} - ${vsw.getLabel()}"
+        //--xx->   : "Vsw w/ DNI ${b(dni)} DOES NOT EXIST"
+        //--xx-> result += (vswState == 'on') ? "<b>${vswWithState}</b>" : "<i>${vswWithState}</i>"
       }
     } else {
       result += Bullet1("<b>${k}</b> → ${v}")
@@ -338,7 +340,7 @@ void _pbsgEnforceMutualExclusion () {
   // Adjusting the cached button state
   while (atomicState.onButtons.size() > 1) {
     String buttonName = FifoPop(atomicState.onButtons)
-    FifoPush(atomicState.offButtons, buttonName)
+    ListPushItem(atomicState.offButtons, buttonName)
     pbsgTurnOff(buttonName)
   }
 }
@@ -367,7 +369,7 @@ void pbsgVswEventHandler (Event e) {
     String buttonName = _pbsgDniToButtonName(e.displayName)
     if (e.value == 'on') {
       _pbsgEnforceMutualExclusion()
-      FifoPush(atomicState.onButtons, buttonName)
+      ListPushItem(atomicState.onButtons, buttonName)
       // PBSG EMITS AN EVENT FOR THE NEWLY TURNED ON BUTTON
       Linfo(
         'pbsgVswEventHandler()',
@@ -379,8 +381,8 @@ void pbsgVswEventHandler (Event e) {
 
   Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
   Ltrace('pbsgVswEventHandler()', "${b(buttonName)} OffButtons -> OnButtons")
-      FifoRemove(atomicState.offButtons, buttonName)
-      FifoPushUnique(atomicState.offButtons, buttonName)
+      ListRemove(atomicState.offButtons, buttonName)
+      ListPushUniqueItem(atomicState.offButtons, buttonName)
   Ltrace('pbsgVswEventHandler', "AFTER<br/>${pbsgCacheState().join('<br/>')}")
 
       sendEvent([
@@ -391,16 +393,16 @@ void pbsgVswEventHandler (Event e) {
     } else if (e.value == 'off') {
   Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
   Ltrace('pbsgVswEventHandler()', "${b(buttonName)} OnButtons -> OffButtons")
-      FifoRemove(atomicState.onButtons, buttonName)
-      FifoPushUnique(atomicState.offButtons, buttonName)
+      ListRemove(atomicState.onButtons, buttonName)
+      ListPushUniqueItem(atomicState.offButtons, buttonName)
   Ltrace('pbsgVswEventHandler', "AFTER<br/>${pbsgCacheState().join('<br/>')}")
       if (atomicState.offButtons.size() == 0) {
         if (atomicState.defaultButtonName) {
           // Adjust cache
   Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
   Ltrace('pbsgVswEventHandler()', "${b(atomicState.defaultButtonName)} OffButtons -> OnButtons")
-          FifoRemove(atomicState.offButtons, atomicState.defaultButtonName)
-          FifoPush(atomicState.offButtons, atomicState.defaultButtonName)
+          ListRemove(atomicState.offButtons, atomicState.defaultButtonName)
+          ListPushItem(atomicState.offButtons, atomicState.defaultButtonName)
   Ltrace('pbsgVswEventHandler', "BEFORE<br/>${pbsgCacheState().join('<br/>')}")
           Linfo(
             'pbsgVswEventHandler()',

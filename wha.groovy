@@ -18,7 +18,7 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libHubUI
 #include wesmc.libHubExt
-#include wesmc.libFifoQ
+//#include wesmc.libFifoQ
 #include wesmc.libLutron
 
 definition (
@@ -319,7 +319,21 @@ void updateAppAndPbsgLogLevels () {
   )
 }
 
-Map whaPage () {
+Map<String, List<String>> whaPage () {
+  List<String> e = ['A', 'B', 'C', 'D', 'F', 'G', 'H', 'I', 'J']
+  List<String> r = ['C', 'D', 'E', 'F', 'H', 'I', 'J', 'K', 'L', 'M']
+  Map<String, List<String>> x = CompareLists(e, r)
+  Ltrace('COMPARISON', [
+    '',
+    Heading2('COMPARISON)
+    "existing: ${e}",
+    "replacement: ${r}",
+    "retained: ${x.retained}",
+    "dropped: ${x.dropped}",
+    "added: ${x.added}"
+  ])
+
+
   app.updateLabel('Whole House Automation (WHA)')
   removeLegacyWhaData()
   state.whaPbsgLabel = 'MODE_PBSG'

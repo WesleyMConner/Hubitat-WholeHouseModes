@@ -1,0 +1,20 @@
+import com.hubitat.app.InstalledAppWrapper as InstAppW
+import com.hubitat.hub.domain.Event as Event
+#include wesmc.libHubExt
+#include wesmc.libHubUI
+#include wesmc.libPbsgCore
+
+definition (
+  name: 'Test_PbsgCore',
+  namespace: 'wesmc',
+  author: 'Wesley M. Conner',
+  description: 'Creates and deletes a PbsgCore instance for testing',
+  category: '',           // Not supported as of Q3'23
+  iconUrl: '',            // Not supported as of Q3'23
+  iconX2Url: '',          // Not supported as of Q3'23
+  iconX3Url: '',          // Not supported as of Q3'23
+  singleInstance: true
+)
+
+
+app.TestPbsgCore()

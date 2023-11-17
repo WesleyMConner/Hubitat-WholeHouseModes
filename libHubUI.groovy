@@ -57,7 +57,11 @@ String Bullet2 (String s) {
 }
 
 String b (def val) {
-  return "'<b>${val}</b>'"
+  return val ? "'<b>${val}</b>'" : "<b>null</b>"
+}
+
+String i (def val) {
+  return val ? "'<i>${val}</i>'" : "<i>null</i>"
 }
 
 //----
@@ -153,6 +157,26 @@ void Ltrace (String fnName, String s) {
   if ((atomicState.logLevel ?: 5) > 4) {
     log.trace("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
+}
+
+void Lerror (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  Lerror(fnName, ls.join(delim))
+}
+
+void Lwarn (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  Lwarn(fnName, ls.join(delim))
+}
+
+void Linfo (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  Linfo(fnName, ls.join(delim))
+}
+
+void Ldebug (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  Ldebug(fnName, ls.join(delim))
+}
+
+void Ltrace (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  Ltrace(fnName, ls.join(delim))
 }
 
 //----

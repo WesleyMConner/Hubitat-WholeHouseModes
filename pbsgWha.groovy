@@ -19,7 +19,7 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libHubUI
 #include wesmc.libHubExt
 #include wesmc.libPbsg
-#include wesmc.libFifoQ
+#include wesmc.libListUtils
 
 definition(
   parent: 'wesmc:wha',

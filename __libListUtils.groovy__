@@ -1,0 +1,140 @@
+// ---------------------------------------------------------------------------------
+// F I F O   Q U E U E   M E T H O D S
+//   - Create First-In-First-Out Behavior on an List<String>
+//
+//   Copyright (C) 2023-Present Wesley M. Conner
+//
+//   LICENSE
+//     Licensed under the Apache License, Version 2.0 (aka Apache-2.0, the
+//     "License"), see http://www.apache.org/licenses/LICENSE-2.0. You may
+//     not use this file except in compliance with the License. Unless
+//     required by applicable law or agreed to in writing, software
+//     distributed under the License is distributed on an "AS IS" BASIS,
+//     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+//     implied.
+// ---------------------------------------------------------------------------------
+
+library (
+  name: 'libListUtils',
+  namespace: 'wesmc',
+  author: 'Wesley M. Conner',
+  description: 'Fifo methods on an List<String>',
+  category: 'general purpose'
+)
+
+// OVERVIEW
+//   Methods that facilitate ordered list behavior on an List<String>
+//
+// METHODS
+//   ListGetFormattedContent - Produce a formatted summary of list content
+//            ListAppendItem - Add item to the back of the list
+//      ListAppendUniqueItem - Add item, if missing, to the back of the list
+//                  ListDemo - Demonstrate list methods as log output
+//               ListHasItem - Returns true if the Item is present
+//                   ListPop - Remove and return item at the front of the list
+//              ListPushItem - Add item to the front of the list
+//        ListPushUniqueItem - Add item, if missing, to the front of the list
+//                ListRemove - Remove item and return true if the list changed
+//
+// ADDITIONAL FUNCTIONALITY
+//   Use built-in list methods for simple tasks. For example: .size()
+
+List<String> ListGetFormattedContent (List<String> q) {
+  List<String> results = [Heading2('CONTENT')]
+  q.each{ item -> results += Bullet2(item) }
+  return results
+}
+
+void ListAppendItem (List<String> q, def item) {
+  if (q == null) { Lerror('ListAppendItem()', 'The queue (q) cannot be null') }
+  else if (!item) { Lerror('ListAppendItem()', "The item cannot be null or ''") }
+  else {
+    q.leftShift(item)
+    Ltrace('ListAppendItem()', "Pushed ${b(item)} onto List ${b(q)}")
+  }
+}
+
+void ListAppendUniqueItem (List<String> q, def item) {
+}
+
+void ListDemo () {
+  List<String> q = []
+  DisplyaContentBullets(q)
+  ListPushItem(q, 'A')
+  ListPushItem(q, 'B')
+  ListPushItem(q, 'C')
+  ListPushItem(q, 'D')
+  ListPushUniqueItem(q, 'A')
+  ListPushItem(q, 'E')
+  ListPop(q)
+  ListPop(q)
+  ListRemove(q, 'D')
+  ListPushItem(q, 'F')
+  ListPop(q)
+  ListPushItem(q, 'G')
+  ListPop(q)
+  ListPushUniqueItem(q, 'C')
+  ListPop(q)
+  ListPop(q)
+  ListPushUniqueItem(q, 'B')
+  ListPop(q)
+  ListPop(q)
+  ListPop(q)
+  ListPop(q)
+  DisplyaContentBullets(q)
+}
+
+Boolean ListHasItem (List<String> q, def item) {
+  Boolean result
+  if (q == null) {
+    Lerror('ListPushItem()', 'The queue (q) cannot be null')
+    result = false
+  } else {
+    result = q.contains(item)
+  }
+  return result
+}
+
+def ListPop (List<String> q) {
+  if (q == null) { Lerror('ListPushUniqueItem()', 'The queue (q) cannot be null') }
+  return q?.size() > 0 ? q.removeAt(0) : null
+}
+
+void ListPushItem (List<String> q, def item) {
+  if (q == null) { Lerror('ListPushItem()', 'The queue (q) cannot be null') }
+  else if (!item) { Lerror('ListPushItem()', "The item cannot be null or ''") }
+  else {
+    q.leftShift(item)
+    Ltrace('ListPushItem()', "Pushed ${b(item)} onto List ${b(q)}")
+  }
+}
+
+void ListPushUniqueItem (List<String> q, def item) {
+  if (q == null) { Lerror('ListPushUniqueItem()', 'The queue (q) cannot be null') }
+  else if (!item) { Lerror('ListPushUniqueItem()', "The item cannot be null or ''") }
+  else {
+    if (q.contains(item)) {
+      Ltrace('ListPushUniqueItem()', "List ${b(q)} already contains ${b(item)}")
+    } else {
+      q.leftShift(item)
+      Ltrace('ListPushUniqueItem()', "Pushed ${b(item)} onto List ${b(q)}")
+    }
+  }
+}
+
+Boolean ListRemove (List<String> q, def item) {
+  // Returns true IFF the queue is changed.
+  retval = false
+  if (q == null) { Lerror('ListPushItem()', 'The queue (q) cannot be null') }
+  else if (!item) { Lerror('ListPushItem()', "The item cannot be null or ''") }
+  else {
+    Boolean retVal = q.removeAll(item)
+    if (retVal) {
+      Ltrace('ListRemove()', "Removed ${b(item)} from List ${b(q)}")
+    } else {
+      Ltrace('ListRemove()', "Did not find ${b(item)} in List ${b(q)}")
+    }
+  }
+  return retVal
+}
+
