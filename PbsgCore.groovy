@@ -12,28 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied.
 // ---------------------------------------------------------------------------------
-// ATOMIC STATE
-//   logLevel : Integer
-//   activeButton : String
-//   inactiveButtons : List<String>, functionally a FIFO
-//   defaultButton : String
-//
-// Application Overview
-//   - Enable no more than one button at a time.
-//   - Publish active button changes (along with the inactive button FIFO)
-//   - Delineate "Private" methods with a leading underscore.
-//
-// "Public" Methods
-//   - pbsgUpdateConfig
-//   - pbsgState
-//   - pbsgActivateButton
-//   - pbsgDeactivateButton
-//   - pbsgActivatePredecessor
-//
-// "Private" Methods
-//   - _pbsgExistingButtons
-//   - _pbsgSendEvent
-// ---------------------------------------------------------------------------------
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 #include wesmc.libHubExt
 #include wesmc.libHubUI
@@ -43,10 +21,10 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Implement PBSG functions and is authoritative for pushbutton state.',
-  category: '', // Not supported as of Q3'23
-  iconUrl: '', // Not supported as of Q3'23
-  iconX2Url: '', // Not supported as of Q3'23
-  iconX3Url: '', // Not supported as of Q3'23
+  category: '',    // Not supported as of Q3'23
+  iconUrl: '',     // Not supported as of Q3'23
+  iconX2Url: '',   // Not supported as of Q3'23
+  iconX3Url: '',   // Not supported as of Q3'23
   singleInstance: true
 )
 
@@ -54,10 +32,8 @@ preferences {
   page(name: 'PbsgPage')
 }
 
-//----
 //---- CORE METHODS
 //---- Methods that ARE NOT constrained to any specific execution context.
-//----
 
 Boolean pbsgUpdateConfig (
     List<String> requestedButtonsParm,
@@ -92,10 +68,6 @@ Boolean pbsgUpdateConfig (
     )
   }
   if (activeButtonParm && !requestedButtonsParm.contains(activeButtonParm)) {
-    //--xx-> Lerror('pbsgUpdateConfig()', [
-    //--xx->   '<b>Problematic activeButton</b>',
-    //--xx->   "${b(activeButtonParm)} IS NOT present in ${b(requestedButtonsParm)}"
-    //--xx-> ])
     return isStateChanged
   }
   List<String> existingButtons = _pbsgExistingButtons()
@@ -106,17 +78,21 @@ Boolean pbsgUpdateConfig (
   List<String> retainButtons = actions.retained // Used for accounting only
   List<String> dropButtons = actions.dropped
   List<String> addButtons = actions.added
+  String requestedParms = [
+    "<b>requestedButtonsParm:</b> ${requestedButtonsParm ?: 'n/a'}",
+    "<b>defaultButtonParm:</b> ${(defaultButtonParm ?: null)}",
+    "<b>activeButtonParm:</b> ${activeButtonParm}"
+  ].join('<br/>')
+  String analysis = [
+    "<b>existingButtons:</b> ${existingButtons ?: 'n/a'}",
+    "<b>retainButtons:</b> ${retainButtons ?: 'n/a'}",
+    "<b>dropButtons:</b> ${dropButtons ?: 'n/a'}",
+    "<b>addButtons:</b> ${addButtons ?: 'n/a'}"
+  ].join('<br/>')
   Ltrace('pbsgUpdateConfig()', [
-    Heading2('OVERVIEW AT ENTRY'),
-    Bullet1('Parameters'),
-    Bullet2("<b>requestedButtonsParm:</b> ${requestedButtonsParm ?: 'n/a'}"),
-    Bullet2("<b>defaultButtonParm:</b> ${(defaultButtonParm ?: null)}"),
-    Bullet2("<b>activeButtonParm:</b> ${activeButtonParm}"),
-    Bullet1('Analysis'),
-    Bullet2("<b>existingButtons:</b> ${existingButtons ?: 'n/a'}"),
-    Bullet2("<b>retainButtons:</b> ${retainButtons ?: 'n/a'}"),
-    Bullet2("<b>dropButtons:</b> ${dropButtons ?: 'n/a'}"),
-    Bullet2("<b>addButtons:</b> ${addButtons ?: 'n/a'}")
+    '<table style="border-spacing: 0px;" rules="all">',
+    '<tr><th>Input Parameters</th><th style="width:10%"/><th>Action Summary</th></tr>',
+    "<tr><td>${requestedParms}</td><td/><td>${analysis}</td></tr></table>"
   ])
   if (dropButtons) {
     isStateChanged = true
@@ -154,7 +130,6 @@ Boolean pbsgUpdateConfig (
 
 List<String> pbsgState () {
   return [
-    '',
     Heading2('STATE'),
     Bullet2("<b>logLevel:</b> ${atomicState.logLevel}"),
     Bullet2("<b>activeButton:</b> ${atomicState.activeButton}"),
@@ -164,7 +139,6 @@ List<String> pbsgState () {
 }
 
 Boolean pbsgActivateButton (String button) {
-  //--xx-> if (button == '') Lerror('pbsgActivateButton()', ">${button}<")
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
   if (!_pbsgExistingButtons().contains(button)) {
@@ -176,7 +150,6 @@ Boolean pbsgActivateButton (String button) {
 }
 
 Boolean pbsgDeactivateButton (String button) {
-  //--xx-> if (button == '') Lerror('pbsgActivateButton()', ">${button}<")
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
   if (atomicState.activeButton == atomicState.defaultButton) {
@@ -191,43 +164,7 @@ Boolean pbsgDeactivateButton (String button) {
 }
 
 Boolean pbsgActivatePredecessor () {
-  //--xx-> if (atomicState.activeButton == '') Lerror('pbsgActivateButton()', ">${atomicState.activeButton}<")
-  // Return TRUE on a configuration change, FALSE otherwise.
-  // This method is expected to ALWAYS make a change.
-  // Publish an event ONLY IF/WHEN a new button is activated.
-  Boolean isStateChanged = true
-  _pbsgSafelyActivateButton(atomicState.inactiveButtons.first())
-  /*
-
-  if (atomicState.activeButton == null) {
-    // Activate the first button in the inactiveButtons Fifo.
-  } else {
-    // Pop the first button in the inactiveButtons Fifo.
-    String toBeActivated = atomicState.inactiveButtons.removeAt(0) ?: null
-    // Push the currently active button onto the inactiveButtons Fifo
-    _pbsgIfActiveButtonPushOntoInactiveFifo()
-    // Activate the previously popped button from the inactiveButtons Fifo.
-    atomicState.activeButton = toBeActivated
-  }
-
-  if (atomicState.activeButton != null) {
-    // ADJUST THE LOCAL COPY OF atomicState.inactiveButtons AND SAVE
-    // Swap the currently active button with the front-most inactive button.
-    String toBeActivated = atomicState.inactiveButtons.removeAt(0) ?: null
-    atomicState.inactiveButtons = [ atomicState.activeButton, *atomicState.inactiveButtons ]
-    Ltrace('pbsgActivatePredecessor()', "${b(atomicState.activeButton)} is inactive")
-    atomicState.activeButton = toBeActivated
-    Ltrace('pbsgActivatePredecessor()', "${b(toBeActivated)} is active")
-    _pbsgSendEvent()
-  } else {
-    // ADJUST THE LOCAL COPY OF atomicState.inactiveButtons AND SAVE
-    // Activate the front-most inactive button.
-    atomicState.activeButton = atomicState.inactiveButtons.removeAt(0) ?: null
-    Ltrace('pbsgActivatePredecessor()', "${b(toBeActivated)} is active")
-    _pbsgSendEvent()
-  }
-  */
-  return isStateChanged
+  return _pbsgSafelyActivateButton(atomicState.inactiveButtons.first())
 }
 
 void _pbsgSendEvent() {
@@ -243,8 +180,6 @@ void _pbsgSendEvent() {
   Ltrace('_pbsgSendEvent()', event.toMapString())
   sendEvent(event)
 }
-
-//=============================== REWORKED ===============================//
 
 List<String> _pbsgExistingButtons () {
   return  [atomicState.activeButton, atomicState.inactiveButtons]
@@ -270,12 +205,12 @@ Boolean _pbsgIfActiveButtonPushOntoInactiveFifo () {
 }
 
 void _removeButtonFromInactiveButtons (String button) {
-  // FOR UNCLEAR REASONS atomicState.inactiveButtons.removeAll([button])
-  // DOES NOT PERSIST CHANGES BACK INTO THE 'atomicState' LIST.
-  // MAKE LOCAL CHANGES AND SAVED THEM BY BRUTE FORCE TO 'atomicState'.
-  //--xx-> Ldebug('_removeButtonFromInactiveButtons()', ">${button}< >${button == null}< >${button != null}< >${button == 'null'}<")
-  //--xx-> if (button != null) {
-  if (button) {  //?.trim()
+  // IMPORANT
+  //   atomicState.inactiveButtons.removeAll([button])
+  //     - DOES NOT PERSIST CHANGES BACK INTO THE 'atomicState' LIST.
+  //     - MAKE LOCAL CHANGES
+  //     - SET atomicState.inactiveButtons BY BRUTE FORCE
+  if (button) {
     List<String> local = atomicState.inactiveButtons
     local.removeAll([button])
     atomicState.inactiveButtons = local
@@ -284,7 +219,6 @@ void _removeButtonFromInactiveButtons (String button) {
 }
 
 Boolean _pbsgSafelyActivateButton (String button) {
-  //--xx-> if (button == '') Lerror('_pbsgSafelyActivateButton()', ">${button}<")
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new button is activated.
   Boolean isStateChanged = false
@@ -301,10 +235,8 @@ Boolean _pbsgSafelyActivateButton (String button) {
   return isStateChanged
 }
 
-//----
 //---- SYSTEM CALLBACKS
 //---- Methods specific to this execution context
-//----
 
 void installed () {
   // Called on instance creation - i.e., before configuration, etc.
@@ -326,10 +258,8 @@ void uninstalled () {
   Ldebug('uninstalled()', 'No action')
 }
 
-//----
 //---- RENDERING AND DISPLAY
 //----   Methods specific to this execution context
-//----
 
 Map PbsgPage () {
   app.getChildDevices()
@@ -348,13 +278,7 @@ Map PbsgPage () {
   }
 }
 
-//----
 //---- TEST SUPPORT
-//----
-
-String BLACKBAR() { return '<hr style="border: 5px solid black;"/>' }
-String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
-String REDBAR() { return '<hr style="border: 5px solid red;"/>' }
 
 void TEST_ConfigChange (
     Integer n,
@@ -467,14 +391,14 @@ void TEST_PbsgCore () {
   Ltrace('TEST3', TEST_HasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
   TEST_ConfigChange(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
-  // The state post TEST4 should be the same as the state post TEST3!
+  // TEST4 state is unchanged from TEST3 state
   Ltrace('TEST4', TEST_HasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
   TEST_ConfigChange(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
   Ltrace('TEST5', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
   TEST_ConfigChange(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
-  // The state post TEST6 should be the same as the state post TEST5!
+  // TEST6 state is unchanged from TEST5 state
   Ltrace('TEST6', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], 'B'))
   //----
   TEST_ConfigChange(7, ['B', 'F', 'G', 'I'], 'B', 'G')
@@ -489,7 +413,7 @@ void TEST_PbsgCore () {
   //----
   TEST_PbsgActivation(9, 'Activate Q', '<b>Forced Error:</b> "Button does not exist"')
   pbsgActivateButton('Q')
-  // The state post TEST9 should be the same as the state post TEST8
+  // TEST9 state is unchanged from TEST8 state
   Ltrace('TEST9', TEST_HasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(10, 'Deactivate F')
@@ -511,9 +435,9 @@ void TEST_PbsgCore () {
   pbsgDeactivateButton('C')
   Ltrace('TEST14', TEST_HasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
   //----
-  //----
   TEST_PbsgActivation(12, 'Activate Predecessor')
   pbsgActivatePredecessor()
   Ltrace('TEST15', TEST_HasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  //----
   atomicState.logLevel = parkLogLevel
 }

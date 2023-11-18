@@ -34,6 +34,10 @@ library (
 //----   -- Focused on Hubitat contexts
 //----
 
+String BLACKBAR() { return '<hr style="border: 5px solid black;"/>' }
+String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
+String REDBAR() { return '<hr style="border: 5px solid red;"/>' }
+
 String Heading1 (String s) {
   return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
 }
