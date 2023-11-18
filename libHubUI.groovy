@@ -34,12 +34,6 @@ library (
 //----   -- Focused on Hubitat contexts
 //----
 
-String BLUE = 'rgba(51, 92, 255, 1.0)'
-String LIGHT_GREY = 'rgba(100, 100, 100, 1.0)'
-String RED = 'rgba(255, 0, 0, 1.0)'
-
-String CSS_HIGHLIGHT = 'background-color: yellow; font-weight: bold;'
-
 String Heading1 (String s) {
   return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
 }

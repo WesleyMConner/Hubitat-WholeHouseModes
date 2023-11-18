@@ -24,7 +24,7 @@
 //   - Delineate "Private" methods with a leading underscore.
 //
 // "Public" Methods
-//   - pbsgConfig
+//   - pbsgUpdateConfig
 //   - pbsgState
 //   - pbsgActivateButton
 //   - pbsgDeactivateButton
@@ -59,39 +59,48 @@ preferences {
 //---- Methods that ARE NOT constrained to any specific execution context.
 //----
 
-void pbsgConfig (
+Boolean pbsgUpdateConfig (
     List<String> requestedButtons,
     String defaultButton = null,
     String activeButton = null
   ) {
+  // Return TRUE on a configuration change, FALSE otherwise.
+  Boolean isStateChanged = false
   if (!requestedButtons) {
-    Lerror('pbsgConfig()', '<b>No buttons have been defined.</b>')
-    return
+    Lerror('pbsgUpdateConfig()', '<b>No buttons have been defined.</b>')
+    return isStateChanged
+  }
+  if (requestedButtons.size() < 2) {
+    Lerror('pbsgUpdateConfig()', "<b>A PBSG needs at least two buttons.</b>")
+    return isStateChanged
   }
   if (defaultButton && !requestedButtons.contains(defaultButton)) {
-    Lerror('pbsgConfig()', [
+    Lerror('pbsgUpdateConfig()', [
       '<b>Problematic defaultButton</b>',
       "${b(defaultButton)} IS NOT present in ${b(requestedButtons)}"
     ])
-    return
+    return isStateChanged
   }
   if (activeButton && !requestedButtons.contains(activeButton)) {
-    Lerror('pbsgConfig()', [
+    Lerror('pbsgUpdateConfig()', [
       '<b>Problematic activeButton</b>',
       "${b(activeButton)} IS NOT present in ${b(requestedButtons)}"
     ])
-    return
+    return isStateChanged
   }
-  atomicState.defaultButton = defaultButton
+  if (atomicState.defaultButton != defaultButton) {
+    atomicState.defaultButton = defaultButton
+    isStateChanged = true
+  }
   List<String> existingButtons = _pbsgExistingButtons()
   Map<String, List<String>> actions = CompareLists(
     existingButtons,
     requestedButtons
   )
-  List<String> retainButtons = actions.retained
+  List<String> retainButtons = actions.retained // Used for accounting only
   List<String> dropButtons = actions.dropped
   List<String> addButtons = actions.added
-  Ltrace('pbsgConfig()', [
+  Ltrace('pbsgUpdateConfig()', [
     Heading2('OVERVIEW AT ENTRY'),
     Bullet1('Parameters'),
     Bullet2("<b>requestedButtons:</b> ${requestedButtons ?: 'n/a'}"),
@@ -104,6 +113,7 @@ void pbsgConfig (
     Bullet2("<b>addButtons:</b> ${addButtons ?: 'n/a'}")
   ])
   if (dropButtons) {
+    isStateChanged = true
     // Remove out-of-scope buttons without activating any button.
     if (dropButtons.contains(atomicState.activeButton)) {
       atomicState.activeButton = null
@@ -111,6 +121,7 @@ void pbsgConfig (
     atomicState.inactiveButtons.removeAll(dropButtons)
   }
   if (addButtons) {
+    isStateChanged = true
     // Add new buttons without activating any buttons
     if (atomicState.inactiveButtons) {
       // Add buttons to the existing list.
@@ -121,84 +132,18 @@ void pbsgConfig (
       atomicState.inactiveButtons = addButtons
     }
   }
-  //=============================== REWORKED ===============================//
-  Ltrace('pbsgConfig()', [
-    'REWORK CHECKPOINT',
+  // Delegate all aspects of button activation to existing methods.
+  if (activeButton) {
+    Ltrace('pbsgUpdateConfig()', "activating ${activeButton}")
+    isStateChanged = pbsgActivateButton(activeButton)
+  } else if (atomicState.activeButton == null && defaultButton) {
+    Ltrace('pbsgUpdateConfig()', "activating ${atomicState.defaultButton}")
+    isStateChanged = pbsgActivateButton(atomicState.defaultButton)
+  }
+  Ltrace('pbsgUpdateConfig()', [
+    'AT EXIT',
     *pbsgState()
   ])
-
-/*
-  app.unsubscribe()
-  // Reconcile existing state to possibly-revised buttons list.
-  if (buttons.size() > 0) {
-    if (defaultButton && buttons?.contains(defaultButton) == false) {
-      Lerror(
-        'pbsgConfig()',
-        "defaultButton (${b(defaultButton)}) not present in buttons (${b(buttons)})"
-      )
-    } else {
-      // Initialize dropped.. lists
-      List<String> droppedactiveButtons = atomicState.activeButton.collect { it }
-      List<String> droppedinactiveButtons = atomicState.inactiveButtons.collect { it }
-      // Potentially retain some buttons (and their state).
-      atomicState.activeButton.retainAll(buttons)
-      atomicState.inactiveButtons.retainAll(buttons)
-      droppedactiveButtons.removeAll(atomicState.activeButton)
-      if (droppedactiveButtons.size() > 0) {
-        Ltrace('pbsgConfig()', "Dropped 'On' button(s): ${b(droppedactiveButtons)}")
-      }
-      droppedinactiveButtons.removeAll(atomicState.inactiveButtons)
-      if (droppedinactiveButtons.size() > 0) {
-        Ltrace('pbsgConfig()', "Dropped 'Off' buttons: ${b(droppedinactiveButtons)}")
-      }
-      // Identify and add any new buttons
-      List<String> newButtons = buttons.collect{ it }
-      newButtons.removeAll(atomicState.activeButton)
-      newButtons.removeAll(atomicState.inactiveButtons)
-      if (newButtons.size() > 0) {
-        newButtons.each{ button -> atomicState.inactiveButtons.push(button) }
-        Ltrace('pbsgConfig()', "Added (off) button(s): ${b(newButtons)}")
-      }
-      // If an activeButton was supplied, turn it on.
-      // Else, if the activeButtonFifo queue is empty, turn on the default button.
-      String turnOnTarget = null
-      if (activeButton != null) {                          // No Java Truth (atomicState)
-        turnOnTarget = activeButton
-      } else if (atomicState.defaultButton != null) {  // No Java Truth (atomicState)
-        turnOnTarget = atomicState.defaultButton
-      }
-      Ltrace('pbsgConfig()', "turnOnTarget: ${b(turnOnTarget)}")
-      if (turnOnTarget) {
-        Ltrace('pbsgConfig()', 'Entered the turnOnTarget block')
-        if (atomicState.activeButton.contains(turnOnTarget)) {
-          // Ensure activeButton is the last item in the Fifo queue
-          Ltrace(
-            'pbsgConfig()',
-            "Adjusting ${b(turnOnTarget)} position in activeButtonFifo."
-          )
-          atomicState.activeButton.removeAll(turnOnTarget)
-          atomicState.activeButton.push(turnOnTarget)
-        } else {
-          // Move activeButton from off FIFO to on FIFO
-          Ltrace(
-            'pbsgConfig()',
-            "Move ${b(turnOnTarget)} from inactiveButtons to activeButtonFifo."
-          )
-          atomicState.activeButton.removeAll(turnOnTarget)
-          atomicState.activeButton.push(turnOnTarget)
-        }
-      }
-      _pbsgEnforceControls()
-      Ltrace('pbsgConfig()', [
-        'Calling _pbsgPublishEvent()',
-        *pbsgState()
-      ])
-      _pbsgPublishEvent()
-    }
-  } else {
-    Lerror('pbsgConfig()', "The '<b>buttons</b>' argument is null")
-  }
-*/
 }
 
 List<String> pbsgState () {
@@ -212,42 +157,80 @@ List<String> pbsgState () {
   ]
 }
 
-void pbsgActivateButton (String button) {
+//=============================== REWORKED ===============================//
+
+Boolean pbsgActivateButton (String button) {
+  // Return TRUE on a configuration change, FALSE otherwise.
+  Boolean isStateChanged = false
   if (!_pbsgExistingButtons().contains(button)) {
     Lerror('pbsgActivateButton()', "Argument ${b(button)} IS NOT a button")
   } else if (atomicState.activeButton == button) {
     // Do nothing. The button is already active.
   } else {
-    // Move active button to the front of the inactive FIFO queue.
-    atomicState.inactiveButtons.push(atomicState.activeButton)
-    Ltrace('pbsgActivateButton()', "${b(atomicState.activeButton) is inactive}")
+    isStateChanged = true
+    if (atomicState.activeButton != null) {
+      // Move active button to the front of the inactive FIFO queue.
+      atomicState.inactiveButtons = [atomicState.activeButton, *atomicState.inactiveButtons]
+      Ltrace('pbsgActivateButton()', "${b(atomicState.activeButton)} is inactive")
+    }
     // Move button from inactiveButtons to activeButton.
-    atomicState.inactiveButtons.removeAll(button)
+    // DIRECT OPERATION ON atomicState.inactiveButtons DOES NOT PERSIST
+    List<String> local2 = atomicState.inactiveButtons
+    local2.removeAll([button])
+    atomicState.inactiveButtons = local2
     atomicState.activeButton = button
-    Ltrace('pbsgActivateButton()', "${b(button) is active}")
+    //Ltrace('pbsgActivateButton()', "${b(button)} is active}")
   }
+  return isStateChanged
 }
 
-void pbsgDeactivateButton (String button) {
+Boolean pbsgDeactivateButton (String button) {
+  // Return TRUE on a configuration change, FALSE otherwise.
+  Boolean isStateChanged = false
   if (atomicState.activeButton != button) {
     // Do nothing. The button is already inactive.
   } else {
-    // Move active button to the front of the inactive FIFO queue.
-    atomicState.inactiveButtons.push(atomicState.activeButton)
-    Ltrace('pbsgDeactivateButton()', "${b(atomicState.activeButton) is inactive}")
+    isStateChanged = true
+    if (atomicState.activeButton != null) {
+      // Move active button to the front of the inactive FIFO queue.
+      atomicState.inactiveButtons = [atomicState.activeButton, *atomicState.inactiveButtons]
+      Ltrace('pbsgDeactivateButton()', "${b(atomicState.activeButton)} is inactive")
+    }
+    // Move the default button inactiveButtons to activeButton
+    if (atomicState.defaultButton) {
+      // To remove, manipulate a copy of object state THEN refresh object state.
+      List<String> local = atomicState.inactiveButtons
+      local.removeAll(atomicState.defaultButton)
+      atomicState.inactiveButtons = local
+    }
     // Activate the defaultButton (which may exist OR may be null).
     atomicState.activeButton = atomicState.defaultButton
-    Ltrace('pbsgDeactivateButton()', "${b(atomicState.defaultButton) is active}")
+    Ltrace('pbsgDeactivateButton()', "${b(atomicState.defaultButton)} is active")
   }
+  return isStateChanged
 }
 
-void pbsgActivatePredecessor () {
-  // Swap the currently active button with the front-most inactive button
-  String temp = atomicState.inactiveButtons.pop()
-  atomicState.inactiveButtons.push(atomicState.activeButton)
-  Ltrace('pbsgActivatePredecessor()', "${b(atomicState.activeButton) is inactive}")
-  atomicState.activeButton = temp
-  Ltrace('pbsgActivatePredecessor()', "${b(temp) is active}")
+Boolean pbsgActivatePredecessor () {
+  // Return TRUE on a configuration change, FALSE otherwise.
+  // Expecting this method to ALWAYS make a change.
+  Boolean isStateChanged = true
+  List<String> inactiveButtons = atomicState.inactiveButtons
+  if (atomicState.activeButton != null) {
+    // Swap the currently active button with the front-most inactive button.
+    // The following pop alters the local copy of inactiveButtons (only).
+    String toBeActivated = inactiveButtons.pop() ?: null
+    atomicState.inactiveButtons = [ atomicState.activeButton, *inactiveButtons ]
+    Ltrace('pbsgActivatePredecessor()', "${b(atomicState.activeButton)} is inactive")
+    atomicState.activeButton = toBeActivated
+    Ltrace('pbsgActivatePredecessor()', "${b(toBeActivated)} is active")
+  } else {
+    // Activate the front-most inactive button.
+    String toBeActivated = inactiveButtons.pop() ?: null
+    atomicState.inactiveButtons = inactiveButtons
+    atomicState.activeButton = toBeActivated
+    Ltrace('pbsgActivatePredecessor()', "${b(toBeActivated)} is active")
+  }
+  return isStateChanged
 }
 
 /*
@@ -383,103 +366,132 @@ Map PbsgPage () {
 //---- TEST SUPPORT
 //----
 
+String BLACKBAR() { return '<hr style="border: 5px solid black;"/>' }
+String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
+String REDBAR() { return '<hr style="border: 5px solid red;"/>' }
+
+void TEST_ConfigChange (
+    Integer n,
+    List<String> list,
+    String dflt,
+    String on,
+    String forcedError = null
+  ) {
+  // Logs display newest to oldest; so, write logs backwards
+  List<String> traceText = []
+  traceText += "buttons=${b(list)}, dflt=${b(dflt)}, activeButton=${b(on)}"
+  if (forcedError) traceText += forcedError
+  traceText += (forcedError ? REDBAR() : GREENBAR())
+  Ltrace("TEST ${n} CONFIG", traceText)
+  pbsgUpdateConfig(list, dflt, on)
+}
+
+void PbsgActivation_TEST (
+    Integer n,
+    String description,
+    String forcedError = null
+  ){
+  // Logs display newest to oldest; so, write logs backwards
+  List<String> traceText = []
+  traceText += description
+  if (forcedError) { traceText += forcedError }
+  traceText += (forcedError ? REDBAR() : GREENBAR())
+  Ltrace("TEST ${n} ACTION", traceText)
+}
+
+String _hasExpectedState (String activeButton, List<String> inactiveButtons) {
+  Boolean result = true
+  Integer actualInactiveButtonsSize = atomicState.inactiveButtons?.size() ?: 0
+  Integer expectedInactiveButtonsSize = inactiveButtons.size()
+  if (atomicState.activeButton != activeButton) {
+    result = false
+    Ltrace(
+      '_hasExpectedState()',
+      "activeButton ${atomicState.activeButton} != ${activeButton}"
+    )
+  } else if (actualInactiveButtonsSize != expectedInactiveButtonsSize) {
+    result = false
+    Ltrace(
+      '_hasExpectedState()',
+      "inActiveButtons size ${actualInactiveButtonsSize} != ${expectedInactiveButtonsSize}",
+      "expected: ${inactiveButtons} got: ${atomicState.inactiveButtons}"
+    )
+  } else {
+    atomicState.inactiveButtons.eachWithIndex{ button, index ->
+      String expectedButton = inactiveButtons[index]
+      if (button != expectedButton) {
+        result = false
+        Ltrace(
+          '_hasExpectedState()',
+          "At ${index}: inactiveButton ${button} != ${expectedButton}"
+        )
+      }
+    }
+  }
+  return [
+    result ? 'true' : '<b>FALSE</b>',
+    *pbsgState()
+  ].join('<br/>')
+}
+
 void PbsgCore_TEST () {
   String parkLogLevel = atomicState.logLevel
   atomicState.logLevel = LogThresholdToLogLevel('TRACE')
-  String B = '<hr style="border: 5px solid green;"/>'
-  Ltrace('PbsgCore_TEST()', ['At Entry', *pbsgState()])
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> CONFIG 1 Test <b>Error Condition</b> "no buttons"',
-    B
-  ])
-  pbsgConfig([], 'A', 'B')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    "=====> CONFIG 2: buttons=[A, B, C, D, E], dflt='', activeButton=null",
-    B
-  ])
-  pbsgConfig(['A', 'B', 'C', 'D', 'E'], '')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> CONFIG 3: buttons=[A, B, C, D, E], dflt=B, activeButton=null',
-    B
-  ])
-  pbsgConfig(['A', 'B', 'C', 'D', 'E'], 'B')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> CONFIG 4 Test <b>Error Condition</b> default IS NOT in the button list',
-    B
-  ])
-  pbsgConfig(['A', 'B', 'C', 'D', 'E'], 'F')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    "=====> CONFIG 5: [A, B, C, D, E, F], dflt='', activeButton=C",
-    B
-  ])
-  pbsgConfig(['A', 'B', 'C', 'D', 'E', 'F'], '', 'C')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> CONFIG 6: Test <b>Error Condition</b> active button IS NOT in the button list',
-    B
-  ])
-  pbsgConfig(['B', 'F', 'G', 'I'], 'B', 'D')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    "=====> CONFIG 7: [B, F, G, I], dflt='B', activeButton=''",
-    B
-  ])
-  pbsgConfig(['B', 'F', 'G', 'I'], 'B', '')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> Turn on F',
-    B
-  ])
+  // START AS THOUGH FRESHLY INITIALIZED
+  atomicState.activeButton = null
+  atomicState.inactiveButtons = null
+  atomicState.defaultButton = null
+  //----
+  String expectedActive = null
+  List<String> expectedInactive = null
+  Ltrace('PbsgCore_TEST()', ['At Entry', *pbsgState(), BLACKBAR()])
+  //----
+  TEST_ConfigChange(1, [], 'A', 'B', 'Force Error: "No buttons"')
+  Ltrace('TEST1', _hasExpectedState(null, []))
+  //----
+  TEST_ConfigChange(2, ['A', 'B', 'C', 'D', 'E'], '', null)
+  Ltrace('TEST2', _hasExpectedState(null, ['A', 'B', 'C', 'D', 'E']))
+  //----
+  TEST_ConfigChange(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
+  Ltrace('TEST3', _hasExpectedState('B', ['A', 'C', 'D', 'E']))
+  //----
+  TEST_ConfigChange(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
+  // The state post TEST4 should be the same as the state post TEST3!
+  Ltrace('TEST4', _hasExpectedState('B', ['A', 'C', 'D', 'E']))
+  //----
+  TEST_ConfigChange(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
+  Ltrace('TEST5', _hasExpectedState('C', ['B', 'D', 'E', 'F']))
+  //----
+  TEST_ConfigChange(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
+  // The state post TEST6 should be the same as the state post TEST5!
+  Ltrace('TEST6', _hasExpectedState('C', ['B', 'D', 'E', 'F']))
+  //----
+  TEST_ConfigChange(7, ['B', 'F', 'G', 'I'], 'B', 'G')
+  Ltrace('TEST7', _hasExpectedState('G', ['B', 'F', 'I']))
+  //----
+  // WITHOUT CHANGING THE CONFIGURATION, START TESTING ACTIVATION OF BUTTONS
+  // THE DEFAULT BUTTON REMAINS 'B'
+  //----
+  PbsgActivation_TEST(8, 'Activate F')
   pbsgActivateButton('F')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> Turn off Q (which does not exist)',
-    B
-  ])
-  pbsgDeactivateButton('Q')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> Turn off F',
-    B
-  ])
-  pbsgDeactivateButton('F')
-  Ltrace('PbsgCore_TEST()', [
-    '',
-    '=====> Turn on I',
-    B
-  ])
+  Ltrace('TEST8', _hasExpectedState('F', ['G', 'B', 'I']))
+  //----
+  PbsgActivation_TEST(9, 'Activate Q', '<b>Forced Error:</b> "Button does not exist"')
+  pbsgActivateButton('Q')
+  // The state post TEST9 should be the same as the state post TEST8
+  Ltrace('TEST9', _hasExpectedState('F', ['G', 'B', 'I']))
+  //----
+  PbsgActivation_TEST(10, 'Deactivate F')
+  pbsgDeactivateButton('F')  // NOTE: Dflt=B
+  Ltrace('TEST10', _hasExpectedState('B', ['F', 'G', 'I']))
+  //----
+  PbsgActivation_TEST(11, 'Activate I')
   pbsgActivateButton('I')
+  Ltrace('TEST11', _hasExpectedState('I', ['B', 'F', 'G']))
+  //----
+  PbsgActivation_TEST(12, 'Activate Predecessor')
+  pbsgActivatePredecessor()
+  Ltrace('TEST12', _hasExpectedState('B', ['I', 'F', 'G']))
+  //----
   atomicState.logLevel = parkLogLevel
 }
-
-// THE HUBITAT DISPLAY UI CAN BE USED TO CONSTRUCT AND ADJUST APP
-// INSTANCES. THE SAMPLE CODE BELOW CAN ALSO CREATE AND DELETE INSTANCES
-
-/*
-M O N D A Y
-- Keep it simple. Use Map toString fn for now.
-- Later, Map<String, Bool> can have a fancier display
-
-init()
-- placeholders for atomicStateKeys
-updated()
-- pbsgState()
-- publishLatestState()
-
-pbsgCoreTest()
-- pbsgState()
-- configure() // Initial
-- configure() // Revised
-- turnOn()
-- turnOff()
-- forEach, turnOn()
-- turnOn()
-- turnOn()
-- turnOff() // Redundant
-- turnOff() // Only
-*/
