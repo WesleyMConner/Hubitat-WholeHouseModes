@@ -89,7 +89,7 @@ Boolean pbsgUpdateConfig (
     "<b>dropButtons:</b> ${dropButtons ?: 'n/a'}",
     "<b>addButtons:</b> ${addButtons ?: 'n/a'}"
   ].join('<br/>')
-  Ltrace('pbsgUpdateConfig()', [
+  Linfo('pbsgUpdateConfig()', [
     '<table style="border-spacing: 0px;" rules="all">',
     '<tr><th>Input Parameters</th><th style="width:10%"/><th>Action Summary</th></tr>',
     "<tr><td>${requestedParms}</td><td/><td>${analysis}</td></tr></table>"
@@ -122,10 +122,6 @@ Boolean pbsgUpdateConfig (
     Ltrace('pbsgUpdateConfig()', "activating ${atomicState.defaultButton}")
     isStateChanged = pbsgActivateButton(atomicState.defaultButton)
   }
-  Ltrace('pbsgUpdateConfig()', [
-    'AT EXIT',
-    *pbsgState()
-  ])
 }
 
 List<String> pbsgState () {
@@ -175,9 +171,16 @@ void _pbsgSendEvent() {
       'active': atomicState.activeButton,
       'inactive': atomicState.inactiveButtons,
       'default': atomicState.defaultButton
-    ].toMapString()
+    ]
   ]
-  Ltrace('_pbsgSendEvent()', event.toMapString())
+  Linfo('_pbsgSendEvent()', [
+    '<b>EVENT MAP</b>',
+    Bullet2("<b>name:</b> ${event.name}"),
+    Bullet2("<b>descriptionText:</b> ${event.descriptionText}"),
+    Bullet2("<b>value.active:</b> ${event.value['active']}"),
+    Bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
+    Bullet2("<b>value.default:</b> ${event.value['default']}")
+  ])
   sendEvent(event)
 }
 
