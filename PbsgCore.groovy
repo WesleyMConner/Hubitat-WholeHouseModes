@@ -47,24 +47,25 @@ Boolean pbsgUpdateConfig (
   ) {
   List<String> requestedButtons = cleanStrings(requestedButtonsParm)
   if (requestedButtons != requestedButtonsParm) {
-    Lwarn(
-      'pbsgUpdateConfig()',
+    Lwarn('pbsgUpdateConfig()', [
+      '<b>requestedButtonsParm</b>',
       ">${requestedButtonsParm}< replaced with >${requestedButtons}<"
+    ]
     )
   }
   String defaultButton = defaultButtonParm ?: null
   if (defaultButton != defaultButtonParm) {
-    Lwarn(
-      'pbsgUpdateConfig()',
+    Lwarn('pbsgUpdateConfig()', [
+      '<b>defaultButtonParm</b>',
       ">${defaultButtonParm}< replaced with >${defaultButton}<"
-    )
+    ])
   }
   String activeButton = activeButtonParm ?: null
   if (activeButton != activeButtonParm) {
-    Lwarn(
-      'pbsgUpdateConfig()',
+    Lwarn('pbsgUpdateConfig()', [
+      '<b>activeButtonParm</b>',
       ">${activeButtonParm}< replaced with >${activeButton}<"
-    )
+    ])
   }
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
@@ -126,12 +127,16 @@ Boolean pbsgUpdateConfig (
     "<tr><td>${requested}</td><td/><td>${analysis}</td></tr></table>"
   ])
   if (dropButtons) {
+Ldebug('#130', "${dropButtons}")
     isStateChanged = true
     // Remove out-of-scope buttons without activating any button.
     if (dropButtons.contains(atomicState.activeButton)) {
       atomicState.activeButton = null
     }
+Ldebug('#136', "${atomicState.activeButton}, ${atomicState.inactiveButtons} .. ${dropButtons}, ${addButtons}")
     atomicState.inactiveButtons.removeAll(dropButtons)
+Ldebug('#138', "${atomicState.activeButton}, ${atomicState.inactiveButtons}")
+Ldebug('#139', pbsgState())
   }
   if (addButtons) {
     isStateChanged = true
@@ -145,14 +150,15 @@ Boolean pbsgUpdateConfig (
       atomicState.inactiveButtons = addButtons
     }
   }
+Ldebug('#151', "${atomicState.activeButton}, ${atomicState.inactiveButtons}")
   Ltrace('pbsgUpdateConfig()', "Calling _vswConfigure()")
-  _vswConfigure(requestedButtons)
+//===============>  _vswConfigure(requestedButtons)
   // Delegate all aspects of button activation to existing methods.
   if (activeButtonParm) {
-    Ltrace('pbsgUpdateConfig()', "activating ${activeButtonParm}")
+    Ltrace('pbsgUpdateConfig()', "activating activeButton ${activeButtonParm}")
     isStateChanged = pbsgActivateButton(activeButtonParm)
   } else if (atomicState.activeButton == null && atomicState.defaultButton) {
-    Ltrace('pbsgUpdateConfig()', "activating ${atomicState.defaultButton}")
+    Ltrace('pbsgUpdateConfig()', "activating defaultButton ${atomicState.defaultButton}")
     isStateChanged = pbsgActivateButton(atomicState.defaultButton)
   }
   //pbsgConfigure ("${app.getLabel()}_", requestedParms, String logThreshold)
@@ -235,7 +241,7 @@ Boolean _pbsgIfActiveButtonPushOntoInactiveFifo () {
     atomicState.activeButton = null
     Ltrace(
       '_pbsgIfActiveButtonPushOntoInactiveFifo()',
-      "${b(button)} is inactive"
+      "Button ${b(button)} pushed onto inactiveButtons ${atomicState.inactiveButtons}"
     )
   }
   return isStateChanged
@@ -248,16 +254,18 @@ void _removeButtonFromInactiveButtons (String button) {
   //     - MAKE LOCAL CHANGES
   //     - SET atomicState.inactiveButtons BY BRUTE FORCE
   if (button) {
+Ldebug('#257', "${button} .. ${atomicState.inactiveButtons}")
     List<String> local = atomicState.inactiveButtons
     local.removeAll([button])
     atomicState.inactiveButtons = local
-    Ltrace('_removeButtonFromInactiveButtons()', "${b(button)} is inactive")
+Ldebug('#261', "${button} .. ${atomicState.inactiveButtons}")
   }
 }
 
 Boolean _pbsgSafelyActivateButton (String button) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new button is activated.
+  Ltrace('_pbsgSafelyActivateButton()', "button: ${b(button)}")
   Boolean isStateChanged = false
   if (atomicState.activeButton == button) {
     // Nothing to do, button is already active
@@ -266,7 +274,10 @@ Boolean _pbsgSafelyActivateButton (String button) {
     _pbsgIfActiveButtonPushOntoInactiveFifo()
     _removeButtonFromInactiveButtons(button)
     atomicState.activeButton = button
-    Ltrace(callingFn, "${b(atomicState.activeButton)} is active")
+    Ltrace(
+      '_pbsgSafelyActivateButton()',
+      "button ${b(button)} moved to activeButton ${b(atomicState.activeButton)}"
+    )
     _pbsgSendEvent()
   }
   return isStateChanged
@@ -301,7 +312,7 @@ void uninstalled () {
 Map PbsgPage () {
   app.getChildDevices()
   // Ensure a log level is available before App
-  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'DEBUG')
+  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
   Ltrace('PbsgPage()', "pbsg is ${AppInfo(pbsg)}")
   return dynamicPage(
     name: 'PbsgPage',
@@ -529,7 +540,7 @@ void TEST_PbsgCore () {
   //----
   TEST_ConfigChange(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
   // TEST6 state is unchanged from TEST5 state
-  Ltrace('TEST6', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], 'B'))
+  Ltrace('TEST6', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
   TEST_ConfigChange(7, ['B', 'F', 'G', 'I'], 'B', 'G')
   Ltrace('TEST7', TEST_HasExpectedState('G', ['B', 'F', 'I'], 'B'))
