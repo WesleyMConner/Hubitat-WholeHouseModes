@@ -40,144 +40,102 @@ preferences {
 //---- CORE METHODS
 //---- Methods that ARE NOT constrained to any specific execution context.
 
-Boolean pbsgUpdateConfig (
-    List<String> requestedButtonsParm,
-    String defaultButtonParm = null,
+void pbsgConfig (
+    List<String> buttonsParm,
+    String dfltButtonParm = null,
     String activeButtonParm = null
   ) {
-  List<String> requestedButtons = cleanStrings(requestedButtonsParm)
-  if (requestedButtons != requestedButtonsParm) {
-    Lwarn('pbsgUpdateConfig()', [
-      '<b>requestedButtonsParm</b>',
-      ">${requestedButtonsParm}< replaced with >${requestedButtons}<"
-    ]
-    )
+Ldebug('#48', [
+  "buttons: ${buttonsParm}",
+  "dfltButton: ${dfltButtonParm}",
+  "activeButton: ${activeButtonParm}"
+])
+  // Adjust the provided parameters to remove empty strings, duplicates, etc.
+  List<String> buttons = cleanStrings(buttonsParm)
+  if (buttons != buttonsParm) {
+    Lwarn('pbsgConfig()', "buttonsParm: >${buttonsParm}< -> >${buttons}<")
+    buttons = buttons
   }
-  String defaultButton = defaultButtonParm ?: null
-  if (defaultButton != defaultButtonParm) {
-    Lwarn('pbsgUpdateConfig()', [
-      '<b>defaultButtonParm</b>',
-      ">${defaultButtonParm}< replaced with >${defaultButton}<"
-    ])
+  String dfltButton = dfltButtonParm ?: null
+  if (dfltButton != dfltButtonParm) {
+    Lwarn('pbsgConfig()', "dfltButton: >${dfltButtonParm}< -> >${dfltButton}<")
+    dfltButton = dfltButton ?: null
   }
   String activeButton = activeButtonParm ?: null
   if (activeButton != activeButtonParm) {
-    Lwarn('pbsgUpdateConfig()', [
-      '<b>activeButtonParm</b>',
-      ">${activeButtonParm}< replaced with >${activeButton}<"
-    ])
+    Lwarn('pbsgConfig()', "activeButtonParm: >${activeButtonParm}< -> ${activeButton}<")
+    activeButton = activeButton ?: null
   }
-  // Return TRUE on a configuration change, FALSE otherwise.
-  Boolean isStateChanged = false
-  if (!requestedButtons) {
-    Lerror('pbsgUpdateConfig()', [
-      '<b>No buttons have been defined.</b>',
-      "requestedButtonsParm: ${requestedButtonsParm}",
-      "requestedButtons (cleaned): ${requestedButtons}"
-    ])
-    return isStateChanged
+Ldebug('#67', [
+  "buttons: ${buttons}",
+  "dfltButton: ${dfltButton}",
+  "activeButton: ${activeButton}"
+])
+  if (buttons.size() < 2) {
+    Lerror('pbsgConfig()', "button count (${buttons.size()}) must be >= 2")
+    return
   }
-  if (requestedButtons.size() < 2) {
-    Lerror('pbsgUpdateConfig()', [
-      "<b>A PBSG needs at least two buttons.</b>",
-      "requestedButtonsParm: ${requestedButtonsParm}",
-      "requestedButtons (cleaned): ${requestedButtons}"
-    ])
-    return isStateChanged
+  if (dfltButton && buttons.contains(dfltButton) == false) {
+    Lerror('pbsgConfig()', "dfltButton ${b(dfltButton)} not found in buttons (${buttons})")
+    return
   }
-  if (defaultButton ?: null) {
-    if (!requestedButtons.contains(defaultButton)) {
-      Lerror('pbsgUpdateConfig()', [
-        '<b>Problematic defaultButton</b>',
-        "${b(defaultButton)} (cleaned) IS NOT present in ${b(requestedButtons)} (cleaned)"
-      ])
-      return isStateChanged
-    }
+  if (activeButton && buttons.contains(activeButton) == false) {
+    Lerror('pbsgConfig()', "activeButton ${b(activeButton)} not found in buttons (${buttons})")
+    return
   }
-  if (atomicState.defaultButton != (defaultButton ?: null)) {
-    isStateChange = true
-    atomicState.defaultButton = (defaultButton ?: null)
-    Linfo(
-      'pbsgUpdateConfig()',
-      "Adjusted atomicState.defaultButton to ${atomicState.defaultButton}"
-    )
-  }
-  if (activeButton && !requestedButtons.contains(activeButton)) {
-    return isStateChanged
-  }
-  List<String> existingButtons = _pbsgExistingButtons()
-  Map<String, List<String>> actions = CompareLists(existingButtons, requestedButtons)
+  // Identify the impact of parametric changes on application state.
+  List<String> currButtons = _pbsgGetButtons()
+  Map<String, List<String>> actions = CompareLists(currButtons, buttons)
   List<String> retainButtons = actions.retained // Used for accounting only
   List<String> dropButtons = actions.dropped
   List<String> addButtons = actions.added
   String requested = [
-    "<b>requestedButtons:</b> ${requestedButtons ?: 'n/a'}",
-    "<b>defaultButton:</b> ${(defaultButton ?: null)}",
+    "<b>buttons:</b> ${buttons ?: 'n/a'}",
+    "<b>dfltButton:</b> ${(dfltButton ?: null)}",
     "<b>activeButton:</b> ${activeButton}"
   ].join('<br/>')
   String analysis = [
-    "<b>existingButtons:</b> ${existingButtons ?: 'n/a'}",
+    "<b>currButtons:</b> ${currButtons ?: 'n/a'}",
     "<b>retainButtons:</b> ${retainButtons ?: 'n/a'}",
     "<b>dropButtons:</b> ${dropButtons ?: 'n/a'}",
     "<b>addButtons:</b> ${addButtons ?: 'n/a'}"
   ].join('<br/>')
-  Linfo('pbsgUpdateConfig()', [
+  Linfo('pbsgConfig()', [
     '<table style="border-spacing: 0px;" rules="all">',
     '<tr><th>Input Parameters</th><th style="width:10%"/><th>Action Summary</th></tr>',
     "<tr><td>${requested}</td><td/><td>${analysis}</td></tr></table>"
   ])
+  // TBD
+  //   - While the following suspends processing of child VSW events ...
+  //   - It does not prevent Parent/Child Apps from invoking activate/deactivate.
+  unsubscribe()
+  // ADJUST APPLICATION STATE TO MATCH ANY REVISED PBSG CONFIGURATION
+  atomicState.dfltButton = dfltButton
   if (dropButtons) {
-Ldebug('#130', "${dropButtons}")
-    isStateChanged = true
-    // Remove out-of-scope buttons without activating any button.
+    // Remove legacy buttons without without activating/deactivating buttons.
     if (dropButtons.contains(atomicState.activeButton)) {
       atomicState.activeButton = null
     }
-Ldebug('#136', "${atomicState.activeButton}, ${atomicState.inactiveButtons} .. ${dropButtons}, ${addButtons}")
     atomicState.inactiveButtons.removeAll(dropButtons)
-Ldebug('#138', "${atomicState.activeButton}, ${atomicState.inactiveButtons}")
-Ldebug('#139', pbsgState())
   }
   if (addButtons) {
-    isStateChanged = true
-    // Add new buttons without activating any buttons
-    if (atomicState.inactiveButtons) {
-      // Add buttons to the existing list.
-      Integer nextIndex = atomicState.inactiveButtons?.size() ?: 0
-      atomicState.inactiveButtons.addAll(nextIndex, addButtons)
-    } else {
-      // No existing buttons, so start the list.
-      atomicState.inactiveButtons = addButtons
-    }
+    Integer nextIndex = atomicState.inactiveButtons?.size() ?: 0
+    atomicState.inactiveButtons.addAll(nextIndex, addButtons)
   }
-Ldebug('#151', "${atomicState.activeButton}, ${atomicState.inactiveButtons}")
-  Ltrace('pbsgUpdateConfig()', "Calling _vswConfigure()")
-//===============>  _vswConfigure(requestedButtons)
-  // Delegate all aspects of button activation to existing methods.
-  if (activeButtonParm) {
-    Ltrace('pbsgUpdateConfig()', "activating activeButton ${activeButtonParm}")
-    isStateChanged = pbsgActivateButton(activeButtonParm)
-  } else if (atomicState.activeButton == null && atomicState.defaultButton) {
-    Ltrace('pbsgUpdateConfig()', "activating defaultButton ${atomicState.defaultButton}")
-    isStateChanged = pbsgActivateButton(atomicState.defaultButton)
+  // Leverage activation/deactivation methods for initial button activation.
+  if (activeButton) {
+    Ltrace('pbsgConfig()', "activating activeButton ${activeButton}")
+    pbsgActivateButton(activeButton)
+  } else if (atomicState.activeButton == null && atomicState.dfltButton) {
+    Ltrace('pbsgConfig()', "activating dfltButton ${atomicState.dfltButton}")
+    pbsgActivateButton(atomicState.dfltButton)
   }
-  //pbsgConfigure ("${app.getLabel()}_", requestedParms, String logThreshold)
-}
-
-List<String> pbsgState () {
-  return [
-    Heading2('STATE'),
-    Bullet2("<b>logLevel:</b> ${atomicState.logLevel}"),
-    Bullet2("<b>activeButton:</b> ${atomicState.activeButton}"),
-    Bullet2("<b>inactiveButtons:</b> ${atomicState.inactiveButtons}"),
-    Bullet2("<b>defaultButton:</b> ${atomicState.defaultButton}")
-  ]
 }
 
 Boolean pbsgActivateButton (String button) {
   // Return TRUE on a configuration change, FALSE otherwise.
-  Boolean isStateChanged = false
-  if (!_pbsgExistingButtons().contains(button)) {
+  // Boolean isStateChanged = false
+  if (!_pbsgGetButtons().contains(button)) {
     Lerror('pbsgActivateButton()', "Argument ${b(button)} IS NOT a button")
   } else {
     isStateChange = _pbsgSafelyActivateButton(button)
@@ -188,19 +146,29 @@ Boolean pbsgActivateButton (String button) {
 Boolean pbsgDeactivateButton (String button) {
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
-  if (atomicState.activeButton == atomicState.defaultButton) {
+  if (atomicState.activeButton == atomicState.dfltButton) {
     Linfo(
       'pbsgDeactivateButton()',
-      "Ignoring attempt to deactivate the default button (${atomicState.defaultButton})"
+      "Ignoring attempt to deactivate the dflt button (${atomicState.dfltButton})"
     )
   } else {
-    isStateChange = _pbsgSafelyActivateButton(atomicState.defaultButton)
+    isStateChange = _pbsgSafelyActivateButton(atomicState.dfltButton)
   }
   return isStateChange
 }
 
 Boolean pbsgActivatePredecessor () {
   return _pbsgSafelyActivateButton(atomicState.inactiveButtons.first())
+}
+
+List<String> pbsgState () {
+  return [
+    Heading2('STATE'),
+    Bullet2("<b>logLevel:</b> ${atomicState.logLevel}"),
+    Bullet2("<b>activeButton:</b> ${atomicState.activeButton}"),
+    Bullet2("<b>inactiveButtons:</b> ${atomicState.inactiveButtons}"),
+    Bullet2("<b>dfltButton:</b> ${atomicState.dfltButton}")
+  ]
 }
 
 void _pbsgSendEvent() {
@@ -210,7 +178,7 @@ void _pbsgSendEvent() {
     value: [
       'active': atomicState.activeButton,
       'inactive': atomicState.inactiveButtons,
-      'default': atomicState.defaultButton
+      'dflt': atomicState.dfltButton
     ]
   ]
   Linfo('_pbsgSendEvent()', [
@@ -219,20 +187,18 @@ void _pbsgSendEvent() {
     Bullet2("<b>descriptionText:</b> ${event.descriptionText}"),
     Bullet2("<b>value.active:</b> ${event.value['active']}"),
     Bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
-    Bullet2("<b>value.default:</b> ${event.value['default']}")
+    Bullet2("<b>value.dflt:</b> ${event.value['dflt']}")
   ])
   sendEvent(event)
 }
 
-List<String> _pbsgExistingButtons () {
-  return  [atomicState.activeButton, atomicState.inactiveButtons]
-          .flatten()
-          .findAll{ e -> e?.trim() }
+List<String> _pbsgGetButtons () {
+  return [atomicState.activeButton, *atomicState.inactiveButtons].findAll()
 }
 
 Boolean _pbsgIfActiveButtonPushOntoInactiveFifo () {
   // Return TRUE on a configuration change, FALSE otherwise.
-  // This method DOES NOT activate a defaultButton!
+  // This method DOES NOT activate a dfltButton!
   Boolean isStateChanged = false
   String button = atomicState.activeButton
   if (button) {
@@ -254,11 +220,9 @@ void _removeButtonFromInactiveButtons (String button) {
   //     - MAKE LOCAL CHANGES
   //     - SET atomicState.inactiveButtons BY BRUTE FORCE
   if (button) {
-Ldebug('#257', "${button} .. ${atomicState.inactiveButtons}")
     List<String> local = atomicState.inactiveButtons
     local.removeAll([button])
     atomicState.inactiveButtons = local
-Ldebug('#261', "${button} .. ${atomicState.inactiveButtons}")
   }
 }
 
@@ -292,7 +256,8 @@ void installed () {
   atomicState.logLevel = LogThresholdToLogLevel('TRACE')  // Integer
   atomicState.activeButton = null                         // String
   atomicState.inactiveButtons = []                        // List<String>
-  atomicState.defaultButton = null                        // String
+  atomicState.dfltButton = null                           // String
+  atomicState.vswDniPrefix = "${app.getLabel()}_"         // String
   Ltrace('installed()', 'Calling TEST_PbsgCore()')
   TEST_PbsgCore()
 }
@@ -310,10 +275,10 @@ void uninstalled () {
 //----   Methods specific to this execution context
 
 Map PbsgPage () {
-  app.getChildDevices()
+  //?? app.getChildDevices()
   // Ensure a log level is available before App
-  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
-  Ltrace('PbsgPage()', "pbsg is ${AppInfo(pbsg)}")
+  //??atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
+  //??Ltrace('PbsgPage()', "pbsg is ${AppInfo(pbsg)}")
   return dynamicPage(
     name: 'PbsgPage',
     title: Heading1(AppInfo(app)),
@@ -336,7 +301,6 @@ void _vswConfigure (List<String> buttons) {
   // Any new VSWs are turned off on creation.
   // Full reconciliation of VSW on/off state occurs at pbsgActivateButton().
   app.unsubscribe()
-  atomicState.vswDniPrefix = "${app.getLabel()}_"
   List<String> expectedDnis = buttons.collect{ "${atomicState.vswDniPrefix}${it}" }
   // It is unlikely that a Pbsg should have non-switch devices; so,
   // comparins just DNIs and NOT looking at d.hasCapability('Switch')
@@ -434,7 +398,7 @@ void TEST_ConfigChange (
   traceText += "buttons=${b(list)}, dflt=${b(dflt)}, activeButton=${b(on)}"
   traceText += (forcedError ? REDBAR() : GREENBAR())
   Ltrace("TEST ${n} CONFIG", traceText)
-  pbsgUpdateConfig(list, dflt, on)
+  pbsgConfig(list, dflt, on)
 }
 
 void TEST_PbsgActivation (
@@ -453,16 +417,16 @@ void TEST_PbsgActivation (
 String TEST_HasExpectedState (
     String activeButton,
     List<String> inactiveButtons,
-    String defaultButton
+    String dfltButton
   ) {
   Boolean result = true
   Integer actualInactiveButtonsSize = atomicState.inactiveButtons?.size() ?: 0
   Integer expectedInactiveButtonsSize = inactiveButtons.size()
-  if (atomicState.defaultButton != defaultButton) {
+  if (atomicState.dfltButton != dfltButton) {
     result = false
     Ltrace(
       'TEST_HasExpectedState()',
-      "defaultButton ${atomicState.defaultButton} != ${defaultButton}"
+      "dfltButton ${atomicState.dfltButton} != ${dfltButton}"
     )
   } else if (atomicState.activeButton != activeButton) {
     result = false
@@ -502,10 +466,10 @@ String TEST_HasExpectedState (
   } else {
     results += "<i>inactiveButtons:</b> ${atomicState.inactiveButtons}</i> ==> <b>expected: ${inactiveButtons}</b>"
   }
-  if(atomicState.defaultButton == defaultButton) {
-    results += "<i>defaultButton: ${atomicState.defaultButton}</i>"
+  if(atomicState.dfltButton == dfltButton) {
+    results += "<i>dfltButton: ${atomicState.dfltButton}</i>"
   } else {
-    results += "<i>defaultButton: ${atomicState.defaultButton}</i> ==> <b>expected: ${defaultButton}</b>"
+    results += "<i>dfltButton: ${atomicState.dfltButton}</i> ==> <b>expected: ${dfltButton}</b>"
   }
   return results.join('<br/>')
 }
@@ -516,7 +480,7 @@ void TEST_PbsgCore () {
   // START AS THOUGH FRESHLY INITIALIZED
   atomicState.activeButton = null
   atomicState.inactiveButtons = []
-  atomicState.defaultButton = null
+  atomicState.dfltButton = null
   //----
   String expectedActive = null
   List<String> expectedInactive = null
