@@ -29,10 +29,15 @@ library (
  importUrl: 'TBD'
 )
 
-//----
+//---- GENERAL PURPOSE
+
+List<String> cleanStrings (List<String> list) {
+  // Prune nulls, empty strings and dups
+  return list.findAll{ it ?: null }.unique()
+}
+
 //---- HTML FORMATTING
 //----   -- Focused on Hubitat contexts
-//----
 
 String BLACKBAR() { return '<hr style="border: 5px solid black;"/>' }
 String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
@@ -62,10 +67,8 @@ String i (def val) {
   return val ? "'<i>${val}</i>'" : "<i>null</i>"
 }
 
-//----
 //---- HTML TABLES
 //----   -- Focused on Hubitat contexts
-//----
 
 String tdLft (def x) {
   return "<td style='text-align: left; padding-left: 10px; padding-right: 10px;'>${x}</td>"
@@ -79,10 +82,8 @@ String tdRght (def x) {
   return "<td style='text-align: right; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
 
-//----
 //---- LOGGING
 //----   - Adjust log levels to reduce noise and improve performance
-//----
 
 void solicitLogThreshold (String settingsKey) {
   // By passing in the settings key, clients can:
@@ -177,10 +178,8 @@ void Ltrace (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
   Ltrace(fnName, ls.join(delim))
 }
 
-//----
 //---- Convenience
 //----   - Simplify debugging
-//----
 
 String AppInfo (InstAppW app) {
   return "${app?.getLabel() ?: 'MISSING_LABEL'} (${app?.getId() ?: 'MISSING_ID'})"

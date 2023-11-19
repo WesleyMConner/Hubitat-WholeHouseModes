@@ -28,6 +28,11 @@ definition (
   singleInstance: true
 )
 
+// ABSTRACT
+//   - Isolate the core behavior of a PushButton Switch Group (PBSG).
+//   - Differentiate core PBSG behavior (button state) from its VSWs (see libPbsgVsw).
+//   - Minimize interaction between non-VSW and VSW methods, settings and state.
+
 preferences {
   page(name: 'PbsgPage')
 }
@@ -40,48 +45,74 @@ Boolean pbsgUpdateConfig (
     String defaultButtonParm = null,
     String activeButtonParm = null
   ) {
+  List<String> requestedButtons = cleanStrings(requestedButtonsParm)
+  if (requestedButtons != requestedButtonsParm) {
+    Lwarn(
+      'pbsgUpdateConfig()',
+      ">${requestedButtonsParm}< replaced with >${requestedButtons}<"
+    )
+  }
+  String defaultButton = defaultButtonParm ?: null
+  if (defaultButton != defaultButtonParm) {
+    Lwarn(
+      'pbsgUpdateConfig()',
+      ">${defaultButtonParm}< replaced with >${defaultButton}<"
+    )
+  }
+  String activeButton = activeButtonParm ?: null
+  if (activeButton != activeButtonParm) {
+    Lwarn(
+      'pbsgUpdateConfig()',
+      ">${activeButtonParm}< replaced with >${activeButton}<"
+    )
+  }
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
-  if (!requestedButtonsParm) {
-    Lerror('pbsgUpdateConfig()', '<b>No buttons have been defined.</b>')
+  if (!requestedButtons) {
+    Lerror('pbsgUpdateConfig()', [
+      '<b>No buttons have been defined.</b>',
+      "requestedButtonsParm: ${requestedButtonsParm}",
+      "requestedButtons (cleaned): ${requestedButtons}"
+    ])
     return isStateChanged
   }
-  if (requestedButtonsParm.size() < 2) {
-    Lerror('pbsgUpdateConfig()', "<b>A PBSG needs at least two buttons.</b>")
+  if (requestedButtons.size() < 2) {
+    Lerror('pbsgUpdateConfig()', [
+      "<b>A PBSG needs at least two buttons.</b>",
+      "requestedButtonsParm: ${requestedButtonsParm}",
+      "requestedButtons (cleaned): ${requestedButtons}"
+    ])
     return isStateChanged
   }
-  if (defaultButtonParm ?: null) {
-    if (!requestedButtonsParm.contains(defaultButtonParm)) {
+  if (defaultButton ?: null) {
+    if (!requestedButtons.contains(defaultButton)) {
       Lerror('pbsgUpdateConfig()', [
         '<b>Problematic defaultButton</b>',
-        "${b(defaultButtonParm)} IS NOT present in ${b(requestedButtonsParm)}"
+        "${b(defaultButton)} (cleaned) IS NOT present in ${b(requestedButtons)} (cleaned)"
       ])
       return isStateChanged
     }
   }
-  if (atomicState.defaultButton != (defaultButtonParm ?: null)) {
+  if (atomicState.defaultButton != (defaultButton ?: null)) {
     isStateChange = true
-    atomicState.defaultButton = (defaultButtonParm ?: null)
+    atomicState.defaultButton = (defaultButton ?: null)
     Linfo(
       'pbsgUpdateConfig()',
       "Adjusted atomicState.defaultButton to ${atomicState.defaultButton}"
     )
   }
-  if (activeButtonParm && !requestedButtonsParm.contains(activeButtonParm)) {
+  if (activeButton && !requestedButtons.contains(activeButton)) {
     return isStateChanged
   }
   List<String> existingButtons = _pbsgExistingButtons()
-  Map<String, List<String>> actions = CompareLists(
-    existingButtons,
-    requestedButtonsParm
-  )
+  Map<String, List<String>> actions = CompareLists(existingButtons, requestedButtons)
   List<String> retainButtons = actions.retained // Used for accounting only
   List<String> dropButtons = actions.dropped
   List<String> addButtons = actions.added
-  String requestedParms = [
-    "<b>requestedButtonsParm:</b> ${requestedButtonsParm ?: 'n/a'}",
-    "<b>defaultButtonParm:</b> ${(defaultButtonParm ?: null)}",
-    "<b>activeButtonParm:</b> ${activeButtonParm}"
+  String requested = [
+    "<b>requestedButtons:</b> ${requestedButtons ?: 'n/a'}",
+    "<b>defaultButton:</b> ${(defaultButton ?: null)}",
+    "<b>activeButton:</b> ${activeButton}"
   ].join('<br/>')
   String analysis = [
     "<b>existingButtons:</b> ${existingButtons ?: 'n/a'}",
@@ -92,7 +123,7 @@ Boolean pbsgUpdateConfig (
   Linfo('pbsgUpdateConfig()', [
     '<table style="border-spacing: 0px;" rules="all">',
     '<tr><th>Input Parameters</th><th style="width:10%"/><th>Action Summary</th></tr>',
-    "<tr><td>${requestedParms}</td><td/><td>${analysis}</td></tr></table>"
+    "<tr><td>${requested}</td><td/><td>${analysis}</td></tr></table>"
   ])
   if (dropButtons) {
     isStateChanged = true
@@ -114,6 +145,8 @@ Boolean pbsgUpdateConfig (
       atomicState.inactiveButtons = addButtons
     }
   }
+  Ltrace('pbsgUpdateConfig()', "Calling _vswConfigure()")
+  _vswConfigure(requestedButtons)
   // Delegate all aspects of button activation to existing methods.
   if (activeButtonParm) {
     Ltrace('pbsgUpdateConfig()', "activating ${activeButtonParm}")
@@ -122,6 +155,7 @@ Boolean pbsgUpdateConfig (
     Ltrace('pbsgUpdateConfig()', "activating ${atomicState.defaultButton}")
     isStateChanged = pbsgActivateButton(atomicState.defaultButton)
   }
+  //pbsgConfigure ("${app.getLabel()}_", requestedParms, String logThreshold)
 }
 
 List<String> pbsgState () {
@@ -277,6 +311,99 @@ Map PbsgPage () {
   ) {
     section {
       paragraph "YOU ARE HERE"
+    }
+  }
+}
+
+//---- VSW METHODS
+//----   - Isolate PbsgVsw data and methods from PbsgCore data and methods.
+//----   - Provide VSW functionality to a PBSG instance.
+//----   - Minimize interaction between non-VSW and VSW methods, settings and state.
+
+void _vswConfigure (List<String> buttons) {
+  // Ensure a 1-to-1 correspondence between PBSG buttons and VSW instances.
+  // Any new VSWs are turned off on creation.
+  // Full reconciliation of VSW on/off state occurs at pbsgActivateButton().
+  app.unsubscribe()
+  atomicState.vswDniPrefix = "${app.getLabel()}_"
+  List<String> expectedDnis = buttons.collect{ "${atomicState.vswDniPrefix}${it}" }
+  // It is unlikely that a Pbsg should have non-switch devices; so,
+  // comparins just DNIs and NOT looking at d.hasCapability('Switch')
+  List<String> foundDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
+  List<String> dropDnis = foundDnis.collect().minus(expectedDnis)
+  List<String> createDnis = expectedDnis.collect().minus(foundDnis)
+  Ltrace('_vswConfigure()', [
+    '',
+    Bullet2("<b>expectedDnis:</b> ${expectedDnis.join(', ')}"),
+    Bullet2("<b>foundDnis:</b> ${foundDnis.join(', ')}"),
+    Bullet2("<b>createDnis:</b> ${createDnis}"),
+    Bullet2("<b>dropDnis:</b> ${dropDnis}")
+  ])
+  dropDnis.each{ dni ->
+    Lwarn('_vswConfigure()', "Deleting orphaned device ${b(dni)}")
+    app.deleteChildDevice(dni)
+  }
+  createDnis.each{ dni ->
+    Lwarn('_vswConfigure()', "Adding VSW ${b(dni)}")
+    DevW vsw = addChildDevice(
+      'hubitat',          // namespace
+      'Virtual Switch',   // typeName
+      dni,                // device's unique DNI
+      [isComponent: true, name: dni, name: dni]
+    )
+    vsw.off()
+  }
+}
+
+void _vswUpdateState (String on, List<String> offList) {
+  String dni = "${atomicState.vswDniPrefix}${on}"
+  DevW d = getChildDevice(dni)
+  d ? d.on() : Lerror ('_vswRefreshState()', "Unable to find device ${d}")
+  offList.each{ off ->
+    dni = "${atomicState.vswDniPrefix}${off}"
+    d = getChildDevice(dni)
+    d ? d.off() : Lerror ('_vswRefreshState()', "Unable to find device ${d}")
+  }
+}
+
+Boolean _vswUnsubscribe () {
+  app.unsubscribe('VswEventHandler')
+}
+
+Boolean _vswSubscribe () {
+  // Returns false if an issue arises during subscriptions
+  Boolean issueArose = false
+  [atomicState.activeButton, *atomicState.inactiveButtons].each{ button ->
+    String dni = "${atomicState.vswDniPrefix}${button}"
+    DevW vsw = getChildDevice(dni)
+    if (!vsw) {
+      issueArose = true
+      Lerror('_vswSubscribe()', "Cannot find ${b(dni)}")
+      result = false
+    } else {
+      subscribe(vsw, VswEventHandler, ['filterEvents': true])
+    }
+  }
+  return issueArose
+}
+
+void VswEventHandler (Event e) {
+  // Design Notes
+  //   - VSWs are turned on/off as a part of _vswUpdateState().
+  //   - BUT, Hubitat Dashboard and Alexa can also turn on/off VSWs.
+  //   - Process and SUPPRESS any events that report state inconsistent
+  //     with current on/off buttons
+  if (e.isStateChange) {
+    if (e.value == 'on') {
+      String dni = e.displayName
+      String button = dni?.minus(atomicState.vswDniPrefix)
+      if (atomicState.onButton != button) pbsgActivateButton(button)
+    } else if (e.value == 'off') {
+      String dni = e.displayName
+      String button = dni?.minus(atomicState.vswDniPrefix)
+      if (!atomicState.offButtons.contains(button)) pbsgDeactivateButton(button)
+    } else {
+      Ldebug('VswEventHandler()', "Unexpected event ${EventDetails(e)}")
     }
   }
 }
@@ -438,9 +565,12 @@ void TEST_PbsgCore () {
   pbsgDeactivateButton('C')
   Ltrace('TEST14', TEST_HasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
   //----
-  TEST_PbsgActivation(12, 'Activate Predecessor')
+  TEST_PbsgActivation(15, 'Activate Predecessor')
   pbsgActivatePredecessor()
   Ltrace('TEST15', TEST_HasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  //----
+  TEST_ConfigChange(16, ['B', '', null, 'A', 'G', 'X', null, 'A'], 'X', '')
+  Ltrace('TEST16', TEST_HasExpectedState('X', ['B', 'A', 'G'], 'X'))
   //----
   atomicState.logLevel = parkLogLevel
 }
