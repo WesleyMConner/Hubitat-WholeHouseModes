@@ -35,7 +35,7 @@ void _vswConfigure (List<String> buttons) {
   // Any new VSWs are turned off on creation.
   // Full reconciliation of VSW on/off state occurs at pbsgActivateButton().
   app.unsubscribe()
-  atomicState.vswDniPrefix = "${app.getLabel()}_"
+  state.vswDniPrefix = "${app.getLabel()}_"
   List<String> expectedDnis = buttons.collect{ _pbsgButtonNameToVswDni(it) }
   List<DevW> foundDevices = app.getAllChildDevices()
   foundDevices.each{ d ->
@@ -68,11 +68,11 @@ void _vswConfigure (List<String> buttons) {
 }
 
 void _vswUpdateState (String on, List<String> offList) {
-  String dni = "${atomicState.vswDniPrefix}${on}"
+  String dni = "${state.vswDniPrefix}${on}"
   DevW d = getChildDevice(dni)
   d ? d.on() : Lerror ('_vswRefreshState()', "Unable to find device ${d}")
   offList.each{ off ->
-    dni = "${atomicState.vswDniPrefix}${off}"
+    dni = "${state.vswDniPrefix}${off}"
     d = getChildDevice(dni)
     d ? d.off() : Lerror ('_vswRefreshState()', "Unable to find device ${d}")
   }
@@ -85,8 +85,8 @@ Boolean _vswUnsubscribe () {
 Boolean _vswSubscribe () {
   // Returns false if an issue arises during subscriptions
   Boolean issueArose = false
-  [atomicState.activeButton, *atomicState.inactiveButtons].each{ button ->
-    String dni = "${atomicState.vswDniPrefix}${button}"
+  [state.activeButton, *state.inactiveButtons].each{ button ->
+    String dni = "${state.vswDniPrefix}${button}"
     DevW vsw = getChildDevice(dni)
     if (!vsw) {
       issueArose = true
@@ -108,12 +108,12 @@ void vswEventHandler (Event e) {
   if (e.isStateChange) {
     if (e.value == 'on') {
       String dni = e.displayName
-      String button = dni?.minus(atomicState.vswDniPrefix)
-      if (atomicState.onButton != button) pbsgActivateButton(button)
+      String button = dni?.minus(state.vswDniPrefix)
+      if (state.onButton != button) pbsgActivateButton(button)
     } else if (e.value == 'off') {
       String dni = e.displayName
-      String button = dni?.minus(atomicState.vswDniPrefix)
-      if (!atomicState.offButtons.contains(button)) pbsgDeactivateButton(button)
+      String button = dni?.minus(state.vswDniPrefix)
+      if (!state.offButtons.contains(button)) pbsgDeactivateButton(button)
     } else {
       Ldebug('vswEventHandler()', "Unexpected event ${EventDetails(e)}")
     }

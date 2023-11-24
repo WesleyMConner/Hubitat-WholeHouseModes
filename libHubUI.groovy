@@ -132,28 +132,28 @@ void Lerror (String fnName, String s) {
 
 void Lwarn (String fnName, String s) {
   // Fail closed if logLevel is missing.
-  if ((atomicState.logLevel ?: 5) > 1) {
+  if ((state.logLevel ?: 5) > 1) {
     log.warn("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
 void Linfo (String fnName, String s) {
   // Fail closed if logLevel is missing.
-  if ((atomicState.logLevel ?: 5) > 2) {
+  if ((state.logLevel ?: 5) > 2) {
     log.info("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
 void Ldebug (String fnName, String s) {
   // Fail closed if logLevel is missing.
-  if ((atomicState.logLevel ?: 5) > 3) {
+  if ((state.logLevel ?: 5) > 3) {
     log.debug("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
 void Ltrace (String fnName, String s) {
   // Fail closed if logLevel is missing.
-  if ((atomicState.logLevel ?: 5) > 4) {
+  if ((state.logLevel ?: 5) > 4) {
     log.trace("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
@@ -239,7 +239,7 @@ String EventDetails (Event e, Boolean DEEP = false) {
 
 String AppStateAsBullets() {
   List<String> result = []
-  atomicState.sort().each{ k, v ->
+  state.sort().each{ k, v ->
     result += Bullet1("<b>${k}</b> → ${v}")
   }
   return result.size() != 0 ? result.join('<br/>') : Bullet1('<i>NO DATA AVAILABLE</i>')

@@ -53,7 +53,7 @@ void populateStateKpadButtons (String prefix) {
   //   Keypad button presses. Settings data includes the user-friendly
   //   LED displayName and the LED device ID, which is comprised of 'Keypad
   //   Device Id' and 'Button Number', concatenated with a hyphen. This
-  //   method populates "atomicState.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
+  //   method populates "state.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
   //
   // Sample Settings Data
   //     key: LEDs_Day,
@@ -68,17 +68,17 @@ void populateStateKpadButtons (String prefix) {
   //   - Keypad DNI
   //   - Keypad Button number
   String stateKey = "${prefix}Map"
-  atomicState[stateKey] = [:]
+  state[stateKey] = [:]
   settings.each{ key, value ->
     if (key.contains("${prefix}_")) {
       String base = key.minus("${prefix}_")
       value.each{ item ->
         List<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
-          if (atomicState[stateKey][kpadDniAndButtons[0]] == null) {
-            atomicState[stateKey][kpadDniAndButtons[0]] = [:]
+          if (state[stateKey][kpadDniAndButtons[0]] == null) {
+            state[stateKey][kpadDniAndButtons[0]] = [:]
           }
-          atomicState[stateKey][kpadDniAndButtons[0]][kpadDniAndButtons[1]] = base
+          state[stateKey][kpadDniAndButtons[0]][kpadDniAndButtons[1]] = base
         }
       }
     }

@@ -1,22 +1,22 @@
-= atomicState Changes
+= state Changes
 
 .Getting a List Modification to Stick
 ----
 // ====================================================================
 // ==  W A R N I N G
 // ====================================================================
-// These Local changes are LOCAL ONLY and DO NOT persist in atomicState!
+// These Local changes are LOCAL ONLY and DO NOT persist in state!
 // Option 1 (FAILS)
-//   atomicState.inactiveButtons.removeAll{ it == button }
+//   state.inactiveButtons.removeAll{ it == button }
 // Option 2 (FAILS)
-//   atomicState.inactiveButtons.removeAll([button])
+//   state.inactiveButtons.removeAll([button])
 // Option 3 (SUCCEEDS)
-//   List<String> local = atomicState.inactiveButtons
+//   List<String> local = state.inactiveButtons
 //   local.removeAll{ it == button }
-//   atomicState.inactiveButtons = local
+//   state.inactiveButtons = local
 // Option 4 (SUCCEEDS)
-//   List<String> local = atomicState.inactiveButtons
+//   List<String> local = state.inactiveButtons
 //   local.removeAll([button])
-//   atomicState.inactiveButtons = local
+//   state.inactiveButtons = local
 // ====================================================================
 ----

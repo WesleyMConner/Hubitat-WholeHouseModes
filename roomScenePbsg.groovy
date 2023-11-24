@@ -26,21 +26,21 @@ void roomSceneVswEventHandler (Event e) {
   Ltrace('roomSceneVswEventHandler', "EventDetails: ${EventDetails(e)}")
   if (e.isStateChange) {
     if (e.value == 'on') {
-      if (atomicState.previousVswDni == e.displayName) {
+      if (state.previousVswDni == e.displayName) {
         Lerror(
           'roomSceneVswEventHandler()',
-          "The active Room Scene VSW '${atomicState.activeVswDni}' did not change."
+          "The active Room Scene VSW '${state.activeVswDni}' did not change."
         )
       }
       //--TBD-> TREAT 'getDefaultVswDni' AS PRIVATE
-      atomicState.previousVswDni = atomicState.activeVswDni ?: getDefaultVswDni()
-      atomicState.activeVswDni = e.displayName
+      state.previousVswDni = state.activeVswDni ?: getDefaultVswDni()
+      state.activeVswDni = e.displayName
       Linfo(
         'roomSceneVswEventHandler()',
-        "${atomicState.previousVswDni} -> ${atomicState.activeVswDni}"
+        "${state.previousVswDni} -> ${state.activeVswDni}"
       )
       //--TBD-> TREAT 'vswDniToName' AS PRIVATE
-      String scene = _pbsgDnitoButtonName(atomicState.activeVswDni)
+      String scene = _pbsgDnitoButtonName(state.activeVswDni)
       parent.activateRoomScene(scene)
     } else if (e.value == 'off') {
       Ltrace()

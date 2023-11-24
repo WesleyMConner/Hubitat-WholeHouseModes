@@ -94,25 +94,25 @@ InstAppW getOrCreateModePbsg (Boolean refreshConfig = false) {
 
 void removeLegacyWhaData () {
   // settings?.remove('log')
-  // atomicState.remove('defaultMode')
-  // atomicState.remove('LOG_LEVEL1_ERROR')
-  // atomicState.remove('LOG_LEVEL2_WARN')
-  // atomicState.remove('LOG_LEVEL3_INFO')
-  // atomicState.remove('LOG_LEVEL4_DEBUG')
-  // atomicState.remove('LOG_LEVEL5_TRACE')
-  // atomicState.remove('LOG_WARN')
-  // atomicState.remove('logLevel1Error')
-  // atomicState.remove('logLevel2Warn')
-  // atomicState.remove('logLevel3Info')
-  // atomicState.remove('logLevel4Debug')
-  // atomicState.remove('logLevel5Trace')
-  // atomicState.remove('MODE_PBSG_APP_NAME')
-  // atomicState.remove('MODES')
-  // atomicState.remove('PBSGapp')
-  // atomicState.remove('roomName')
-  // atomicState.remove('SPECIALTY_BUTTONS')
-  // atomicState.remove('specialtyButtons')
-  // atomicState.remove('specialtyFnButtons')
+  // state.remove('defaultMode')
+  // state.remove('LOG_LEVEL1_ERROR')
+  // state.remove('LOG_LEVEL2_WARN')
+  // state.remove('LOG_LEVEL3_INFO')
+  // state.remove('LOG_LEVEL4_DEBUG')
+  // state.remove('LOG_LEVEL5_TRACE')
+  // state.remove('LOG_WARN')
+  // state.remove('logLevel1Error')
+  // state.remove('logLevel2Warn')
+  // state.remove('logLevel3Info')
+  // state.remove('logLevel4Debug')
+  // state.remove('logLevel5Trace')
+  // state.remove('MODE_PBSG_APP_NAME')
+  // state.remove('MODES')
+  // state.remove('PBSGapp')
+  // state.remove('roomName')
+  // state.remove('SPECIALTY_BUTTONS')
+  // state.remove('specialtyButtons')
+  // state.remove('specialtyFnButtons')
 }
 
 void manageNestedChildApps () {
@@ -129,8 +129,8 @@ void manageNestedChildApps () {
 }
 
 String getLogLevel() {
-  if (!atomicState.logLevel) Lerror('getLogLevel()', "Missing 'atomicState.logLevel'")
-  return atomicState.logLevel
+  if (!state.logLevel) Lerror('getLogLevel()', "Missing 'state.logLevel'")
+  return state.logLevel
 }
 
 void whaInitialize () {
@@ -179,7 +179,7 @@ void installed () {
 void updated () {
   Ldebug('updated()', "pbsg is ${AppInfo(pbsg)}")
   if (settings.appLogThreshold) {
-    atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold)
+    state.logLevel = LogThresholdToLogLevel(settings.appLogThreshold)
   }
   if (pbsg && settings.pbsgLogThreshold) {
     pbsg.pbsgAdjustLogLevel(LogThresholdToLogLevel(settings.pbsgLogThreshold))
@@ -189,9 +189,9 @@ void updated () {
 
   solicitLogThreshold('appLogThreshold')
   solicitLogThreshold('pbsgLogThreshold')
-    if (pbsg) atomicState.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
+    if (pbsg) state.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
 
-  if (pbsg) atomicState.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
+  if (pbsg) state.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
 
 
 
@@ -211,7 +211,7 @@ void specialFnButtonHandler (Event e) {
   Ldebug('specialFnButtonHandler()', "pbsg is ${AppInfo(pbsg)}")
   switch (e.name) {
     case 'pushed':
-      String specialtyFunction = atomicState.specialFnButtonMap?.getAt(e.deviceId.toString())
+      String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
                                                          ?.getAt(e.value)
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
@@ -258,14 +258,14 @@ void modeChangeButtonHandler (Event e) {
   Ldebug('modeChangeButtonHandler()', 'TBD - VSW LEAKAGE ???')
   switch (e.name) {
     case 'pushed':
-      String targetVswName = atomicState.modeButtonMap?.getAt(e.deviceId.toString())
+      String targetVswName = state.modeButtonMap?.getAt(e.deviceId.toString())
                                                 ?.getAt(e.value)
       //-> Ltrace(
       //->   'modeChangeButtonHandler()',
       //->   [
-      //->     "<b>atomicState.modeButtonMap:</b> ${atomicState.modeButtonMap}",
+      //->     "<b>state.modeButtonMap:</b> ${state.modeButtonMap}",
       //->     "<b>e.deviceId:</b> ${e.deviceId}",
-      //->     "<b>atomicState.modeButtonMap?.getAt(e.deviceId.toString()):</b> ${atomicState.modeButtonMap?.getAt(e.deviceId.toString())}",
+      //->     "<b>state.modeButtonMap?.getAt(e.deviceId.toString()):</b> ${state.modeButtonMap?.getAt(e.deviceId.toString())}",
       //->     "<b>e.value:</b> ${e.value}"
       //->     "<b>targetVswName:</b> ${targetVswName}",
       //->   ].join('<br/>')
@@ -313,7 +313,7 @@ void modeChangeButtonHandler (Event e) {
 //----
 
 void updateAppAndPbsgLogLevels () {
-  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
+  state.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
   modePbsg.pbsgAdjustLogLevel(
     LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'TRACE')
   )
@@ -340,7 +340,7 @@ Map<String, List<String>> whaPage () {
   InstAppW pbsg = getOrCreateModePbsg(true)
   Ldebug('whaPage()', "pbsg is ${AppInfo(pbsg)}")
   // Ensure a log level is available before App
-  atomicState.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'DEBUG')
+  state.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'DEBUG')
     return dynamicPage(
     name: 'whaPage',
     title: [
@@ -403,7 +403,7 @@ void identifySpecialFunctionButtons() {
     name: 'specialFnButtons',
     title: [
       Heading2('Identify Special Function Buttons'),
-      Bullet1("Examples: ${atomicState.specialFnButtons}")
+      Bullet1("Examples: ${state.specialFnButtons}")
     ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
@@ -414,24 +414,24 @@ void identifySpecialFunctionButtons() {
 
 void wireButtonsToSpecialFunctions () {
   Ldebug('wireButtonsToSpecialFunctions()', 'TBD - DNI LEAKAGE ???')
-  atomicState.specialFnButtons = [
+  state.specialFnButtons = [
     'ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY', 'FLASH', 'PANIC', 'QUIET'
   ]
   if (settings?.specialFnButtons == null) {
     paragraph('No specialty activation buttons are selected.')
   } else {
     identifyLedButtonsForListItems(               // Wire
-      atomicState.specialFnButtons,                    //   - to Special Functions
+      state.specialFnButtons,                    //   - to Special Functions
       settings.specialFnButtons,                 //   - from Keypad Button
       'specialFnButton'                          //   - prefix
     )
     populateStateKpadButtons('specialFnButton')  // specialFnButton_*
     Map<String, String> result = [:]              // kpadButtonDniToSpecialtyFn
-    atomicState.specialFnButtonMap.collect{ kpadDni, buttonMap ->
+    state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
       buttonMap.each{ buttonNumber, specialtyFn ->
         result["${kpadDni}-${buttonNumber}"] = specialtyFn
       }
-      atomicState.kpadButtonDniToSpecialtyFn = result
+      state.kpadButtonDniToSpecialtyFn = result
     }
   }
 }
@@ -452,22 +452,22 @@ void identifyModeButtons () {
 
 void wireButtonsToModes () {
   Ldebug('wireButtonsToModes()', 'TBD - DNI LEAKAGE ???')
-  if (atomicState.modes == null || settings?.lutronModeButtons == null) {
+  if (state.modes == null || settings?.lutronModeButtons == null) {
     paragraph('Mode activation buttons are pending pre-requisites.')
   } else {
     identifyLedButtonsForListItems(            // Wire
-      atomicState.modes,                             //   - to Hubitat Mode
+      state.modes,                             //   - to Hubitat Mode
       settings.lutronModeButtons,              //   - from Keypad Button
       'modeButton'                             //   - prefix
     )
     populateStateKpadButtons('modeButton')     // modeButton_*
     Map<String, String> result = [:]           // kpadButtonDniToTargetMode
-    atomicState.modeButtonMap.collect{ kpadDni, buttonMap ->
+    state.modeButtonMap.collect{ kpadDni, buttonMap ->
       buttonMap.each{ buttonNumber, targetMode ->
         result["${kpadDni}-${buttonNumber}"] = targetMode
       }
     }
-    atomicState.kpadButtonDniToTargetMode = result
+    state.kpadButtonDniToTargetMode = result
   }
 }
 

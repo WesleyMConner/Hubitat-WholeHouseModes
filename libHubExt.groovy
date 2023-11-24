@@ -79,7 +79,7 @@ String ShowSwitchAndState (String name, String state) {
 //----
 //---- NESTED STATE MAP OPERATIONS
 //----   Extend and mimic the following built-in method.
-//----     atomicState.updateMapValue(stateKey, innerKey, value)
+//----     state.updateMapValue(stateKey, innerKey, value)
 //----       stateKey - isolates the User Map inside State
 //----       innerKey - isolates an Entry in that User Map
 //----       value is - the new value to associate with that key
@@ -88,15 +88,15 @@ String ShowSwitchAndState (String name, String state) {
 
 /*
 void asUpdateMapValue(String stateKey, String innerKey, def value) {
-  atomicState.updateMapValue(stateKey, innerKey, value)
+  state.updateMapValue(stateKey, innerKey, value)
 }
 
 void asGetMapValue(String stateKey, String innerKey) {
-  atomicState.stateKey.
+  state.stateKey.
 }
 
 void asRemoveMapKey(String stateKey, String innerKey)
-  atomicState.updateMapValue(stateKey, innerKey, value)
+  state.updateMapValue(stateKey, innerKey, value)
 */
 
 //----
