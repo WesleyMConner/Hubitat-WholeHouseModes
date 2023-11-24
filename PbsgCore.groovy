@@ -40,6 +40,13 @@ preferences {
 //---- CORE METHODS
 //---- Methods that ARE NOT constrained to any specific execution context.
 
+void _pbsgConfigure (List<String> buttons, String defaultButton, String activeButton) {
+  settings.buttons = buttons
+  settings.dfltButton = defaultButton
+  settings.activeButton = activeButton
+  updated()
+}
+
 Boolean pbsgActivateButton (String button) {
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
@@ -69,7 +76,7 @@ Boolean pbsgActivatePredecessor () {
   return _pbsgSafelyActivateButton(state.inactiveButtons.first())
 }
 
-List<String> pbsgState () {
+List<String> _pbsgState () {
   return [
     Heading2('STATE'),
     Bullet2("<b>logLevel:</b> ${state.logLevel}"),
@@ -182,8 +189,8 @@ void installed () {
   state.inactiveButtons = []   // List<String>
   state.dfltButton = null      // String
   state.vswDniPrefix = "${app.getLabel()}_"         // String
-  Ltrace('installed()', 'Calling TEST_PbsgCore()')
-  TEST_PbsgCore()
+  Ltrace('installed()', 'Calling TEST_pbsgCoreFunctionality()')
+  TEST_pbsgCoreFunctionality()
 }
 
 void updated () {
@@ -235,7 +242,7 @@ void updated () {
   Linfo('updated()', [
     '<table style="border-spacing: 0px;" rules="all">',
     '<tr><th>STATE</th><th style="width:10%"/><th>Input Parameters</th><th style="width:10%"/><th>Action Summary</th></tr>',
-    "<tr><td>${pbsgState().join('<br/>')}</td><td/><td>${requested}</td><td/><td>${analysis}</td></tr></table>"
+    "<tr><td>${_pbsgState().join('<br/>')}</td><td/><td>${requested}</td><td/><td>${analysis}</td></tr></table>"
   ])
   // TBD
   //   - While the following suspends processing of child VSW events ...
@@ -382,7 +389,7 @@ void VswEventHandler (Event e) {
 
 //---- TEST SUPPORT
 
-void TEST_ConfigChange (
+void TEST_pbsgConfigure (
     Integer n,
     List<String> list,
     String dflt,
@@ -397,10 +404,7 @@ void TEST_ConfigChange (
   Ltrace("TEST ${n} CONFIG", traceText)
 
   // Simulate a Page update (GUI settings) and System updated() callback.
-  settings.buttons = list
-  settings.dfltButton = dflt
-  settings.activeButton = on
-  updated()
+  _pbsgConfigure(list, dflt, on)
 }
 
 void TEST_PbsgActivation (
@@ -416,7 +420,7 @@ void TEST_PbsgActivation (
   Ltrace("TEST ${n} ACTION", traceText)
 }
 
-String TEST_HasExpectedState (
+String TEST_pbsgHasExpectedState (
     String activeButton,
     List<String> inactiveButtons,
     String dfltButton
@@ -427,19 +431,19 @@ String TEST_HasExpectedState (
   if (state.dfltButton != dfltButton) {
     result = false
     Ltrace(
-      'TEST_HasExpectedState()',
+      'TEST_pbsgHasExpectedState()',
       "dfltButton ${state.dfltButton} != ${dfltButton}"
     )
   } else if (state.activeButton != activeButton) {
     result = false
     Ltrace(
-      'TEST_HasExpectedState()',
+      'TEST_pbsgHasExpectedState()',
       "activeButton ${state.activeButton} != ${activeButton}"
     )
   } else if (actualInactiveButtonsSize != expectedInactiveButtonsSize) {
     result = false
     Ltrace(
-      'TEST_HasExpectedState()',
+      'TEST_pbsgHasExpectedState()',
       [
         "inActiveButtons size ${actualInactiveButtonsSize} != ${expectedInactiveButtonsSize}",
         "expected: ${inactiveButtons} got: ${state.inactiveButtons}"
@@ -451,7 +455,7 @@ String TEST_HasExpectedState (
       if (button != expectedButton) {
         result = false
         Ltrace(
-          'TEST_HasExpectedState()',
+          'TEST_pbsgHasExpectedState()',
           "At ${index}: inactiveButton ${button} != ${expectedButton}"
         )
       }
@@ -476,74 +480,74 @@ String TEST_HasExpectedState (
   return results.join('<br/>')
 }
 
-void TEST_PbsgCore () {
+void TEST_pbsgCoreFunctionality () {
   String parkLogLevel = state.logLevel
   state.logLevel = LogThresholdToLogLevel('TRACE')
   //----
   String expectedActive = null
   List<String> expectedInactive = null
-  Ltrace('TEST_PbsgCore()', ['At Entry', *pbsgState(), BLACKBAR()])
+  Ltrace('TEST_pbsgCoreFunctionality()', ['At Entry', *_pbsgState(), BLACKBAR()])
   //----
-  TEST_ConfigChange(1, [], 'A', 'B', '<b>Forced Error:</b> "No buttons"')
-  Ltrace('TEST1', TEST_HasExpectedState(null, [], null))
+  TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "No buttons"')
+  Ltrace('TEST1', TEST_pbsgHasExpectedState(null, [], null))
   //----
-  TEST_ConfigChange(2, ['A', 'B', 'C', 'D', 'E'], '', null)
-  Ltrace('TEST2', TEST_HasExpectedState(null, ['A', 'B', 'C', 'D', 'E'], null))
+  TEST_pbsgConfigure(2, ['A', 'B', 'C', 'D', 'E'], '', null)
+  Ltrace('TEST2', TEST_pbsgHasExpectedState(null, ['A', 'B', 'C', 'D', 'E'], null))
   //----
-  TEST_ConfigChange(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
-  Ltrace('TEST3', TEST_HasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
+  TEST_pbsgConfigure(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
+  Ltrace('TEST3', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
-  TEST_ConfigChange(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
+  TEST_pbsgConfigure(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
   // TEST4 state is unchanged from TEST3 state
-  Ltrace('TEST4', TEST_HasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
+  Ltrace('TEST4', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
-  TEST_ConfigChange(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
-  Ltrace('TEST5', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], null))
+  TEST_pbsgConfigure(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
+  Ltrace('TEST5', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
-  TEST_ConfigChange(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
+  TEST_pbsgConfigure(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
   // TEST6 state is unchanged from TEST5 state
-  Ltrace('TEST6', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], null))
+  Ltrace('TEST6', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
-  TEST_ConfigChange(7, ['B', 'F', 'G', 'I'], 'B', 'G')
-  Ltrace('TEST7', TEST_HasExpectedState('G', ['B', 'F', 'I'], 'B'))
+  TEST_pbsgConfigure(7, ['B', 'F', 'G', 'I'], 'B', 'G')
+  Ltrace('TEST7', TEST_pbsgHasExpectedState('G', ['B', 'F', 'I'], 'B'))
   //----
   // WITHOUT CHANGING THE CONFIGURATION, START TESTING ACTIVATION OF BUTTONS
   // THE DEFAULT BUTTON REMAINS 'B'
   //----
   TEST_PbsgActivation(8, 'Activate F')
   pbsgActivateButton('F')
-  Ltrace('TEST8', TEST_HasExpectedState('F', ['G', 'B', 'I'], 'B'))
+  Ltrace('TEST8', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(9, 'Activate Q', '<b>Forced Error:</b> "Button does not exist"')
   pbsgActivateButton('Q')
   // TEST9 state is unchanged from TEST8 state
-  Ltrace('TEST9', TEST_HasExpectedState('F', ['G', 'B', 'I'], 'B'))
+  Ltrace('TEST9', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(10, 'Deactivate F')
   pbsgDeactivateButton('F')
-  Ltrace('TEST10', TEST_HasExpectedState('B', ['F', 'G', 'I'], 'B'))
+  Ltrace('TEST10', TEST_pbsgHasExpectedState('B', ['F', 'G', 'I'], 'B'))
   //----
   TEST_PbsgActivation(11, 'Activate I')
   pbsgActivateButton('I')
-  Ltrace('TEST11', TEST_HasExpectedState('I', ['B', 'F', 'G'], 'B'))
+  Ltrace('TEST11', TEST_pbsgHasExpectedState('I', ['B', 'F', 'G'], 'B'))
   //----
   TEST_PbsgActivation(12, 'Activate Predecessor')
   pbsgActivatePredecessor()
-  Ltrace('TEST12', TEST_HasExpectedState('B', ['I', 'F', 'G'], 'B'))
+  Ltrace('TEST12', TEST_pbsgHasExpectedState('B', ['I', 'F', 'G'], 'B'))
   //----
-  TEST_ConfigChange(13, ['B', 'X', 'C', 'E', 'Z'], '', 'C')
-  Ltrace('TEST13', TEST_HasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  TEST_pbsgConfigure(13, ['B', 'X', 'C', 'E', 'Z'], '', 'C')
+  Ltrace('TEST13', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
   TEST_PbsgActivation(14, 'Deactivate C')
   pbsgDeactivateButton('C')
-  Ltrace('TEST14', TEST_HasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
+  Ltrace('TEST14', TEST_pbsgHasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
   //----
   TEST_PbsgActivation(15, 'Activate Predecessor')
   pbsgActivatePredecessor()
-  Ltrace('TEST15', TEST_HasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  Ltrace('TEST15', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
-  TEST_ConfigChange(16, ['B', '', null, 'A', 'G', 'X', null, 'A'], 'X', '')
-  Ltrace('TEST16', TEST_HasExpectedState('X', ['B', 'A', 'G'], 'X'))
+  TEST_pbsgConfigure(16, ['B', '', null, 'A', 'G', 'X', null, 'A'], 'X', '')
+  Ltrace('TEST16', TEST_pbsgHasExpectedState('X', ['B', 'A', 'G'], 'X'))
   //----
   state.logLevel = parkLogLevel
 }
