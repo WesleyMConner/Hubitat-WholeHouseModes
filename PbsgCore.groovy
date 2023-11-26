@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
 // implied.
 // ---------------------------------------------------------------------------------
+import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 #include wesmc.libHubExt
 #include wesmc.libHubUI
@@ -40,7 +41,7 @@ preferences {
 //---- CORE METHODS
 //---- Methods that ARE NOT constrained to any specific execution context.
 
-void _pbsgConfigure (List<String> buttons, String defaultButton, String activeButton) {
+void pbsgConfigure (List<String> buttons, String defaultButton, String activeButton) {
   settings.buttons = buttons
   settings.dfltButton = defaultButton
   settings.activeButton = activeButton
@@ -49,36 +50,51 @@ void _pbsgConfigure (List<String> buttons, String defaultButton, String activeBu
 
 Boolean pbsgActivateButton (String button) {
   // Return TRUE on a configuration change, FALSE otherwise.
+  // Publish an event ONLY IF/WHEN a new button is activated.
+  Ltrace('pbsgActivateButton()', "button: ${b(button)}")
   Boolean isStateChanged = false
-  //====> if (!_pbsgGetButtons().contains(button)) {
-  //====>   Lerror('pbsgActivateButton()', "Argument ${b(button)} IS NOT a button")
-  //====> } else {
-    isStateChange = _pbsgSafelyActivateButton(button)
-  //====> }
+  if (state.activeButton == button) {
+    // Nothing to do, button is already active
+  } else if (button && !_pbsgGetButtons().contains(button)) {
+    Lerror('pbsgActivateButton()', "Button >${button}< does not exist")
+  } else {
+    isStateChanged = true
+    _pbsgIfActiveButtonPushOntoInactiveFifo()
+    _removeButtonFromInactiveButtons(button)
+    state.activeButton = button
+    Ltrace(
+      'pbsgActivateButton()',
+      "button ${b(button)} moved to activeButton ${b(state.activeButton)}"
+    )
+if (button) { _vswTurnOn(button) } else { Ldebug( '#68', "FYI NULL BUTTON") }
+    _pbsgSendEvent()
+  }
   return isStateChanged
 }
 
 Boolean pbsgDeactivateButton (String button) {
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
-  if (state.activeButton == state.dfltButton) {
+  if (state.inactiveButtons.contains(button)) {
+    // Nothing to do, button is already inactive
+  } else if (state.activeButton == state.dfltButton) {
     Linfo(
       'pbsgDeactivateButton()',
       "Ignoring attempt to deactivate the dflt button (${state.dfltButton})"
     )
   } else {
-    isStateChange = _pbsgSafelyActivateButton(state.dfltButton)
+    isStateChange = pbsgActivateButton(state.dfltButton)
   }
   return isStateChange
 }
 
 Boolean pbsgActivatePredecessor () {
-  return _pbsgSafelyActivateButton(state.inactiveButtons.first())
+  return pbsgActivateButton(state.inactiveButtons.first())
 }
 
 List<String> _pbsgState () {
   return [
-    Heading2('STATE'),
+    //-> Heading2('STATE'),
     Bullet2("<b>logLevel:</b> ${state.logLevel}"),
     Bullet2("<b>activeButton:</b> ${state.activeButton}"),
     Bullet2("<b>inactiveButtons:</b> ${state.inactiveButtons}"),
@@ -105,6 +121,7 @@ void _pbsgSendEvent() {
     Bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
     Bullet2("<b>value.dflt:</b> ${event.value['dflt']}")
   ])
+  //--> if (event.value?.dflt) { _vswUpdateState() }
   sendEvent(event)
 }
 
@@ -137,46 +154,23 @@ Boolean _pbsgIfActiveButtonPushOntoInactiveFifo () {
       '_pbsgIfActiveButtonPushOntoInactiveFifo()',
       "Button ${b(button)} pushed onto inactiveButtons ${state.inactiveButtons}"
     )
+    Ldebug('#157', getAllChildDevices())
+    _vswTurnOff(button)
+    Ldebug('#159', getAllChildDevices())
   }
   return isStateChanged
 }
 
 void _removeButtonFromInactiveButtons (String button) {
-  // IMPORANT
+  // TBD
   //   state.inactiveButtons.removeAll([button])
-  //     - DOES NOT PERSIST CHANGES BACK INTO THE 'state' LIST.
-  //     - MAKE LOCAL CHANGES
-  //     - SET state.inactiveButtons BY BRUTE FORCE
+  //     - DID NOT PERSIST CHANGES BACK INTO THE 'state' LIST CONSISTENTLY.
+  //     - MAKING LOCAL CHANGES THEN SETTING BY BRUTE FORCE
   if (button) {
     List<String> local = state.inactiveButtons
     local.removeAll([button])
     state.inactiveButtons = local
   }
-}
-
-Boolean _pbsgSafelyActivateButton (String button) {
-  // Return TRUE on a configuration change, FALSE otherwise.
-  // Publish an event ONLY IF/WHEN a new button is activated.
-  Boolean isStateChanged = false
-  Ltrace('_pbsgSafelyActivateButton()', "button: ${b(button)}")
-  if (button && !_pbsgGetButtons().contains(button)) {
-    Lerror('_pbsgSafelyActivateButton()', "Button >${button}< does not exist")
-  } else {
-    if (state.activeButton == button) {
-      // Nothing to do, button is already active
-    } else {
-      isStateChanged = true
-      _pbsgIfActiveButtonPushOntoInactiveFifo()
-      _removeButtonFromInactiveButtons(button)
-      state.activeButton = button
-      Ltrace(
-        '_pbsgSafelyActivateButton()',
-        "button ${b(button)} moved to activeButton ${b(state.activeButton)}"
-      )
-      _pbsgSendEvent()
-    }
-  }
-  return isStateChanged
 }
 
 //---- SYSTEM CALLBACKS
@@ -185,20 +179,24 @@ Boolean _pbsgSafelyActivateButton (String button) {
 void installed () {
   // Called on instance creation - i.e., before configuration, etc.
   state.logLevel = LogThresholdToLogLevel('TRACE')  // Integer
-  state.activeButton = null    // String
-  state.inactiveButtons = []   // List<String>
-  state.dfltButton = null      // String
+  state.activeButton = null                         // String
+  state.inactiveButtons = []                        // List<String>
+  state.dfltButton = null                           // String
   state.vswDniPrefix = "${app.getLabel()}_"         // String
   Ltrace('installed()', 'Calling TEST_pbsgCoreFunctionality()')
   TEST_pbsgCoreFunctionality()
 }
 
 void updated () {
+  // New values are passed into this method as :
+  //   - settings.buttons
+  //   - settings.dfltButton
+  //   - settings.activeButton
   Ltrace('updated()', 'At entry')
-  // Adjust the provided parameters to remove empty strings, duplicates, etc.
-  List<String> buttons = cleanStrings(settings.buttons)
-  if (buttons != settings.buttons) {
-    Lwarn('updated()', "settings.buttons: >${settings.buttons}< -> >${buttons}<")
+  // INSPECT SETTINGS FOR VALIDITY AND ISSUES
+  List<String> cleanedButtons = cleanStrings(settings.buttons)
+  if (cleanedButtons != settings.buttons) {
+    Lwarn('updated()', "settings.buttons: >${settings.buttons}< -> >${cleanedButtons}<")
   }
   String dfltButton = settings.dfltButton ?: null
   if (dfltButton != settings.dfltButton) {
@@ -210,26 +208,26 @@ void updated () {
     Lwarn('updated()', "settings.activeButton: >${settings.activeButton}< -> ${activeButton}<")
     activeButton = activeButton ?: null
   }
-  if (buttons.size() < 2) {
-    Lerror('updated()', "settings.buttons count (${buttons.size()}) must be >= 2")
+  if (cleanedButtons.size() < 2) {
+    Lerror('updated()', "settings.buttons count (${cleanedButtons.size()}) must be >= 2")
     return
   }
-  if (dfltButton && buttons.contains(dfltButton) == false) {
-    Lerror('updated()', "dfltButton ${b(dfltButton)} not found in buttons (${buttons})")
+  if (dfltButton && cleanedButtons.contains(dfltButton) == false) {
+    Lerror('updated()', "dfltButton ${b(dfltButton)} not found in buttons (${cleanedButtons})")
     return
   }
-  if (activeButton && buttons.contains(activeButton) == false) {
-    Lerror('updated()', "activeButton ${b(activeButton)} not found in buttons (${buttons})")
+  if (activeButton && cleanedButtons.contains(activeButton) == false) {
+    Lerror('updated()', "activeButton ${b(activeButton)} not found in buttons (${cleanedButtons})")
     return
   }
-  // Identify the impact of parametric changes on application state.
+  // ASSESS THE NET IMPACT OF SETTINGS ON APPLICATION STATE
   List<String> prevButtons = _pbsgGetButtons()
-  Map<String, List<String>> actions = CompareLists(prevButtons, buttons)
+  Map<String, List<String>> actions = CompareLists(prevButtons, cleanedButtons)
   List<String> retainButtons = actions.retained // Used for accounting only
   List<String> dropButtons = actions.dropped
   List<String> addButtons = actions.added
   String requested = [
-    "<b>buttons:</b> ${buttons}",
+    "<b>buttons:</b> ${cleanedButtons}",
     "<b>dfltButton:</b> ${dfltButton}",
     "<b>activeButton:</b> ${activeButton}"
   ].join('<br/>')
@@ -240,23 +238,34 @@ void updated () {
     "<b>addButtons:</b> ${addButtons}"
   ].join('<br/>')
   Linfo('updated()', [
-    '<table style="border-spacing: 0px;" rules="all">',
-    '<tr><th>STATE</th><th style="width:10%"/><th>Input Parameters</th><th style="width:10%"/><th>Action Summary</th></tr>',
-    "<tr><td>${_pbsgState().join('<br/>')}</td><td/><td>${requested}</td><td/><td>${analysis}</td></tr></table>"
+    '<table style="border-spacing: 0px;" rules="all"><tr>',
+    '<th>STATE</th><th style="width:5%"/>',
+    '<th>Input Parameters</th><th style="width:5%"/>',
+    '<th>Action Summary</th>',
+    '</tr><tr>',
+    "<td>${_pbsgState().join('<br/>')}</td><td/>",
+    "<td>${requested}</td><td/>",
+    "<td>${analysis}</td></tr></table>"
   ])
-  // TBD
-  //   - While the following suspends processing of child VSW events ...
-  //   - It does not prevent Parent/Child Apps from invoking activate/deactivate.
+  // Suspend ALL child events (i.e., new AND old VSWs)
   unsubscribe()
-  // ADJUST APPLICATION STATE TO MATCH ANY REVISED PBSG CONFIGURATION
+  // ADJUST APPLICATION STATE TO MATCH THE PBSG CONFIGURATION (IF REVISED)
+  String PBSG_LOG_LEVEL = 'TRACE'   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+  state.logLevel = LogThresholdToLogLevel(PBSG_LOG_LEVEL)
   state.dfltButton = dfltButton
   _pbsgDropButtons(dropButtons)
   if (addButtons) {
-    Integer nextIndex = state.inactiveButtons?.size() ?: 0
-    state.inactiveButtons.addAll(nextIndex, addButtons)
-    state.inactiveButtons = cleanStrings([
-      *state.inactiveButtons, *inactiveButtons
-    ])
+    Ltrace('#256 BEFORE ADD', _pbsgState())
+    Ltrace('#256 ADD', addButtons)
+  state.inactiveButtons = cleanStrings([
+    *state.inactiveButtons, *addButtons
+  ])
+    Ltrace('#261 AFTER ADD', _pbsgState())
+    //Integer nextIndex = state.inactiveButtons?.size() ?: 0
+    //state.inactiveButtons.addAll(nextIndex, addButtons)
+    //state.inactiveButtons = cleanStrings([
+    //  *state.inactiveButtons, *inactiveButtons
+    //])
   }
   // Leverage activation/deactivation methods for initial button activation.
   if (activeButton) {
@@ -266,8 +275,9 @@ void updated () {
     Ltrace('updated()', "activating dfltButton ${state.dfltButton}")
     pbsgActivateButton(state.dfltButton)
   }
-  //==========> _vswConfigure (buttons)
-  // HAVE NOT RE-ENABLED SUBSCRIPTIONS YET
+  _vswConfigure(_pbsgGetButtons())
+  Ltrace('updated()', _vswDevices())
+  _vswSubscribe()
 }
 
 void uninstalled () {
@@ -289,7 +299,7 @@ Map PbsgPage () {
     uninstall: false,
   ) {
     section {
-      //-> solicitLogThreshold('pbsgLogThreshold')
+
       paragraph "YOU ARE HERE"
     }
   }
@@ -304,11 +314,11 @@ void _vswConfigure (List<String> buttons) {
   // Ensure a 1-to-1 correspondence between PBSG buttons and VSW instances.
   // Any new VSWs are turned off on creation.
   // Full reconciliation of VSW on/off state occurs at pbsgActivateButton().
-  app.unsubscribe()
+  if (!state.vswDniPrefix) Lerror('_vswConfigure()', 'Missing state.vswDniPrefix.')
   List<String> expectedDnis = buttons.collect{ "${state.vswDniPrefix}${it}" }
   // It is unlikely that a Pbsg should have non-switch devices; so,
   // comparins just DNIs and NOT looking at d.hasCapability('Switch')
-  List<String> foundDnis = app.getAllChildDevices().collect{ it.getDeviceNetworkId() }
+  List<String> foundDnis = getAllChildDevices().collect{ it.getDeviceNetworkId() }
   List<String> dropDnis = foundDnis.collect().minus(expectedDnis)
   List<String> createDnis = expectedDnis.collect().minus(foundDnis)
   Ltrace('_vswConfigure()', [
@@ -332,18 +342,61 @@ void _vswConfigure (List<String> buttons) {
     )
     vsw.off()
   }
+  Ldebug('_vswConfigure()', [
+    'AT RETURN:',
+    getAllChildDevices() // .collect{ it.getDeviceNetworkId() })
+  ])
+  return
 }
 
-void _vswUpdateState (String on, List<String> offList) {
-  String dni = "${state.vswDniPrefix}${on}"
-  DevW d = getChildDevice(dni)
-  d ? d.on() : Lerror ('_vswRefreshState()', "Unable to find device ${d}")
-  offList.each{ off ->
-    dni = "${state.vswDniPrefix}${off}"
-    d = getChildDevice(dni)
-    d ? d.off() : Lerror ('_vswRefreshState()', "Unable to find device ${d}")
+List<String> _vswDevices () {
+  List<String> outputText = [ Heading2('DEVICES') ]
+  List<InstAppW> devices = getChildDevices()
+  devices.each{ d -> outputText += Bullet2(d.getDeviceNetworkId()) }
+  return outputText
+}
+
+void _vswTurnOn (button) {
+  String dni = "${state.vswDniPrefix}${button}"
+  DevW device = app.getChildDevice(dni)
+  if (device) {
+    device.on()
+  } else {
+    Lerror('_vswTurnOn()', "For button (${button}) w/ dni ${dni} no device in ${getChildDevices().collect{ it.getDeviceNetworkId() }}")
   }
 }
+
+void _vswTurnOff (button) {
+    Ldebug('#370', getAllChildDevices())
+  String dni = "${state.vswDniPrefix}${button}"
+  DevW device = app.getChildDevice(dni)
+  if (device) {
+    device.off()
+  } else {
+    Lerror('_vswTurnOff()', "For button (${button}) w/ dni ${dni} no device in ${getChildDevices().collect{ it.getDeviceNetworkId() }}")
+  }
+}
+
+/*
+void _vswUpdateState () {
+  String dni = "${state.vswDniPrefix}${state.activeButton}"
+  DevW d = getChildDevice(dni)
+  if (d) d.on() // A null device is possible if no defaultButton is specified.
+  Ldebug('_vswUpdateState()', "#347 inactiveButtons: >${state.inactiveButtons}<")
+  state.inactiveButtons.each{ off ->
+    dni = "${state.vswDniPrefix}${off}"
+    d = getChildDevice(dni)
+    d ? d.off() : Lerror (
+      '_vswUpdateState()',
+      [
+        "Inactive button >${off}<",
+        "no device ${dni} among ${state.inactiveButtons}",
+        "_vswDevices(): ${_vswDevices()}"
+      ]
+    )
+  }
+}
+*/
 
 Boolean _vswUnsubscribe () {
   app.unsubscribe('VswEventHandler')
@@ -351,8 +404,9 @@ Boolean _vswUnsubscribe () {
 
 Boolean _vswSubscribe () {
   // Returns false if an issue arises during subscriptions
+  if (!state.vswDniPrefix) Lerror('_vswSubscribe()', 'Missing state.vswDniPrefix.')
   Boolean issueArose = false
-  [state.activeButton, *state.inactiveButtons].each{ button ->
+  _pbsgGetButtons().each{ button ->
     String dni = "${state.vswDniPrefix}${button}"
     DevW vsw = getChildDevice(dni)
     if (!vsw) {
@@ -368,22 +422,29 @@ Boolean _vswSubscribe () {
 
 void VswEventHandler (Event e) {
   // Design Notes
-  //   - VSWs are turned on/off as a part of _vswUpdateState().
-  //   - BUT, Hubitat Dashboard and Alexa can also turn on/off VSWs.
-  //   - Process and SUPPRESS any events that report state inconsistent
-  //     with current on/off buttons
+  //--> //   - VSWs are turned on/off as a part of _vswUpdateState().
+  //   - Hubitat Dashboard and Alexa can also turn on/off VSWs.
+  //   - Tactically, process ALL events:
+  //       - Events that report VSW state consistent with current buttons
+  //         are suppressed downstream.
+  //       - Allow race conditions to "play through" without manipulating
+  //         subscriptions.
+  if (!state.vswDniPrefix) Lerror('VswEventHandler()', 'Missing state.vswDniPrefix.')
+  Ltrace('VswEventHandler()', e.descriptionText)
   if (e.isStateChange) {
+    String dni = e.displayName
+    String button = dni?.minus(state.vswDniPrefix)
     if (e.value == 'on') {
-      String dni = e.displayName
-      String button = dni?.minus(state.vswDniPrefix)
-      if (state.onButton != button) pbsgActivateButton(button)
+      pbsgActivateButton(button)
     } else if (e.value == 'off') {
-      String dni = e.displayName
-      String button = dni?.minus(state.vswDniPrefix)
-      if (!state.offButtons.contains(button)) pbsgDeactivateButton(button)
+      pbsgDeactivateButton(button)
     } else {
-      Ldebug('VswEventHandler()', "Unexpected event ${EventDetails(e)}")
+      Ldebug(
+        'VswEventHandler()',
+        "Unexpected value (${e.value}) for button (${button}")
     }
+  } else {
+    Ldebug('VswEventHandler()', "Unexpected event: ${EventDetails(e)}")
   }
 }
 
@@ -397,14 +458,14 @@ void TEST_pbsgConfigure (
     String forcedError = null
   ) {
   // Logs display newest to oldest; so, write logs backwards
-  List<String> traceText = []
-  if (forcedError) traceText += forcedError
-  traceText += "buttons=${b(list)}, dflt=${b(dflt)}, activeButton=${b(on)}"
-  traceText += (forcedError ? REDBAR() : GREENBAR())
-  Ltrace("TEST ${n} CONFIG", traceText)
+  List<String> logMsg = []
+  if (forcedError) logMsg += forcedError
+  logMsg += "buttons=${b(list)}, dflt=${b(dflt)}, activeButton=${b(on)}"
+  logMsg += (forcedError ? REDBAR() : GREENBAR())
+  Linfo("TEST ${n} CONFIG", logMsg)
 
   // Simulate a Page update (GUI settings) and System updated() callback.
-  _pbsgConfigure(list, dflt, on)
+  pbsgConfigure(list, dflt, on)
 }
 
 void TEST_PbsgActivation (
@@ -413,11 +474,11 @@ void TEST_PbsgActivation (
     String forcedError = null
   ){
   // Logs display newest to oldest; so, write logs backwards
-  List<String> traceText = []
-  traceText += description
-  if (forcedError) { traceText += forcedError }
-  traceText += (forcedError ? REDBAR() : GREENBAR())
-  Ltrace("TEST ${n} ACTION", traceText)
+  List<String> logMsg = []
+  logMsg += description
+  if (forcedError) { logMsg += forcedError }
+  logMsg += (forcedError ? REDBAR() : GREENBAR())
+  Linfo("TEST ${n} ACTION", logMsg)
 }
 
 String TEST_pbsgHasExpectedState (
@@ -430,19 +491,19 @@ String TEST_pbsgHasExpectedState (
   Integer expectedInactiveButtonsSize = inactiveButtons.size()
   if (state.dfltButton != dfltButton) {
     result = false
-    Ltrace(
+    Linfo(
       'TEST_pbsgHasExpectedState()',
       "dfltButton ${state.dfltButton} != ${dfltButton}"
     )
   } else if (state.activeButton != activeButton) {
     result = false
-    Ltrace(
+    Linfo(
       'TEST_pbsgHasExpectedState()',
       "activeButton ${state.activeButton} != ${activeButton}"
     )
   } else if (actualInactiveButtonsSize != expectedInactiveButtonsSize) {
     result = false
-    Ltrace(
+    Linfo(
       'TEST_pbsgHasExpectedState()',
       [
         "inActiveButtons size ${actualInactiveButtonsSize} != ${expectedInactiveButtonsSize}",
@@ -454,7 +515,7 @@ String TEST_pbsgHasExpectedState (
       String expectedButton = inactiveButtons[index]
       if (button != expectedButton) {
         result = false
-        Ltrace(
+        Linfo(
           'TEST_pbsgHasExpectedState()',
           "At ${index}: inactiveButton ${button} != ${expectedButton}"
         )
@@ -486,68 +547,71 @@ void TEST_pbsgCoreFunctionality () {
   //----
   String expectedActive = null
   List<String> expectedInactive = null
-  Ltrace('TEST_pbsgCoreFunctionality()', ['At Entry', *_pbsgState(), BLACKBAR()])
+  Linfo('TEST_pbsgCoreFunctionality()', ['At Entry', *_pbsgState(), BLACKBAR()])
   //----
   TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "No buttons"')
-  Ltrace('TEST1', TEST_pbsgHasExpectedState(null, [], null))
+  Linfo('TEST1', TEST_pbsgHasExpectedState(null, [], null))
   //----
   TEST_pbsgConfigure(2, ['A', 'B', 'C', 'D', 'E'], '', null)
-  Ltrace('TEST2', TEST_pbsgHasExpectedState(null, ['A', 'B', 'C', 'D', 'E'], null))
+  Linfo('TEST2', TEST_pbsgHasExpectedState(null, ['A', 'B', 'C', 'D', 'E'], null))
   //----
   TEST_pbsgConfigure(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
-  Ltrace('TEST3', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
+  Linfo('TEST3', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
   TEST_pbsgConfigure(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
   // TEST4 state is unchanged from TEST3 state
-  Ltrace('TEST4', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
+  Linfo('TEST4', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
   TEST_pbsgConfigure(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
-  Ltrace('TEST5', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
+  Linfo('TEST5', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
   TEST_pbsgConfigure(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
   // TEST6 state is unchanged from TEST5 state
-  Ltrace('TEST6', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
+  Linfo('TEST6', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
   TEST_pbsgConfigure(7, ['B', 'F', 'G', 'I'], 'B', 'G')
-  Ltrace('TEST7', TEST_pbsgHasExpectedState('G', ['B', 'F', 'I'], 'B'))
+  Linfo('TEST7', TEST_pbsgHasExpectedState('G', ['B', 'F', 'I'], 'B'))
   //----
   // WITHOUT CHANGING THE CONFIGURATION, START TESTING ACTIVATION OF BUTTONS
   // THE DEFAULT BUTTON REMAINS 'B'
   //----
   TEST_PbsgActivation(8, 'Activate F')
   pbsgActivateButton('F')
-  Ltrace('TEST8', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
+  Linfo('TEST8', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(9, 'Activate Q', '<b>Forced Error:</b> "Button does not exist"')
   pbsgActivateButton('Q')
   // TEST9 state is unchanged from TEST8 state
-  Ltrace('TEST9', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
+  Linfo('TEST9', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(10, 'Deactivate F')
   pbsgDeactivateButton('F')
-  Ltrace('TEST10', TEST_pbsgHasExpectedState('B', ['F', 'G', 'I'], 'B'))
+  Linfo('TEST10', TEST_pbsgHasExpectedState('B', ['F', 'G', 'I'], 'B'))
   //----
   TEST_PbsgActivation(11, 'Activate I')
   pbsgActivateButton('I')
-  Ltrace('TEST11', TEST_pbsgHasExpectedState('I', ['B', 'F', 'G'], 'B'))
+  Linfo('TEST11', TEST_pbsgHasExpectedState('I', ['B', 'F', 'G'], 'B'))
   //----
   TEST_PbsgActivation(12, 'Activate Predecessor')
   pbsgActivatePredecessor()
-  Ltrace('TEST12', TEST_pbsgHasExpectedState('B', ['I', 'F', 'G'], 'B'))
+  Linfo('TEST12', TEST_pbsgHasExpectedState('B', ['I', 'F', 'G'], 'B'))
   //----
   TEST_pbsgConfigure(13, ['B', 'X', 'C', 'E', 'Z'], '', 'C')
-  Ltrace('TEST13', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  Linfo('TEST13', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
   TEST_PbsgActivation(14, 'Deactivate C')
   pbsgDeactivateButton('C')
-  Ltrace('TEST14', TEST_pbsgHasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
+  Linfo('TEST14', TEST_pbsgHasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
   //----
   TEST_PbsgActivation(15, 'Activate Predecessor')
   pbsgActivatePredecessor()
-  Ltrace('TEST15', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  Linfo('TEST15', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
   TEST_pbsgConfigure(16, ['B', '', null, 'A', 'G', 'X', null, 'A'], 'X', '')
-  Ltrace('TEST16', TEST_pbsgHasExpectedState('X', ['B', 'A', 'G'], 'X'))
+  Linfo('TEST16', TEST_pbsgHasExpectedState('X', ['B', 'A', 'G'], 'X'))
+  //----
+  TEST_pbsgConfigure(17, ['B', 'A', 'G', 'X'], 'X', 'G')
+  Linfo('TEST17', TEST_pbsgHasExpectedState('G', ['X', 'B', 'A', 'G'], 'X'))
   //----
   state.logLevel = parkLogLevel
 }
