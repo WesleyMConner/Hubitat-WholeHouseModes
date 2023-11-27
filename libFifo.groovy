@@ -24,30 +24,52 @@ library (
 
 String FifoRemove (List<String> fifo, String item) {
   // Remove and return item if present OR return null.
-  if (!fifo) Lerror('FifoRemove()', "Received a null value for fifo")
-  return fifo.removeAll{ it == item } ? item : null
+  //if (!fifo) Lerror('FifoRemove()', "Received a null value for fifo")
+  return fifo?.removeAll{ it == item } ? item : null
+
+
+
+
+  Boolean retval = null
+  if (fifo == null) {
+    Lerror('FifoRemove()', "Received a null value for fifo")
+  } else if (fifo.removeAll{ it == item }) {
+    retval = item
+  }
+  return retval
 }
 
-List<String> FifoQueue (List<String> fifo, String item) {
-  if (!fifo) Lerror('FifoRemove()', "Received a null value for fifo")
-  if (item) fifo.leftShift(item)
-  return fifo
+Boolean FifoEnqueue (List<String> fifo, String item) {
+  Boolean retval = false
+  if (fifo == null) {
+    Lerror('FifoEnqueue()', "Received a null value for fifo")
+  } else if (item) {
+    fifo.leftShift(item)
+    retval = true
+  }
+  return retval
 }
 
 String FifoDequeue (List<String> fifo) {
-  return fifo.size() ? fifo.removeAt(0) : null
+  String retval = null
+  if (fifo == null) {
+    Lerror('FifoDequeue()', "Received a null value for fifo")
+  } else if (fifo.size() > 0) {
+    retval = fifo.removeAt(0)
+  }
+  return retval
 }
 
 void FifoTest () {
   List<String> fifo = []
   Linfo('#52', "fifo: ${fifo}")
-  FifoQueue(fifo, 'A')
+  FifoEnqueue(fifo, 'A')
   Linfo('#54', "fifo: ${fifo}")
-  FifoQueue(fifo, 'B')
+  FifoEnqueue(fifo, 'B')
   Linfo('#56', "fifo: ${fifo}")
-  FifoQueue(fifo, 'C')
+  FifoEnqueue(fifo, 'C')
   Linfo('#58', "fifo: ${fifo}")
-  FifoQueue(fifo, 'D')
+  FifoEnqueue(fifo, 'D')
   Linfo('#60', "fifo: ${fifo}")
   String s1 = FifoRemove(fifo, 'C')
   Linfo('#62', "s1: ${s1}, fifo: ${fifo}")
