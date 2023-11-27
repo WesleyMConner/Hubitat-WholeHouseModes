@@ -60,7 +60,7 @@ void _addDni (String dni) {
       [isComponent: true, name: dni]
     )
   }
-  Ldebug('_addDni() at exit', "state.inactiveDnis: >${state.inactiveDnis}<")
+  //--xx-> Ldebug('_addDni() at exit', "state.inactiveDnis: >${state.inactiveDnis}<")
 }
 
 void _dropDni (String dni) {
@@ -72,8 +72,8 @@ void _dropDni (String dni) {
 
 void pbsgConfigure (List<String> buttons, String defaultButton, String activeDni) {
   settings.dnis = buttons.collect{ buttonToDni(it) }
-  settings.dfltDni = buttonToDni(defaultButton)
-  settings.activeDni = buttonToDni(activeDni)
+  settings.dfltDni = defaultButton ? buttonToDni(defaultButton) : null
+  settings.activeDni = activeDni ? buttonToDni(activeDni) : null
   updated()
 }
 
@@ -241,8 +241,8 @@ void updated () {
   ].join('<br/>')
   Linfo('updated()', [
     '<table style="border-spacing: 0px;" rules="all"><tr>',
-    '<th>STATE</th><th style="width:5%"/>',
-    '<th>Input Parameters</th><th style="width:5%"/>',
+    '<th>STATE</th><th style="width:3%"/>',
+    '<th>Input Parameters</th><th style="width:3%"/>',
     '<th>Action Summary</th>',
     '</tr><tr>',
     "<td>${AppStateAsBullets().join('<br/>')}</td><td/>",
@@ -451,17 +451,17 @@ String TEST_pbsgHasExpectedState (
   if (state.activeDni == activeDni) {
     results += "<i>activeDni: ${state.activeDni}</i>"
   } else {
-    results += "<i>activeDni: ${state.activeDni}</i> ==> <b>expected: ${activeDni}</b>"
+    results += "<i>activeDni: ${state.activeDni}</i> => <b>expected: ${activeDni}</b>"
   }
-  if (state.inactiveDnis == inactiveDnis) {
+  if ((state.inactiveDnis == inactiveDnis) || (!state.inactiveDnis && !inactiveDnis)) {
     results += "<i>inactiveDnis: ${state.inactiveDnis}</i>"
   } else {
-    results += "<i>inactiveDnis:</b> ${state.inactiveDnis}</i> ==> <b>expected: ${inactiveDnis}</b>"
+    results += "<i>inactiveDnis:</b> ${state.inactiveDnis}</i> => <b>expected: ${inactiveDnis}</b>"
   }
   if(state.dfltDni == dfltDni) {
     results += "<i>dfltDni: ${state.dfltDni}</i>"
   } else {
-    results += "<i>dfltDni: ${state.dfltDni}</i> ==> <b>expected: ${dfltDni}</b>"
+    results += "<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>"
   }
   return results.join('<br/>')
 }
