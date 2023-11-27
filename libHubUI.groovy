@@ -238,9 +238,9 @@ String EventDetails (Event e, Boolean DEEP = false) {
 }
 
 String AppStateAsBullets() {
-  List<String> result = []
+  List<String> result = [Heading2('STATE')]
   state.sort().each{ k, v ->
-    result += Bullet1("<b>${k}</b> → ${v}")
+    result += Bullet2("<b>${k}</b> → ${v}")
   }
   return result.size() != 0 ? result.join('<br/>') : Bullet1('<i>NO DATA AVAILABLE</i>')
 }
