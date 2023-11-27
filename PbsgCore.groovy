@@ -71,7 +71,7 @@ void _dropDni (String dni) {
 }
 
 void pbsgConfigure (List<String> buttons, String defaultButton, String activeButton) {
-  settings.dnis = buttons.collect{ buttonToDni(it) }
+  settings.dnis = cleanStrings(buttons).collect{ buttonToDni(it) }
   settings.dfltDni = defaultButton ? buttonToDni(defaultButton) : null
   settings.activeDni = activeButton ? buttonToDni(activeButton) : null
   updated()
@@ -94,11 +94,6 @@ Boolean _pbsgActivateDni (String dni) {
     _pbsgIfActiveDniPushOntoInactiveFifo()
     FifoRemove(state.inactiveDnis, dni)
     state.activeDni = dni
-    Ltrace('_pbsgActivateDni()', [
-      'About to call _pbsgSendEvent()',
-      "activeDni: ${b(state.activeDni)}, inactiveDnis: ${b(state.inactiveDnis)}",
-      AppStateAsBullets()
-    ])
     _pbsgSendEvent()
   }
   return isStateChanged
@@ -133,11 +128,6 @@ Boolean pbsgActivatePredecessor () {
 }
 
 void _pbsgSendEvent() {
-  Ltrace('_pbsgSendEvent()', [
-    'At entry ...',
-    "activeDni: ${b(state.activeDni)}, inactiveDnis: ${b(state.inactiveDnis)}",
-    AppStateAsBullets()
-  ])
   Map<String, String> event = [
     name: 'PbsgActiveButton',
     descriptionText: "Button ${state.activeDni} is active",
@@ -176,9 +166,7 @@ Boolean _pbsgIfActiveDniPushOntoInactiveFifo () {
       '_pbsgIfActiveDniPushOntoInactiveFifo()',
       "Button ${b(dni)} pushed onto inactiveDnis ${state.inactiveDnis}"
     )
-    Ldebug('#160', getAllChildDevices())
     _vswTurnOff(dni)
-    Ldebug('#162', getAllChildDevices())
   }
   return isStateChanged
 }
@@ -260,7 +248,8 @@ void updated () {
   // Suspend ALL child events (i.e., new AND old VSWs)
   unsubscribe()
   // ADJUST APPLICATION STATE TO MATCH THE PBSG CONFIGURATION (IF REVISED)
-  String PBSG_LOG_LEVEL = 'TRACE'   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+  String PBSG_LOG_LEVEL = 'INFO' // Heavy debug w/ 'TRACE'
   state.logLevel = LogThresholdToLogLevel(PBSG_LOG_LEVEL)
   state.dfltDni = dfltDni
   dropDnis.each{ dni -> _dropDni(dni) }
@@ -291,12 +280,8 @@ Map PbsgPage () {
     install: true,
     uninstall: true,
   ) {
-    String xIn = 'zebra'
-    String xIntermediate = buttonToDni(xIn)
-    String xOut = dniToButton(xIntermediate)
     section {
       paragraph "YOU ARE HERE"
-      paragraph "in: >${xIn}<, intermediate: >${xIntermediate}<, out: >${xOut}<"
     }
   }
 }
@@ -323,7 +308,6 @@ void _vswTurnOn (dni) {
 }
 
 void _vswTurnOff (dni) {
-    Ldebug('#375', getAllChildDevices())
   DevW device = app.getChildDevice(dni)
   if (device) {
     device.off()
@@ -476,14 +460,11 @@ String TEST_pbsgHasExpectedState (
 
 void TEST_pbsgCoreFunctionality () {
   String parkLogLevel = state.logLevel
-  state.logLevel = LogThresholdToLogLevel('TRACE')
+  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+  state.logLevel = LogThresholdToLogLevel('INFO')  // Heavy debug w/ 'TRACE'
 
   //-> FifoTest()
 
-  //----
-  String expectedActive = null
-  List<String> expectedInactive = null
-  Linfo('TEST_pbsgCoreFunctionality()', ['At Entry', AppStateAsBullets(), BLACKBAR()])
   //----
   TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "No dnis"')
   Linfo('TEST1', TEST_pbsgHasExpectedState(null, [], null))
@@ -547,7 +528,7 @@ void TEST_pbsgCoreFunctionality () {
   Linfo('TEST16', TEST_pbsgHasExpectedState('X', ['B', 'A', 'G'], 'X'))
   //----
   TEST_pbsgConfigure(17, ['B', 'A', 'G', 'X'], 'X', 'G')
-  Linfo('TEST17', TEST_pbsgHasExpectedState('G', ['X', 'B', 'A', 'G'], 'X'))
+  Linfo('TEST17', TEST_pbsgHasExpectedState('G', ['X', 'B', 'A'], 'X'))
   //----
   state.logLevel = parkLogLevel
 }
