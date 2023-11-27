@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
+#include wesmc.libFifo
 #include wesmc.libHubExt
 #include wesmc.libHubUI
 
@@ -33,6 +34,10 @@ preferences {
   page(name: 'PbsgPage')
 }
 
+
+
+
+
 //---- CORE METHODS
 //---- Methods that ARE NOT constrained to any specific execution context.
 
@@ -41,30 +46,34 @@ String buttonToDni (String button) {
 }
 
 String dniToButton (String dni) {
-  return dni.substring("${app.getLabel()}_${app.getId()}_".length())
+  return dni ? dni.substring("${app.getLabel()}_${app.getId()}_".length()) : null
 }
 
 void _addDni (String dni) {
-  state.inactiveDnis += dni
-  DevW vsw = addChildDevice(
-    'hubitat',          // namespace
-    'Virtual Switch',   // typeName
-    dni,                // device's unique DNI
-    [isComponent: true, name: dni]
-  )
+  if (dni) {
+    if (!state.inactiveDnis) state.inactiveDnis = []
+    FifoQueue(state.inactiveDnis, dni)
+    DevW vsw = addChildDevice(
+      'hubitat',          // namespace
+      'Virtual Switch',   // typeName
+      dni,                // device's unique DNI
+      [isComponent: true, name: dni]
+    )
+  }
+  Ldebug('_addDni() at exit', "state.inactiveDnis: >${state.inactiveDnis}<")
 }
 
 void _dropDni (String dni) {
   // Drop without enforcing Default DNI.
   if (state.activeDni == dni) state.activeDni = null
-  else state.inactiveDnis.removeElement(dni)
+  else FifoRemove(state.inactiveDnis, dni)
   deleteChildDevice(dni)
 }
 
 void pbsgConfigure (List<String> buttons, String defaultButton, String activeDni) {
-  settings.dnis = buttons.collect{ buttonToDni(it) }
-  settings.dfltDni = buttonToDni(defaultButton)
-  settings.activeDni = buttonToDni(activeDni)
+  settings.dnis = buttons.collect{ app.buttonToDni(it) }
+  settings.dfltDni = app.buttonToDni(defaultButton)
+  settings.activeDni = app.buttonToDni(activeDni)
   updated()
 }
 
@@ -75,18 +84,21 @@ Boolean pbsgActivateDni (String dni) {
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
     // Nothing to do, dni is already active
-  } else if (dni && !app._pbsgGetDnis().contains(dni)) {
-    Lerror('pbsgActivateDni()', "DNI >${dni}< does not exist in >${app._pbsgGetDnis()}<")
+  } else if (dni && !app._pbsgGetDnis()?.contains(dni)) {
+    Lerror(
+      'pbsgActivateDni()',
+      "DNI >${dni}< does not exist in >${app._pbsgGetDnis()}<"
+    )
   } else {
     isStateChanged = true
     app._pbsgIfActiveDniPushOntoInactiveFifo()
-    app._removeDniFromInactiveDnis(dni)
+    FifoRemove(state.inactiveDnis, dni)
     state.activeDni = dni
-    Ltrace(
-      'pbsgActivateDni()',
-      "DNI ${b(dni)} moved to activeDni ${b(state.activeDni)}"
-    )
-if (dni) { app._vswTurnOn(dni) } else { Ldebug( '#72', "FYI NULL BUTTON") }
+    Ltrace('pbsgActivateDni()', [
+      'About to call _pbsgSendEvent()',
+      "activeDni: ${b(state.activeDni)}, inactiveDnis: ${b(state.inactiveDnis)}",
+      AppStateAsBullets()
+    ])
     app._pbsgSendEvent()
   }
   return isStateChanged
@@ -103,23 +115,28 @@ Boolean pbsgDeactivateDni (String dni) {
       "Ignoring attempt to deactivate the dflt dni (${state.dfltDni})"
     )
   } else {
-    isStateChange = pbsgActivateDni(state.dfltDni)
+    isStateChange = app.pbsgActivateDni(state.dfltDni)
   }
   return isStateChange
 }
 
 Boolean pbsgActivatePredecessor () {
-  return pbsgActivateDni(state.inactiveDnis.first())
+  return app.pbsgActivateDni(state.inactiveDnis.first())
 }
 
 void _pbsgSendEvent() {
+  Ltrace('_pbsgSendEvent()', [
+    'At entry ...',
+    "activeDni: ${b(state.activeDni)}, inactiveDnis: ${b(state.inactiveDnis)}",
+    AppStateAsBullets()
+  ])
   Map<String, String> event = [
     name: 'PbsgActiveButton',
     descriptionText: "Button ${state.activeDni} is active",
     value: [
-      'active': state.activeDni,
-      'inactive': state.inactiveDnis,
-      'dflt': state.dfltDni
+      'active': app.dniToButton(state.activeDni),
+      'inactive': state.inactiveDnis.collect{ app.dniToButton(it) },
+      'dflt': app.dniToButton(state.dfltDni)
     ]
   ]
   Linfo('_pbsgSendEvent()', [
@@ -135,7 +152,7 @@ void _pbsgSendEvent() {
 }
 
 List<String> _pbsgGetDnis () {
-  return [ state.activeDni, *state.inactiveDnis ].findAll()
+  return cleanStrings([ state.activeDni, *state.inactiveDnis ])
 }
 
 Boolean _pbsgIfActiveDniPushOntoInactiveFifo () {
@@ -152,22 +169,10 @@ Boolean _pbsgIfActiveDniPushOntoInactiveFifo () {
       "Button ${b(dni)} pushed onto inactiveDnis ${state.inactiveDnis}"
     )
     Ldebug('#160', getAllChildDevices())
-    _vswTurnOff(dni)
+    app._vswTurnOff(dni)
     Ldebug('#162', getAllChildDevices())
   }
   return isStateChanged
-}
-
-void _removeDniFromInactiveDnis (String dni) {
-  // TBD
-  //   state.inactiveDnis.removeAll([dni])
-  //     - DID NOT PERSIST CHANGES BACK INTO THE 'state' LIST CONSISTENTLY.
-  //     - MAKING LOCAL CHANGES THEN SETTING BY BRUTE FORCE
-  if (dni) {
-    List<String> local = state.inactiveDnis
-    local.removeAll([dni])
-    state.inactiveDnis = local
-  }
 }
 
 //---- SYSTEM CALLBACKS
@@ -179,6 +184,7 @@ void installed () {
   state.activeDni = null                         // String
   state.inactiveDnis = []                        // List<String>
   state.dfltDni = null                           // String
+  Linfo('installed()', AppStateAsBullets())
   Ltrace('installed()', 'Calling TEST_pbsgCoreFunctionality()')
   TEST_pbsgCoreFunctionality()
 }
@@ -217,7 +223,7 @@ void updated () {
     return
   }
   // ASSESS THE NET IMPACT OF SETTINGS ON APPLICATION STATE
-  List<String> prevDnis = _pbsgGetDnis()
+  List<String> prevDnis = app._pbsgGetDnis() ?: []
   Map<String, List<String>> actions = CompareLists(prevDnis, cleanedDnis)
   List<String> retainDnis = actions.retained // Used for accounting only
   List<String> dropDnis = actions.dropped
@@ -249,18 +255,18 @@ void updated () {
   String PBSG_LOG_LEVEL = 'TRACE'   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
   state.logLevel = LogThresholdToLogLevel(PBSG_LOG_LEVEL)
   state.dfltDni = dfltDni
-  dropDnis.each{ dni -> _dropDni(dni) }
-  addDnis.each{ dni -> _addDni(dni) }
+  dropDnis.each{ dni -> app._dropDni(dni) }
+  addDnis.each{ dni -> app._addDni(dni) }
   // Leverage activation/deactivation methods for initial dni activation.
   if (activeDni) {
     Ltrace('updated()', "activating activeDni ${activeDni}")
-    pbsgActivateDni(activeDni)
+    app.pbsgActivateDni(activeDni)
   } else if (state.activeDni == null && state.dfltDni) {
     Ltrace('updated()', "activating dfltDni ${state.dfltDni}")
-    pbsgActivateDni(state.dfltDni)
+    app.pbsgActivateDni(state.dfltDni)
   }
-  Ltrace('updated()', _vswDevices())
-  _vswSubscribe()
+  Ltrace('updated()', app._vswDevices())
+  app._vswSubscribe()
 }
 
 void uninstalled () {
@@ -282,8 +288,8 @@ Map PbsgPage () {
     uninstall: true,
   ) {
     String xIn = 'zebra'
-    String xIntermediate = buttonToDni(xIn)
-    String xOut = dniToButton(xIntermediate)
+    String xIntermediate = app.buttonToDni(xIn)
+    String xOut = app.dniToButton(xIntermediate)
     section {
       paragraph "YOU ARE HERE"
       paragraph "in: >${xIn}<, intermediate: >${xIntermediate}<, out: >${xOut}<"
@@ -296,47 +302,9 @@ Map PbsgPage () {
 //----   - Provide VSW functionality to a PBSG instance.
 //----   - Minimize interaction between non-VSW and VSW methods, settings and state.
 
-void _vswConfigure (List<String> dnis) {
-  // Ensure a 1-to-1 correspondence between PBSG dnis and VSW instances.
-  // Any new VSWs are turned off on creation.
-  // Full reconciliation of VSW on/off state occurs at pbsgActivateDni().
-  List<String> expectedDnis = dnis
-  // It is unlikely that a Pbsg should have non-switch devices; so,
-  // comparins just DNIs and NOT looking at d.hasCapability('Switch')
-  List<String> foundDnis = getAllChildDevices().collect{ it.getDeviceNetworkId() }
-  List<String> dropDnis = foundDnis.collect().minus(expectedDnis)
-  List<String> createDnis = expectedDnis.collect().minus(foundDnis)
-  Ltrace('_vswConfigure()', [
-    '',
-    Bullet2("<b>expectedDnis:</b> ${expectedDnis.join(', ')}"),
-    Bullet2("<b>foundDnis:</b> ${foundDnis.join(', ')}"),
-    Bullet2("<b>createDnis:</b> ${createDnis}"),
-    Bullet2("<b>dropDnis:</b> ${dropDnis}")
-  ])
-  dropDnis.each{ dni ->
-    Lwarn('_vswConfigure()', "Deleting orphaned device ${b(dni)}")
-    app.deleteChildDevice(dni)
-  }
-  createDnis.each{ dni ->
-    Lwarn('_vswConfigure()', "Adding VSW ${b(dni)}")
-    DevW vsw = addChildDevice(
-      'hubitat',          // namespace
-      'Virtual Switch',   // typeName
-      dni,                // device's unique DNI
-      [isComponent: true, name: dni, name: dni]
-    )
-    vsw.off()
-  }
-  Ldebug('_vswConfigure()', [
-    'AT RETURN:',
-    getAllChildDevices() // .collect{ it.getDeviceNetworkId() })
-  ])
-  return
-}
-
 List<String> _vswDevices () {
   List<String> outputText = [ Heading2('DEVICES') ]
-  List<InstAppW> devices = getChildDevices()
+  List<InstAppW> devices = app.getChildDevices()
   devices.each{ d -> outputText += Bullet2(d.getDeviceNetworkId()) }
   return outputText
 }
@@ -346,7 +314,7 @@ void _vswTurnOn (dni) {
   if (device) {
     device.on()
   } else {
-    Lerror('_vswTurnOn()', "For DNI (${dni}) w/ dni ${dni} no device in ${getChildDevices().collect{ it.getDeviceNetworkId() }}")
+    Lerror('_vswTurnOn()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
   }
 }
 
@@ -356,19 +324,19 @@ void _vswTurnOff (dni) {
   if (device) {
     device.off()
   } else {
-    Lerror('_vswTurnOff()', "For DNI (${dni}) w/ dni ${dni} no device in ${getChildDevices().collect{ it.getDeviceNetworkId() }}")
+    Lerror('_vswTurnOff()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
   }
 }
 
-Boolean _vswUnsubscribe () {
-  app.unsubscribe('VswEventHandler')
-}
+//-> Boolean _vswUnsubscribe () {
+//->   unsubscribe('VswEventHandler')
+//-> }
 
 Boolean _vswSubscribe () {
   // Returns false if an issue arises during subscriptions
   Boolean issueArose = false
-  _pbsgGetDnis().each{ dni ->
-    DevW vsw = getChildDevice(dni)
+  app._pbsgGetDnis().each{ dni ->
+    DevW vsw = app.getChildDevice(dni)
     if (!vsw) {
       issueArose = true
       Lerror('_vswSubscribe()', "Cannot find ${b(dni)}")
@@ -423,7 +391,7 @@ void TEST_pbsgConfigure (
   Linfo("TEST ${n} CONFIG", logMsg)
 
   // Simulate a Page update (GUI settings) and System updated() callback.
-  pbsgConfigure(list, dflt, on)
+  app.pbsgConfigure(list, dflt, on)
 }
 
 void TEST_PbsgActivation (
@@ -441,12 +409,12 @@ void TEST_PbsgActivation (
 
 String TEST_pbsgHasExpectedState (
     String activeButton,
-    List<String> inactiveButton,
+    List<String> inactiveButtons,
     String dfltButton
   ) {
-  String activeDni = activeButton ? buttonToDni(activeButton) : null
-  List<String> inactiveButtons = inactiveButtons ? inactiveButtons.collect{ buttonToDni(it) } : null
-  String dfltDni = dfltButton ? buttonToDni(dfltButton) : null
+  String activeDni = activeButton ? app.buttonToDni(activeButton) : null
+  List<String> inactiveDnis = inactiveButtons ? inactiveButtons.collect{ app.buttonToDni(it) } : null
+  String dfltDni = dfltButton ? app.buttonToDni(dfltButton) : null
   Boolean result = true
   Integer actualInactiveDnisSize = state.inactiveDnis?.size() ?: 0
   Integer expectedInactiveDnisSize = inactiveDnis?.size() ?: 0
@@ -505,6 +473,9 @@ String TEST_pbsgHasExpectedState (
 void TEST_pbsgCoreFunctionality () {
   String parkLogLevel = state.logLevel
   state.logLevel = LogThresholdToLogLevel('TRACE')
+
+  FifoTest()
+
   //----
   /*
   String expectedActive = null
@@ -540,35 +511,35 @@ void TEST_pbsgCoreFunctionality () {
   // THE DEFAULT BUTTON REMAINS 'B'
   //----
   TEST_PbsgActivation(8, 'Activate F')
-  pbsgActivateDni('F')
+  app.pbsgActivateDni('F')
   Linfo('TEST8', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(9, 'Activate Q', '<b>Forced Error:</b> "Button does not exist"')
-  pbsgActivateDni('Q')
+  app.pbsgActivateDni('Q')
   // TEST9 state is unchanged from TEST8 state
   Linfo('TEST9', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
   TEST_PbsgActivation(10, 'Deactivate F')
-  pbsgDeactivateDni('F')
+  app.pbsgDeactivateDni('F')
   Linfo('TEST10', TEST_pbsgHasExpectedState('B', ['F', 'G', 'I'], 'B'))
   //----
   TEST_PbsgActivation(11, 'Activate I')
-  pbsgActivateDni('I')
+  app.pbsgActivateDni('I')
   Linfo('TEST11', TEST_pbsgHasExpectedState('I', ['B', 'F', 'G'], 'B'))
   //----
   TEST_PbsgActivation(12, 'Activate Predecessor')
-  pbsgActivatePredecessor()
+  app.pbsgActivatePredecessor()
   Linfo('TEST12', TEST_pbsgHasExpectedState('B', ['I', 'F', 'G'], 'B'))
   //----
   TEST_pbsgConfigure(13, ['B', 'X', 'C', 'E', 'Z'], '', 'C')
   Linfo('TEST13', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
   TEST_PbsgActivation(14, 'Deactivate C')
-  pbsgDeactivateDni('C')
+  app.pbsgDeactivateDni('C')
   Linfo('TEST14', TEST_pbsgHasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
   //----
   TEST_PbsgActivation(15, 'Activate Predecessor')
-  pbsgActivatePredecessor()
+  app.pbsgActivatePredecessor()
   Linfo('TEST15', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
   TEST_pbsgConfigure(16, ['B', '', null, 'A', 'G', 'X', null, 'A'], 'X', '')
