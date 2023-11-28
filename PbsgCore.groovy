@@ -113,7 +113,13 @@ Boolean _pbsgActivateDni (String dni) {
 Boolean _pbsgDeactivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   Boolean isStateChanged = false
+Ldebug('_pbsgDeactivateDni()', [
+  "Received dni: ${b(dni)}",
+  "inactiveDnis: ${state.inactiveDnis}",
+  "contains dni?: ${state.inactiveDnis.contains(dni)}"
+])
   if (state.inactiveDnis.contains(dni)) {
+Ldebug('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
     // Nothing to do, dni is already inactive
   } else if (state.activeDni == state.dfltDni) {
     Linfo(
@@ -121,6 +127,7 @@ Boolean _pbsgDeactivateDni (String dni) {
       "Ignoring attempt to deactivate the dflt dni (${state.dfltDni})"
     )
   } else {
+Ldebug('_pbsgDeactivateDni()', "Is a state change for dni: ${b(dni)} w/ dflt ${b(state.dfltDni)}")
     isStateChange = _pbsgActivateDni(state.dfltDni)
   }
   return isStateChange
@@ -287,7 +294,11 @@ void updated () {
     _pbsgActivateDni(state.dfltDni)
   }
   Ltrace('updated()', _pbsgListVswDevices())
-  app.subscribe(app.getChildDevices(), VswEventHandler, ['filterEvents': true])
+  List<DevW> childDevices = app.getChildDevices()
+  childDevices.each{ d ->
+    app.subscribe(d, VswEventHandler, ['filterEvents': true])
+  }
+  //app.subscribe(childDevices, VswEventHandler, ['filterEvents': true])
 }
 
 void uninstalled () {
@@ -318,7 +329,10 @@ void VswEventHandler (Event e) {
   //         are suppressed downstream.
   //       - Allow race conditions to "play through" without manipulating
   //         subscriptions.
-  Linfo('VswEventHandler()', e.descriptionText)
+  Linfo('VswEventHandler()', [
+    e.descriptionText,
+    AppStateAsBullets()
+  ])
   if (e.isStateChange) {
     String dni = e.displayName
     if (e.value == 'on') {
