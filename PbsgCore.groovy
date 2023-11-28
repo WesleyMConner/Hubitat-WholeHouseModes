@@ -113,7 +113,6 @@ void _addDni (String dni) {
       [isComponent: true, name: dni]
     )
   }
-  //--xx-> Ldebug('_addDni() at exit', "state.inactiveDnis: >${state.inactiveDnis}<")
 }
 
 void _dropDni (String dni) {
@@ -144,7 +143,6 @@ Boolean _pbsgActivateDni (String dni) {
     FifoRemove(state.inactiveDnis, dni)
     // Adjust the activeDni and Vsw together
     state.activeDni = dni
-    //--xx-> _pbsgTurnOnVsw(dni)
     _pbsgSendEvent()
   }
   return isStateChanged
@@ -211,7 +209,6 @@ Boolean _pbsgIfActiveDniPushOntoInactiveFifo () {
     // Adjust inactiveDnis, activeDni and Vsw together
     state.inactiveDnis = [dni, *state.inactiveDnis]
     state.activeDni = null
-    //--xx-> _pbsgTurnOffVsw(dni)
     Ltrace(
       '_pbsgIfActiveDniPushOntoInactiveFifo()',
       "Button ${b(dni)} pushed onto inactiveDnis ${state.inactiveDnis}"
@@ -226,24 +223,6 @@ List<String> _pbsgListVswDevices () {
   devices.each{ d -> outputText += Bullet2(d.getDeviceNetworkId()) }
   return outputText
 }
-
-//--xx-> void _pbsgTurnOnVsw (dni) {
-//--xx->   DevW device = app.getChildDevice(dni)
-//--xx->   if (device) {
-//--xx->     device.on()
-//--xx->   } else {
-//--xx->     Lerror('_pbsgTurnOnVsw()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
-//--xx->   }
-//--xx-> }
-
-//--xx-> void _pbsgTurnOffVsw (dni) {
-//--xx->   DevW device = app.getChildDevice(dni)
-//--xx->   if (device) {
-//--xx->     device.off()
-//--xx->   } else {
-//--xx->     Lerror('_pbsgTurnOffVsw()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
-//--xx->   }
-//--xx-> }
 
 //---- SYSTEM CALLBACKS
 
