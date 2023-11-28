@@ -504,14 +504,14 @@ void TEST_PbsgCore () {
   TEST_ConfigChange(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
   Ltrace('TEST3', TEST_HasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
-  TEST_ConfigChange(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
+  TEST_ConfigChange(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in DNIs"')
   // TEST4 state is unchanged from TEST3 state
   Ltrace('TEST4', TEST_HasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
   TEST_ConfigChange(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
   Ltrace('TEST5', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
-  TEST_ConfigChange(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
+  TEST_ConfigChange(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in DNIs"')
   // TEST6 state is unchanged from TEST5 state
   Ltrace('TEST6', TEST_HasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----

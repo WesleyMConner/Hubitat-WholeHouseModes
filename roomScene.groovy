@@ -908,9 +908,9 @@ void displayWhaRoomDebugData () {
     [
       '<h2><b>roomScenePage Debug</b></h2>',
       '<h3><b>STATE</b></h3>',
-      AppStateAsBullets(),
+      appStateAsBullets(),
       '<h3><b>SETTINGS</b></h3>',
-      AppSettingsAsBullets()
+      appSettingsAsBullets()
     ].join()
   )
 }

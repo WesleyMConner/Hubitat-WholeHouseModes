@@ -237,15 +237,19 @@ String EventDetails (Event e, Boolean DEEP = false) {
   return "<table>${rows}</table>"
 }
 
-String AppStateAsBullets() {
-  List<String> result = [Heading2('STATE')]
+String AppStateAsBullets (InstAppW app) {
+  app.appStateAsBullets()
+}
+
+String appStateAsBullets () {
+  List<String> result = [Heading2("${AppInfo(app)} STATE")]
   state.sort().each{ k, v ->
     result += Bullet2("<b>${k}</b> → ${v}")
   }
   return result.size() != 0 ? result.join('<br/>') : Bullet1('<i>NO DATA AVAILABLE</i>')
 }
 
-String AppSettingsAsBullets() {
+String appSettingsAsBullets () {
   List<String> result = []
   settings.sort().each{ k, v ->
     result += Bullet1("<b>${k}</b> → ${v}")

@@ -44,18 +44,55 @@ void pbsgConfigure (List<String> buttons, String defaultButton, String activeBut
 }
 
 Boolean pbsgActivateButton (String button) {
+  Ltrace('pbsgActivateButton()', [
+    "Called for button: ${b(button)}",
+    appStateAsBullets()
+  ])
   _pbsgActivateDni(_buttonToDni(button))
 }
 
 Boolean pbsgDeactivateButton (String button) {
+  Ltrace('pbsgDeactivateButton()', [
+    "Called for button: ${b(button)}",
+    appStateAsBullets()
+  ])
   _pbsgDeactivateDni(_buttonToDni(button))
 }
 
 Boolean pbsgActivatePredecessor () {
+  Ltrace('pbsgActivatePredecessor()', appStateAsBullets())
   return _pbsgActivateDni(state.inactiveDnis.first())
 }
 
 //---- CORE METHODS (Internal)
+
+String _childVswStates () {
+  List<String> results = []
+  app.getChildDevices().each{ d ->
+    if (SwitchState(d) == 'on') {
+      results += "<b>${d.getDeviceNetworkId()}: on</b>"
+    } else {
+      results += "<i>${d.getDeviceNetworkId()}: off</i>"
+    }
+  }
+  return results.join(', ')
+}
+
+void _adjustVsws () {
+  // Make sure the correct VSW is on
+  DevW onDevice = app.getChildDevice(state.activeDni)
+  if (SwitchState(onDevice) != 'on') {
+    Ltrace('_adjustVsw()', "Turning on VSW ${state.activeDni}")
+    onDevice.on()
+  }
+  // Make sure other VSWs are off
+  state.inactiveDnis.each{ offDevice ->
+    if (SwitchState(offDevice) != 'off') {
+      Ltrace('_adjustVsw()', "Turning on VSW ${state.activeDni}")
+      offDevice.off()
+    }
+  }
+}
 
 String _buttonToDni (String button) {
   return "${app.getLabel()}_${app.getId()}_${button}"
@@ -89,7 +126,10 @@ void _dropDni (String dni) {
 Boolean _pbsgActivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new dni is activated.
-  Ltrace('_pbsgActivateDni()', "DNI: ${b(dni)}")
+  Ltrace('_pbsgActivateDni()', [
+    "DNI: ${b(dni)}",
+    appStateAsBullets()
+  ])
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
     // Nothing to do, dni is already active
@@ -104,7 +144,7 @@ Boolean _pbsgActivateDni (String dni) {
     FifoRemove(state.inactiveDnis, dni)
     // Adjust the activeDni and Vsw together
     state.activeDni = dni
-    _pbsgTurnOnVsw(dni)
+    //--xx-> _pbsgTurnOnVsw(dni)
     _pbsgSendEvent()
   }
   return isStateChanged
@@ -115,8 +155,8 @@ Boolean _pbsgDeactivateDni (String dni) {
   Boolean isStateChanged = false
 Ldebug('_pbsgDeactivateDni()', [
   "Received dni: ${b(dni)}",
-  "inactiveDnis: ${state.inactiveDnis}",
-  "contains dni?: ${state.inactiveDnis.contains(dni)}"
+  "inactive contains dni?: ${state.inactiveDnis.contains(dni)}",
+  appStateAsBullets()
 ])
   if (state.inactiveDnis.contains(dni)) {
 Ldebug('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
@@ -127,7 +167,7 @@ Ldebug('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
       "Ignoring attempt to deactivate the dflt dni (${state.dfltDni})"
     )
   } else {
-Ldebug('_pbsgDeactivateDni()', "Is a state change for dni: ${b(dni)} w/ dflt ${b(state.dfltDni)}")
+Ldebug('_pbsgDeactivateDni()', "Activating default ${b(state.dfltDni)}, which deacivates dni: ${b(dni)}")
     isStateChange = _pbsgActivateDni(state.dfltDni)
   }
   return isStateChange
@@ -151,7 +191,9 @@ void _pbsgSendEvent() {
     Bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
     Bullet2("<b>value.dflt:</b> ${event.value['dflt']}")
   ])
-  //--> if (event.value?.dflt) { _vswUpdateState() }
+  // Update the state of child devices
+  _childVswStates()
+  // Broadcast the state change to subscribers
   sendEvent(event)
 }
 
@@ -169,7 +211,7 @@ Boolean _pbsgIfActiveDniPushOntoInactiveFifo () {
     // Adjust inactiveDnis, activeDni and Vsw together
     state.inactiveDnis = [dni, *state.inactiveDnis]
     state.activeDni = null
-    _pbsgTurnOffVsw(dni)
+    //--xx-> _pbsgTurnOffVsw(dni)
     Ltrace(
       '_pbsgIfActiveDniPushOntoInactiveFifo()',
       "Button ${b(dni)} pushed onto inactiveDnis ${state.inactiveDnis}"
@@ -185,23 +227,23 @@ List<String> _pbsgListVswDevices () {
   return outputText
 }
 
-void _pbsgTurnOnVsw (dni) {
-  DevW device = app.getChildDevice(dni)
-  if (device) {
-    device.on()
-  } else {
-    Lerror('_pbsgTurnOnVsw()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
-  }
-}
+//--xx-> void _pbsgTurnOnVsw (dni) {
+//--xx->   DevW device = app.getChildDevice(dni)
+//--xx->   if (device) {
+//--xx->     device.on()
+//--xx->   } else {
+//--xx->     Lerror('_pbsgTurnOnVsw()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
+//--xx->   }
+//--xx-> }
 
-void _pbsgTurnOffVsw (dni) {
-  DevW device = app.getChildDevice(dni)
-  if (device) {
-    device.off()
-  } else {
-    Lerror('_pbsgTurnOffVsw()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
-  }
-}
+//--xx-> void _pbsgTurnOffVsw (dni) {
+//--xx->   DevW device = app.getChildDevice(dni)
+//--xx->   if (device) {
+//--xx->     device.off()
+//--xx->   } else {
+//--xx->     Lerror('_pbsgTurnOffVsw()', "For DNI (${dni}) w/ dni ${dni} no device in ${app.getChildDevices().collect{ it.getDeviceNetworkId() }}")
+//--xx->   }
+//--xx-> }
 
 //---- SYSTEM CALLBACKS
 
@@ -211,7 +253,7 @@ void installed () {
   state.activeDni = null                         // String
   state.inactiveDnis = []                        // List<String>
   state.dfltDni = null                           // String
-  Linfo('installed()', AppStateAsBullets())
+  Linfo('installed()', appStateAsBullets())
   Ltrace('installed()', 'Calling TEST_pbsgCoreFunctionality()')
   TEST_pbsgCoreFunctionality()
 }
@@ -272,7 +314,7 @@ void updated () {
     '<th>Input Parameters</th><th style="width:3%"/>',
     '<th>Action Summary</th>',
     '</tr><tr>',
-    "<td>${AppStateAsBullets().join('<br/>')}</td><td/>",
+    "<td>${appStateAsBullets().join('<br/>')}</td><td/>",
     "<td>${requested}</td><td/>",
     "<td>${analysis}</td></tr></table>"
   ])
@@ -329,9 +371,14 @@ void VswEventHandler (Event e) {
   //         are suppressed downstream.
   //       - Allow race conditions to "play through" without manipulating
   //         subscriptions.
+  // IMPORTANT
+  //   - This IS NOT an instance method. It IS a standalone method; so,
+  //     there IS NO IMPLIED app. You have to invoke it via 'app.'
   Linfo('VswEventHandler()', [
     e.descriptionText,
-    AppStateAsBullets()
+    AppInfo(app),
+    AppStateAsBullets(app),
+    _childVswStates()
   ])
   if (e.isStateChange) {
     String dni = e.displayName
@@ -448,7 +495,7 @@ String TEST_pbsgHasExpectedState (
 void TEST_pbsgCoreFunctionality () {
   String parkLogLevel = state.logLevel
   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-  state.logLevel = LogThresholdToLogLevel('INFO')  // Heavy debug w/ 'TRACE'
+  state.logLevel = LogThresholdToLogLevel('TRACE')  // Heavy debug w/ 'TRACE'
 
   //-> FifoTest()
 
@@ -462,14 +509,14 @@ void TEST_pbsgCoreFunctionality () {
   TEST_pbsgConfigure(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
   Linfo('TEST3', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
-  TEST_pbsgConfigure(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in Buttons"')
+  TEST_pbsgConfigure(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in DNIs"')
   // TEST4 state is unchanged from TEST3 state
   Linfo('TEST4', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
   //----
   TEST_pbsgConfigure(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
   Linfo('TEST5', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
-  TEST_pbsgConfigure(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in Buttons"')
+  TEST_pbsgConfigure(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in DNIs"')
   // TEST6 state is unchanged from TEST5 state
   Linfo('TEST6', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
   //----
@@ -479,35 +526,35 @@ void TEST_pbsgCoreFunctionality () {
   // WITHOUT CHANGING THE CONFIGURATION, START TESTING ACTIVATION OF BUTTONS
   // THE DEFAULT BUTTON REMAINS 'B'
   //----
-  TEST_PbsgActivation(8, 'Activate F')
+  TEST_PbsgActivation(8, "With 'G', ['*B', 'F', 'I'], Activate F")
   pbsgActivateButton('F')
   Linfo('TEST8', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
-  TEST_PbsgActivation(9, 'Activate Q', '<b>Forced Error:</b> "Button does not exist"')
+  TEST_PbsgActivation(9, "With 'F', ['G', '*B', 'I'], Activate Q", '<b>Forced Error:</b> "Button does not exist"')
   pbsgActivateButton('Q')
   // TEST9 state is unchanged from TEST8 state
   Linfo('TEST9', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
   //----
-  TEST_PbsgActivation(10, 'Deactivate F')
+  TEST_PbsgActivation(10, "With 'F', ['G', '*B', 'I'], Deactivate F")
   pbsgDeactivateButton('F')
   Linfo('TEST10', TEST_pbsgHasExpectedState('B', ['F', 'G', 'I'], 'B'))
   //----
-  TEST_PbsgActivation(11, 'Activate I')
+  TEST_PbsgActivation(11, "With '*B', ['F', 'G', 'I'], Activate I")
   pbsgActivateButton('I')
   Linfo('TEST11', TEST_pbsgHasExpectedState('I', ['B', 'F', 'G'], 'B'))
   //----
-  TEST_PbsgActivation(12, 'Activate Predecessor')
+  TEST_PbsgActivation(12, "With 'I', ['*B', 'F', 'G'], Activate Predecessor")
   pbsgActivatePredecessor()
   Linfo('TEST12', TEST_pbsgHasExpectedState('B', ['I', 'F', 'G'], 'B'))
   //----
   TEST_pbsgConfigure(13, ['B', 'X', 'C', 'E', 'Z'], '', 'C')
   Linfo('TEST13', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----
-  TEST_PbsgActivation(14, 'Deactivate C')
+  TEST_PbsgActivation(14, "With 'C', ['B', 'X', 'E', 'Z'], Deactivate C")
   pbsgDeactivateButton('C')
   Linfo('TEST14', TEST_pbsgHasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
   //----
-  TEST_PbsgActivation(15, 'Activate Predecessor')
+  TEST_PbsgActivation(15, "With null, ['C', 'B', 'X', 'E', 'Z'], Activate Predecessor")
   pbsgActivatePredecessor()
   Linfo('TEST15', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
   //----

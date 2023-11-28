@@ -26,10 +26,6 @@ String FifoRemove (List<String> fifo, String item) {
   // Remove and return item if present OR return null.
   //if (!fifo) Lerror('FifoRemove()', "Received a null value for fifo")
   return fifo?.removeAll{ it == item } ? item : null
-
-
-
-
   Boolean retval = null
   if (fifo == null) {
     Lerror('FifoRemove()', "Received a null value for fifo")
