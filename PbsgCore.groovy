@@ -36,11 +36,51 @@ preferences {
 
 //---- CORE METHODS (External)
 
-void pbsgConfigure (List<String> buttons, String defaultButton, String activeButton) {
-  settings.dnis = cleanStrings(buttons).collect{ _buttonToDni(it) }
-  settings.dfltDni = defaultButton ? _buttonToDni(defaultButton) : null
-  settings.activeDni = activeButton ? _buttonToDni(activeButton) : null
-  updated()
+Boolean pbsgConfigure (
+    List<String> buttons,
+    String defaultButton,
+    String activeButton,
+    String pbsgLogLevel = 'TRACE' // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+  ) {
+  // Returns true if configuration is accepted, false otherwise.
+  Boolean retVal = true
+  settings.buttons = cleanStrings(buttons)
+  if (settings.buttons != buttons) {
+    Linfo('pbsgConfigure()', "buttons: (${buttons}) -> (${settings.buttons})")
+  }
+  settings.dfltButton = defaultButton ? defaultButton : null
+  if (settings.dfltButton != defaultButton) {
+    Linfo('pbsgConfigure()', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
+  }
+  settings.activeButton = activeButton ? activeButton : null
+  if (settings.activeButton != activeButton) {
+    Linfo('pbsgConfigure()', "activeButton: (${activeButton}) -> (${settings.activeButton})")
+  }
+  settings.logLevel = ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'].contains(pbsgLogLevel)
+    ? pbsgLogLevel : 'TRACE'
+  if (settings.logLevel != pbsgLogLevel) {
+    Linfo('pbsgConfigure()', "pbsgLogLevel: (${pbsgLogLevel}) -> (${settings.logLevel})")
+  }
+  Integer buttonCount = settings.buttons?.size() ?: 0
+  if (buttonCount < 2) {
+    retVal = false
+    Lerror('pbsgConfigure()', "Button count (${buttonCount}) must be two or more")
+  }
+  if (settings.dfltButton && settings.buttons?.contains(settings.dfltButton) == false) {
+    retVal = false
+    Lerror(
+      'pbsgConfigure()',
+      "defaultButton ${b(settings.dfltButton)} is not found among buttons (${settings.buttons})"
+    )
+  }
+  if (settings.activeButton && settings.buttons?.contains(settings.activeButton) == false) {
+    retVal = false
+    Lerror(
+      'pbsgConfigure()',
+      "activeDni ${b(settings.activeButton)} is not found among buttons (${settings.buttons})")
+  }
+  if (retVal) updated()
+  return retVal
 }
 
 Boolean pbsgActivateButton (String button) {
@@ -238,51 +278,35 @@ void installed () {
 }
 
 void updated () {
-  // New values are passed into this method as :
-  //   - settings.dnis
-  //   - settings.dfltDni
-  //   - settings.activeDni
-  Ltrace('updated()', 'At entry')
-  // INSPECT SETTINGS FOR VALIDITY AND ISSUES
-  List<String> cleanedDnis = cleanStrings(settings.dnis)
-  if (cleanedDnis != settings.dnis) {
-    Lwarn('updated()', "settings.dnis: >${settings.dnis}< -> >${cleanedDnis}<")
-  }
-  String dfltDni = settings.dfltDni ?: null
-  if (dfltDni != settings.dfltDni) {
-    Lwarn('updated()', "dfltDni: >${settings.dfltDni}< -> >${dfltDni}<")
-    dfltDni = dfltDni ?: null
-  }
-  String activeDni = settings.activeDni ?: null
-  if (activeDni != settings.activeDni) {
-    Lwarn('updated()', "settings.activeDni: >${settings.activeDni}< -> ${activeDni}<")
-    activeDni = activeDni ?: null
-  }
-  if (cleanedDnis.size() < 2) {
-    Lerror('updated()', "settings.dnis count (${cleanedDnis.size()}) must be >= 2")
-    return
-  }
-  if (dfltDni && cleanedDnis.contains(dfltDni) == false) {
-    Lerror('updated()', "dfltDni ${b(dfltDni)} not found in DNIs (${cleanedDnis})")
-    return
-  }
-  if (activeDni && cleanedDnis.contains(activeDni) == false) {
-    Lerror('updated()', "activeDni ${b(activeDni)} not found in DNIs (${cleanedDnis})")
-    return
-  }
-  // ASSESS THE NET IMPACT OF SETTINGS ON APPLICATION STATE
+  // Values are provided via these settings:
+  //   - settings.buttons
+  //   - settings.dfltButton
+  //   - settings.activeButton
+  //   - settings.logLevel
+  // PROCESS SETTINGS (BUTTONS) INTO TARGET VSW DNIS
   List<String> prevDnis = _pbsgGetDnis() ?: []
-  Map<String, List<String>> actions = CompareLists(prevDnis, cleanedDnis)
+  updatedDnis = settings.buttons.collect{ _buttonToDni(it) }
+  updatedDfltDni = settings.dfltButton ? _buttonToDni(settings.dfltButton) : null
+  updatedActiveDni = settings.activeButton ? _buttonToDni(settings.activeButton) : null
+  Ltrace('updated()', [
+    'Configuration Adjustments',
+    "Dnis: ${prevDnis} -> ${updatedDnis}",
+    "DfltDni: ${state.dfltDni} -> ${updatedDfltDni}",
+    "ActiveDni: ${state.activeDni} -> ${updatedActiveDni}"
+  ])
+  // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
+  state.logLevel = LogThresholdToLogLevel(settings.logLevel)
+  Map<String, List<String>> actions = CompareLists(prevDnis, updatedDnis)
   List<String> retainDnis = actions.retained // Used for accounting only
   List<String> dropDnis = actions.dropped
   List<String> addDnis = actions.added
   String requested = [
-    "<b>dnis:</b> ${cleanedDnis}",
-    "<b>dfltDni:</b> ${dfltDni}",
-    "<b>activeDni:</b> ${activeDni}"
+    "<b>dnis:</b> ${updatedDnis}",
+    "<b>dfltDni:</b> ${updatedDfltDni}",
+    "<b>activeDni:</b> ${updatedActiveDni}"
   ].join('<br/>')
   String analysis = [
-    "<b>prevDnis:</b> ${prevDnis}",        //  ?: 'n/a'
+    "<b>prevDnis:</b> ${prevDnis}",
     "<b>retainDnis:</b> ${retainDnis}",
     "<b>dropDnis:</b> ${dropDnis}",
     "<b>addDnis:</b> ${addDnis}"
@@ -299,17 +323,13 @@ void updated () {
   ])
   // Suspend ALL events, irrespective of type
   unsubscribe()
-  // ADJUST APPLICATION STATE TO MATCH THE PBSG CONFIGURATION (IF REVISED)
-  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-  String PBSG_LOG_LEVEL = 'TRACE' // Heavy debug w/ 'TRACE'
-  state.logLevel = LogThresholdToLogLevel(PBSG_LOG_LEVEL)
-  state.dfltDni = dfltDni
+  state.dfltDni = updatedDfltDni
   dropDnis.each{ dni -> _dropDni(dni) }
   addDnis.each{ dni -> _addDni(dni) }
   // Leverage activation/deactivation methods for initial dni activation.
-  if (activeDni) {
-    Ltrace('updated()', "activating activeDni ${activeDni}")
-    _pbsgActivateDni(activeDni)
+  if (updatedActiveDni) {
+    Ltrace('updated()', "activating activeDni ${updatedActiveDni}")
+    _pbsgActivateDni(updatedActiveDni)
   } else if (state.activeDni == null && state.dfltDni) {
     Ltrace('updated()', "activating dfltDni ${state.dfltDni}")
     _pbsgActivateDni(state.dfltDni)
@@ -391,8 +411,9 @@ void TEST_pbsgConfigure (
   logMsg += (forcedError ? REDBAR() : GREENBAR())
   Linfo("TEST ${n} CONFIG", logMsg)
 
-  // Simulate a Page update (GUI settings) and System updated() callback.
-  pbsgConfigure(list, dflt, on)
+  // Simulate a Page update (GUI settings) via the System updated() callback.
+  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE' .. 'TRACE' for HEAVY DEBUG
+  pbsgConfigure(list, dflt, on, 'INFO')
 }
 
 void TEST_PbsgActivation (
@@ -472,14 +493,9 @@ String TEST_pbsgHasExpectedState (
 }
 
 void TEST_pbsgCoreFunctionality () {
-  String parkLogLevel = state.logLevel
-  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-  state.logLevel = LogThresholdToLogLevel('TRACE')  // Heavy debug w/ 'TRACE'
-
   //-> FifoTest()
-
   //----
-  TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "No dnis"')
+  TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "Inadequate parameters"')
   Linfo('TEST1', TEST_pbsgHasExpectedState(null, [], null))
   //----
   TEST_pbsgConfigure(2, ['A', 'B', 'C', 'D', 'E'], '', null)
@@ -543,5 +559,4 @@ void TEST_pbsgCoreFunctionality () {
   TEST_pbsgConfigure(17, ['B', 'A', 'G', 'X'], 'X', 'G')
   Linfo('TEST17', TEST_pbsgHasExpectedState('G', ['X', 'B', 'A'], 'X'))
   //----
-  state.logLevel = parkLogLevel
 }
