@@ -100,7 +100,7 @@ Boolean pbsgDeactivateButton (String button) {
 }
 
 Boolean pbsgActivatePredecessor () {
-  Ltrace('pbsgActivatePredecessor()', appStateAsBullets(''))
+  Ltrace('pbsgActivatePredecessor()', appStateAsBullets(true))
   return _pbsgActivateDni(state.inactiveDnis.first())
 }
 
