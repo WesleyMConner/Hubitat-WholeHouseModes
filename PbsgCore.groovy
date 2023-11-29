@@ -46,20 +46,20 @@ Boolean pbsgConfigure (
   Boolean retVal = true
   settings.buttons = cleanStrings(buttons)
   if (settings.buttons != buttons) {
-    Linfo('pbsgConfigure()', "buttons: (${buttons}) -> (${settings.buttons})")
+    Ltrace('pbsgConfigure()', "buttons: (${buttons}) -> (${settings.buttons})")
   }
   settings.dfltButton = defaultButton ? defaultButton : null
   if (settings.dfltButton != defaultButton) {
-    Linfo('pbsgConfigure()', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
+    Ltrace('pbsgConfigure()', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
   }
   settings.activeButton = activeButton ? activeButton : null
   if (settings.activeButton != activeButton) {
-    Linfo('pbsgConfigure()', "activeButton: (${activeButton}) -> (${settings.activeButton})")
+    Ltrace('pbsgConfigure()', "activeButton: (${activeButton}) -> (${settings.activeButton})")
   }
   settings.logLevel = ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'].contains(pbsgLogLevel)
     ? pbsgLogLevel : 'TRACE'
   if (settings.logLevel != pbsgLogLevel) {
-    Linfo('pbsgConfigure()', "pbsgLogLevel: (${pbsgLogLevel}) -> (${settings.logLevel})")
+    Ltrace('pbsgConfigure()', "pbsgLogLevel: (${pbsgLogLevel}) -> (${settings.logLevel})")
   }
   Integer buttonCount = settings.buttons?.size() ?: 0
   if (buttonCount < 2) {
@@ -167,17 +167,18 @@ Boolean _pbsgDeactivateDni (String dni) {
     *appStateAsBullets()
   ])
   Boolean isStateChanged = false
-  Ldebug('_pbsgDeactivateDni()', [ "Received dni: ${b(dni)}", *appStateAsBullets() ])
+  Ltrace('_pbsgDeactivateDni()', [ "Received dni: ${b(dni)}", *appStateAsBullets() ])
   if (state.inactiveDnis.contains(dni)) {
-    Ldebug('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
     // Nothing to do, dni is already inactive
+    Ltrace('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
   } else if (state.activeDni == state.dfltDni) {
-    Linfo(
-      '_pbsgDeactivateDni()',
-      "Ignoring attempt to deactivate the dflt dni (${state.dfltDni})"
-    )
+    // It is likely that the default DNI has been manually turned off.
+    // Update the PBSG state to reflect this likely fact.
+    _pbsgIfActiveDniPushOntoInactiveFifo()
+    // Force re-enable the default DNI.
+    isStateChange = _pbsgActivateDni(state.dfltDni)
   } else {
-    Ldebug(
+    Linfo(
       '_pbsgDeactivateDni()',
       "Activating default ${b(state.dfltDni)}, which deacivates dni: ${b(dni)}"
     )
@@ -279,7 +280,7 @@ void installed () {
   state.inactiveDnis = []                        // List<String>
   state.dfltDni = null                           // String
   Linfo('installed()', appStateAsBullets(true))
-  Ltrace('installed()', 'Calling TEST_pbsgCoreFunctionality()')
+  Linfo('installed()', 'Calling TEST_pbsgCoreFunctionality()')
   TEST_pbsgCoreFunctionality()
 }
 
@@ -294,12 +295,6 @@ void updated () {
   updatedDnis = settings.buttons.collect{ _buttonToDni(it) }
   updatedDfltDni = settings.dfltButton ? _buttonToDni(settings.dfltButton) : null
   updatedActiveDni = settings.activeButton ? _buttonToDni(settings.activeButton) : null
-  //-> Ltrace('updated()', [
-  //->   'Configuration Adjustments',
-  //->   "Dnis: ${prevDnis} -> ${updatedDnis}",
-  //->   "DfltDni: ${state.dfltDni} -> ${updatedDfltDni}",
-  //->   "ActiveDni: ${state.activeDni} -> ${updatedActiveDni}"
-  //-> ])
   // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
   state.logLevel = LogThresholdToLogLevel(settings.logLevel)
   Map<String, List<String>> actions = CompareLists(prevDnis, updatedDnis)
@@ -336,10 +331,10 @@ void updated () {
   addDnis.each{ dni -> _addDni(dni) }
   // Leverage activation/deactivation methods for initial dni activation.
   if (updatedActiveDni) {
-    Ltrace('updated()', "activating activeDni ${updatedActiveDni}")
+    Linfo('updated()', "activating activeDni ${updatedActiveDni}")
     _pbsgActivateDni(updatedActiveDni)
   } else if (state.activeDni == null && state.dfltDni) {
-    Ltrace('updated()', "activating dfltDni ${state.dfltDni}")
+    Linfo('updated()', "activating dfltDni ${state.dfltDni}")
     _pbsgActivateDni(state.dfltDni)
   }
   Ltrace('updated()', _pbsgListVswDevices())
@@ -347,7 +342,8 @@ void updated () {
   // Avoid the List version of app.subscribe. It seems flaky.
   //-> app.subscribe(childDevices, VswEventHandler, ['filterEvents': true])
   childDevices.each{ d ->
-    app.subscribe(d, VswEventHandler, ['filterEvents': true])
+    Linfo('updated()', "Subscribing ${d} to VswEventHandler")
+    subscribe(d, VswEventHandler, ['filterEvents': true])
   }
   // Reconcile the PBSG / Child VSW state AND publish a first event.
   _pbsgAdjustVswsAndSendEvent()
@@ -424,7 +420,7 @@ void TEST_pbsgConfigure (
 
   // Simulate a Page update (GUI settings) via the System updated() callback.
   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE' .. 'TRACE' for HEAVY DEBUG
-  pbsgConfigure(list, dflt, on, 'TRACE')
+  pbsgConfigure(list, dflt, on, 'INFO')
 }
 
 void TEST_PbsgActivation (
@@ -440,7 +436,8 @@ void TEST_PbsgActivation (
   Linfo("TEST ${n} ACTION", logMsg)
 }
 
-String TEST_pbsgHasExpectedState (
+void TEST_pbsgHasExpectedState (
+    Integer n,
     String activeButton,
     List<String> inactiveButtons,
     String dfltButton
@@ -451,105 +448,94 @@ String TEST_pbsgHasExpectedState (
   Boolean result = true
   Integer actualInactiveDnisSize = state.inactiveDnis?.size() ?: 0
   Integer expectedInactiveDnisSize = inactiveDnis?.size() ?: 0
+  List<String> testLog = []
+  testLog += Heading2('PBSG State Checks')
   if (state.dfltDni != dfltDni) {
     result = false
-    Linfo(
-      'TEST_pbsgHasExpectedState()',
-      "dfltDni ${state.dfltDni} != ${dfltDni}"
-    )
+    testLog += Bullet2("dfltDni ${state.dfltDni} != ${dfltDni}")
   } else if (state.activeDni != activeDni) {
     result = false
-    Linfo(
-      'TEST_pbsgHasExpectedState()',
-      "activeDni ${state.activeDni} != ${activeDni}"
-    )
+    testLog += Bullet2("activeDni ${state.activeDni} != ${activeDni}")
   } else if (actualInactiveDnisSize != expectedInactiveDnisSize) {
     result = false
-    Linfo(
-      'TEST_pbsgHasExpectedState()',
-      [
-        "inActiveDnis size ${actualInactiveDnisSize} != ${expectedInactiveDnisSize}",
-        "expected: ${inactiveDnis }} got: ${state.inactiveDnis}"
-      ]
-    )
+    testLog += Bullet2("inActiveDnis size ${actualInactiveDnisSize} != ${expectedInactiveDnisSize}")
+    testLog += Bullet2("expected: ${inactiveDnis }} got: ${state.inactiveDnis}")
   } else {
     state.inactiveDnis.eachWithIndex{ dni, index ->
       String expectedDni = inactiveDnis[index]
       if (dni != expectedDni) {
         result = false
-        Linfo(
-          'TEST_pbsgHasExpectedState()',
-          "At ${index}: inactiveDni ${dni} != ${expectedDni}"
-        )
+        testLog += Bullet2("At ${index}: inactiveDni ${dni} != ${expectedDni}")
       }
     }
   }
-  // Check VSW state
-  if (activeButton && SwitchState(getChildDevice(_buttonToDni(activeButton))) != 'on') {
-    result = false
-    Linfo(
-      'TEST_pbsgHasExpectedState()',
-      "Device for activeButton ${activeButton} IS NOT 'on'"
-    )
-  }
-  inactiveBUttons.each{ offButton ->
-    if (SwitchState(getChildDevice(_buttonToDni(offButton))) != 'off') {
-      result = false
-      Linfo(
-        'TEST_pbsgHasExpectedState()',
-        "Device for offButton ${offButton} IS NOT 'off'"
-      )
-    }
-  }
-  List<String> results = [result ? 'true' : '<b>FALSE</b>']
   if (state.activeDni == activeDni) {
-    results += "<i>activeDni: ${state.activeDni}</i>"
+    testLog += Bullet2("<i>activeDni: ${state.activeDni}</i>")
   } else {
-    results += "<i>activeDni: ${state.activeDni}</i> => <b>expected: ${activeDni}</b>"
+    testLog += Bullet2("<i>activeDni: ${state.activeDni}</i> => <b>expected: ${activeDni}</b>")
   }
   if ((state.inactiveDnis == inactiveDnis) || (!state.inactiveDnis && !inactiveDnis)) {
-    results += "<i>inactiveDnis: ${state.inactiveDnis}</i>"
+    testLog += Bullet2("<i>inactiveDnis: ${state.inactiveDnis}</i>")
   } else {
-    results += "<i>inactiveDnis:</b> ${state.inactiveDnis}</i> => <b>expected: ${inactiveDnis}</b>"
+    testLog += Bullet2("<i>inactiveDnis:</b> ${state.inactiveDnis}</i> => <b>expected: ${inactiveDnis}</b>")
   }
   if(state.dfltDni == dfltDni) {
-    results += "<i>dfltDni: ${state.dfltDni}</i>"
+    testLog += Bullet2("<i>dfltDni: ${state.dfltDni}</i>")
   } else {
-    results += "<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>"
+    testLog += Bullet2("<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>")
   }
-  return results.join('<br/>')
+  testLog += Heading2('Button (VSW) State Checks')
+  List<String> buttonState = []
+  if (activeButton) {
+    String state = SwitchState(getChildDevice(_buttonToDni(activeButton)))
+    Boolean isExpected = (state == 'on')
+    state = (state == 'on') ? '<b>on</b>' : '<i>off</i>'
+    if (!isExpected) result = false
+    buttonState += "${activeButton}: ${state} (${isExpected ? '✅' : '❌'})"
+  }
+  inactiveButtons.each{ offButton ->
+    String state = SwitchState(getChildDevice(_buttonToDni(offButton)))
+    Boolean isExpected = (state == 'off')
+    if (!isExpected) result = false
+    buttonState += "${offButton}: ${state} (${isExpected ? '✅' : '❌'})"
+  }
+  testLog += buttonState.join(', ')
+  // results.join('<br/>')
+  Linfo(
+    "TEST ${n} ${ result ? 'passed' : '<b>F A I L E D</b>' }",
+    "<br/>${testLog.join('<br/>')}"
+  )
 }
 
 void TEST_pbsgCoreFunctionality () {
   //-> FifoTest()
   //----
   TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "Inadequate parameters"')
-  Linfo('TEST1', TEST_pbsgHasExpectedState(null, [], null))
+  TEST_pbsgHasExpectedState(1, null, [], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(2, ['A', 'B', 'C', 'D', 'E'], '', null)
-  Linfo('TEST2', TEST_pbsgHasExpectedState(null, ['A', 'B', 'C', 'D', 'E'], null))
+  TEST_pbsgHasExpectedState(2, null, ['A', 'B', 'C', 'D', 'E'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(3, ['A', 'B', 'C', 'D', 'E'], 'B', null)
-  Linfo('TEST3', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
+  TEST_pbsgHasExpectedState(3, 'B', ['A', 'C', 'D', 'E'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(4, ['A', 'C', 'D', 'E'], 'B', null, '<b>Forced Error:</b> "Default not in DNIs"')
-  // TEST4 state is unchanged from TEST3 state
-  Linfo('TEST4', TEST_pbsgHasExpectedState('B', ['A', 'C', 'D', 'E'], 'B'))
+  TEST_pbsgHasExpectedState(4, 'B', ['A', 'C', 'D', 'E'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(5, ['B', 'C', 'D', 'E', 'F'], '', 'C')
-  Linfo('TEST5', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
+  TEST_pbsgHasExpectedState(5, 'C', ['B', 'D', 'E', 'F'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(6, ['B', 'F', 'G', 'I'], 'B', 'D', '<b>Forced Error:</b> "Active not in DNIs"')
-  Linfo('TEST6', TEST_pbsgHasExpectedState('C', ['B', 'D', 'E', 'F'], null))
+  TEST_pbsgHasExpectedState(6, 'C', ['B', 'D', 'E', 'F'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(7, ['B', 'F', 'G', 'I'], 'B', 'G')
-  Linfo('TEST7', TEST_pbsgHasExpectedState('G', ['B', 'F', 'I'], 'B'))
+  TEST_pbsgHasExpectedState(7, 'G', ['B', 'F', 'I'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   // WITHOUT CHANGING THE CONFIGURATION, START TESTING ACTIVATION OF BUTTONS
@@ -557,49 +543,50 @@ void TEST_pbsgCoreFunctionality () {
   //----
   TEST_PbsgActivation(8, "With 'G', ['*B', 'F', 'I'], Activate F")
   pbsgActivateButton('F')
-  Linfo('TEST8', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
+  TEST_pbsgHasExpectedState(8, 'F', ['G', 'B', 'I'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(9, "With 'F', ['G', '*B', 'I'], Activate Q", '<b>Forced Error:</b> "Button does not exist"')
   pbsgActivateButton('Q')
-  Linfo('TEST9', TEST_pbsgHasExpectedState('F', ['G', 'B', 'I'], 'B'))
+  TEST_pbsgHasExpectedState(9, 'F', ['G', 'B', 'I'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(10, "With 'F', ['G', '*B', 'I'], Deactivate F")
   pbsgDeactivateButton('F')
-  Linfo('TEST10', TEST_pbsgHasExpectedState('B', ['F', 'G', 'I'], 'B'))
+  TEST_pbsgHasExpectedState(10, 'B', ['F', 'G', 'I'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(11, "With '*B', ['F', 'G', 'I'], Activate I")
   pbsgActivateButton('I')
-  Linfo('TEST11', TEST_pbsgHasExpectedState('I', ['B', 'F', 'G'], 'B'))
+  TEST_pbsgHasExpectedState(11, 'I', ['B', 'F', 'G'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(12, "With 'I', ['*B', 'F', 'G'], Activate Predecessor")
   pbsgActivatePredecessor()
-  Linfo('TEST12', TEST_pbsgHasExpectedState('B', ['I', 'F', 'G'], 'B'))
+  TEST_pbsgHasExpectedState(12, 'B', ['I', 'F', 'G'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(13, ['B', 'X', 'C', 'E', 'Z'], '', 'C')
-  Linfo('TEST13', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  TEST_pbsgHasExpectedState(13, 'C', ['B', 'X', 'E', 'Z'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(14, "With 'C', ['B', 'X', 'E', 'Z'], Deactivate C")
   pbsgDeactivateButton('C')
-  Linfo('TEST14', TEST_pbsgHasExpectedState(null, ['C', 'B', 'X', 'E', 'Z'], null))
+  TEST_pbsgHasExpectedState(14, null, ['C', 'B', 'X', 'E', 'Z'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(15, "With null, ['C', 'B', 'X', 'E', 'Z'], Activate Predecessor")
   pbsgActivatePredecessor()
-  Linfo('TEST15', TEST_pbsgHasExpectedState('C', ['B', 'X', 'E', 'Z'], null))
+  TEST_pbsgHasExpectedState(15, 'C', ['B', 'X', 'E', 'Z'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(16, ['B', '', null, 'A', 'G', 'X', null, 'A'], 'X', '')
-  Linfo('TEST16', TEST_pbsgHasExpectedState('X', ['B', 'A', 'G'], 'X'))
+  TEST_pbsgHasExpectedState(16, 'X', ['B', 'A', 'G'], 'X')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_pbsgConfigure(17, ['B', 'A', 'G', 'X'], 'X', 'G')
-  Linfo('TEST17', TEST_pbsgHasExpectedState('G', ['X', 'B', 'A'], 'X'))
-  unsubscribe()  // Suspend ALL events that might arise from the last test case.
+  TEST_pbsgHasExpectedState(17, 'G', ['X', 'B', 'A'], 'X')
+  //--> Stay subscribed for manual Dasboard testing.
+  //--> unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
 }
