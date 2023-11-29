@@ -83,7 +83,7 @@ void TEST_pbsgConfigure (
   Linfo("TEST ${n} CONFIG", logMsg)
   // Simulate a Page update (GUI settings) via the System updated() callback.
   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE' .. 'TRACE' for HEAVY DEBUG
-  pbsgConfigure(list, dflt, on, 'TRACE')
+  pbsgConfigure(list, dflt, on, 'INFO')
 }
 
 void TEST_PbsgActivation (
@@ -174,11 +174,8 @@ void TEST_pbsgCoreFunctionality () {
   //-> FifoTest()
   //----
   TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "Inadequate parameters"')
-  Ltrace('A1', 'n/a')
   TEST_pbsgHasExpectedState(1, null, [], null)
-  Ltrace('A2', 'n/a')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
-  Ltrace('A3', 'n/a')
   //----
   TEST_pbsgConfigure(2, ['A', 'B', 'C', 'D', 'E'], '', null)
   TEST_pbsgHasExpectedState(2, null, ['A', 'B', 'C', 'D', 'E'], null)
