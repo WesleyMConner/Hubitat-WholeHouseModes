@@ -1,0 +1,3 @@
+git rev-parse --short head
+b20bac6
+2023/11/28 Save w/ Stabilized PbsgCore.groovy
