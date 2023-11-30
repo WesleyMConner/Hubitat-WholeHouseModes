@@ -43,7 +43,6 @@ preferences {
 
 ////-----------------------------------------------------------------------
 //// EXTERNAL-FACING METHODS
-////
 ////   Boolean pbsgConfigure (
 ////     List<String> buttons,
 ////     String defaultButton,
@@ -57,16 +56,17 @@ preferences {
 ////
 ////   Boolean pbsgActivatePredecessor ()
 ////
+//// PARENT CALLBACK
+////   void _buttonOnCallback (String button)
 ////
-//// PUBLISHED EVENT
-////
-////   Map event = [
-////     name: 'PbsgActiveButton',                                   String
-////     descriptionText: "Button <activeButton> is active",         String
-////     value: [
-////         'active': activeButton,                                 String
-////       'inactive': inactiveButtonFifo,                     List<String>
-////           'dflt': defaultButton                                 String
+////xx PUBLISHED EVENT
+////xx   Map event = [
+////xx     name: 'PbsgActiveButton',                                 String
+////xx     descriptionText: "Button <activeButton> is active",       String
+////xx     value: [
+////xx         'active': activeButton,                               String
+////xx       'inactive': inactiveButtonFifo,                   List<String>
+////xx           'dflt': defaultButton                               String
 ////-----------------------------------------------------------------------
 
 //---- SYSTEM CALLBACKS

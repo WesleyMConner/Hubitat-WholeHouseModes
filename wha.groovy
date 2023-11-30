@@ -64,21 +64,8 @@ void _updateLutronKpadLeds (String currMode) {
 }
 
 void _buttonOnCallback (String button) {
-  Ldebug('_buttonOnCallback()', "Received button: ${b(button)}")
-}
-
-void _pbsgVswTurnedOnCallback (String currPbsgSwitch) {
-  String currMode = currPbsgSwitch?.minus("${state.MODE_PBSG_APP_LABEL}_")
   // - The modePbsg instance calls this method to reflect a state change.
-  // - When a PBSG-managed switch turns on, its peers can be presumed to be off.
-  // - This function's response includes setting mode Keypad LEDs on/off.
-  // - SeeTouch Keypad LEDs are switches that respond to on/off.
-  // - Access to LEDs is approved via a per-scene list of LEDs:
-  //   modeButton_<scene> → ["<description>: <LED DNI>", ...]
-  Ldebug(
-    '_pbsgVswTurnedOnCallback()',
-    "activating <b>mode = ${currMode}</b>."
-  )
+  Linfo('_buttonOnCallback()', "Received button: ${b(button)}")
   getLocation().setMode(currMode)
   _updateLutronKpadLeds(currMode)
 }
@@ -95,7 +82,7 @@ void _removeAllChildApps () {
 
 //---- EVENT HANDLERS
 
-void specialFnButtonHandler (Event e) {
+void seeTouchSpecialFnButtonHandler (Event e) {
   switch (e.name) {
     case 'pushed':
       String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
@@ -103,7 +90,7 @@ void specialFnButtonHandler (Event e) {
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
         case 'ALL_AUTO':
-          Ldebug('specialFnButtonHandler()', 'executing ALL_AUTO')
+          Ldebug('seeTouchSpecialFnButtonHandler()', 'executing ALL_AUTO')
           AllAuto()
           //--TBD--> Update of Keypad LEDs
           break;
@@ -113,7 +100,7 @@ void specialFnButtonHandler (Event e) {
         case 'PANIC':
         case 'QUIET':
           Ldebug(
-            'specialFnButtonHandler()',
+            'seeTouchSpecialFnButtonHandler()',
             "<b>${specialtyFunction}</b> "
               + "function execution is <b>TBD</b>"
           )
@@ -121,7 +108,7 @@ void specialFnButtonHandler (Event e) {
         default:
           // Silently
           Lerror(
-            'specialFnButtonHandler()',
+            'seeTouchSpecialFnButtonHandler()',
             "Unknown specialty function <b>'${specialtyFunction}'</b>"
           )
       }
@@ -130,33 +117,28 @@ void specialFnButtonHandler (Event e) {
     case 'released':
     default:
       Ldebug(
-        'specialFnButtonHandler()',
+        'seeTouchSpecialFnButtonHandler()',
         "ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
 }
 
-void modeChangeButtonHandler (Event e) {
+void seeTouchModeButtonHandler (Event e) {
   // Design Note
+  //   - Process Lutron SeeTouch Keypad events.
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Keypad buttons are matched to state data to activate a target VSW.
+  //   - Keypad buttons are matched to state data to activate a PBSG button.
   switch (e.name) {
     case 'pushed':
-      String targetVsw = state.modeButtonMap?.getAt(e.deviceId.toString())
+      String targetButton = state.modeButtonMap?.getAt(e.deviceId.toString())
                                             ?.getAt(e.value)
-      if (targetVsw) {
-        Ldebug(
-          'modeChangeButtonHandler()',
-          "turning on ${targetVsw}"
-        )
-        app.getChildAppByLabel(state.MODE_PBSG_APP_LABEL).turnOnSwitch(targetVsw)
+      if (targetButton) {
+        Ldebug('seeTouchModeButtonHandler()', "turning on ${targetButton}")
+        app.getChildAppByLabel(state.MODE_PBSG_LABEL).pbsgActivateButton(targetButton)
       }
-      if (targetVsw == 'Day') {
-        Ldebug(
-          'modeChangeButtonHandler()',
-          "executing ALL_AUTO"
-        )
+      if (targetButton == 'Day') {
+        Ldebug('seeTouchModeButtonHandler()', 'executing ALL_AUTO')
         AllAuto()
       }
       // Silently ignore buttons that DO NOT impact Hubitat mode.
@@ -165,8 +147,8 @@ void modeChangeButtonHandler (Event e) {
     case 'released':
     default:
       Ldebug(
-        'modeChangeButtonHandler()',
-        "ignoring ${e.name} ${e.deviceId}-${e.value}"
+        'seeTouchModeButtonHandler()',
+        "Ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
 }
@@ -197,17 +179,13 @@ void initialize () {
     DevW device = d
     Ldebug('initialize()', "subscribing ${getDeviceInfo(device)} to mode handler."
     )
-    subscribe(device, modeChangeButtonHandler, ['filterEvents': true])
+    subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
   }
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
     Ldebug('initialize()', "subscribing ${getDeviceInfo(device)}")
-    subscribe(device, specialFnButtonHandler, ['filterEvents': true])
+    subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
   }
-  //---> Make sure the App-to-App subscription holds.
-  //---> IF this subscription does not work, consider a child-to-parent
-  //---> call where the ModePbsg does a parent.callbackFn() solution.
-  subscribe(pbsgApp, ModePbsgHandler)
 }
 
 //---- GUI / PAGE RENDERING
@@ -354,22 +332,22 @@ void _displayInstantiatedRoomHrefs () {
 }
 
 void _createModePbsgAndPageLink () {
-  InstAppW pbsgApp = app.getChildAppByLabel(state.MODE_PBSG_APP_LABEL)
+  InstAppW pbsgApp = app.getChildAppByLabel(state.MODE_PBSG_LABEL)
   if (!pbsgApp) {
     Ldebug(
       '_createModePbsgAndPageLink()',
-      "Adding mode pbsg ${state.MODE_PBSG_APP_LABEL}"
+      "Adding mode pbsg ${state.MODE_PBSG_LABEL}"
     )
-    pbsgApp = addChildApp('wesmc', 'ModePbsg', state.MODE_PBSG_APP_LABEL)
+    pbsgApp = addChildApp('wesmc', 'ModePbsg', state.MODE_PBSG_LABEL)
   }
   List<String> modeNames = getLocation().getModes().collect{ it.name }
   String currModeName = getLocation().currentMode.name
   pbsgApp.pbsgConfigure(
     modeNames,     // Create a PBSG button per Hubitat Mode name
     'Day',         // 'Day' is the default Mode/Button
-    currModeName   // Activate the Button for the current Mode
+    currModeName,  // Activate the Button for the current Mode
+    'TRACE'        // Use 'TRACE' for PBSG and VSW state details
   )
-  subscribe(pbsgApp, ModePbsgHandler)
   paragraph Heading1('Mode Pbsg Page')
   href(
     name: pbsgLabel,
@@ -379,15 +357,6 @@ void _createModePbsgAndPageLink () {
     title: "Edit <b>${AppInfo(pbsgApp)}</b>",
     state: null
   )
-}
-
-void ModePbsgHandler (Event e) {
-  // e.name                                              'PbsgActiveButton'
-  // e.descriptionText                    'Button <activeButton> is active'
-  // e.value.active                                        '<activeButton>'
-  // e.value.inactive                 FIFO: ['<latestInactiveButton', ... ]
-  // e.value.dflt                                           <defaultButton>
-  Ltrace('ModePbsgHandler()', EventDetails(e))
 }
 
 Map whaPage () {
@@ -405,7 +374,7 @@ Map whaPage () {
     nextPage: 'whaPage'
   ) {
     app.updateLabel('Whole House Automation')
-    state.MODE_PBSG_APP_LABEL = '_ModePbsg'
+    state.MODE_PBSG_LABEL = '_ModePbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
     getGlobalVar('defaultMode').value
     state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
@@ -436,7 +405,7 @@ Map whaPage () {
         paragraph('Management of child apps is pending selection of Room Names.')
       } else {
         PruneAppDups(
-          [*settings.rooms, state.MODE_PBSG_APP_LABEL],
+          [*settings.rooms, state.MODE_PBSG_LABEL],
           false,   // For dups, keep oldest
           app      // The object (parent) pruning dup children
         )

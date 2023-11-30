@@ -1,3 +1,49 @@
+TV -> Party (manual)
+
+With TV on initially .. Party is turned on manually:
+
+  [info]      Device 2.548  Party → on
+  [debug]  _ModePbsg 2.585  VswEventHandler           → ✓..Party turned on
+  [trace]  _ModePbsg 2.615  VswEventHandler           → STATE
+  [trace]  _ModePbsg 2.645  _pbsgActivateDni          → STATE
+  [debug]  _ModePbsg 2.650  _pbsgMoveActiveToInactive → ✓..Push TV
+  [trace]  _ModePbsg 2.664  _pbsgMoveActiveToInactive → STATE
+  [trace]  _ModePbsg 2.678  _pbsgActivateDni          → ✓..Party
+  [info]   _ModePbsg 2.682  _pbsgPublishOnButton      → ✓..Processing button Party
+  [info]   _ModePbsg 2.689  _adjustVsw                → ✓..Turn off VSW TV
+  [info]      Device 2.696  ------------------------- → ✓..TV off
+  [debug]  _ModePbsg 2.747  VswEventHandler           → ✓..TV Off
+  [info]         WHA 2.751  _buttonOnCallback         → ✓..Party
+
+The Handler notes the turn-off event:
+
+[info]   _ModePbsg 2.773  VswEventHandler           → STATE
+[debug]  _ModePbsg 2.780  _pbsgDeactivateDni        → ✓..TV
+[trace]  _ModePbsg 2.903  _pbsgDeactivateDni        → STATE
+[debug]  _ModePbsg 2.913  _pbsgDeactivateDni        → ✓..TV
+
+[debug]  _ModePbsg 2.918  _pbsgDeactivateDni        → ✗..Activate Day (<-TV) *****
+
+
+
+[trace]  _ModePbsg 2.941  _pbsgActivateDni          → STATE
+[debug]  _ModePbsg 2.946  _pbsgMoveActiveToInactive → ✗..Push TV
+[trace]  _ModePbsg 2.969  _pbsgMoveActiveToInactive → STATE
+[trace]  _ModePbsg 2.974  _pbsgActivateDni          → Day
+[info]   _ModePbsg 2.979  _pbsgPublishOnButton      → Processing button Day
+[info]   _ModePbsg 2.984  _adjustVsw                → Turn on VSW Day
+[info]      Device 2.989  ------------------------- → Day on
+[info]   _ModePbsg 3.001  _adjustVsw                → Turn off VSW Party
+[info]      Device 3.007  ------------------------- → Party off
+[debug]  _ModePbsg 3.040  VswEventHandler           → Day On
+[info]         WHA 3.058  _buttonOnCallback         → Day
+[info]   _ModePbsg 3.067  VswEventHandler           → STATE
+[debug]  _ModePbsg 3.073  VswEventHandler           → Party Off
+[info]   _ModePbsg 3.100  VswEventHandler           → STATE
+
+
+
+
 *********************************************************************
 **                                                                 **
 **  For PBSG's:                                                    **
