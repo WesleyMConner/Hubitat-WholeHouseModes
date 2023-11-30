@@ -8,8 +8,10 @@
 **                                                                 **
 **    - WHA Refresh 8:47p --> WHA (2162), ModePbsg (2811)          **
 **    - WHA Refresh 8:50p --> WHA (2162), ModePbsg (2828) !!!      **
-**    - ISSUE:  _pruneOrphanedChildApps() → deleting ModePbsg !!!  **
+**    ISSUE:  _pruneOrphanedChildApps() → deleting ModePbsg !!!    **
 **    - WHA Refresh 9:37p --> WHA (2162), ModePbsg (2845) !!!      **
+**    Deliberate Refresh with simpler Device DNIs                  **
+**    - WHA Refresh 9:49p --> WHA (2162), ModePbsg (2865) !!!      **
 **                                                                 **
 *********************************************************************
 

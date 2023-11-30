@@ -63,6 +63,10 @@ void _updateLutronKpadLeds (String currMode) {
   }
 }
 
+void _buttonOnCallback (String button) {
+  Ldebug('_buttonOnCallback()', "Received button: ${b(button)}")
+}
+
 void _pbsgVswTurnedOnCallback (String currPbsgSwitch) {
   String currMode = currPbsgSwitch?.minus("${state.MODE_PBSG_APP_LABEL}_")
   // - The modePbsg instance calls this method to reflect a state change.
@@ -200,6 +204,10 @@ void initialize () {
     Ldebug('initialize()', "subscribing ${getDeviceInfo(device)}")
     subscribe(device, specialFnButtonHandler, ['filterEvents': true])
   }
+  //---> Make sure the App-to-App subscription holds.
+  //---> IF this subscription does not work, consider a child-to-parent
+  //---> call where the ModePbsg does a parent.callbackFn() solution.
+  subscribe(pbsgApp, ModePbsgHandler)
 }
 
 //---- GUI / PAGE RENDERING
@@ -361,7 +369,7 @@ void _createModePbsgAndPageLink () {
     'Day',         // 'Day' is the default Mode/Button
     currModeName   // Activate the Button for the current Mode
   )
-  app.subscribe(pbsgApp, ModePbsgHandler)
+  subscribe(pbsgApp, ModePbsgHandler)
   paragraph Heading1('Mode Pbsg Page')
   href(
     name: pbsgLabel,
@@ -397,7 +405,7 @@ Map whaPage () {
     nextPage: 'whaPage'
   ) {
     app.updateLabel('Whole House Automation')
-    state.MODE_PBSG_APP_LABEL = 'ModePbsg'
+    state.MODE_PBSG_APP_LABEL = '_ModePbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
     getGlobalVar('defaultMode').value
     state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',

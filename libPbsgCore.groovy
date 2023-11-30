@@ -238,6 +238,8 @@ void _pbsgAdjustVswsAndSendEvent() {
   ])
   // Update the state of child devices
   _adjustVsws()
+  // PARENT DIRECT CALLBACK
+  parent._buttonOnCallback(activeButton)
   // Broadcast the state change to subscribers
   sendEvent(event)
 }
