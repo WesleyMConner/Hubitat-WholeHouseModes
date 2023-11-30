@@ -54,7 +54,7 @@ preferences {
 ////
 ////   Boolean pbsgDeactivateButton (String button)
 ////
-////   Boolean pbsgActivatePredecessor ()
+////   Boolean pbsgActivatePrior ()
 ////
 //// PARENT CALLBACK
 ////   void _buttonOnCallback (String button)

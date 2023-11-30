@@ -225,7 +225,7 @@ void TEST_pbsgCoreFunctionality () {
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(12, "With 'I', ['*B', 'F', 'G'], Activate Predecessor")
-  pbsgActivatePredecessor()
+  pbsgActivatePrior()
   TEST_pbsgHasExpectedState(12, 'B', ['I', 'F', 'G'], 'B')
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
@@ -239,7 +239,7 @@ void TEST_pbsgCoreFunctionality () {
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----
   TEST_PbsgActivation(15, "With null, ['C', 'B', 'X', 'E', 'Z'], Activate Predecessor")
-  pbsgActivatePredecessor()
+  pbsgActivatePrior()
   TEST_pbsgHasExpectedState(15, 'C', ['B', 'X', 'E', 'Z'], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.
   //----

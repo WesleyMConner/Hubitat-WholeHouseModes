@@ -9,7 +9,7 @@ With TV on initially .. Party is turned on manually:
   [debug]  _ModePbsg 2.650  _pbsgMoveActiveToInactive → ✓..Push TV
   [trace]  _ModePbsg 2.664  _pbsgMoveActiveToInactive → STATE
   [trace]  _ModePbsg 2.678  _pbsgActivateDni          → ✓..Party
-  [info]   _ModePbsg 2.682  _pbsgPublishOnButton      → ✓..Processing button Party
+  [info]   _ModePbsg 2.682  _pbsgPublishActiveButton      → ✓..Processing button Party
   [info]   _ModePbsg 2.689  _adjustVsw                → ✓..Turn off VSW TV
   [info]      Device 2.696  ------------------------- → ✓..TV off
   [debug]  _ModePbsg 2.747  VswEventHandler           → ✓..TV Off
@@ -30,7 +30,7 @@ The Handler notes the turn-off event:
 [debug]  _ModePbsg 2.946  _pbsgMoveActiveToInactive → ✗..Push TV
 [trace]  _ModePbsg 2.969  _pbsgMoveActiveToInactive → STATE
 [trace]  _ModePbsg 2.974  _pbsgActivateDni          → Day
-[info]   _ModePbsg 2.979  _pbsgPublishOnButton      → Processing button Day
+[info]   _ModePbsg 2.979  _pbsgPublishActiveButton      → Processing button Day
 [info]   _ModePbsg 2.984  _adjustVsw                → Turn on VSW Day
 [info]      Device 2.989  ------------------------- → Day on
 [info]   _ModePbsg 3.001  _adjustVsw                → Turn off VSW Party

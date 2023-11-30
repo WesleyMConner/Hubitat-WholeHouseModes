@@ -346,7 +346,9 @@ void _createModePbsgAndPageLink () {
     modeNames,     // Create a PBSG button per Hubitat Mode name
     'Day',         // 'Day' is the default Mode/Button
     currModeName,  // Activate the Button for the current Mode
-    'TRACE'        // Use 'TRACE' for PBSG and VSW state details
+    'INFO'         // Use 'INFO' for normal operations
+                   // Use 'DEBUG' to walk key PBSG methods
+                   // Use 'TRACE' to also watch PBSG and VSW state
   )
   paragraph Heading1('Mode Pbsg Page')
   href(
@@ -373,7 +375,7 @@ Map whaPage () {
     uninstall: true,
     nextPage: 'whaPage'
   ) {
-    app.updateLabel('Whole House Automation')
+    app.updateLabel('WHA')
     state.MODE_PBSG_LABEL = '_ModePbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
     getGlobalVar('defaultMode').value

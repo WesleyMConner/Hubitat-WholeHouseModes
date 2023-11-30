@@ -85,10 +85,10 @@ Boolean pbsgDeactivateButton (String button) {
   _pbsgDeactivateDni(_buttonToDni(button))
 }
 
-Boolean pbsgActivatePredecessor () {
-  _tracePbsgStateAndVswState('pbsgActivatePredecessor() AT ENTRY')
+Boolean pbsgActivatePrior () {
+  _tracePbsgStateAndVswState('pbsgActivatePrior()', 'AT ENTRY')
   String predecessor = state.inactiveDnis.first()
-  Ltrace('pbsgActivatePredecessor()', "predecessor: ${predecessor}")
+  Ltrace('pbsgActivatePrior()', "predecessor: ${predecessor}")
   return _pbsgActivateDni(predecessor)
 }
 
@@ -133,7 +133,7 @@ Boolean _pbsgActivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new dni is activated.
   //-> Ldebug('_pbsgActivateDni()', "DNI: ${b(dni)}")
-  _tracePbsgStateAndVswState('_pbsgActivateDni() AT ENTRY')
+  _tracePbsgStateAndVswState('_pbsgActivateDni()', 'AT ENTRY')
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
     Ldebug('_pbsgActivateDni()', "No action, ${dni} is already active")
@@ -150,23 +150,17 @@ Boolean _pbsgActivateDni (String dni) {
     // Adjust the activeDni and Vsw together
     Ldebug('_pbsgActivateDni()', "Activating ${dni}")
     state.activeDni = dni
-    _pbsgPublishOnButton()
-    _tracePbsgStateAndVswState('_pbsgActivateDni() AT EXIT')
+    _pbsgPublishActiveButton()
+    _tracePbsgStateAndVswState('_pbsgActivateDni()', 'AT EXIT')
   }
   return isStateChanged
 }
 
 Boolean _pbsgDeactivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
-  _tracePbsgStateAndVswState('_pbsgDeactivateDni() AT ENTRY')
+  _tracePbsgStateAndVswState('_pbsgDeactivateDni()', 'AT ENTRY')
   Ldebug('_pbsgDeactivateDni()', "DNI: ${b(dni)}")
   Boolean isStateChanged = false
-Ldebug('#157', [
-  '',
-  "dni: ${dni}",
-  "state.inactiveDnis: ${state.inactiveDnis}",
-  "state.inactiveDnis.contains(dni): ${state.inactiveDnis.contains(dni)}"
-])
   if (state.inactiveDnis.contains(dni)) {
     // Nothing to do, dni is already inactive
     Ldebug('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
@@ -187,7 +181,7 @@ Ldebug('#157', [
   return isStateChange
 }
 
-String _childVswStates (Boolean includeHeading = false) {
+List<String> _childVswStates (Boolean includeHeading = false) {
   List<String> results = []
   if (includeHeading) { results += Heading2('VSW States') }
   getChildDevices().each{ d ->
@@ -197,76 +191,102 @@ String _childVswStates (Boolean includeHeading = false) {
       results += Bullet2("<i>${d.getDeviceNetworkId()}: off</i>")
     }
   }
-  return results.join(', ')
+  return results
 }
 
-void _tracePbsgStateAndVswState(String fnName) {
-  Ltrace(
-    fnName,
-    [
-      "<table><tr>",
-      "<td>${appStateAsBullets(true).join('<br/>')}</td>",
-      "<td>${_childVswStates(true).join('<br/>')}</td>",
-      "</tr></table"
-    ].join()
-  )
+void _tracePbsgStateAndVswState(String fnName, String heading) {
+  Ltrace(fnName, [
+    heading,
+    "<table style='border-spacing: 0px;' rules='all'><tr>",
+    "<th style='width:49%'>STATE</th>",
+    "<th/>",
+    "<th style='width:49%'>VSW STATUS</th>",
+    "</tr><tr>",
+    "<td>${appStateAsBullets().join('<br/>')}</td>",
+    "<td/>",
+    "<td>${_childVswStates().join('<br/>')}</td>",
+    "</tr></table"
+  ].join())
 }
 
-void _adjustVsws () {
+void _syncChildVswsToPbsgState () {
+  // W A R N I N G
+  //   - WHEN UPDATING CHILD DEVICES WITH ACTIVE SUBSCRIPTIONS ...
+  //   - HUBITAT MAY PROVIDE DEVICE HANDLERS WITH A STALE STATE MAP
+  //   - TEMPORARILY SUSPENDING SUBSCRIPTIONS FOR DEVICE CHANGES
+  _tracePbsgStateAndVswState('_syncChildVswsToPbsgState()', 'AT ENTRY')
   if (state.activeDni) {
     // Make sure the correct VSW is on
     DevW onDevice = getChildDevice(state.activeDni)
-    if (SwitchState(onDevice) != 'on') {
-      Linfo('_adjustVsws()', "Turning on VSW ${state.activeDni}")
-      onDevice.on()
-    } else {
-      Ltrace('_adjustVsws()', "VSW ${state.activeDni} is already on")
-    }
+    if (SwitchState(onDevice) != 'on') onDevice.on()
   }
   // Make sure other VSWs are off
   state.inactiveDnis.each{ offDni ->
     DevW offDevice = getChildDevice(offDni)
-    if (SwitchState(offDevice) != 'off') {
-      Linfo('_adjustVsw()', "Turning off VSW ${offDni}")
-      offDevice.off()
-    } else {
-      Ltrace('_adjustVsws()', "VSW ${offDni} is already off")
-    }
+    if (SwitchState(offDevice) != 'off') offDevice.off()
   }
+  _tracePbsgStateAndVswState('_syncChildVswsToPbsgState()', 'AT EXIT')
 }
 
-//--> CALLING "EXPECTED" PARENT FUNCTION _buttonOnCallback(button)
-//--> IN LIEU OF SENDING AN EVENT DUE TO HUBITAT SUBSCRIPTION ISSUES.
-//--> void _pbsgAdjustVswsAndSendEvent() {
-void _pbsgPublishOnButton() {
-  _tracePbsgStateAndVswState('_pbsgPublishOnButton() AT ENTRY')
+void _subscribeChildVswEvents () {
+  //-> Avoid the List version of subscribe. It seems flaky.
+  //-> subscribe(childDevices, VswEventHandler, ['filterEvents': true])
+  List<String> traceSummary = [Heading2('Devices Subscribed to VswEventHandler')]
+  childDevices.each{ d ->
+    subscribe(d, VswEventHandler, ['filterEvents': true])
+    traceSummary += Bullet2(d.getDeviceNetworkId())
+  }
+  Ltrace('pbsgCoreUpdated()', traceSummary)
+}
+
+void _pbsgPublishActiveButton() {
+  // DESIGN NOTES
+  //   - Invokes an "expected" parent callback: _buttonOnCallback(button)
+  //   - The use of a callnback avoids app-to-app subscription issues
+  //     (e.g., Hubitat exposed internal SQL in Hubitat Logs)
+  //   - Child device subscriptions occur on a delayed basis as a
+  //     workaround to avoid stale STATE data in Handler methods.
+  _tracePbsgStateAndVswState('_pbsgPublishActiveButton()', 'AT ENTRY')
   String activeButton = _dniToButton(state.activeDni)
-  Linfo('_pbsgPublishOnButton()', "Processing button ${activeButton}")
-  //-> List<String> inactiveButtonFifo = state.inactiveDnis.collect{
-  //->   _dniToButton(it)
-  //-> }
-  //-> String defaultButton = _dniToButton(state.dfltDni)
-  //-> Map event = [
-  //->   name: 'PbsgActiveButton',                             // String
-  //->   descriptionText: "Button ${activeButton} is active",  // String
-  //->   value: [
-  //->     'active': activeButton,                             // String
-  //->     'inactive': inactiveButtonFifo,                     // List<String>
-  //->     'dflt': defaultButton                               // String
+  Linfo('_pbsgPublishActiveButton()', "Processing button ${activeButton}")
+  //-----------------------------------------------------------------------
+  //-> TACTICALLY, SUPPRESS APP-TO-APP EVENTS
+  //->   List<String> inactiveButtonFifo = state.inactiveDnis.collect{
+  //->     _dniToButton(it)
+  //->   }
+  //->   String defaultButton = _dniToButton(state.dfltDni)
+  //->   Map event = [
+  //->     name: 'PbsgActiveButton',                             // String
+  //->     descriptionText: "Button ${activeButton} is active",  // String
+  //->     value: [
+  //->       'active': activeButton,                             // String
+  //->       'inactive': inactiveButtonFifo,                // List<String>
+  //->       'dflt': defaultButton                               // String
+  //->     ]
   //->   ]
-  //-> ]
-  //-> Linfo('_pbsgAdjustVswsAndSendEvent()', [
-  //->   '<b>EVENT MAP</b>',
-  //->   Bullet2("<b>name:</b> ${event.name}"),
-  //->   Bullet2("<b>descriptionText:</b> ${event.descriptionText}"),
-  //->   Bullet2("<b>value.active:</b> ${event.value['active']}"),
-  //->   Bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
-  //->   Bullet2("<b>value.dflt:</b> ${event.value['dflt']}")
-  //-> ])
-  _adjustVsws()
-  parent._buttonOnCallback(activeButton)
+  //->   Linfo('_pbsgAdjustVswsAndSendEvent()', [
+  //->     '<b>EVENT MAP</b>',
+  //->     Bullet2("<b>name:</b> ${event.name}"),
+  //->     Bullet2("<b>descriptionText:</b> ${event.descriptionText}"),
+  //->     Bullet2("<b>value.active:</b> ${event.value['active']}"),
+  //->     Bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
+  //->     Bullet2("<b>value.dflt:</b> ${event.value['dflt']}")
+  //->   ])
+  //-----------------------------------------------------------------------
+  // Box event subscriptions to reduce stale STATE data in Handlers
+  unsubscribe()
+  _syncChildVswsToPbsgState()
+  //-----------------------------------------------------------------------
   //-> Broadcast the state change to subscribers
   //-> sendEvent(event)
+  //-----------------------------------------------------------------------
+  parent._buttonOnCallback(activeButton)    // Communicate event to parent.
+  Integer delayInSeconds = 1
+  Ltrace(
+    '_pbsgPublishActiveButton()',
+    "Event subscription delayed for ${delayInSeconds} second(s)."
+  )
+  runIn(delayInSeconds, '_subscribeChildVswEvents')
 }
 
 List<String> _pbsgGetDnis () {
@@ -285,7 +305,7 @@ Boolean _pbsgMoveActiveToInactive () {
     isStateChanged = true
     state.inactiveDnis = [state.activeDni, *state.inactiveDnis]
     state.activeDni = null
-    _tracePbsgStateAndVswState('_pbsgMoveActiveToInactive() AFTER MOVE')
+    _tracePbsgStateAndVswState('_pbsgMoveActiveToInactive()', 'AFTER MOVE')
   }
   return isStateChanged
 }
@@ -345,8 +365,8 @@ void pbsgCoreUpdated (InstAppW app) {
   Linfo('pbsgCoreUpdated()', [
     [
       '<table style="border-spacing: 0px;" rules="all"><tr>',
-      '<th>ENTRY STATE</th><th style="width:3%"/>',
-      '<th>CONFIGURATION PARAMETERS</th><th style="width:3%"/>',
+      '<th style="width:32%">ENTRY STATE</th><th style="width:2%"/>',
+      '<th style="width:32%">CONFIGURATION PARAMETERS</th><th style="width:2%"/>',
       '<th>REQUIRED ACTIONS</th>',
       '</tr><tr>'
     ].join(),
@@ -369,14 +389,7 @@ void pbsgCoreUpdated (InstAppW app) {
   }
   Ltrace('pbsgCoreUpdated()', _pbsgListVswDevices())
   List<DevW> childDevices = getChildDevices()
-  // Avoid the List version of subscribe. It seems flaky.
-  //-> subscribe(childDevices, VswEventHandler, ['filterEvents': true])
-  childDevices.each{ d ->
-    Ltrace('pbsgCoreUpdated()', "Subscribing ${d} to VswEventHandler")
-    subscribe(d, VswEventHandler, ['filterEvents': true])
-  }
-  // Reconcile the PBSG / Child VSW state AND publish a first event.
-  _pbsgPublishOnButton()
+  _pbsgPublishActiveButton()
 }
 
 void pbsgCoreUninstalled (InstAppW app) {
@@ -392,20 +405,16 @@ void VswEventHandler (Event e) {
   //       2. Manual manipulation of VSWs (via dashboards or directly)
   //       3. Remote manipulation of VSWs (via Amazon Alexa)
   //   - Let downstream functions discard redundant state information
-  // ==================================================================
-  // == PREFIX APP METHODS WITH 'app.'                               ==
-  // ==                                                              ==
-  // == This IS NOT an instance method; so, there is no implied app. ==
-  // == This IS a standalone method !!!                              ==
-  // ==================================================================
-  app._tracePbsgStateAndVswState('VswEventHandler() AT ENTRY')
+  // W A R N I N G
+  //   As of 2023-11-30 Handler continues to receive STALE state values!!!
+  _tracePbsgStateAndVswState('VswEventHandler()', 'AT ENTRY')
   Ldebug('VswEventHandler()', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName
     if (e.value == 'on') {
-      app._pbsgActivateDni(dni)
+      _pbsgActivateDni(dni)
     } else if (e.value == 'off') {
-      app._pbsgDeactivateDni(dni)
+      _pbsgDeactivateDni(dni)
     } else {
       Ldebug(
         'VswEventHandler()',
