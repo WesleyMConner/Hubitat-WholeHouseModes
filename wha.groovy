@@ -66,8 +66,8 @@ void _updateLutronKpadLeds (String currMode) {
 void _buttonOnCallback (String button) {
   // - The modePbsg instance calls this method to reflect a state change.
   Linfo('_buttonOnCallback()', "Received button: ${b(button)}")
-  getLocation().setMode(currMode)
-  _updateLutronKpadLeds(currMode)
+  getLocation().setMode(button)
+  _updateLutronKpadLeds(button)
 }
 
 void _removeAllChildApps () {
