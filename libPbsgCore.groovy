@@ -37,13 +37,6 @@ Boolean pbsgConfigure (
   ) {
   // Returns true if configuration is accepted, false otherwise.
   Boolean retVal = true
-Ltrace('pbsgConfig() parms', [
-  '',
-  "buttons: ${buttons}",
-  "defaultButton: ${defaultButton}",
-  "activeButton: ${activeButton}",
-  "pbsgLogLevel: ${pbsgLogLevel}"
-])
   settings.buttons = cleanStrings(buttons)
   if (settings.buttons != buttons) {
     Ltrace('pbsgConfigure()', "buttons: (${buttons}) -> (${settings.buttons})")
@@ -79,14 +72,6 @@ Ltrace('pbsgConfig() parms', [
       'pbsgConfigure()',
       "activeDni ${b(settings.activeButton)} is not found among buttons (${settings.buttons})")
   }
-Ltrace('pbsgConfig() at updated() call', [
-  "retVal: ${retVal}",
-  "settings.buttons: ${settings.buttons}",
-  "settings.dfltButton: ${settings.dfltButton}",
-  "settings.activeButton: ${settings.activeButton}",
-  "settings.logLevel: ${settings.logLevel}",
-  *appStateAsBullets()
-])
   if (retVal) updated()
   return retVal
 }
@@ -227,13 +212,18 @@ void _adjustVsws () {
 }
 
 void _pbsgAdjustVswsAndSendEvent() {
-  Map<String, String> event = [
-    name: 'PbsgActiveButton',
-    descriptionText: "Button ${state.activeDni} is active",
+  String activeButton = _dniToButton(state.activeDni)
+  List<String> inactiveButtonFifo = state.inactiveDnis.collect{
+    _dniToButton(it)
+  }
+  String defaultButton = _dniToButton(state.dfltDni)
+  Map event = [
+    name: 'PbsgActiveButton',                             // String
+    descriptionText: "Button ${activeButton} is active",  // String
     value: [
-      'active': _dniToButton(state.activeDni),
-      'inactive': state.inactiveDnis.collect{ _dniToButton(it) },
-      'dflt': _dniToButton(state.dfltDni)
+      'active': activeButton,                             // String
+      'inactive': inactiveButtonFifo,                     // List<String>
+      'dflt': defaultButton                               // String
     ]
   ]
   Linfo('_pbsgAdjustVswsAndSendEvent()', [
@@ -365,7 +355,7 @@ void pbsgCoreUninstalled (InstAppW app) {
   Ldebug('pbsgCoreUninstalled()', 'No action')
 }
 
-//---- SUBSCRIPTION HANDLER
+//---- EVENT HANDLERS
 
 void VswEventHandler (Event e) {
   // Design Notes

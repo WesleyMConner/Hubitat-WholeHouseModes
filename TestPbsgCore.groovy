@@ -32,7 +32,7 @@ definition (
 )
 
 preferences {
-  page(name: 'TestPbsgCore')
+  page(name: 'TestPbsgCorePage')
 }
 
 //---- SYSTEM CALLBACKS
@@ -53,9 +53,9 @@ void uninstalled () {
 
 //---- RENDERING AND DISPLAY
 
-Map TestPbsgCore () {
+Map TestPbsgCorePage () {
   return dynamicPage(
-    name: 'TestPbsgCore',
+    name: 'TestPbsgCorePage',
     title: Heading1(AppInfo(app)),
     install: true,
     uninstall: true,

@@ -12,4 +12,4 @@ Lib libLutron id=17
 App PbsgCore id=349
 
 App modePbsg id=341
-App roomPbsg id=342
+App roomScenePbsg id=342

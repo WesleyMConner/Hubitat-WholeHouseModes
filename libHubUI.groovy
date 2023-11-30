@@ -246,10 +246,11 @@ List<String> appStateAsBullets (Boolean includeHeading = false) {
   return result.size() != 0 ? result : [ Heading2('NO STATE DATA AVAILABLE') ]
 }
 
-String appSettingsAsBullets () {
+List<String> appSettingsAsBullets (Boolean includeHeading = false) {
   List<String> result = []
+  if (includeHeading) result += Heading2("${AppInfo(app)} SETTINGS")
   settings.sort().each{ k, v ->
     result += Bullet1("<b>${k}</b> → ${v}")
   }
-  return result.size() != 0 ? result.join('<br/>') : Bullet1('<i>NO DATA AVAILABLE</i>')
+  return result.size() != 0 ? result : [ Heading2('<i>NO SETTINGS DATA AVAILABLE</i>') ]
 }

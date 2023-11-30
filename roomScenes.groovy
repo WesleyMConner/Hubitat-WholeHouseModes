@@ -50,6 +50,9 @@ Map whaRoomPage () {
     uninstall: true,
     //nextPage: 'whaPage'
   ) {
+    // Rename pbsg_modes to ModePbsg
+    InstAppW xPbsg = app.getChildAppByLabel("pbsg_${underscoreRoomName}").updateLabel("${cleanRoomName}Pbsg")
+
     // SAMPLE STATE & SETTINGS CLEAN UP
     //   - app.deleteChildDevice(<INSERT DNI>)
     //   - state.remove('X')
@@ -68,6 +71,21 @@ Map whaRoomPage () {
     //?? app.deleteChildDevice("${state.ROOM_NAME}_ManualOverride".replaceAll(' ', '_'))
     //---------------------------------------------------------------------------------
     //----PRIOR-REPAIR----> app.updateLabel(app.getLabel().replace(' ', '_'))
+
+    String rsLabel = app.getLabel()
+    String newRsLabel = ''
+    if (rsLabel == 'Her_Closet') { newRsLabel = 'Hers' }
+    else if (rsLabel == 'His_Closet') { newRsLabel = 'His' }
+    else {
+      List<String> segments = rsLabel.split('_')
+      segments.each{ segment -> newRsLabel += segment.toLowerCase().capitalize() }
+    }
+    if (rsLabel != newRsLabel) {
+      paragraph "${rsLabel} -> ${newRsLabel}"
+      //app.updateLabel(newRsLabel)
+      //paragraph "===>${app.getLabel()}"
+    }
+
     state.ROOM_NAME = app.getLabel()
     state.SCENE_PBSG_APP_NAME = "pbsg_${state.ROOM_NAME.replace(' ', '_')}"
     section {
@@ -172,7 +190,13 @@ Map whaRoomPage () {
         paragraph red('Management of child apps is pending selection of Room scenes.')
       } else {
         // Before presenting room drilldown HREFs, prune any d
-        keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME])
+        //->keepOldestAppObjPerAppLabel([state.SCENE_PBSG_APP_NAME])
+        PruneAppDups(
+          [state.SCENE_PBSG_APP_NAME],
+          false,   // For dups, keep oldest
+          app      // The object (parent) pruning dup children
+        )
+
         paragraph heading('Inspect Room PBSG')
         InstAppW roomPBSG = app.getChildAppByLabel(state.SCENE_PBSG_APP_NAME)
         if (!roomPBSG || roomPBSG.getAllChildDevices().size() == 0) {
@@ -191,16 +215,16 @@ Map whaRoomPage () {
           width: 2,
           url: "/installedapp/configure/${roomPBSG.getId()}/roomPbsgPage",
           style: 'internal',
-          title: "Edit <b>${getAppInfo(roomPBSG)}</b>",
+          title: "Edit <b>${AppInfo(roomPBSG)}</b>",
           state: null
         )
       }
       paragraph(
         [
           heading('Debug<br/>'),
-          "${ displayState() }<br/>",
-          "${ displaySettings() }"
-        ].join()
+          *appStateAsBullets(true),
+          *appSettingsAsBullets(true)
+        ].join('<br/>')
       )
     }
   }
