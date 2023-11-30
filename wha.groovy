@@ -323,30 +323,6 @@ void _identifyParticipatingRooms () {
   )
 }
 
-void _pruneOrphanedChildApps () {
-  //Initially, assume InstAppW supports instance equality tests -> values is a problem
-  List<InstAppW> kids = getAllChildApps()
-  Ldebug(
-    '_pruneOrphanedChildApps()',
-    "processing ${kids.collect{it.getLabel()}.join(', ')}"
-  )
-  List<String> roomNames =
-  kids.each{ kid ->
-    if (settings.rooms?.contains(kid)) {
-      Ldebug(
-        '_pruneOrphanedChildApps()',
-        "skipping ${kid.getLabel()} (room)"
-      )
-    } else {
-      Ldebug(
-        '_pruneOrphanedChildApps()',
-        "deleting ${kid.getLabel()} (orphan)"
-      )
-      deleteChildApp(kid.getId())
-    }
-  }
-}
-
 void _displayInstantiatedRoomHrefs () {
   paragraph Heading1('Room Scene Configuration')
   settings.rooms.each{ roomName ->
@@ -369,32 +345,30 @@ void _displayInstantiatedRoomHrefs () {
   }
 }
 
-//--xx-> void _createModePbsgAndLink () {
-//--xx->   paragraph heading('Inspect Mode PBSG')
-//--xx->   InstAppW modePBSG = app.getChildAppByLabel(state.MODE_PBSG_APP_LABEL)
-//--xx->   if (!modePBSG || modePBSG.getAllChildDevices().size() == 0) {
-//--xx->     modePBSG = addChildApp('wesmc', 'modePBSG', 'modePbsgPage')
-//--xx->   }
-//--xx-> }
-
 void _createModePbsgAndPageLink () {
-  InstAppW pbsg = app.getChildAppByLabel(pbsgLabel)
-    ?: app.addChildApp('wesmc', state.MODE_PBSG_APP_LABEL, pbsgLabel)
+  InstAppW pbsgApp = app.getChildAppByLabel(state.MODE_PBSG_APP_LABEL)
+  if (!pbsgApp) {
+    Ldebug(
+      '_createModePbsgAndPageLink()',
+      "Adding mode pbsg ${state.MODE_PBSG_APP_LABEL}"
+    )
+    pbsgApp = addChildApp('wesmc', 'ModePbsg', state.MODE_PBSG_APP_LABEL)
+  }
   List<String> modeNames = getLocation().getModes().collect{ it.name }
   String currModeName = getLocation().currentMode.name
-  pbsg.pbsgConfigure(
+  pbsgApp.pbsgConfigure(
     modeNames,     // Create a PBSG button per Hubitat Mode name
     'Day',         // 'Day' is the default Mode/Button
     currModeName   // Activate the Button for the current Mode
   )
-  app.subscribe(pbsg, ModePbsgHandler)
+  app.subscribe(pbsgApp, ModePbsgHandler)
   paragraph Heading1('Mode Pbsg Page')
   href(
     name: pbsgLabel,
     width: 2,
-    url: "/installedapp/configure/${pbsg.getId()}/ModePbsgPage",
+    url: "/installedapp/configure/${pbsgApp.getId()}/ModePbsgPage",
     style: 'internal',
-    title: "Edit <b>${AppInfo(pbsg)}</b>",
+    title: "Edit <b>${AppInfo(pbsgApp)}</b>",
     state: null
   )
 }
@@ -412,12 +386,12 @@ Map whaPage () {
   return dynamicPage(
     name: 'whaPage',
     title: [
-      Heading2('Whole House Automation (WHA) Application<br/>'),
-      Bullet2("Authorize Access to appropriate devices.<br/>"),
-      Bullet2("Create the Mode PBSG App Instance.<br/>"),
-      Bullet2("Identify Participating Rooms.<br/>"),
+      Heading2("Whole House Automation (WHA) - ${app.getId()}"),
+      Bullet2("Authorize Access to appropriate devices."),
+      Bullet2("Create the Mode PBSG App Instance."),
+      Bullet2("Identify Participating Rooms."),
       Bullet2("Press <b>Done</b> (see below) to ensure event subscription updates !!!")
-    ].join(),
+    ].join('<br/>'),
     install: true,
     uninstall: true,
     nextPage: 'whaPage'
@@ -448,7 +422,7 @@ Map whaPage () {
       _identifyKpadModeButtons()
       _wireModeButtons()
       _identifyParticipatingRooms()
-      _pruneOrphanedChildApps()
+      /* _pruneOrphanedChildApps() */
       _createModePbsgAndPageLink()
       if (!settings.rooms) {
         paragraph('Management of child apps is pending selection of Room Names.')

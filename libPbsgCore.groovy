@@ -100,11 +100,13 @@ Boolean pbsgActivatePredecessor () {
 //---- CORE METHODS (Internal)
 
 String _buttonToDni (String button) {
-  return "${app.getLabel()}_${app.getId()}_${button}"
+  //-> return "${app.getLabel()}_${app.getId()}_${button}"
+  return "${app.getLabel()}_${button}"
 }
 
 String _dniToButton (String dni) {
-  return dni ? dni.substring("${app.getLabel()}_${app.getId()}_".length()) : null
+  //-> return dni ? dni.substring("${app.getLabel()}_${app.getId()}_".length()) : null
+  return dni ? dni.substring("${app.getLabel()}_".length()) : null
 }
 
 void _addDni (String dni) {
