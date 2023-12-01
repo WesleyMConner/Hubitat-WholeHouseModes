@@ -44,11 +44,15 @@ String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
 String REDBAR() { return '<hr style="border: 5px solid red;"/>' }
 
 String Heading1 (String s) {
-  return """<span style='font-size: 2em; font-weight: bold;'>${s}</span>"""
+  return """<span style='font-size: 2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
 String Heading2 (String s) {
-  return """<span style='font-size: 1em; font-weight: bold;'>${s}</span>"""
+  return """<span style='font-size: 1.2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
+}
+
+String Heading3 (String s) {
+  return """<span style='font-size: 1.1em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
 String Bullet1 (String s) {
@@ -85,7 +89,7 @@ String tdRght (def x) {
 //---- LOGGING
 //----   - Adjust log levels to reduce noise and improve performance
 
-void solicitLogThreshold (String settingsKey) {
+void solicitLogThreshold (String settingsKey, String dfltThreshold = 'TRACE') {
   // By passing in the settings key, clients can:
   //   - Specify their choice of settings key.
   //   - Solicit two differentiate keys (e.g., App's level vs child PBSG's level)
@@ -94,7 +98,7 @@ void solicitLogThreshold (String settingsKey) {
     type: 'enum',
     title: Heading2("Select ${settingsKey}"),
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
-    defaultValue: 'TRACE',
+    defaultValue: dfltThreshold,
     submitOnChange: true
   )
 }

@@ -194,9 +194,8 @@ List<String> _childVswStates (Boolean includeHeading = false) {
   return results
 }
 
-void _tracePbsgStateAndVswState(String fnName, String heading) {
-  Ltrace(fnName, [
-    heading,
+String _getPbsgStateAndVswState () {
+  return [
     "<table style='border-spacing: 0px;' rules='all'><tr>",
     "<th style='width:49%'>STATE</th>",
     "<th/>",
@@ -206,6 +205,24 @@ void _tracePbsgStateAndVswState(String fnName, String heading) {
     "<td/>",
     "<td>${_childVswStates().join('<br/>')}</td>",
     "</tr></table"
+  ].join()
+}
+
+void _tracePbsgStateAndVswState(String fnName, String heading) {
+  Ltrace(fnName, [
+    heading,
+    _getPbsgStateAndVswState()
+    /*
+    "<table style='border-spacing: 0px;' rules='all'><tr>",
+    "<th style='width:49%'>STATE</th>",
+    "<th/>",
+    "<th style='width:49%'>VSW STATUS</th>",
+    "</tr><tr>",
+    "<td>${appStateAsBullets().join('<br/>')}</td>",
+    "<td/>",
+    "<td>${_childVswStates().join('<br/>')}</td>",
+    "</tr></table"
+    */
   ].join())
 }
 

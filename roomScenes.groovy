@@ -43,16 +43,19 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
-void _activateScene (String scene) {
+//-> void _activateScene (String scene) { --> See _buttonOnCallback()
+void _buttonOnCallback (String scene) {
+  // - The RoomScenesPbsg instance calls this method to reflect a state change.
+  Linfo('_buttonOnCallback()', "Received button: ${b(button)}")
   // Push Repeater buttons and execute Independent switch/dimmer levels.
-  Ldebug('_activateScene()', "scene: <b>${scene}</b>")
+  Ldebug('_buttonOnCallback()', "scene: <b>${scene}</b>")
   // Values are expected at ...
   //   state.sceneToRepeater[sceneName][dni]
   //   state.sceneToIndependent[sceneName][dni]
   // THIS APPLICATION ALLOWS A SINGLE LUTRON MAIN REPEATER PER ROOM
   state.sceneToRepeater?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
     Ldebug(
-      '_activateScene()',
+      '_buttonOnCallback()',
       "${scene}: repeater: ${repeaterDni}, button: ${buttonNumber}"
     )
     // Note: The repeater's Id (not DNI) and button are required to track the scene's
@@ -62,7 +65,7 @@ void _activateScene (String scene) {
       repeater.getDeviceNetworkId() == repeaterDni
     }?.first() ?: {
       Ldebug(
-        '_activateScene()',
+        '_buttonOnCallback()',
         "no repeater w/ DNI: ${repeaterDni}"
       )
     }
@@ -71,14 +74,14 @@ void _activateScene (String scene) {
   }
   state.sceneToIndependent?.getAt(scene)?.each{ deviceDni, level ->
     Ldebug(
-      '_activateScene()',
+      '_buttonOnCallback()',
       "${scene}': device: ${deviceDni}, level: ${level}"
     )
     DevW matchedDevice = settings.independentDevices?.findAll{ device ->
       device.getDeviceNetworkId() == deviceDni
     }?.first() ?: {                              // There should be one match by DNI.
       Ldebug(
-        '_activateScene()',
+        '_buttonOnCallback()',
         "no matchedDevice w/ DNI: ${deviceDni}"
       )
     }
@@ -523,17 +526,14 @@ void initialize () {
 //---- GUI / PAGE RENDERING
 
 void _authMotionSensor () {
-      input(
-        name: 'motionSensor',
-        title: [
-          Heading2("Optionally: Authorize Motion Sensor Access"),
-          Bullet2('Identified Motion Sensors trigger Room Scenes')
-        ].join('<br/>'),
-        type: 'device.LutronMotionSensor',
-        submitOnChange: true,
-        required: false,
-        multiple: false
-      )
+  input(
+    name: 'motionSensor',
+    title: Heading3("Identify Room Motion Sensors"),
+    type: 'device.LutronMotionSensor',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
 }
 
 void _selectModeNamesAsSceneNames () {
@@ -541,7 +541,7 @@ void _selectModeNamesAsSceneNames () {
   input(
     name: 'modeNamesAsSceneNames',
     type: 'enum',
-    title: Heading2('Optional: Select "Mode Names" to use as "Scene Names":'),
+    title: Heading2('Select Mode Names to use as Scenes Names'),
     submitOnChange: true,
     required: false,
     multiple: true,
@@ -550,21 +550,87 @@ void _selectModeNamesAsSceneNames () {
 }
 
 void _identifyCustomScenes () {
+  String prefix = 'customScene'
+  LinkedHashMap<String, String> slots = [
+    "${prefix}1": settings.motionSensor ? 'Off' : settings["${prefix}1"],
+    "${prefix}2": settings["${prefix}2"],
+    "${prefix}3": settings["${prefix}3"],
+    "${prefix}4": settings["${prefix}4"],
+    "${prefix}5": settings["${prefix}5"],
+    "${prefix}6": settings["${prefix}6"],
+    "${prefix}7": settings["${prefix}7"],
+    "${prefix}8": settings["${prefix}8"],
+    "${prefix}9": settings["${prefix}9"]
+  ]
+  LinkedHashMap<String, String> filled = slots?.findAll{it.value}
+  // Only present 1 empty sceen "slot" at a time.
+  LinkedHashMap<String, String> firstOpen = slots?.findAll{!it.value}?.take(1)
+  LinkedHashMap<String, String> custom = \
+    firstOpen + filled.sort{ a, b -> a.value <=> b.value }
+  custom.each{ key, value ->
+    input(
+      name: key,
+      type: 'text',
+      title: Heading2('Custom Scene Name (Optional)'),
+      width: 4,
+      submitOnChange: true,
+      required: false,
+      defaultValue: value
+    )
+  }
 }
 
 void _populateStateScenes () {
+  List<String> scenes = settings.modeNamesAsSceneNames ?: []
+  scenes = scenes.flatten()
+  String prefix = 'customScene'
+  List<String> customScenes = [
+    settings["${prefix}1"],
+    settings["${prefix}2"],
+    settings["${prefix}3"],
+    settings["${prefix}4"],
+    settings["${prefix}5"],
+    settings["${prefix}6"],
+    settings["${prefix}7"],
+    settings["${prefix}8"],
+    settings["${prefix}9"],
+  ].findAll{it != null}
+  if (customScenes) {
+    scenes << customScenes
+    scenes = scenes.flatten().toUnique()
+  }
+  scenes = scenes.sort()
+  state.scenes = scenes.size() > 0 ? scenes : null
 }
 
-void _selectScenePerMode () {
+void _solicitScenePerMode () {
+  if (state.scenes == null) {
+    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
+  } else {
+    paragraph Heading2('Map Hubitat Modes to a Room Scene')
+    getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
+      String inputName = "modeToScene^${modeName}"
+      String defaultValue = settings[inputName]
+        ?: state.scenes.contains(modeName) ? modeName : null
+      input(
+        name: inputName,
+        type: 'enum',
+        title: Heading3(modeName),
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        options: state.scenes,
+        defaultValue: defaultValue
+      )
+    }
+  }
 }
 
 void _authSeeTouchKeypads () {
   input(
     name: 'seeTouchKeypads',
-    title: [
-      Heading2("Optionally: Authorize Access to Keypads"),
-      Bullet2('Identified keypads have buttons that activate room scenes')
-    ].join('<br/>'),
+    title: Heading3("Identify Keypads with Buttons that Activate Room Scenes"),
     type: 'device.LutronSeeTouchKeypad',
     submitOnChange: true,
     required: false,
@@ -575,10 +641,7 @@ void _authSeeTouchKeypads () {
 void _identifyRoomSceneButtons () {
   input(
     name: 'sceneButtons',
-    title: [
-      Heading2("Optionally: Identify Specific Keypad Buttons/LEDs"),
-      Bullet2('Identified buttons trigger a room scene')
-    ].join('<br/>'),
+    title: Heading3("Identify Keypad Buttons/LEDs that Select Room Scenes"),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
     required: false,
@@ -586,9 +649,19 @@ void _identifyRoomSceneButtons () {
   )
 }
 
+void populateStateKpadButtonDniToTargetScene () {
+  Map<String, String> result = [:]
+  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
+    buttonMap.each{ buttonNumber, targetScene ->
+      result["${kpadDni}-${buttonNumber}"] = targetScene
+    }
+  }
+  state.kpadButtonDniToTargetScene = result
+}
+
 void _wireKeypadButtonsToScenes () {
   if (state.scenes == null || settings?.sceneButtons == null) {
-    paragraph('Scene activation buttons are pending pre-requisites.')
+    //paragraph('No Room Scene Keypad buttons have been identified.')
   } else {
     identifyLedButtonsForListItems(
       state.scenes,
@@ -600,7 +673,7 @@ void _wireKeypadButtonsToScenes () {
   }
 }
 
-void populateStateSceneToDeviceValues () {
+void _populateStateSceneToDeviceValues () {
   // Reset state for the Repeater/Independent per-scene device values.
   state['sceneToRepeater'] = [:]
   state['sceneToIndependent'] = [:]
@@ -629,10 +702,7 @@ void populateStateSceneToDeviceValues () {
 void _authRoomScenesPicos () {
   input(
     name: 'picos',
-    title: [
-      Heading2("Optionally: Identify Picos that Trigger Room Scenes"),
-      Bullet2('Identified Picos have buttons that trigger or adjust a room scene')
-    ].join('<br/>'),
+    title: Heading3("Identify Picos that Trigger or Adjust Room Scenes"),
     type: 'device.LutronFastPico',
     submitOnChange: true,
     required: false,
@@ -642,7 +712,7 @@ void _authRoomScenesPicos () {
 
 void _wirePicoButtonsToScenes () {
   if (settings.picos == null) {
-    paragraph('Selection of pico buttons to activate scenes is pending pre-requisites.')
+    //paragraph('Selection of pico buttons to activate scenes is pending pre-requisites.')
   } else {
     selectPicoButtonsForScene(settings.picos)
     populateStatePicoButtonToTargetScene()
@@ -652,10 +722,7 @@ void _wirePicoButtonsToScenes () {
 void _authMainRepeaterImplementingScenes () {
   input(
     name: 'mainRepeater',
-    title: [
-      Heading2("Authorize Main Repeaters with Integration Buttons"),
-      Bullet2('The Integration Buttons realize the Lutron component of a room scene')
-    ].join('<br/>'),
+    title: Heading3("Identify Main Repeaters with Integration Buttons for Room Scenes"),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
@@ -666,10 +733,7 @@ void _authMainRepeaterImplementingScenes () {
 void _authIndependentDevices () {
   input(
     name: 'independentDevices',
-    title: [
-          Heading2("Authorize Access to Independent Devices"),
-          Bullet2('Non-RA2 devices (e.g, Lutron Caséta, Z-Wave) participate in a room scenes')
-    ].join('<br/>'),
+    title: Heading3("Identify the Room's Non-RA2 Devices (e.g., Lutron Caséta, Z-Wave)"),
     type: 'capability.switch',
     submitOnChange: true,
     required: false,
@@ -687,7 +751,7 @@ void configureRoomScene () {
   //-> )
   Set<String> currentSceneKeys = []
   if (state.scenes == null) {
-    paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
+    //paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
   } else {
     state.scenes?.each{ sceneName ->
       Integer col = 2
@@ -697,7 +761,7 @@ void configureRoomScene () {
         currentSceneKeys += inputName
         col += 2
         input(
-          name: inputName,
+          name: Heading3(inputName),
           type: 'number',
           title: "<b>${ d.getLabel() }</b><br/>Level 0..100",
           width: 2,
@@ -712,7 +776,7 @@ void configureRoomScene () {
         currentSceneKeys += inputName
         col += 2
         input(
-          name: inputName,
+          name: Heading3(inputName),
           type: 'number',
           title: "<b>${d.getLabel()}</b><br/>Button #",
           width: 2,
@@ -744,43 +808,59 @@ void configureRoomScene () {
 void _solicitRoomScenes () {
   if (state.scenes && (settings.independentDevices || settings.mainRepeater)) {
     configureRoomScene()
-    populateStateSceneToDeviceValues()
+    _populateStateSceneToDeviceValues()
   } else {
-    paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
+    // paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
   }
 }
 
-void _manageRoomScenePbsg () {
-  if (state.scenes == null) {
-    paragraph 'Management of child apps is pending selection of Room scenes.'
-  } else {
-    // Before presenting room drilldown HREFs, prune any d
-    //->keepOldestAppObjPerAppLabel([state.ROOM_PBSG_LABEL])
-    PruneAppDups(
-      [state.ROOM_PBSG_LABEL],
-      false,   // For dups, keep oldest
-      app      // The object (parent) pruning dup children
+//-> void _displayRoomScenesPbsg () {
+//->   paragraph Heading2('Inspect Room PBSG')
+//->   InstAppW rsPbsg = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
+//->   if (!rsPbsg || rsPbsg.getAllChildDevices().size() == 0) {
+//->     rsPbsg = addChildApp('wesmc', 'RoomScenesPbsg', state.ROOM_PBSG_LABEL)
+//->   }
+//-> }
+
+//-> void _configureRoomScenesPbsg () {
+//->   List<String> vswDNIs = [
+//->     *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE'
+//->   ].collect{ scene ->
+//->     "${state.ROOM_PBSG_LABEL}_${scene}"
+//->   }
+//->   String defaultSwitchDNI = "${state.ROOM_PBSG_LABEL}_AUTOMATIC"
+//->   // Set core instance fields immediately after PBSG instantiation.
+//->   rsPbsg.configPbsg(vswDNIs, defaultSwitchDNI, settings.logThreshold)
+//-> }
+
+void _createRoomScenesPbsgAndPageLink () {
+  InstAppW pbsgApp = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
+  if (!pbsgApp) {
+    Ldebug(
+      '_createRoomScenesPbsgAndPageLink()',
+      "Adding Room Scene PBSG ${state.ROOM_PBSG_LABEL}"
     )
+    pbsgApp = addChildApp('wesmc', 'RoomScenesPbsg', state.ROOM_PBSG_LABEL)
   }
-}
-
-void _displayRoomScenesPbsg () {
-  paragraph heading('Inspect Room PBSG')
-  InstAppW roomPBSG = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
-  if (!roomPBSG || roomPBSG.getAllChildDevices().size() == 0) {
-    roomPBSG = addChildApp('wesmc', 'roomPBSG', 'roomPbsgPage')
-  }
-}
-
-void _configureRoomScenesPbsg () {
-  List<String> vswDNIs = [
-    *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE'
-  ].collect{ scene ->
-    "${state.ROOM_PBSG_LABEL}_${scene}"
-  }
-  String defaultSwitchDNI = "${state.ROOM_PBSG_LABEL}_AUTOMATIC"
-  // Set core instance fields immediately after PBSG instantiation.
-  roomPBSG.configPbsg(vswDNIs, defaultSwitchDNI, settings.logThreshold)
+  List<String> roomSceneNames = [ *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE' ]
+  String dfltSceneName = 'AUTOMATIC'
+  String currSceneName = null  // TBD
+  pbsgApp.pbsgConfigure(
+    roomSceneNames,  // Create a PBSG button per Hubitat Mode name
+    dfltSceneName,   // 'Day' is the default Mode/Button
+    currSceneName,   // Activate the Button for the current Mode
+    settings.pbsgLogThreshold ?: 'INFO' // 'INFO' for normal operations
+                                        // 'DEBUG' to walk key PBSG methods
+                                        // 'TRACE' to include PBSG and VSW state
+  )
+  href(
+    name: AppInfo(pbsgApp),
+    width: 2,
+    url: "/installedapp/configure/${pbsgApp.getId()}/ModePbsgPage",
+    style: 'internal',
+    title: "Edit <b>${AppInfo(pbsgApp)}</b>",
+    state: null
+  )
 }
 
 Map RoomScenesPage () {
@@ -790,8 +870,8 @@ Map RoomScenesPage () {
     name: 'RoomScenesPage',
     title: [
       Heading1("${app.getLabel()} Scenes"),
-      Bullet1("Click <b>${'Done'}</b> to enable subscriptions."),
-      Bullet1('Tab to register changes.')
+      Bullet1('Tab to register changes.'),
+      Bullet1("Click <b>${'Done'}</b> to enable subscriptions.")
     ].join('<br/>'),
     install: true,
     uninstall: true,
@@ -814,38 +894,48 @@ Map RoomScenesPage () {
     state.ROOM_LABEL = app.getLabel()  // WHA creates App w/ Label == Room Name
     state.ROOM_PBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     section {
-      solicitLogThreshold('appLogThreshold')        // <- provided by Utils
-      solicitLogThreshold('pbsgLogThreshold')       // <- provided by Utils
+      solicitLogThreshold('appLogThreshold', 'TRACE')           // libHubUI
+      solicitLogThreshold('pbsgLogThreshold', 'INFO')           // libHubUI
       _authMotionSensor()
       _selectModeNamesAsSceneNames()
       _identifyCustomScenes()
       _populateStateScenes()
-      _selectScenePerMode()
+      _solicitScenePerMode()
       _authSeeTouchKeypads()
       _identifyRoomSceneButtons()
       _wireKeypadButtonsToScenes()
+      _authRoomScenesPicos()
       _wirePicoButtonsToScenes()
       _authMainRepeaterImplementingScenes()
       _authIndependentDevices()
       _solicitRoomScenes()
+      _createRoomScenesPbsgAndPageLink()
+      PruneAppDups(
+        [state.ROOM_PBSG_LABEL],   // App Labels to keep
+        false,                     // For dups, keep oldest
+        app                        // Prune children of this app
+      )
+      //-> _displayRoomScenesPbsg()
+      //--LEGACY-> _configureRoomScenesPbsg()
       /*
-      _manageRoomScenePbsg()
-      _displayRoomScenesPbsg()
-      _configureRoomScenesPbsg()
       href (
         name: state.ROOM_PBSG_LABEL,
         width: 2,
-        url: "/installedapp/configure/${roomPBSG.getId()}",
+        url: "/installedapp/configure/${rsPbsg.getId()}",
         style: 'internal',
-        title: "Edit <b>${AppInfo(roomPBSG)}</b>",
+        title: "Edit <b>${AppInfo(rsPbsg)}</b>",
         state: null
       )
+      */
       paragraph([
         Heading1('Debug'),
         *appStateAsBullets(true),
         *appSettingsAsBullets(true)
       ].join('<br/>'))
-      */
     }
   }
+}
+
+Set<String> getSettingsSceneKeys () {
+  return settings.findAll{ key, value -> key.contains('scene^') }.keySet()
 }

@@ -64,7 +64,7 @@ void _updateLutronKpadLeds (String currMode) {
 }
 
 void _buttonOnCallback (String button) {
-  // - The modePbsg instance calls this method to reflect a state change.
+  // - The ModePbsg instance calls this method to reflect a state change.
   Linfo('_buttonOnCallback()', "Received button: ${b(button)}")
   getLocation().setMode(button)
   _updateLutronKpadLeds(button)
@@ -191,13 +191,13 @@ void initialize () {
 
 //---- GUI / PAGE RENDERING
 
-void _authSpecialFnMainRepeaterAccess () {
+void _idSpecialFnMainRepeater () {
   input(
     name: 'specialtyFnMainRepeater',
     title: [
-      Heading2('Authorize Specialty Function Repeater Access<br/>'),
-      Bullet2("Used for 'all off'... behavior.")
-    ].join(),
+      Heading2('Identify Lutron Repeater(s) Supporting Specialty Functions'),
+      Bullet2('e.g., ALL_AUTO, ALARM, AWAY, FLASH, PANIC, QUIET')
+    ].join('<br/>'),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
@@ -205,15 +205,13 @@ void _authSpecialFnMainRepeaterAccess () {
   )
 }
 
-void _authSeeTouchKpadAccess () {
+void _idKpadsWithModeButtons () {
   input(
     name: 'seeTouchKeypads',
     title: [
-      Heading2('Authorize SeeTouch Keypad Access<br/>'),
-      Bullet2('Identify keypads with buttons that:<br/>'),
-      Bullet2('Trigger specialty whole-house functions.<br/>'),
-      Bullet2('Change the Hubitat mode.')
-    ].join(),
+      Heading2('Identify Keypad(s) with Mode Selection Buttons'),
+      Bullet2('The identified buttons are used to set the Hubitat mode')
+    ].join('<br/>'),
     type: 'device.LutronSeeTouchKeypad',
     submitOnChange: true,
     required: false,
@@ -221,13 +219,13 @@ void _authSeeTouchKpadAccess () {
   )
 }
 
-void _identifySpecialFnButtons () {
+void _idSpecialFnButtons () {
   input(
     name: 'specialFnButtons',
     title: [
-      Heading2('Identify Special Function Buttons<br/>'),
+      Heading2('Identify Special Function Buttons'),
       Bullet2("Examples: ${state.SPECIALTY_BUTTONS}")
-    ].join(),
+    ].join('<br/>'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
     required: false,
@@ -235,7 +233,7 @@ void _identifySpecialFnButtons () {
   )
 }
 
-void _populateStateKpadButtonDniToSpecialFnButtons () {
+void _populateSpecialFnButtonMap () {
   Map<String, String> result = [:]
   state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
     buttonMap.each{ buttonNumber, specialtyFn ->
@@ -247,7 +245,7 @@ void _populateStateKpadButtonDniToSpecialFnButtons () {
 
 void _wireSpecialFnButtons () {
   if (settings?.specialFnButtons == null) {
-    paragraph('No specialty activation buttons are selected.')
+    paragraph Bullet2('No specialty activation buttons are selected.')
   } else {
     identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
       state.SPECIALTY_BUTTONS,              //   - list
@@ -255,17 +253,14 @@ void _wireSpecialFnButtons () {
       'specialFnButton'                     //   - prefix
     )
     populateStateKpadButtons('specialFnButton')
-    _populateStateKpadButtonDniToSpecialFnButtons()
+    _populateSpecialFnButtonMap()
   }
 }
 
 void _identifyKpadModeButtons () {
   input(
     name: 'lutronModeButtons',
-    title: [
-      Heading2('lutronModeButtons<br/>'),
-      Bullet2('Identify Keypad LEDs/Buttons that change the Hubitat mode.')
-    ].join(),
+    title: Heading2('Identify Keypad Mode Selection Buttons'),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
     required: false,
@@ -288,7 +283,7 @@ void _wireModeButtons () {
     paragraph('Mode activation buttons are pending pre-requisites.')
   } else {
     identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
-      state.MODES,              //   - list
+      state.MODES,                          //   - list
       settings.lutronModeButtons,           //   - ledDevices
       'modeButton'                          //   - prefix
     )
@@ -302,7 +297,7 @@ void _identifyParticipatingRooms () {
   input(
     name: 'rooms',
     type: 'enum',
-    title: '<b>Select Participating Rooms</b>',
+    title: Heading2('Identify Participating Rooms'),
     options: roomPicklist,
     submitOnChange: true,
     required: false,
@@ -337,7 +332,7 @@ void _createModePbsgAndPageLink () {
   if (!pbsgApp) {
     Ldebug(
       '_createModePbsgAndPageLink()',
-      "Adding mode pbsg ${state.MODE_PBSG_LABEL}"
+      "Adding Mode PBSG ${state.MODE_PBSG_LABEL}"
     )
     pbsgApp = addChildApp('wesmc', 'ModePbsg', state.MODE_PBSG_LABEL)
   }
@@ -347,17 +342,16 @@ void _createModePbsgAndPageLink () {
     modeNames,     // Create a PBSG button per Hubitat Mode name
     'Day',         // 'Day' is the default Mode/Button
     currModeName,  // Activate the Button for the current Mode
-    'INFO'         // Use 'INFO' for normal operations
-                   // Use 'DEBUG' to walk key PBSG methods
-                   // Use 'TRACE' to also watch PBSG and VSW state
+    settings.pbsgLogThreshold ?: 'INFO' // 'INFO' for normal operations
+                                        // 'DEBUG' to walk key PBSG methods
+                                        // 'TRACE' to include PBSG and VSW state
   )
-  paragraph Heading1('Mode Pbsg Page')
   href(
-    name: pbsgLabel,
+    name: AppInfo(pbsgApp),
     width: 2,
     url: "/installedapp/configure/${pbsgApp.getId()}/ModePbsgPage",
     style: 'internal',
-    title: "Edit <b>${AppInfo(pbsgApp)}</b>",
+    title: "Review <b>${AppInfo(pbsgApp)}</b>",
     state: null
   )
 }
@@ -366,11 +360,9 @@ Map WhaPage () {
   return dynamicPage(
     name: 'WhaPage',
     title: [
-      Heading2("Whole House Automation (WHA) - ${app.getId()}"),
-      Bullet2("Authorize Access to appropriate devices."),
-      Bullet2("Create the Mode PBSG App Instance."),
-      Bullet2("Identify Participating Rooms."),
-      Bullet2("Press <b>Done</b> (see below) to ensure event subscription updates !!!")
+      Heading1("Whole House Automation (WHA) - ${app.getId()}"),
+      Bullet1('Tab to register changes.'),
+      Bullet1("Click <b>${'Done'}</b> to enable subscriptions.")
     ].join('<br/>'),
     install: true,
     uninstall: true
@@ -395,16 +387,16 @@ Map WhaPage () {
     section {
       solicitLogThreshold('appLogThreshold')        // <- provided by Utils
       solicitLogThreshold('pbsgLogThreshold')       // <- provided by Utils
-      _authSpecialFnMainRepeaterAccess()
-      _authSeeTouchKpadAccess()
-      _identifySpecialFnButtons()
+      _idSpecialFnMainRepeater()
+      _idKpadsWithModeButtons()
+      _idSpecialFnButtons()
       _wireSpecialFnButtons()
       _identifyKpadModeButtons()
       _wireModeButtons()
       _identifyParticipatingRooms()
-      /* _pruneOrphanedChildApps() */
       _createModePbsgAndPageLink()
       if (!settings.rooms) {
+        // Don't be too aggressive deleting child apps and their config data.
         paragraph('Management of child apps is pending selection of Room Names.')
       } else {
         PruneAppDups(
