@@ -92,7 +92,7 @@ void solicitLogThreshold (String settingsKey) {
   input (
     name: settingsKey,
     type: 'enum',
-    title: "Set the ${settingsKey}",
+    title: Heading2("Select ${settingsKey}"),
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     defaultValue: 'TRACE',
     submitOnChange: true
