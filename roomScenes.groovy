@@ -23,8 +23,8 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libPbsgCore
 
 definition (
-  parent: 'wesmc:wha',
-  name: 'roomScenes',
+  parent: 'wesmc:WHA',
+  name: 'RoomScenes',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Manage WHA Rooms for Whole House Automation',

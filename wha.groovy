@@ -24,7 +24,7 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.libPbsgCore
 
 definition (
-  name: 'wha',
+  name: 'WHA',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
@@ -36,7 +36,7 @@ definition (
 )
 
 preferences {
-  page(name: 'whaPage')
+  page(name: 'WhaPage')
 }
 
 //---- CORE METHODS (External)
@@ -362,9 +362,9 @@ void _createModePbsgAndPageLink () {
   )
 }
 
-Map whaPage () {
+Map WhaPage () {
   return dynamicPage(
-    name: 'whaPage',
+    name: 'WhaPage',
     title: [
       Heading2("Whole House Automation (WHA) - ${app.getId()}"),
       Bullet2("Authorize Access to appropriate devices."),
@@ -373,8 +373,7 @@ Map whaPage () {
       Bullet2("Press <b>Done</b> (see below) to ensure event subscription updates !!!")
     ].join('<br/>'),
     install: true,
-    uninstall: true,
-    //-> nextPage: 'whaPage'
+    uninstall: true
   ) {
     app.updateLabel('WHA')
     state.MODE_PBSG_LABEL = '_ModePbsg'

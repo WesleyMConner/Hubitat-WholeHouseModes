@@ -20,7 +20,7 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 #include wesmc.libPbsgCore
 
 definition (
-  parent: 'wesmc:wha',
+  parent: 'wesmc:WHA',
   name: 'ModePbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',

@@ -331,7 +331,7 @@ void pbsgCoreInstalled (InstAppW app) {
   state.activeDni = null                            // String
   state.inactiveDnis = []                           // List<String>
   state.dfltDni = null                              // String
-  trace('pbsgCoreInstalled()', appStateAsBullets(true))
+  Ltrace('pbsgCoreInstalled()', appStateAsBullets(true))
 }
 
 void pbsgCoreUpdated (InstAppW app) {
