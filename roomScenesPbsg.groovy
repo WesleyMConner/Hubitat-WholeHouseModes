@@ -24,7 +24,7 @@ definition (
   name: 'RoomScenesPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A libPbsgCore instance rooted in a (WHA) Room Scenes instance',
+  description: 'A pbsgLibrary instance rooted in a Room Scenes instance',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23

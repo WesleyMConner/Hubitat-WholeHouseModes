@@ -24,7 +24,7 @@ definition (
   name: 'ModePbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A PBSG (pbsgLibrary instance) rooted in Whole House Automation',
+  description: 'A pbsgLibrary instance rooted in WHA instance',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -72,7 +72,7 @@ preferences {
 //---- SYSTEM CALLBACKS
 
 void installed () {
-  app.pbsgCoreInstalled()
+  pbsgCoreInstalled(app)
 }
 
 void updated () {
@@ -80,7 +80,7 @@ void updated () {
 }
 
 void uninstalled () {
-  app.pbsgCoreUninstalled()
+  pbsgCoreUninstalled(app)
 }
 
 //---- RENDERING AND DISPLAY

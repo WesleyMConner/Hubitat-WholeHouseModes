@@ -16,10 +16,11 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-#include wesmc.libHubUI
+#include wesmc.libFifo
 #include wesmc.libHubExt
-//#include wesmc.libFifoQ
+#include wesmc.libHubUI
 #include wesmc.libLutron
+#include wesmc.libPbsgCore
 
 definition (
   name: 'wha',
@@ -36,6 +37,25 @@ definition (
 preferences {
   page(name: 'whaPage')
 }
+
+//---- CORE METHODS (External)
+
+//---- CORE METHODS (Internal)
+
+void allAuto () {
+  settings.rooms.each{ roomName ->
+    InstAppW roomApp = getChildAppByLabel(roomName)
+    Ldebug('allAuto()', 'Turning on <b>MANUAL_OVERRIDE</b>')
+    roomApp.getRoomScenePbsg().pbsgTurnOn('MANUAL_OVERRIDE')
+  }
+}
+
+
+
+
+
+
+
 
 //----
 //---- CORE METHODS
@@ -156,56 +176,7 @@ void whaInitialize () {
   }
 }
 
-void allAuto () {
-  settings.rooms.each{ roomName ->
-    InstAppW roomApp = getChildAppByLabel(roomName)
-    Ldebug('allAuto()', 'Turning on <b>MANUAL_OVERRIDE</b>')
-    roomApp.getRoomScenePbsg().pbsgTurnOn('MANUAL_OVERRIDE')
-  }
-}
-
-//----
-//---- SYSTEM CALLBACKS
-//----   Methods specific to this execution context
-//----
-
-void installed () {
-  // ON FIRST LOAD OF whaPage() THERE IS NO PBSG
-  Ldebug('installed()', "pbsg is ${AppInfo(pbsg)}")
-  Ltrace('installed()', 'calling whaInitialize()')
-  whaInitialize()
-}
-
-void updated () {
-  Ldebug('updated()', "pbsg is ${AppInfo(pbsg)}")
-  if (settings.appLogThreshold) {
-    state.logLevel = LogThresholdToLogLevel(settings.appLogThreshold)
-  }
-  if (pbsg && settings.pbsgLogThreshold) {
-    pbsg.pbsgAdjustLogLevel(LogThresholdToLogLevel(settings.pbsgLogThreshold))
-  }
-  Ltrace('updated()', 'calling whaInitialize()')
-  whaInitialize()
-
-  solicitLogThreshold('appLogThreshold')
-  solicitLogThreshold('pbsgLogThreshold')
-    if (pbsg) state.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
-
-  if (pbsg) state.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
-
-
-
-}
-
-void uninstalled () {
-  Lwarn('uninstalled()', 'calling RemoveChildApps()')
-  RemoveChildApps()
-}
-
-//----
 //---- EVENT HANDLERS
-//----   Methods specific to this execution context
-//----
 
 void specialFnButtonHandler (Event e) {
   Ldebug('specialFnButtonHandler()', "pbsg is ${AppInfo(pbsg)}")
@@ -297,20 +268,102 @@ void modeChangeButtonHandler (Event e) {
   }
 }
 
-//----
-//---- SCHEDULED ROUTINES
-//----   Methods specific to this execution context
-//----
+//---- SYSTEM CALLBACKS
 
-//----
-//---- HTTP ENDPOINTS
-//----   Methods specific to this execution context
-//----
+void installed () {
+  // ON FIRST LOAD OF whaPage() THERE IS NO PBSG
+  Ldebug('installed()', "pbsg is ${AppInfo(pbsg)}")
+  Ltrace('installed()', 'calling whaInitialize()')
+  whaInitialize()
+}
 
-//----
-//---- RENDERING AND DISPLAY
-//----   Methods specific to this execution context
-//----
+void updated () {
+  Ldebug('updated()', "pbsg is ${AppInfo(pbsg)}")
+  if (settings.appLogThreshold) {
+    state.logLevel = LogThresholdToLogLevel(settings.appLogThreshold)
+  }
+  if (pbsg && settings.pbsgLogThreshold) {
+    pbsg.pbsgAdjustLogLevel(LogThresholdToLogLevel(settings.pbsgLogThreshold))
+  }
+  Ltrace('updated()', 'calling whaInitialize()')
+  whaInitialize()
+
+  solicitLogThreshold('appLogThreshold')
+  solicitLogThreshold('pbsgLogThreshold')
+    if (pbsg) state.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
+
+  if (pbsg) state.logLevel = LogThresholdToLogLevel(settings.pbsgLogThreshold ?: 'DEBUG')
+
+
+
+}
+
+void uninstalled () {
+  Lwarn('uninstalled()', 'calling RemoveChildApps()')
+  RemoveChildApps()
+}
+
+//---- GUI / PAGE RENDERING
+
+void authorizeMainRepeater () {
+  input(
+    name: 'specialtyFnMainRepeater',
+    title: [
+      Heading2('Authorize Specialty Function Repeater Access'),
+      Bullet1('Identify repeaters supporting special function implementation.')
+    ].join('<br/>'),
+    type: 'device.LutronKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
+}
+
+void authorizeSeeTouchKeypads () {
+  input(
+    name: 'seeTouchKeypads',
+    title: [
+      Heading2('Authorize SeeTouch Keypad Access'),
+      Bullet1('Identify Specialty Function keypad buttons.'),
+      Bullet1('Identify keypad buttons used to change the Hubitat Mode.')
+    ].join('<br/>'),
+    type: 'device.LutronSeeTouchKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void authorizeSeeTouchKeypads () {
+  input(
+    name: 'seeTouchKeypads',
+    title: [
+      Heading2('Authorize SeeTouch Keypad Access'),
+      Bullet1('Identify Specialty Function keypad buttons.'),
+      Bullet1('Identify keypad buttons used to change the Hubitat Mode.')
+    ].join('<br/>'),
+    type: 'device.LutronSeeTouchKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void identifySpecialFunctionButtons() {
+  input(
+    name: 'specialFnButtons',
+    title: [
+      Heading2('Identify Special Function Buttons'),
+      Bullet1("Examples: ${state.specialFnButtons}")
+    ].join('<br/>'),
+    type: 'device.LutronComponentSwitch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+
 
 void updateAppAndPbsgLogLevels () {
   state.logLevel = LogThresholdToLogLevel(settings.appLogThreshold ?: 'TRACE')
@@ -369,50 +422,7 @@ Map<String, List<String>> whaPage () {
   }
 }
 
-void authorizeMainRepeater () {
-  input(
-    name: 'specialtyFnMainRepeater',
-    title: [
-      Heading2('Authorize Specialty Function Repeater Access'),
-      Bullet1('Identify repeaters supporting special function implementation.')
-    ].join('<br/>'),
-    type: 'device.LutronKeypad',
-    submitOnChange: true,
-    required: false,
-    multiple: false
-  )
-}
-
-void authorizeSeeTouchKeypads () {
-  input(
-    name: 'seeTouchKeypads',
-    title: [
-      Heading2('Authorize SeeTouch Keypad Access'),
-      Bullet1('Identify Specialty Function keypad buttons.'),
-      Bullet1('Identify keypad buttons used to change the Hubitat Mode.')
-    ].join('<br/>'),
-    type: 'device.LutronSeeTouchKeypad',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void identifySpecialFunctionButtons() {
-  input(
-    name: 'specialFnButtons',
-    title: [
-      Heading2('Identify Special Function Buttons'),
-      Bullet1("Examples: ${state.specialFnButtons}")
-    ].join('<br/>'),
-    type: 'device.LutronComponentSwitch',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void wireButtonsToSpecialFunctions () {
+void _wireSpecialFnButtons () {
   Ldebug('wireButtonsToSpecialFunctions()', 'TBD - DNI LEAKAGE ???')
   state.specialFnButtons = [
     'ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY', 'FLASH', 'PANIC', 'QUIET'
@@ -436,7 +446,7 @@ void wireButtonsToSpecialFunctions () {
   }
 }
 
-void identifyModeButtons () {
+void _identifyKpadModeButtons () {
   input(
     name: 'lutronModeButtons',
     title: [
@@ -450,7 +460,7 @@ void identifyModeButtons () {
   )
 }
 
-void wireButtonsToModes () {
+void _wireModeButtons () {
   Ldebug('wireButtonsToModes()', 'TBD - DNI LEAKAGE ???')
   if (state.modes == null || settings?.lutronModeButtons == null) {
     paragraph('Mode activation buttons are pending pre-requisites.')
@@ -471,7 +481,7 @@ void wireButtonsToModes () {
   }
 }
 
-void solicitParticipatingRooms () {
+void _identifyParticipatingRooms () {
   // By convention, Hubitat room names DO NOT have whitespace.
   roomPicklist = getRooms().collect{it.name}.sort()
   input(
@@ -514,31 +524,3 @@ void _displayInstantiatedRoomHrefs () {
   }
 }
 */
-
-void displayWhaDebugData() {
-  paragraph (
-    [
-      '<h2><b>whaPage Debug</b></h2>',
-      '<h3><b>STATE</b></h3>',
-      appStateAsBullets(),
-      '<h3><b>SETTINGS</b></h3>',
-      appSettingsAsBullets()
-    ].join()
-  )
-}
-
-void displayModePbsgDebugData () {
-  //--hold-> // Use the Mode PBSG if it exists, but DO NOT create it if missing.
-  //--hold-> InstAppW modePbsg = getOrCreateModePbsg()
-  if (modePbsg) {
-    paragraph (
-      [
-        "<h2><b>${AppInfo(modePbsg)} Debug</b></h2>",
-        '<h3><b>STATE</b></h3>',
-        modePbsg.pbsgGetStateBullets(),
-      ].join()
-    )
-  } else {
-    paragraph '<h2><b>No Mode PBSG (yet)</b></h2>'
-  }
-}

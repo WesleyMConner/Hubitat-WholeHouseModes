@@ -156,17 +156,18 @@ void seeTouchModeButtonHandler (Event e) {
 //---- SYSTEM CALLBACKS
 
 void installed () {
-  Ldebug('installed()', '')
+  Ldebug('installed()', 'Entered')
+  unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void uninstalled () {
-  Ldebug('uninstalled()', '')
+  Ldebug('uninstalled()', 'Entered')
   _removeAllChildApps()
 }
 
 void updated () {
-  Ltrace('updated()', '')
+  Ltrace('updated()', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
@@ -174,16 +175,16 @@ void updated () {
 void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
-  Ldebug('initialize()', '')
+  Ldebug('initialize()', 'Entered')
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    Ldebug('initialize()', "subscribing ${getDeviceInfo(device)} to mode handler."
+    Ldebug('initialize()', "subscribing ${DeviceInfo(device)} to mode handler."
     )
     subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
   }
   settings.seeTouchKeypads.each{ d ->
     DevW device = d
-    Ldebug('initialize()', "subscribing ${getDeviceInfo(device)}")
+    Ldebug('initialize()', "subscribing ${DeviceInfo(device)}")
     subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
   }
 }
@@ -318,12 +319,12 @@ void _displayInstantiatedRoomHrefs () {
         'addRoomAppsIfMissing()',
         "Adding room ${roomName}"
       )
-      roomApp = addChildApp('wesmc', 'whaRoom', roomName)
+      roomApp = addChildApp('wesmc', 'roomScenes', roomName)
     }
     href (
       name: roomName,
       width: 2,
-      url: "/installedapp/configure/${roomApp?.getId()}/whaRoomPage",
+      url: "/installedapp/configure/${roomApp?.getId()}",
       style: 'internal',
       title: "<b>${AppInfo(roomApp)}</b> Scenes",
       state: null, //'complete'
@@ -373,7 +374,7 @@ Map whaPage () {
     ].join('<br/>'),
     install: true,
     uninstall: true,
-    nextPage: 'whaPage'
+    //-> nextPage: 'whaPage'
   ) {
     app.updateLabel('WHA')
     state.MODE_PBSG_LABEL = '_ModePbsg'
@@ -387,13 +388,14 @@ Map whaPage () {
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    settings.remove('log')
-    state.remove('PBSGapp')
+    //-> settings.remove('log')
+    //-> state.remove('PBSGapp')
     //?? state.remove('MODE_SWITCH_NAMES')
     //?? state.remove('DEFAULT_MODE_SWITCH_NAME')
     //---------------------------------------------------------------------------------
     section {
-      solicitLogThreshold()                            // <- provided by Utils
+      solicitLogThreshold('appLogThreshold')        // <- provided by Utils
+      solicitLogThreshold('pbsgLogThreshold')       // <- provided by Utils
       _authSpecialFnMainRepeaterAccess()
       _authSeeTouchKpadAccess()
       _identifySpecialFnButtons()
