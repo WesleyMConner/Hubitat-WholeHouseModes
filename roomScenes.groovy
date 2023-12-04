@@ -344,6 +344,7 @@ void independentDeviceHandler (Event e) {
 }
 
 void hubitatModeChangeHandler (Event e) {
+  Ltrace('hubitatModeChangeHandler()', EventDetails(e))
   if (
     e.name == 'mode'
     && state.currentScene == 'AUTOMATIC'
@@ -466,13 +467,13 @@ void motionSensorHandler (Event e) {
 
 void installed () {
   Ldebug('installed()', 'At Entry')
-  //-> initialize()
+  initialize()
 }
 
 void updated () {
   Ldebug('updated()', 'At Entry')
-  unsubscribe()  // Suspend event processing to rebuild state variables.
-  //-> initialize()
+  unsubscribe()  // Suspend all events (e.g., child devices, mode changes).
+  initialize()
 }
 
 void uninstalled () {
@@ -489,35 +490,35 @@ void initialize () {
   settings.seeTouchKeypads.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Keypad ${getDeviceInfo(device)}"
+      "R_${state.ROOM_LABEL} subscribing to Keypad ${DeviceInfo(device)}"
     )
     subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Repeater ${getDeviceInfo(device)}"
+      "R_${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(device)}"
     )
     subscribe(device, repeaterLedHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Pico ${getDeviceInfo(device)}"
+      "R_${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(device)}"
     )
     subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Motion Sensor ${getDeviceInfo(device)}"
+      "R_${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(device)}"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
   settings.independentDevices.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to independentDevice ${getDeviceInfo(device)}"
+      "R_${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
     )
     subscribe(device, independentDeviceHandler, ['filterEvents': true])
   }
@@ -744,12 +745,7 @@ void _authIndependentDevices () {
 void configureRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
-  Set<String> sceneKeysAtStart = getSettingsSceneKeys()
-  //-> Ldebug(
-  //->   'configureRoomScene() <b>sceneKeysAtStart:</b>',
-  //->   sceneKeysAtStart.join('')
-  //-> )
-  Set<String> currentSceneKeys = []
+  List<String> currentSceneKeys = []
   if (state.scenes == null) {
     //paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
   } else {
@@ -791,17 +787,6 @@ void configureRoomScene () {
         paragraph('', width: 1)
       }
     }
-
-  }
-  // Prune stale scene settings keys.
-  //-> Ldebug('configureRoomScene()', [
-  //->   "<b>Scene Keys (Start):</b> ${sceneKeysAtStart}",
-  //->   "<b>Scene Keys   (End):</b> ${currentSceneKeys}",
-  //->   "<b>Excess Keys (Diff):</b> ${sceneKeysAtStart.minus(currentSceneKeys)}"
-  //-> ])
-  sceneKeysAtStart.minus(currentSceneKeys).each{ key ->
-    Ldebug('configureRoomScene()', "removing setting ${key}")
-    settings.remove(key)
   }
 }
 
@@ -813,25 +798,6 @@ void _solicitRoomScenes () {
     // paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
   }
 }
-
-//-> void _displayRoomScenesPbsg () {
-//->   paragraph Heading2('Inspect Room PBSG')
-//->   InstAppW rsPbsg = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
-//->   if (!rsPbsg || rsPbsg.getAllChildDevices().size() == 0) {
-//->     rsPbsg = addChildApp('wesmc', 'RoomScenesPbsg', state.ROOM_PBSG_LABEL)
-//->   }
-//-> }
-
-//-> void _configureRoomScenesPbsg () {
-//->   List<String> vswDNIs = [
-//->     *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE'
-//->   ].collect{ scene ->
-//->     "${state.ROOM_PBSG_LABEL}_${scene}"
-//->   }
-//->   String defaultSwitchDNI = "${state.ROOM_PBSG_LABEL}_AUTOMATIC"
-//->   // Set core instance fields immediately after PBSG instantiation.
-//->   rsPbsg.configPbsg(vswDNIs, defaultSwitchDNI, settings.logThreshold)
-//-> }
 
 void _createRoomScenesPbsgAndPageLink () {
   InstAppW pbsgApp = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
@@ -915,8 +881,6 @@ Map RoomScenesPage () {
         false,                     // For dups, keep oldest
         app                        // Prune children of this app
       )
-      //-> _displayRoomScenesPbsg()
-      //--LEGACY-> _configureRoomScenesPbsg()
       /*
       href (
         name: state.ROOM_PBSG_LABEL,
@@ -936,6 +900,7 @@ Map RoomScenesPage () {
   }
 }
 
-Set<String> getSettingsSceneKeys () {
-  return settings.findAll{ key, value -> key.contains('scene^') }.keySet()
-}
+//-> List<String> getSettingsSceneKeys () {
+//->   Ldebug('getSettingsSceneKeys() ==>', ) settings.findAll{ it.key.contains('scene^') }
+//->   return settings.findAll{ it.key.contains('scene^') }.collect{ it.key }
+//-> }

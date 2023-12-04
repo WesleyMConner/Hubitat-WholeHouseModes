@@ -245,10 +245,21 @@ void _syncChildVswsToPbsgState () {
   _tracePbsgStateAndVswState('_syncChildVswsToPbsgState()', 'AT EXIT')
 }
 
+void _unsubscribeChildVswEvents () {
+  // Unsubscribing to individual devices due to some prior issues with the
+  // List version of subscribe()/unsubsribe().
+  List<String> traceSummary = [Heading2('Unsubscribed these Child Devices from Events:')]
+  getChildDevices().each{ d ->
+    traceSummary += Bullet2(d.get)
+    unsubscribe(d)
+  }
+  Ltrace('pbsgCoreUpdated()', traceSummary)
+}
+
 void _subscribeChildVswEvents () {
   //-> Avoid the List version of subscribe. It seems flaky.
   //-> subscribe(childDevices, VswEventHandler, ['filterEvents': true])
-  List<String> traceSummary = [Heading2('Devices Subscribed to VswEventHandler')]
+  List<String> traceSummary = [Heading2('Subscribing to VswEventHandler')]
   childDevices.each{ d ->
     subscribe(d, VswEventHandler, ['filterEvents': true])
     traceSummary += Bullet2(d.getDeviceNetworkId())
@@ -291,7 +302,7 @@ void _pbsgPublishActiveButton() {
   //->   ])
   //-----------------------------------------------------------------------
   // Box event subscriptions to reduce stale STATE data in Handlers
-  unsubscribe()
+  _unsubscribeChildVswEvents()
   _syncChildVswsToPbsgState()
   //-----------------------------------------------------------------------
   //-> Broadcast the state change to subscribers
@@ -391,8 +402,9 @@ void pbsgCoreUpdated (InstAppW app) {
     "<td>${requested}</td><td/>",
     "<td>${analysis}</td></tr></table>"
   ])
-  // Suspend ALL events, irrespective of type
-  unsubscribe()
+  // Suspend ALL events, irrespective of type. This can be problematic since
+  // it also takes out Mode change event subscriptions, et al.
+  _unsubscribeChildVswEvents()
   state.dfltDni = updatedDfltDni
   dropDnis.each{ dni -> _dropDni(dni) }
   addDnis.each{ dni -> _addDni(dni) }

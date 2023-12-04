@@ -126,7 +126,7 @@ void removeLegacyWhaData () {
   // state.remove('logLevel3Info')
   // state.remove('logLevel4Debug')
   // state.remove('logLevel5Trace')
-  // state.remove('MODE_PBSG_APP_LABEL')
+  // state.remove('MODE_PBSG_LABEL')
   // state.remove('MODES')
   // state.remove('PBSGapp')
   // state.remove('roomName')

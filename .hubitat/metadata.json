@@ -28,7 +28,7 @@
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/libPbsgCore.groovy",
       "codeType": "library",
       "id": 18,
-      "version": 80
+      "version": 82
     },
     {
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/TestPbsgCore.groovy",
@@ -46,7 +46,7 @@
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/wha.groovy",
       "codeType": "app",
       "id": 332,
-      "version": 1926
+      "version": 1927
     },
     {
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/roomScenePbsg.groovy",
@@ -58,7 +58,7 @@
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/roomScenes.groovy",
       "codeType": "app",
       "id": 356,
-      "version": 72
+      "version": 106
     },
     {
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/modePbsg.groovy",

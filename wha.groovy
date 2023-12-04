@@ -169,6 +169,16 @@ void uninstalled () {
 void updated () {
   Ltrace('updated()', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
+  //---------------------------------------------------------------------------------
+  // REMOVE NO LONGER USED SETTINGS AND STATE
+  //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
+  //   - state.remove('X')
+  //   - settings.remove('Y')
+  //---------------------------------------------------------------------------------
+  state.remove('MODE_PBSG_APP_LABEL')
+  state.remove('MODE_PBSG_APP_NAME')
+
+
   initialize()
 }
 
@@ -373,17 +383,6 @@ Map WhaPage () {
     getGlobalVar('defaultMode').value
     state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
       'FLASH', 'PANIC', 'QUIET']
-    // SAMPLE STATE & SETTINGS CLEAN UP
-    //   - state.remove('X')
-    //   - settings.remove('Y')
-    //---------------------------------------------------------------------------------
-    // REMOVE NO LONGER USED SETTINGS AND STATE
-    //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> settings.remove('log')
-    //-> state.remove('PBSGapp')
-    //?? state.remove('MODE_SWITCH_NAMES')
-    //?? state.remove('DEFAULT_MODE_SWITCH_NAME')
-    //---------------------------------------------------------------------------------
     section {
       solicitLogThreshold('appLogThreshold')        // <- provided by Utils
       solicitLogThreshold('pbsgLogThreshold')       // <- provided by Utils
