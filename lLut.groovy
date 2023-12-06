@@ -16,7 +16,7 @@
 // ---------------------------------------------------------------------------------
 
 library (
-  name: 'libLutron',
+  name: 'lLut',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Lutron extensions',
@@ -28,7 +28,7 @@ void identifyLedButtonsForListItems(
   List<DevW> ledDevices,
   String prefix
   ) {
-  // Keypad LEDs are used as a proxy for Keypad buttons.
+  // Kpad LEDs are used as a proxy for Kpad buttons.
   //   - The button's displayName is meaningful to clients.
   //   - The button's deviceNetworkId is <KPAD Dni> hyphen <BUTTON #>
   list.each{ item ->
@@ -49,9 +49,9 @@ void identifyLedButtonsForListItems(
 
 void populateStateKpadButtons (String prefix) {
   // Design Note
-  //   The Keypad LEDs collected by selectForMode() function as a proxy for
-  //   Keypad button presses. Settings data includes the user-friendly
-  //   LED displayName and the LED device ID, which is comprised of 'Keypad
+  //   The Kpad LEDs collected by selectForMode() function as a proxy for
+  //   Kpad button presses. Settings data includes the user-friendly
+  //   LED displayName and the LED device ID, which is comprised of 'Kpad
   //   Device Id' and 'Button Number', concatenated with a hyphen. This
   //   method populates "state.[<KPAD DNI>]?.[<KPAD Button #>] = mode".
   //
@@ -59,14 +59,14 @@ void populateStateKpadButtons (String prefix) {
   //     key: LEDs_Day,
   //   value: [Central KPAD 2 - DAY: 5953-2]
   //           ^User-Friendly Name
-  //                                 ^Keypad DNI
-  //                                      ^Keypad Button Number
+  //                                 ^Kpad DNI
+  //                                      ^Kpad Button Number
   // The 'value' is first parsed into a list with two components:
   //   - User-Friendly Name
   //   - Button DNI               [The last() item in the parsed list.]
   // The Button DNI is further parsed into a list with two components:
-  //   - Keypad DNI
-  //   - Keypad Button number
+  //   - Kpad DNI
+  //   - Kpad Button number
   String stateKey = "${prefix}Map"
   state[stateKey] = [:]
   settings.each{ key, value ->

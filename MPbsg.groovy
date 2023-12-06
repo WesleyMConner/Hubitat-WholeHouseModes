@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// R O O M   S C E N E   P B S G
+// M O D E   P B S G
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -14,17 +14,17 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
-#include wesmc.libFifo
-#include wesmc.libHubExt
-#include wesmc.libHubUI
-#include wesmc.libPbsgCore
+#include wesmc.lFifo
+#include wesmc.lHExt
+#include wesmc.lHUI
+#include wesmc.lPbsg
 
 definition (
-  parent: 'wesmc:RoomScenes',
-  name: 'RoomScenesPbsg',
+  parent: 'wesmc:WHA',
+  name: 'MPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'A pbsgLibrary instance rooted in a Room Scenes instance',
+  description: 'A pbsgLibrary instance rooted in WHA instance',
   category: '',           // Not supported as of Q3'23
   iconUrl: '',            // Not supported as of Q3'23
   iconX2Url: '',          // Not supported as of Q3'23
@@ -34,11 +34,11 @@ definition (
   videoLink: '',          // TBD
   importUrl: '',          // TBD
   oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: false
+  singleInstance: true
 )
 
 preferences {
-  page(name: 'RoomScenesPbsgPage')
+  page(name: 'MPbsgPage')
 }
 
 ////-----------------------------------------------------------------------
@@ -85,9 +85,9 @@ void uninstalled () {
 
 //---- RENDERING AND DISPLAY
 
-Map RoomScenesPbsgPage () {
+Map MPbsgPage () {
   return dynamicPage(
-    name: 'RoomScenesPbsgPage',
+    name: 'MPbsgPage',
     title: Heading1(AppInfo(app)),
     install: true,
     uninstall: true,

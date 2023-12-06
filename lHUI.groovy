@@ -20,7 +20,7 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Hub as Hub
 
 library (
- name: 'libHubUI',
+ name: 'lHUI',
  namespace: 'wesmc',
  author: 'WesleyMConner',
  description: 'Log-level filtering AND application display enrichment for Hubitat',
@@ -31,7 +31,7 @@ library (
 
 //---- GENERAL PURPOSE
 
-List<String> cleanStrings (List<String> list) {
+List<String> CleanStrings (List<String> list) {
   // Prune nulls, empty strings and dups
   return list.findAll{ it ?: null }.unique()
 }
@@ -89,7 +89,7 @@ String tdRght (def x) {
 //---- LOGGING
 //----   - Adjust log levels to reduce noise and improve performance
 
-void solicitLogThreshold (String settingsKey, String dfltThreshold = 'TRACE') {
+void solicitLogThreshold (String settingsKey, String dfltThresh = 'TRACE') {
   // By passing in the settings key, clients can:
   //   - Specify their choice of settings key.
   //   - Solicit two differentiate keys (e.g., App's level vs child PBSG's level)
@@ -98,14 +98,14 @@ void solicitLogThreshold (String settingsKey, String dfltThreshold = 'TRACE') {
     type: 'enum',
     title: Heading2("Select ${settingsKey}"),
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
-    defaultValue: dfltThreshold,
+    defaultValue: dfltThresh,
     submitOnChange: true
   )
 }
 
-Integer LogThresholdToLogLevel (String logThreshold) {
+Integer LogThreshToLogLevel (String logThresh) {
   Integer retval
-  switch(logThreshold ?: 'TRACE') {
+  switch(logThresh ?: 'TRACE') {
     case 'TRACE':
       retval = 5
       break
@@ -122,7 +122,7 @@ Integer LogThresholdToLogLevel (String logThreshold) {
       retval = 1
       break
     default:
-      log.error("${AppInfo(app)} LogThresholdToLogLevel() bad logThreshold: ${b(logThreshold)}")
+      log.error("${AppInfo(app)} LogThreshToLogLevel() bad logThresh: ${b(logThresh)}")
       retval = 5
   }
 }

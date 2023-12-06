@@ -43,103 +43,17 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
-String encodeDniValue (String dni, Integer value) {
-  return "${dni}:${value}"
-}
-
-List<String> decodeDniValue (String dniValue) {
-  return dniValue.tokenize(':')
-}
-
-void saveRepScene(String scene, String repDni, Integer button) {
-  // Operate on DNI:Button combos
-  String repBut = encodeDniValue(repDni, button)
-  // Make sure a repScenes Map exists
-  if (!state.repScenes) state.repScenes = [:]
-  // Make sure each scene key has a DNI:Button list
-  if (!state.repScenes.scene) state.repScenes.scene = []
-  // Make sure the new/revised BAD APPROACH
-  state.repScenes[scene] = CleanStrings([state.repScenes.scene, repBut])
-}
-
-void saveIndScene(String scene, String indDni, Integer level) {
-  // Persist
-  if (!state.indScenes) state.indScenes = [:]
-  state.indScenes[scene] = encodeDniValue(indDni, level)
-}
-
-void activateRepScene(String scene) {
-
-}
-
-void activateIndScene(String scene) {
-
-}
-
-DevW getDevice (String settingsKey, String dni) {
-  return settings.getAt(settingsKey)?.findAll{ d ->
-    d.getDeviceNetworkId() == dni
-  }.first()
-}
-
-void pushDniButton (String settingsKey, Integer dniButton) {
-  List<String> tokens = dniButton.tokenize(':')
-  DevW device = getDevice(settingsKey, tokens[0])
-  device.push(tokens[1])
-}
-
-void save () {
-  state.repScenes = [:]
-  state.repScenes.tv
-}
-
-void TEST1() {
-  String encTv = encodeDniValue('Ra2K-1-1848', 45)
-  paragraph "encTv: ${encTv}"
-  pushDniButton('mainRepeater', encTv)
-}
-
-
-
-
-//-> void isDniButtonActive (String dniButton) {
-//->   key.tokenize('^')
-//-> }
-
-void _setRepSceneButton(String repDni, String scene, Integer button) {
-  if (!state.repeaters) state.repeaters = [:]
-  if (!state.repeaters.repDni) state.repeaters[repDni] = ["${scene}": button]
-}
-
-Integer _getRepSceneButton(String repDni, String scene) {
-  paragraph "repDni: ${repDni}, scene: ${scene}"
-  paragraph "state.repeaters: ${state.repeaters}"
-  paragraph "state.repeaters.${repDni}: ==> ${state.repeaters?.getAt(repDni)}"
-  paragraph "state.repeaters.${repDni}.${scene}: ==> ${state.repeaters?.getAt(repDni)?.getAt(scene)}"
-  Map<String, Integer> xxx = state.repeaters?.getAt(repDni) as Map<String, Integer>
-  paragraph "xxx: ${xxx}"
-  paragraph "xxx.${scene}: ==> ${xxx?.getAt(scene)}"
-  return state.repeaters?.getAt(repDni)?.getAt(scene)
-}
-
-Map<String, Integer> _getRepeatersForScene(String scene) {
-  // repDni: [scene: number]
-  state.repeaters.findAll{ k, v -> v.findAll{ vk, vv -> (vk == scene) } }
-    .collectEntries{ k, v -> v.each{ vk, vv -> [k: vv] }}
-}
-
-// - - - - - - -
-
+//-> void _activateScene (String scene) { --> See _buttonOnCallback()
 void _buttonOnCallback (String scene) {
   // - The RoomScenesPbsg instance calls this method to reflect a state change.
   Linfo('_buttonOnCallback()', "Received button: ${b(button)}")
   // Push Repeater buttons and execute Independent switch/dimmer levels.
   Ldebug('_buttonOnCallback()', "scene: <b>${scene}</b>")
   // Values are expected at ...
-  //   state.sceneToRep[scene][dni]
-  //   state.sceneToInd[scene][dni]
+  //   state.sceneToRepeater[sceneName][dni]
+  //   state.sceneToIndependent[sceneName][dni]
   // THIS APPLICATION ALLOWS A SINGLE LUTRON MAIN REPEATER PER ROOM
-  state.sceneToRep?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
+  state.sceneToRepeater?.getAt(scene)?.each{ repeaterDni, buttonNumber ->
     Ldebug(
       '_buttonOnCallback()',
       "${scene}: repeater: ${repeaterDni}, button: ${buttonNumber}"
@@ -158,7 +72,7 @@ void _buttonOnCallback (String scene) {
     state.roomSceneRepeaterDeviceId = matchedRepeater.getId()
     matchedRepeater.push(buttonNumber)
   }
-  state.sceneToInd?.getAt(scene)?.each{ deviceDni, level ->
+  state.sceneToIndependent?.getAt(scene)?.each{ deviceDni, level ->
     Ldebug(
       '_buttonOnCallback()',
       "${scene}': device: ${deviceDni}, level: ${level}"
@@ -201,7 +115,7 @@ Boolean _isRoomSceneLedActive() {
       '_isRoomSceneLedActive()',
       "ledScene: ${ledScene}"
     )
-    Map repeaterData = state.sceneToRep?.getAt(ledScene)
+    Map repeaterData = state.sceneToRepeater?.getAt(ledScene)
     if (repeaterData) {
       Ldebug(
         '_isRoomSceneLedActive()',
@@ -252,7 +166,7 @@ Boolean _areRoomSceneDevLevelsCorrect() {
   // NOT state.currScenePerVsw). When state.currScenePerVsw == MANUAL_OVERRIDE,
   // state.roomScene will retain the critera required to release the OVERRIDE.
   Boolean retVal = true
-  if (!state.sceneToInd) {
+  if (!state.sceneToIndependent) {
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
       "No Independent Devices."
@@ -260,7 +174,7 @@ Boolean _areRoomSceneDevLevelsCorrect() {
   } else {
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
-      "sceneToInd: ${state.sceneToInd}"               // SEEN IN LOGS
+      "sceneToIndependent: ${state.sceneToIndependent}"               // SEEN IN LOGS
     )
     if (!state.roomScene) {
       if (!state.currScenePerVsw) {
@@ -278,7 +192,7 @@ Boolean _areRoomSceneDevLevelsCorrect() {
       '_areRoomSceneDevLevelsCorrect()',
       "restoreScene: ${restoreScene}"
     )
-    Map indepDevData = state.sceneToInd?.getAt(restoreScene)
+    Map indepDevData = state.sceneToIndependent?.getAt(restoreScene)
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
       "indepDevData: ${indepDevData}"
@@ -447,11 +361,11 @@ void hubitatModeChangeHandler (Event e) {
   }
 }
 
-void kpadSceneButtonHandler (Event e) {
+void keypadSceneButtonHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Kpad buttons are matched to state data to activate a target VSW.
+  //   - Keypad buttons are matched to state data to activate a target VSW.
   switch (e.name) {
     case 'pushed':
       // Toggle the corresponding pbsg-modes-X VSW for the keypad button.
@@ -460,7 +374,7 @@ void kpadSceneButtonHandler (Event e) {
       if (targetScene) {
         String targetVsw = "${state.ROOM_PBSG_LABEL}_${targetScene}"
         Ldebug(
-          'kpadSceneButtonHandler()',
+          'keypadSceneButtonHandler()',
           "toggling ${targetVsw}"
         )
         _getScenePbsg().toggleSwitch(targetVsw)
@@ -472,7 +386,7 @@ void kpadSceneButtonHandler (Event e) {
       break
     default:
       Lwarn(
-        'kpadSceneButtonHandler()',
+        'keypadSceneButtonHandler()',
         "for '${state.ROOM_LABEL}' unexpected event name '${e.name}' for DNI '${e.deviceId}'"
       )
   }
@@ -567,21 +481,18 @@ void uninstalled () {
 }
 
 void initialize () {
-  // state.sceneToRep[scene][dni]
-  // state.sceneToInd[scene][dni]
-
   Ldebug(
     'initialize()',
     "R_${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       + "Subscribing to hubitatModeChangeHandler."
   )
   subscribe(location, "mode", hubitatModeChangeHandler)
-  settings.seeTouchKpads.each{ device ->
+  settings.seeTouchKeypads.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Kpad ${DeviceInfo(device)}"
+      "R_${state.ROOM_LABEL} subscribing to Keypad ${DeviceInfo(device)}"
     )
-    subscribe(device, kpadSceneButtonHandler, ['filterEvents': true])
+    subscribe(device, keypadSceneButtonHandler, ['filterEvents': true])
   }
   settings.mainRepeater.each{ device ->
     Ldebug(
@@ -626,20 +537,20 @@ void _authMotionSensor () {
   )
 }
 
-void _selectModesAsScenes () {
-  List<String> scenes = ModeNames()
+void _selectModeNamesAsSceneNames () {
+  List<String> sceneNames = ModeNames()
   input(
-    name: 'modesAsScenes',
+    name: 'modeNamesAsSceneNames',
     type: 'enum',
     title: Heading2('Select Mode Names to use as Scenes Names'),
     submitOnChange: true,
     required: false,
     multiple: true,
-    options: scenes.sort()
+    options: sceneNames.sort()
   )
 }
 
-void _idCustomScenes () {
+void _identifyCustomScenes () {
   String prefix = 'customScene'
   LinkedHashMap<String, String> slots = [
     "${prefix}1": settings.motionSensor ? 'Off' : settings["${prefix}1"],
@@ -671,7 +582,7 @@ void _idCustomScenes () {
 }
 
 void _populateStateScenes () {
-  List<String> scenes = settings.modesAsScenes ?: []
+  List<String> scenes = settings.modeNamesAsSceneNames ?: []
   scenes = scenes.flatten()
   String prefix = 'customScene'
   List<String> customScenes = [
@@ -690,9 +601,6 @@ void _populateStateScenes () {
     scenes = scenes.flatten().toUnique()
   }
   scenes = scenes.sort()
-
-  Map<String, List<String> > xScenes = scenes?.collectEntries{ [(it): []] }
-  Lerror('#693:', "${xScenes}")
   state.scenes = scenes.size() > 0 ? scenes : null
 }
 
@@ -720,9 +628,9 @@ void _solicitScenePerMode () {
   }
 }
 
-void _authSeeTouchKpads () {
+void _authSeeTouchKeypads () {
   input(
-    name: 'seeTouchKpads',
+    name: 'seeTouchKeypads',
     title: Heading3("Identify Keypads with Buttons that Activate Room Scenes"),
     type: 'device.LutronSeeTouchKeypad',
     submitOnChange: true,
@@ -731,10 +639,10 @@ void _authSeeTouchKpads () {
   )
 }
 
-void _idRoomSceneButtons () {
+void _identifyRoomSceneButtons () {
   input(
     name: 'sceneButtons',
-    title: Heading3("Identify Kpad Buttons/LEDs that Select Room Scenes"),
+    title: Heading3("Identify Keypad Buttons/LEDs that Select Room Scenes"),
     type: 'device.LutronComponentSwitch',
     submitOnChange: true,
     required: false,
@@ -752,9 +660,9 @@ void populateStateKpadButtonDniToTargetScene () {
   state.kpadButtonDniToTargetScene = result
 }
 
-void _wireKpadButtonsToScenes () {
+void _wireKeypadButtonsToScenes () {
   if (state.scenes == null || settings?.sceneButtons == null) {
-    //paragraph('No Room Scene Kpad buttons have been identified.')
+    //paragraph('No Room Scene Keypad buttons have been identified.')
   } else {
     identifyLedButtonsForListItems(
       state.scenes,
@@ -766,56 +674,28 @@ void _wireKpadButtonsToScenes () {
   }
 }
 
-//void storeDeviceSceneValue (String deviceDNI, String scene, )
-
-void _populateStateSceneToDeviceValuesPREV () {
-  // Reset state for the Repeater/Independent per-scene device values.
-  state['sceneToRep'] = [:]
-  state['sceneToInd'] = [:]
-  settings.each{ key, value ->
-    //  key w/ delimited data "scene^Night^Ind^Ra2D-59-1848"
-    //                               scene
-    //                                     deviceType
-    //                                                 deviceDni
-    List<String> parsedKey = key.tokenize('^')
-    // Only process settings keys with the "scene" prefix.
-    if (parsedKey[0] == 'scene') {
-      // Circa 2023-Sep, no object destructuring syntax in Grooy.
-      String scene = parsedKey[1]
-      String deviceType = parsedKey[2]
-      String deviceDNI = parsedKey[3]
-      // If missing, create an empty map for the scene's deviceDNI->value data.
-      // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
-      String stateKey = "sceneTo${deviceType}"
-      if (!state[stateKey][scene]) state[stateKey][scene] = [:]
-      // Populate the current deviceDNI->value data.
-      state[stateKey][scene][deviceDNI] = value
-    }
-  }
-}
-
 void _populateStateSceneToDeviceValues () {
   // Reset state for the Repeater/Independent per-scene device values.
-  //--xx-> state['sceneToRep'] = [:]
-  //--xx-> state['sceneToInd'] = [:]
+  state['sceneToRepeater'] = [:]
+  state['sceneToIndependent'] = [:]
   settings.each{ key, value ->
-    //  key w/ delimited data "scene^Night^Ind^Ra2D-59-1848"
-    //                               scene
+    //  key w/ delimited data "scene^Night^Independent^Ra2D-59-1848"
+    //                               sceneName
     //                                     deviceType
     //                                                 deviceDni
     List<String> parsedKey = key.tokenize('^')
     // Only process settings keys with the "scene" prefix.
     if (parsedKey[0] == 'scene') {
       // Circa 2023-Sep, no object destructuring syntax in Grooy.
-      String scene = parsedKey[1]
+      String sceneName = parsedKey[1]
       String deviceType = parsedKey[2]
       String deviceDNI = parsedKey[3]
       // If missing, create an empty map for the scene's deviceDNI->value data.
       // Note: Hubitat's dated version of Groovy lacks null-safe indexing.
       String stateKey = "sceneTo${deviceType}"
-      if (!state[stateKey][scene]) state[stateKey][scene] = [:]
+      if (!state[stateKey][sceneName]) state[stateKey][sceneName] = [:]
       // Populate the current deviceDNI->value data.
-      state[stateKey][scene][deviceDNI] = value
+      state[stateKey][sceneName][deviceDNI] = value
     }
   }
 }
@@ -851,7 +731,7 @@ void _authMainRepeaterImplementingScenes () {
   )
 }
 
-void _authIndDevices () {
+void _authIndependentDevices () {
   input(
     name: 'independentDevices',
     title: Heading3("Identify the Room's Non-RA2 Devices (e.g., Lutron Caséta, Z-Wave)"),
@@ -862,54 +742,6 @@ void _authIndDevices () {
   )
 }
 
-void configureRoomScenePREV () {
-  // Display may be full-sized (12-positions) or phone-sized (4-position).
-  // For phone friendliness, work one scene at a time.
-  List<String> currentSceneKeys = []
-  if (state.scenes == null) {
-    //paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
-  } else {
-    state.scenes?.each{ scene ->
-      Integer col = 2
-      paragraph("<br/><b>${ scene } →</b>", width: 2)
-      settings.independentDevices?.each{ d ->
-        String inputName = "scene^${scene}^Ind^${d.getDeviceNetworkId()}"
-        currentSceneKeys += inputName
-        col += 2
-        input(
-          name: Heading3(inputName),
-          type: 'number',
-          title: "<b>${ d.getLabel() }</b><br/>Level 0..100",
-          width: 2,
-          submitOnChange: true,
-          required: false,
-          multiple: false,
-          defaultValue: 0
-        )
-      }
-      settings.mainRepeater?.each{d ->
-        String inputName = "scene^${scene}^Rep^${d.getDeviceNetworkId()}"
-        currentSceneKeys += inputName
-        col += 2
-        input(
-          name: Heading3(inputName),
-          type: 'number',
-          title: "<b>${d.getLabel()}</b><br/>Button #",
-          width: 2,
-          submitOnChange: true,
-          required: false,
-          multiple: false,
-          defaultValue: 0
-        )
-      }
-      // Fill to end of logical row
-      while (col++ % 12) {
-        paragraph('', width: 1)
-      }
-    }
-  }
-}
-
 void configureRoomScene () {
   // Display may be full-sized (12-positions) or phone-sized (4-position).
   // For phone friendliness, work one scene at a time.
@@ -917,11 +749,11 @@ void configureRoomScene () {
   if (state.scenes == null) {
     //paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
   } else {
-    state.scenes?.each{ scene ->
+    state.scenes?.each{ sceneName ->
       Integer col = 2
-      paragraph("<br/><b>${ scene } →</b>", width: 2)
+      paragraph("<br/><b>${ sceneName } →</b>", width: 2)
       settings.independentDevices?.each{ d ->
-        String inputName = "scene^${scene}^Ind^${d.getDeviceNetworkId()}"
+        String inputName = "scene^${sceneName}^Independent^${d.getDeviceNetworkId()}"
         currentSceneKeys += inputName
         col += 2
         input(
@@ -936,7 +768,7 @@ void configureRoomScene () {
         )
       }
       settings.mainRepeater?.each{d ->
-        String inputName = "scene^${scene}^Rep^${d.getDeviceNetworkId()}"
+        String inputName = "scene^${sceneName}^Repeater^${d.getDeviceNetworkId()}"
         currentSceneKeys += inputName
         col += 2
         input(
@@ -976,14 +808,14 @@ void _createRoomScenesPbsgAndPageLink () {
     )
     pbsgApp = addChildApp('wesmc', 'RoomScenesPbsg', state.ROOM_PBSG_LABEL)
   }
-  List<String> roomScenes = [ *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE' ]
-  String dfltScene = 'AUTOMATIC'
-  String currScene = null  // TBD
+  List<String> roomSceneNames = [ *state.scenes, 'AUTOMATIC', 'MANUAL_OVERRIDE' ]
+  String dfltSceneName = 'AUTOMATIC'
+  String currSceneName = null  // TBD
   pbsgApp.pbsgConfigure(
-    roomScenes,  // Create a PBSG button per Hubitat Mode name
-    dfltScene,   // 'Day' is the default Mode/Button
-    currScene,   // Activate the Button for the current Mode
-    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+    roomSceneNames,  // Create a PBSG button per Hubitat Mode name
+    dfltSceneName,   // 'Day' is the default Mode/Button
+    currSceneName,   // Activate the Button for the current Mode
+    settings.pbsgLogThreshold ?: 'INFO' // 'INFO' for normal operations
                                         // 'DEBUG' to walk key PBSG methods
                                         // 'TRACE' to include PBSG and VSW state
   )
@@ -1028,37 +860,20 @@ Map RoomScenesPage () {
     state.ROOM_LABEL = app.getLabel()  // WHA creates App w/ Label == Room Name
     state.ROOM_PBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     section {
-
-    _setRepSceneButton('TEST_REP1', 'TEST_SCENE_A', 51)
-    _setRepSceneButton('TEST_REP2', 'TEST_SCENE_A', 52)
-    _setRepSceneButton('TEST_REP3', 'TEST_SCENE_A', 53)
-    _setRepSceneButton('TEST_REP2', 'TEST_SCENE_B', 62)
-paragraph "005"
-    paragraph "repeaters: ${state.repeaters}"
-paragraph "006"
-    paragraph "REP1: ${_getRepSceneButton('TEST_REP1', 'TEST_SCENE_A')}"
-paragraph "007"
-    paragraph "REP2: ${_getRepSceneButton('TEST_REP2', 'TEST_SCENE_B')}"
-paragraph "008"
-    paragraph "REP3: ${_getRepSceneButton('TEST_REP3', 'TEST_SCENE_A')}"
-paragraph "009"
-    paragraph "REPS for SCENE: ${_getRepeatersForScene('TEST_SCENE_A')}"
-
-
       solicitLogThreshold('appLogThresh', 'TRACE')           // lHUI
-      solicitLogThreshold('pbsgLogThresh', 'INFO')           // lHUI
+      solicitLogThreshold('pbsgLogThres', 'INFO')           // lHUI
       _authMotionSensor()
-      _selectModesAsScenes()
-      _idCustomScenes()
+      _selectModeNamesAsSceneNames()
+      _identifyCustomScenes()
       _populateStateScenes()
       _solicitScenePerMode()
-      _authSeeTouchKpads()
-      _idRoomSceneButtons()
-      _wireKpadButtonsToScenes()
+      _authSeeTouchKeypads()
+      _identifyRoomSceneButtons()
+      _wireKeypadButtonsToScenes()
       _authRoomScenesPicos()
       _wirePicoButtonsToScenes()
       _authMainRepeaterImplementingScenes()
-      _authIndDevices()
+      _authIndependentDevices()
       _solicitRoomScenes()
       _createRoomScenesPbsgAndPageLink()
       PruneAppDups(

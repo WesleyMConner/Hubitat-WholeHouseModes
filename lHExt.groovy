@@ -19,13 +19,13 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 
 library (
- name: 'libHubExt',
+ name: 'lHExt',
  namespace: 'wesmc',
  author: 'WesleyMConner',
  description: 'General-Purpose Methods that are Reusable across Hubitat Projects',
  category: 'general purpose',
- documentationLink: 'https://github.com/WesleyMConner/Hubitat-libHubExt/README.adoc',
- importUrl: 'https://github.com/WesleyMConner/Hubitat-libHubExt.git'
+ documentationLink: 'https://github.com/WesleyMConner/Hubitat-lHExt/README.adoc',
+ importUrl: 'https://github.com/WesleyMConner/Hubitat-lHExt.git'
 )
 
 //----

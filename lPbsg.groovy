@@ -15,12 +15,12 @@
 // The following are required when instantiating a PbsgCore application.
 //   - import com.hubitat.app.DeviceWrapper as DevW
 //   - import com.hubitat.app.InstalledAppWrapper as InstAppW
-//   - #include wesmc.libFifo
-//   - #include wesmc.libHubExt
-//   - #include wesmc.libHubUI
+//   - #include wesmc.lFifo
+//   - #include wesmc.lHExt
+//   - #include wesmc.lHUI
 
 library (
-  name: 'libPbsgCore',
+  name: 'lPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Push Button Switch Group (PBSG) Implementation',
@@ -38,7 +38,7 @@ Boolean pbsgConfigure (
   // Returns true if configuration is accepted, false otherwise.
   //   - Log levels: 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
   Boolean retVal = true
-  settings.buttons = cleanStrings(buttons)
+  settings.buttons = CleanStrings(buttons)
   if (settings.buttons != buttons) {
     Ltrace('pbsgConfigure()', "buttons: (${buttons}) -> (${settings.buttons})")
   }
@@ -318,7 +318,7 @@ void _pbsgPublishActiveButton() {
 }
 
 List<String> _pbsgGetDnis () {
-  return cleanStrings([ state.activeDni, *state.inactiveDnis ])
+  return CleanStrings([ state.activeDni, *state.inactiveDnis ])
 }
 
 Boolean _pbsgMoveActiveToInactive () {
@@ -355,7 +355,7 @@ List<String> _pbsgListVswDevices () {
 
 void pbsgCoreInstalled (InstAppW app) {
   // Called on instance creation - i.e., before configuration, etc.
-  state.logLevel = LogThresholdToLogLevel('TRACE')  // Integer
+  state.logLevel = LogThreshToLogLevel('TRACE')  // Integer
   state.activeDni = null                            // String
   state.inactiveDnis = []                           // List<String>
   state.dfltDni = null                              // String
@@ -374,7 +374,7 @@ void pbsgCoreUpdated (InstAppW app) {
   updatedDfltDni = settings.dfltButton ? _buttonToDni(settings.dfltButton) : null
   updatedActiveDni = settings.activeButton ? _buttonToDni(settings.activeButton) : null
   // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
-  state.logLevel = LogThresholdToLogLevel(settings.logLevel)
+  state.logLevel = LogThreshToLogLevel(settings.logLevel)
   Map<String, List<String>> actions = CompareLists(prevDnis, updatedDnis)
   List<String> retainDnis = actions.retained // Used for accounting only
   List<String> dropDnis = actions.dropped

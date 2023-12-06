@@ -14,13 +14,13 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
-#include wesmc.libFifo
-#include wesmc.libHubExt
-#include wesmc.libHubUI
-#include wesmc.libPbsgCore
+#include wesmc.lFifo
+#include wesmc.lHExt
+#include wesmc.lHUI
+#include wesmc.lPbsg
 
 definition (
-  name: 'TestPbsgCore',
+  name: 'TestPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Implement PBSG functions and is authoritative for pushbutton state.',
@@ -32,7 +32,7 @@ definition (
 )
 
 preferences {
-  page(name: 'TestPbsgCorePage')
+  page(name: 'TestPbsgPage')
 }
 
 //---- SYSTEM CALLBACKS
@@ -53,9 +53,9 @@ void uninstalled () {
 
 //---- RENDERING AND DISPLAY
 
-Map TestPbsgCorePage () {
+Map TestPbsgPage () {
   return dynamicPage(
-    name: 'TestPbsgCorePage',
+    name: 'TestPbsgPage',
     title: Heading1(AppInfo(app)),
     install: true,
     uninstall: true,

@@ -15,7 +15,7 @@
 // ---------------------------------------------------------------------------------
 
 library (
-  name: 'libFifo',
+  name: 'lFifo',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Fifo methods on a List<String>',

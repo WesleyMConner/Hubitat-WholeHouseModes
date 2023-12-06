@@ -1,0 +1,32 @@
+String state.targetScene
+Map<String, Boolean> state.sceneConfirmed
+
+
+  //===== S T A T E =====
+      // currentScene
+      // currScenePerVsw
+  kpadButtonDniToTargetScene [dni]
+      // picoButtonToTargetScene
+  ROOM_LABEL
+  ROOM_PBSG_LABEL
+      // roomScene
+      // roomSceneRepeaterDeviceId
+      // roomSceneRepeaterLED
+  sceneButtonMap
+  scenes
+  sceneToInd [scene][dni]
+  sceneToRep [scene][dni]
+
+  //===== S E T T I N G S =====
+  appLogThreshold
+  independentDevices
+  mainRepeater
+  modesAsScenes
+  modeToScene ^ <SCENE>
+  motionSensor
+  pbsgLogThreshold
+  picos
+  scene ^ <SCENE> ^ [Ind | Rep] ^ [## | dni]
+  sceneButton _ <SCENE_NAME>
+  sceneButtons
+  seeTouchKeypads
