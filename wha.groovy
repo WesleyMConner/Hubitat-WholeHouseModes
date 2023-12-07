@@ -47,7 +47,7 @@ void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Ldebug('AllAuto()', "Turning on <b>${manualOverrideSwitchDNI}</b>")
+    Ldebug('AllAuto()', "Turning on ${b(manualOverrideSwitchDNI)}")
     roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
@@ -63,11 +63,11 @@ void _updateLutronKpadLeds (String currMode) {
   }
 }
 
-void _buttonOnCallback (String button) {
+void _buttonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
-  Linfo('_buttonOnCallback()', "Received button: ${b(button)}")
-  getLocation().setMode(button)
-  _updateLutronKpadLeds(button)
+  Linfo('_buttonOnCallback()', "Received mode: ${b(mode)}")
+  getLocation().setMode(mode)
+  _updateLutronKpadLeds(mode)
 }
 
 void _removeAllChildApps () {
@@ -101,15 +101,14 @@ void seeTouchSpecialFnButtonHandler (Event e) {
         case 'QUIET':
           Ldebug(
             'seeTouchSpecialFnButtonHandler()',
-            "<b>${specialtyFunction}</b> "
-              + "function execution is <b>TBD</b>"
+            "${b(specialtyFunction)} function execution is <b>TBD</b>"
           )
           break
         default:
           // Silently
           Lerror(
             'seeTouchSpecialFnButtonHandler()',
-            "Unknown specialty function <b>'${specialtyFunction}'</b>"
+            "Unknown specialty function ${b(specialtyFunction)}"
           )
       }
       break;
@@ -331,7 +330,7 @@ void _displayInstantiatedRoomHrefs () {
       width: 2,
       url: "/installedapp/configure/${roomApp?.getId()}",
       style: 'internal',
-      title: "<b>${AppInfo(roomApp)}</b> Scenes",
+      title: "${AppInfo(roomApp)} Scenes",
       state: null, //'complete'
     )
   }
@@ -353,15 +352,15 @@ void _createMPbsgAndPageLink () {
     'Day',         // 'Day' is the default Mode/Button
     currModeName,  // Activate the Button for the current Mode
     settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                        // 'DEBUG' to walk key PBSG methods
-                                        // 'TRACE' to include PBSG and VSW state
+                                     // 'DEBUG' to walk key PBSG methods
+                                     // 'TRACE' to include PBSG and VSW state
   )
   href(
     name: AppInfo(pbsgApp),
     width: 2,
     url: "/installedapp/configure/${pbsgApp.getId()}/MPbsgPage",
     style: 'internal',
-    title: "Review <b>${AppInfo(pbsgApp)}</b>",
+    title: "Review ${AppInfo(pbsgApp)}",
     state: null
   )
 }
@@ -372,7 +371,7 @@ Map WhaPage () {
     title: [
       Heading1("Whole House Automation (WHA) - ${app.getId()}"),
       Bullet1('Tab to register changes.'),
-      Bullet1("Click <b>${'Done'}</b> to enable subscriptions.")
+      Bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
     install: true,
     uninstall: true

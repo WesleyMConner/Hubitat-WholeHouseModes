@@ -43,36 +43,61 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
-void _buttonOnCallback (String scene) {
+void _buttonOnCallback (String button) {
   // - The RoomScenesPbsg instance calls this method to reflect state changes.
-  Ltrace('_buttonOnCallback()', "Received: ${b(scene)}")
-  state.targetScene = (scene == 'AUTOMATIC') ? _getSceneForMode() : scene
-  Linfo('_buttonOnCallback()', "targetScene: ${b(targetScene)}")
+  if (!button) Lerror('_buttonOnCallback()', 'Called with null argument')
+  state.activeButton = button ?: 'AUTOMATIC'
+  Ltrace('_buttonOnCallback()', "Button received: ${b(state.activeButton)}")
+  state.targetScene = (state.activeButton == 'AUTOMATIC') ? _getSceneForMode() : state.activeButton
+  Linfo('_buttonOnCallback()', "For ${b(button)} -> targetScene: ${b(state.targetScene)}")
   state.isManualOverride = false
   state.moDetected = [:]
   // Process the scene's list of device actions.
-  List<String> state.scenes[state.targetScene].each{ action ->
+  state.scenes[state.targetScene].each{ action ->
     List<String> actionT = action.tokenize('^')
     String devType = actionT[0]
     String dni = actionT[1]
     Integer value = actionT[2].toInteger()
-    Linfo('#57', "devType: ${devType}, dni: ${dni}, value: ${value}")
+    if (value == null) {
+      Lerror('_buttonOnCallback()', "Null value for dni: ${b(dni)}")
+    }
+    Ldebug('#64', "devType: ${b(devType)}, dni: ${b(dni)}, value: ${b(value)}")
     state.moDetected += [(dni): false]  // Initially, assume scene compliance
+    Ldebug('#66', "state.moDetected: ${b(state.moDetected)}")
     switch (devType) {
       case 'Ind':
         // Locate the correct independent device and set its on/off/level
         settings.indDevices.each{ d ->
+  Ldebug('#71', "d.getDeviceNetworkId() (${b(d.getDeviceNetworkId())}) vs dni (${b(dni)})")
           if (d.getDeviceNetworkId() == dni) {
-            if (d.hasCommand('setLevel')) d.setLevel(level)
-            else if (level == 0) d.off()
-            else if (level == 100) d.on()
+            if (d.hasCommand('setLevel')) {
+              Ltrace('_buttonOnCallback()', "Setting ${b(dni)} to level ($value)")
+              d.setLevel(value)
+            } else if (value == 0) {
+              Ltrace('_buttonOnCallback()', "Setting ${b(dni)} to off")
+              d.off()
+            } else if (value == 100) {
+              Ltrace('_buttonOnCallback()', "Setting ${b(dni)} to on")
+              d.on()
+            }
+          } else {
+            Ltrace(_buttonOnCallback(), "Skipping Independent DNI (${b(dni)})")
           }
         }
         break
       case 'Rep':
         // Locate the correct repeater and push its integration button
         settings.mainRepeaters.each{ d ->
-          if (d.getDeviceNetworkId() == dni) d.push(buttonNumber)
+  Ldebug('#91', "d.getDeviceNetworkId() (${b(d.getDeviceNetworkId())}) vs dni (${b(dni)})")
+          if (d.getDeviceNetworkId() == dni) {
+            Ltrace(
+              '_buttonOnCallback()',
+              "Pusbing button (${value}) on ${b(dni)}"
+            )
+            d.push(value)
+          } else {
+            Ltrace(_buttonOnCallback(), "Skipping Main Repeater DNI (${b(dni)})")
+          }
         }
         break
       default:
@@ -94,9 +119,8 @@ Boolean _isRoomSceneLedActive() {
     // LEDs will light if (a) they match an explicitly set Room Scene or
     // (b) they match the room's current AUTOMATIC scene. No LEDs should
     // light if the room's scene is MANUAL_OVERRIDE.
-    String ledScene = (state.currScenePerVsw == 'AUTOMATIC')
-      ? _getSceneForMode()
-      : state.currScenePerVsw
+    String ledScene = (state.targetScene == 'AUTOMATIC')
+      ? _getSceneForMode() : state.targetScene
     Ldebug(
       '_isRoomSceneLedActive()',
       "ledScene: ${ledScene}"
@@ -148,9 +172,9 @@ Boolean _isRoomSceneLedActive() {
 
 Boolean _areRoomSceneDevLevelsCorrect() {
   // Fail true if the current room's scenes DO NOT leverage Independent Devices.
-  // Note that device level comparisons are made to state.roomScene (and
-  // NOT state.currScenePerVsw). When state.currScenePerVsw == MANUAL_OVERRIDE,
-  // state.roomScene will retain the critera required to release the OVERRIDE.
+  // Note that device level comparisons are made to state.targetScene (and
+  // NOT state.targetScene). When state.targetScene == MANUAL_OVERRIDE,
+  // state.targetScene will retain the critera required to release the OVERRIDE.
   Boolean retVal = true
   if (!state.sceneToInd) {
     Ldebug(
@@ -162,18 +186,18 @@ Boolean _areRoomSceneDevLevelsCorrect() {
       '_areRoomSceneDevLevelsCorrect()',
       "sceneToInd: ${state.sceneToInd}"               // SEEN IN LOGS
     )
-    if (!state.roomScene) {
-      if (!state.currScenePerVsw) {
-        Lerror(_areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! state.roomScene IS NOT populated')
+    if (!state.targetScene) {
+      if (!state.targetScene) {
+        Lerror(_areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! state.targetScene IS NOT populated')
       }
     }
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
-      "state.roomScene: ${state.roomScene}"                     // NOT AVAILABLE
+      "state.targetScene: ${state.targetScene}"                     // NOT AVAILABLE
     )
-    String restoreScene = (state.roomScene == 'AUTOMATIC')
+    String restoreScene = (state.targetScene == 'AUTOMATIC')
       ? _getSceneForMode()
-      : state.roomScene
+      : state.targetScene
     Ldebug(
       '_areRoomSceneDevLevelsCorrect()',
       "restoreScene: ${restoreScene}"
@@ -262,50 +286,17 @@ String _getSceneForMode (String mode = getLocation().getMode()) {
   String result = settings["modeToScene^${mode}"]
   Ldebug(
     '_getSceneForMode()',
-    "mode: <b>${mode}</b>, scene: <b>${result}</b>"
+    "mode: ${b(mode)}, scene: ${b(result)}"
   )
   return result
 }
 
-//-> void pbsgVswTurnedOnCallback (String currPbsgSwitch) {
-//->   String currScene = currPbsgSwitch?.minus("${state.ROOM_PBSG_LABEL}_")
-//->   // If 'state.roomScene' is observed, MANUAL_OVERRIDE is resolved.
-//->   state.roomScene = (currScene == 'MANUAL_OVERRIDE') ? state.roomScene : currScene
-//->   if (state.roomScene == 'MANUAL_OVERRIDE') {
-//->     Lerror('pbsgVswTurnedOnCallback()', 'state.roomScene == MANUAL_OVERRIDE')
-//->   }
-//->   state.currScenePerVsw = currScene
-//->   Ldebug(
-//->     'pbsgVswTurnedOnCallback()',
-//->     "currPbsgSwitch: ${currPbsgSwitch}, currScene: ${currScene}, inspectScene: ${state.roomScene}"
-//->   )
-//->   //-----> _updateLutronKpadLeds(currScene)
-//->   switch(currScene) {
-//->     case 'AUTOMATIC':
-//->       String targetScene = _getSceneForMode()
-//->       Ldebug(
-//->         'pbsgVswTurnedOnCallback()',
-//->         "AUTOMATIC -> ${targetScene}"
-//->       )
-//->       if (!settings?.motionSensor) _activateScene(targetScene)
-//->       break
-//->     default:
-//->       Ldebug(
-//->         'pbsgVswTurnedOnCallback()',
-//->         "processing '${currScene}'"
-//->       )
-//->       if (!settings?.motionSensor) _activateScene(currScene)
-//->   }
-//-> }
-
 //---- EVENT HANDLERS
 
 void repLedHandler (Event e) {
-  // - The field e.deviceId arrives as a number and must be cast toString().
-  // - This subscription processes Main Repeater events, which is applicable
-  //   to Rooms that leverage an RA2 Main Repeater (virtual) Integration
-  //   Button and corresponding (virtual) LED. Work is delegated to
-  //   _detectManualOverride()
+  // Process (virtual) LED changes (on or off) from a Lutron Main Repeater
+  // - e.deviceId arrives as a number and must be cast toString()
+  // - If
   if (
        (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
        && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
@@ -322,28 +313,35 @@ void repLedHandler (Event e) {
 void indDeviceHandler (Event e) {
   // - This subscription processes Independent Device events. Work is delegated
   //   to _detectManualOverride.
-  Ldebug(
-    'indDeviceHandler()',
-    'calling _detectManualOverride()'
-  )
+  Ldebug('indDeviceHandler()', 'calling _detectManualOverride()')
   _detectManualOverride()
 }
 
 void hubitatModeHandler (Event e) {
-  Ltrace('hubitatModeHandler()', EventDetails(e))
-  if (
-    e.name == 'mode'
-    && state.currentScene == 'AUTOMATIC'
-  ) {
-    if (!state.roomScene) {
-      state.roomScene = 'AUTOMATIC'
+  if (state.activeButton == 'AUTOMATIC') {
+    if (settings.motionSensor) {
+      Lwarn(
+        'hubitatModeHandler()',
+        "Ignoring motion sensor ${b(settings.motionSensor)}"
+      )
     }
-    String targetScene = _getSceneForMode(e.value)
-    Ldebug(
-      'hubitatModeHandler()',
-      "processing AUTOMATIC -> ${targetScene}"
+    // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
+    if (e.name == 'mode') {
+      // Let _buttonOnCallback() handle activeButton == 'AUTOMATIC'!
+      Ltrace('hubitatModeHandler()', 'Calling _buttonOnCallback("AUTOMATIC")')
+      _buttonOnCallback('AUTOMATIC')
+    } else {
+      Ltrace('hubitatModeHandler()', ['UNEXPECTED EVENT', EventDetails(e)])
+    }
+  } else {
+    Ltrace(
+      'hubitatModeHandler()', [
+        'Ignored: Mode Change',
+        "state.activeButton: ${b(state.activeButton)}",
+        "state.targetScene: ${b(state.targetScene)}",
+        EventDetails(e)
+      ]
     )
-    if (!settings?.motionSensor) _activateScene(targetScene)
   }
 }
 
@@ -351,20 +349,14 @@ void kpadSceneButtonHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Kpad buttons are matched to state data to activate a target VSW.
+  //   - Kpad buttons are matched to state data to activate a scene.
   switch (e.name) {
     case 'pushed':
-      // Toggle the corresponding pbsg-modes-X VSW for the keypad button.
-      String targetScene = state.sceneButtonMap?.getAt(e.deviceId.toString())
-                                               ?.getAt(e.value)
-      if (targetScene) {
-        String targetVsw = "${state.ROOM_PBSG_LABEL}_${targetScene}"
-        Ldebug(
-          'kpadSceneButtonHandler()',
-          "toggling ${targetVsw}"
-        )
-        _getScenePbsg().toggleSwitch(targetVsw)
-      }
+      // Toggle the corresponding scene for the keypad button.
+      String scene = state.sceneButtonMap?.getAt(e.deviceId.toString())
+                                         ?.getAt(e.value)
+      if (scene) _getScenePbsg().pbsgActivateButton(scene)
+      // The prospective PBSG callback triggers further local processing.
       break
     case 'held':
     case 'released':
@@ -438,13 +430,13 @@ void picoButtonHandler (Event e) {
 void motionSensorHandler (Event e) {
   if (e.name == 'motion' && e.isStateChange == true) {
     if (e.value == 'active') {
-      String targetScene = (state.currScenePerVsw == 'AUTOMATIC')
-        ? _getSceneForMode() : state.currScenePerVsw
-      _activateScene(targetScene)
+      String targetScene = (state.targetScene == 'AUTOMATIC')
+        ? _getSceneForMode() : state.targetScene
+      _buttonOnCallback(targetScene)
     } else if (e.value == 'inactive') {
       // Use brute-force to ensure automation is restored when the room is empty.
-      state.currScenePerVsw = 'AUTOMATIC'
-      _activateScene('Off')
+      state.targetScene = 'AUTOMATIC'
+      _buttonOnCallback('Off')
     }
   }
 }
@@ -734,7 +726,7 @@ void _configureRoomScene () {
         input(
           name: inputName,
           type: 'number',
-          title: "<b>${ d.getLabel() }</b><br/>Level 0..100",
+          title: "${b(d.getLabel())}<br/>Level 0..100",
           width: 2,
           submitOnChange: true,
           required: false,
@@ -749,7 +741,7 @@ void _configureRoomScene () {
         input(
           name: inputName,
           type: 'number',
-          title: "<b>${d.getLabel()}</b><br/>Button #",
+          title: "${b(d.getLabel())}<br/>Button #",
           width: 2,
           submitOnChange: true,
           required: false,
@@ -812,7 +804,7 @@ Map RoomScenesPage () {
     title: [
       Heading1("${app.getLabel()} Scenes"),
       Bullet1('Tab to register changes.'),
-      Bullet1("Click <b>${'Done'}</b> to enable subscriptions.")
+      Bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
     install: true,
     uninstall: true,

@@ -142,7 +142,7 @@ void RemoveChildApps () {
   getAllChildApps().each{ child ->
     Ldebug(
       'RemoveChildApps()',
-      "deleting child: <b>${AppInfo(appObj)}</b>"
+      "deleting child: ${b(AppInfo(appObj))}"
     )
     deleteChildApp(child.getId())
   }

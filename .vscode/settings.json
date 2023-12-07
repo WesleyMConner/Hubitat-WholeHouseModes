@@ -50,7 +50,7 @@
       "color": "#cccccc"
     }
   ],
-  "hubitat.hub.hostname": "192.168.4.94",
+  "hubitat.hub.hostname": "192.168.8.94",
   "hubitat.misc.overwriteHubitatVersion": true,
   "javascript.updateImportsOnFileMove.enabled": "never",
   "shellcheck.executablePath": "../../node_modules/shellcheck/shellcheck-stable/shellcheck",
@@ -59,4 +59,10 @@
   "terminal.integrated.fontSize": 13,
   "terminal.integrated.scrollback": 8000,
   "workbench.editor.tabSizing": "shrink",
+  "workbench.editor.revealIfOpen": true,
+  "workbench.editor.decorations.badges": false,
+  "workbench.editor.highlightModifiedTabs": true,
+  "workbench.editor.labelFormat": "default",
+  "workbench.editor.showIcons": false,
+  "workbench.editor.wrapTabs": true
 }
