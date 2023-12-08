@@ -64,7 +64,10 @@ String Bullet2 (String s) {
 }
 
 String b (def val) {
-  return val ? "'<b>${val}</b>'" : "<b>null</b>"
+  String retVal = '<b>null</b>'
+  if (val == '0') retVal = "'<b>0</b>'"
+  else if (val) retVal = "'<b>${val}</b>'"
+  return retVal
 }
 
 String i (def val) {

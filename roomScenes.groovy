@@ -43,9 +43,13 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
+Integer safeParseInt (String s) {
+  return (s == '0') ? 0 : s.toInteger()
+}
+
 void _buttonOnCallback (String button) {
-  // - The RoomScenesPbsg instance calls this method to reflect state changes.
-  if (!button) Lerror('_buttonOnCallback()', 'Called with null argument')
+  // The RSPbsg child App calls this method to communicate its state changes.
+  if (!button) Lerror('_buttonOnCallback() T B D', 'Called with null argument')
   state.activeButton = button ?: 'AUTOMATIC'
   Ltrace('_buttonOnCallback()', "Button received: ${b(state.activeButton)}")
   state.targetScene = (state.activeButton == 'AUTOMATIC') ? _getSceneForMode() : state.activeButton
@@ -54,24 +58,21 @@ void _buttonOnCallback (String button) {
   state.moDetected = [:]
   // Process the scene's list of device actions.
   state.scenes[state.targetScene].each{ action ->
-    List<String> actionT = action.tokenize('^')
+    def actionT = action.tokenize('^')
     String devType = actionT[0]
     String dni = actionT[1]
-    Integer value = actionT[2].toInteger()
+    Integer value = safeParseInt(actionT[2])
     if (value == null) {
-      Lerror('_buttonOnCallback()', "Null value for dni: ${b(dni)}")
+      Lerror('_buttonOnCallback() T B D', "Null value for dni: ${b(dni)}")
     }
-    Ldebug('#64', "devType: ${b(devType)}, dni: ${b(dni)}, value: ${b(value)}")
     state.moDetected += [(dni): false]  // Initially, assume scene compliance
-    Ldebug('#66', "state.moDetected: ${b(state.moDetected)}")
     switch (devType) {
       case 'Ind':
         // Locate the correct independent device and set its on/off/level
         settings.indDevices.each{ d ->
-  Ldebug('#71', "d.getDeviceNetworkId() (${b(d.getDeviceNetworkId())}) vs dni (${b(dni)})")
           if (d.getDeviceNetworkId() == dni) {
             if (d.hasCommand('setLevel')) {
-              Ltrace('_buttonOnCallback()', "Setting ${b(dni)} to level ($value)")
+              Ltrace('_buttonOnCallback()', "Setting ${b(dni)} to level ${b(value)}")
               d.setLevel(value)
             } else if (value == 0) {
               Ltrace('_buttonOnCallback()', "Setting ${b(dni)} to off")
@@ -88,7 +89,6 @@ void _buttonOnCallback (String button) {
       case 'Rep':
         // Locate the correct repeater and push its integration button
         settings.mainRepeaters.each{ d ->
-  Ldebug('#91', "d.getDeviceNetworkId() (${b(d.getDeviceNetworkId())}) vs dni (${b(dni)})")
           if (d.getDeviceNetworkId() == dni) {
             Ltrace(
               '_buttonOnCallback()',
@@ -101,7 +101,7 @@ void _buttonOnCallback (String button) {
         }
         break
       default:
-        Lerror('_buttonOnCallback()', "Unexpected device type ${b(devType)}")
+        Lerror('_buttonOnCallback() T B D', "Unexpected device type ${b(devType)}")
     }
   }
 }
@@ -111,53 +111,32 @@ Boolean _isRoomSceneLedActive() {
   // "RA2 Shared Scene" (via an RA2 Main Repeater Integration Button).
   Boolean retVal = true
   if (!state.roomSceneRepeaterDeviceId) {
-    Ldebug(
-      '_isRoomSceneLedActive()',
-      'No RA2 Shared Scene in use.'
-    )
+    Ldebug('_isRoomSceneLedActive()', 'No RA2 Shared Scene in use.')
   } else {
     // LEDs will light if (a) they match an explicitly set Room Scene or
     // (b) they match the room's current AUTOMATIC scene. No LEDs should
     // light if the room's scene is MANUAL_OVERRIDE.
     String ledScene = (state.targetScene == 'AUTOMATIC')
       ? _getSceneForMode() : state.targetScene
-    Ldebug(
-      '_isRoomSceneLedActive()',
-      "ledScene: ${ledScene}"
-    )
+    Ldebug('_isRoomSceneLedActive()', "ledScene: ${ledScene}")
     Map repeaterData = state.sceneToRep?.getAt(ledScene)
     if (repeaterData) {
-      Ldebug(
-        '_isRoomSceneLedActive()',
-        "repeaterData: ${repeaterData}"
-      )
+      Ldebug('_isRoomSceneLedActive()', "repeaterData: ${repeaterData}")
       settings?.mainRepeaters.eachWithIndex{ rep, index ->
         String repDni = rep.deviceNetworkId
-        Ldebug(
-          '_isRoomSceneLedActive()',
-          "repDni: ${repDni}"
-        )
+        Ldebug('_isRoomSceneLedActive()', "repDni: ${repDni}")
         String associatedButton = repeaterData.getAt(repDni)
         Ldebug(
           '_isRoomSceneLedActive()',
           "associatedButton: ${associatedButton}"
         )
         String led = "buttonLed-${associatedButton}"
-        Ldebug(
-          '_isRoomSceneLedActive()',
-          "led: ${led}"
-        )
+        Ldebug('_isRoomSceneLedActive()', "led: ${led}")
         String ledVal = rep.currentValue(led)
-        Ldebug(
-          '_isRoomSceneLedActive()',
-          "ledVal: ${ledVal}"
-        )
+        Ldebug('_isRoomSceneLedActive()', "ledVal: ${ledVal}")
         if (ledVal == 'off') {
           retVal = false
-          Ldebug(
-            '_isRoomSceneLedActive()',
-            "retVal: ${retVal}"
-          )
+          Ldebug('_isRoomSceneLedActive()', "retVal: ${retVal}")
           // Note: It is NOT possible to break from a closure.
         }
       }
@@ -165,7 +144,7 @@ Boolean _isRoomSceneLedActive() {
   }
   Ldebug(
     '_isRoomSceneLedActive()',
-    "R_${state.ROOM_LABEL} _isRoomSceneLedActive() -> ${retVal}"
+    "${state.ROOM_LABEL} _isRoomSceneLedActive() -> ${retVal}"
   )
   return retVal
 }
@@ -188,7 +167,7 @@ Boolean _areRoomSceneDevLevelsCorrect() {
     )
     if (!state.targetScene) {
       if (!state.targetScene) {
-        Lerror(_areRoomSceneDevLevelsCorrect, '!!!!! SPECIAL !!!!! state.targetScene IS NOT populated')
+        Lerror('_areRoomSceneDevLevelsCorrect() T B D', 'state.targetScene is null')
       }
     }
     Ldebug(
@@ -246,20 +225,10 @@ Boolean _areRoomSceneDevLevelsCorrect() {
 InstAppW _getScenePbsg () {
   InstAppW retVal = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
     ?: Lerror(
-      '_getScenePbsg()',
-      "<b>FAILED</b> to locate scenePbsg App"
+      '_getScenePbsg() T B D',
+      "<b>FAILED</b> to locate RSPbsg ${state.ROOM_PBSG_LABEL}"
     )
   return retVal
-}
-
-Boolean _detectManualOverride() {
-  // Turning a PBSG switch on/off that's already on/off WILL NOT generate a
-  // change event; so, don't worry about suppressing redundant switch state for now.
-  if (!_isRoomSceneLedActive() || !_areRoomSceneDevLevelsCorrect()) {
-    _getScenePbsg().turnOnSwitch("${state.ROOM_PBSG_LABEL}_MANUAL_OVERRIDE")
-  } else {
-    _getScenePbsg().turnOffSwitch("${state.ROOM_PBSG_LABEL}_MANUAL_OVERRIDE")
-  }
 }
 
 void _updateLutronKpadLeds (String currScene) {
@@ -284,7 +253,7 @@ void _updateLutronKpadLeds (String currScene) {
 
 String _getSceneForMode (String mode = getLocation().getMode()) {
   String result = settings["modeToScene^${mode}"]
-  Ldebug(
+  Ltrace(
     '_getSceneForMode()',
     "mode: ${b(mode)}, scene: ${b(result)}"
   )
@@ -302,19 +271,14 @@ void repLedHandler (Event e) {
        && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
        && (e.isStateChange == true)
   ) {
-    Ldebug(
-      'repLedHandler()',
-      'calling _detectManualOverride()'
-    )
-    _detectManualOverride()
+    Lerror('repLedHandler() T B D', 'MO ACTION IS TBD')
   }
 }
 
 void indDeviceHandler (Event e) {
   // - This subscription processes Independent Device events. Work is delegated
   //   to _detectManualOverride.
-  Ldebug('indDeviceHandler()', 'calling _detectManualOverride()')
-  _detectManualOverride()
+  Lerror('indDeviceHandler() T B D', 'MO ACTION IS TBD')
 }
 
 void hubitatModeHandler (Event e) {
@@ -363,10 +327,10 @@ void kpadSceneButtonHandler (Event e) {
       // Ignore without logging
       break
     default:
-      Lwarn(
-        'kpadSceneButtonHandler()',
-        "for '${state.ROOM_LABEL}' unexpected event name '${e.name}' for DNI '${e.deviceId}'"
-      )
+      Lwarn('kpadSceneButtonHandler()', [
+        "DNI: '${b(e.deviceId)}'",
+        "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
+      ])
   }
 }
 
@@ -378,13 +342,12 @@ void picoButtonHandler (Event e) {
         // Check to see if the received button is assigned to a scene.
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value)
-        String scenePbsg = "${state.ROOM_PBSG_LABEL}_${scene}"
         if (scene) {
-          Ldebug(
-            'picoButtonHandler()',
-            "w/ ${e.deviceId}-${e.value} toggling ${scenePbsg}"
+          Lerror(
+            'picoButtonHandler() T B D',
+            "w/ ${e.deviceId}-${e.value} toggling ${scene}"
           )
-          app.getChildAppByLabel(state.ROOM_PBSG_LABEL).toggleSwitch(scenePbsg)
+          //--TBD-> app.getChildAppByLabel(state.ROOM_PBSG_LABEL).toggleSwitch(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Ldebug(
             'picoButtonHandler()',
@@ -415,7 +378,7 @@ void picoButtonHandler (Event e) {
         } else {
           Ldebug(
             'picoButtonHandler()',
-            "R_${state.ROOM_LABEL} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
+            "${state.ROOM_LABEL} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
         break
@@ -461,7 +424,7 @@ void uninstalled () {
 void initialize () {
   Ldebug(
     'initialize()',
-    "R_${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
+    "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       + "Subscribing to hubitatModeHandler."
   )
   subscribe(location, "mode", hubitatModeHandler)
@@ -471,28 +434,28 @@ void initialize () {
   settings.mainRepeaters.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(device)}"
+      "${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(device)}"
     )
     subscribe(device, repLedHandler, ['filterEvents': true])
   }
   settings.picos.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(device)}"
+      "${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(device)}"
     )
     subscribe(device, picoButtonHandler, ['filterEvents': true])
   }
   settings.motionSensor.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(device)}"
+      "${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(device)}"
     )
     subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
   settings.indDevices.each{ device ->
     Ldebug(
       'initialize()',
-      "R_${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+      "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
     )
     subscribe(device, indDeviceHandler, ['filterEvents': true])
   }
@@ -654,16 +617,16 @@ void _wireKpadButtonsToScenes () {
   }
 }
 
-void _populateStateScenes () {
+void _populateStateScenesAssignValues () {
   // Process settings (e.g., "scene^Night^Ind^Ra2D-59-1848") into state.
-  _populateStateScenesKeysOnly()      // Rebuild state.scenes from scratch.
   settings.findAll{ it.key.startsWith('scene^') }.each{ key, value ->
+  Integer v = value
     List<String> keyT = key.tokenize('^')
     String scene = keyT[1]
-    String deviceType = keyT[2]
+    String devType = keyT[2]
     String dni = keyT[3]
     if (!state.scenes[scene]) state.scenes[scene] = []
-    state.scenes[scene] += "${deviceType}^${dni}^${value}"
+    state.scenes[scene] += "${devType}^${dni}^${value}"
   }
 }
 
@@ -683,7 +646,10 @@ void _wirePicoButtonsToScenes () {
     //paragraph('Selection of pico buttons to activate scenes is pending pre-requisites.')
   } else {
     selectPicoButtonsForScene(settings.picos)
-    populateStatePicoButtonToTargetScene()
+    Lerror(
+      '_wirePicoButtonsToScenes() T B D',
+      "Debug missing populateStatePicoButtonToTargetScene()"
+    )
   }
 }
 
@@ -710,19 +676,35 @@ void _idIndDevices () {
 }
 
 void _configureRoomScene () {
-  // Display may be full-sized (12-positions) or phone-sized (4-position).
-  // For phone friendliness, work one scene at a time.
-  List<String> currentSceneKeys = []
-  if (_getScenes() == null) {
-    //paragraph 'Identification of Room Scene details selection will proceed once scene names exist.'
+  // DESIGN NOTES
+  //   There are three steps to populate "state.scenes" map.
+  //   (1) _populateStateScenesKeysOnly() creates a per-scene key and
+  //       sets the value to [].
+  //   (2) This method populates Settings keys "scene^SCENENAME^Ind|Rep^DNI".
+  //       with Integer values:
+  //         - 'light level' for Independent devices (Ind)
+  //         - 'virtual button number' for Main Repeaters (Rep)
+  //   (3) _populateStateScenesAssignValues() harvests the settings from
+  //       Step 2 to complete the "state.scenes" map.
+  // VIRTUAL TABLE
+  //   Hubitat page display logic simulates table cells.
+  //     - Full-sized displays (computer monitors) are 12 cells wide.
+  //     - Phone-sized displays are 4 cells wide.
+  //   To ensure that each scene starts on a new row, this method adds
+  //   empty cells (modulo 12) to ensure each scene begins in column 1.
+  _populateStateScenesKeysOnly()
+  if (!state.scenes) {
+    Linfo('_configureRoomScene()', 'Execution is pending state.scenes')
   } else {
-    state.scenes?.each{ scene, component ->
-      Integer col = 2
-      paragraph("<br/><b>${ scene } →</b>", width: 2)
+    List<String> currSettingsKeys = []
+    state.scenes?.each{ scene, EMPTY_LIST ->
+      // Ignore the current componentList. Rebuilt it from scratch.
+      Integer tableCol = 2
+      paragraph("<br/><b>${scene} →</b>", width: 2)
       settings.indDevices?.each{ d ->
         String inputName = "scene^${scene}^Ind^${d.getDeviceNetworkId()}"
-        currentSceneKeys += inputName
-        col += 2
+        currSettingsKeys += inputName
+        tableCol += 2
         input(
           name: inputName,
           type: 'number',
@@ -736,8 +718,8 @@ void _configureRoomScene () {
       }
       settings.mainRepeaters?.each{d ->
         String inputName = "scene^${scene}^Rep^${d.getDeviceNetworkId()}"
-        currentSceneKeys += inputName
-        col += 2
+        currSettingsKeys += inputName
+        tableCol += 2
         input(
           name: inputName,
           type: 'number',
@@ -749,9 +731,19 @@ void _configureRoomScene () {
           defaultValue: 0
         )
       }
-      // Fill to end of logical row
-      while (col++ % 12) {
+      // Pad the remainder of the table row with empty cells.
+      while (tableCol++ % 12) {
         paragraph('', width: 1)
+      }
+    }
+    // Prune stale Settings keys
+    settings.findAll{ it.key.startsWith('scene^') }.each{ key, value ->
+      if (!currSettingsKeys.contains(key)) {
+        Linfo(
+          '_configureRoomScene()',
+          "Removing stale setting key (${b(key)}) with value (${b(value)})"
+        )
+        settings.remove(key)
       }
     }
   }
@@ -760,40 +752,47 @@ void _configureRoomScene () {
 void _solicitRoomScenes () {
   if (_getScenes() && (settings.indDevices || settings.mainRepeaters)) {
     _configureRoomScene()
-    _populateStateScenes()
+    _populateStateScenesAssignValues()
   } else {
     // paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
   }
 }
 
 void _createRSPbsgAndPageLink () {
-  InstAppW pbsgApp = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
-  if (!pbsgApp) {
-    Ldebug(
+  if (!_getScenes()) {
+    Lwarn(
       '_createRSPbsgAndPageLink()',
-      "Adding Room Scene PBSG ${state.ROOM_PBSG_LABEL}"
+      'PBSG creation is pending identification of Room Scenes'
     )
-    pbsgApp = addChildApp('wesmc', 'RoomScenesPbsg', state.ROOM_PBSG_LABEL)
+  } else {
+    InstAppW pbsgApp = app.getChildAppByLabel(state.ROOM_PBSG_LABEL)
+    if (!pbsgApp) {
+      Ldebug(
+        '_createRSPbsgAndPageLink()',
+        "Adding Room Scene PBSG ${state.ROOM_PBSG_LABEL}"
+      )
+      pbsgApp = addChildApp('wesmc', 'RSPbsg', state.ROOM_PBSG_LABEL)
+    }
+    List<String> roomScenes = [ *_getScenes(), 'AUTOMATIC' ]
+    String dfltScene = 'AUTOMATIC'
+    String currScene = null  // TBD
+    pbsgApp.pbsgConfigure(
+      roomScenes,  // Create a PBSG button per Hubitat Mode name
+      dfltScene,   // 'Day' is the default Mode/Button
+      currScene,   // Activate the Button for the current Mode
+      settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+                                       // 'DEBUG' to walk key PBSG methods
+                                       // 'TRACE' to include PBSG and VSW state
+    )
+    href(
+      name: AppInfo(pbsgApp),
+      width: 2,
+      url: "/installedapp/configure/${pbsgApp.getId()}/MPbsgPage",
+      style: 'internal',
+      title: "Edit <b>${AppInfo(pbsgApp)}</b>",
+      state: null
+    )
   }
-  List<String> roomScenes = [ *_getScenes(), 'AUTOMATIC' ]
-  String dfltScene = 'AUTOMATIC'
-  String currScene = null  // TBD
-  pbsgApp.pbsgConfigure(
-    roomScenes,  // Create a PBSG button per Hubitat Mode name
-    dfltScene,   // 'Day' is the default Mode/Button
-    currScene,   // Activate the Button for the current Mode
-    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                     // 'DEBUG' to walk key PBSG methods
-                                     // 'TRACE' to include PBSG and VSW state
-  )
-  href(
-    name: AppInfo(pbsgApp),
-    width: 2,
-    url: "/installedapp/configure/${pbsgApp.getId()}/MPbsgPage",
-    style: 'internal',
-    title: "Edit <b>${AppInfo(pbsgApp)}</b>",
-    state: null
-  )
 }
 
 Map RoomScenesPage () {
@@ -809,20 +808,11 @@ Map RoomScenesPage () {
     install: true,
     uninstall: true,
   ) {
-    // SAMPLE STATE & SETTINGS CLEAN UP
-    //   - app.deleteChildDevice(<INSERT DNI>)
-    //   - state.remove('X')
-    //   - settings.remove('Y')
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> settings.remove('log')
-    //-> state.remove('ManualOverrideDevice')
-    //-> state.remove('PBSGapp')
-    //-> state.remove('currentScene')
-    //-> state.remove('currentSceneRepeaterDeviceId')
-    //-> state.remove('currentSceneRepeaterLED')
-    //-> state.remove('inspectScene')
+    //-> settings.remove('..')
+    //-> state.remove('..')
     //---------------------------------------------------------------------------------
     state.ROOM_LABEL = app.getLabel()  // WHA creates App w/ Label == Room Name
     state.ROOM_PBSG_LABEL = "${state.ROOM_LABEL}Pbsg"

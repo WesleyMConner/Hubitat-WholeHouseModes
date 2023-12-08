@@ -21,7 +21,7 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 
 definition (
   parent: 'wesmc:RoomScenes',
-  name: 'RoomScenesPbsg',
+  name: 'RSPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A pbsgLibrary instance rooted in a Room Scenes instance',
@@ -38,7 +38,7 @@ definition (
 )
 
 preferences {
-  page(name: 'RoomScenesPbsgPage')
+  page(name: 'RSPbsgPage')
 }
 
 ////-----------------------------------------------------------------------
@@ -85,9 +85,9 @@ void uninstalled () {
 
 //---- RENDERING AND DISPLAY
 
-Map RoomScenesPbsgPage () {
+Map RSPbsgPage () {
   return dynamicPage(
-    name: 'RoomScenesPbsgPage',
+    name: 'RSPbsgPage',
     title: Heading1(AppInfo(app)),
     install: true,
     uninstall: true,

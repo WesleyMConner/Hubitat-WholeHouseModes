@@ -248,12 +248,15 @@ void _syncChildVswsToPbsgState () {
 void _unsubscribeChildVswEvents () {
   // Unsubscribing to individual devices due to some prior issues with the
   // List version of subscribe()/unsubsribe().
-  List<String> traceSummary = [Heading2('Unsubscribed these Child Devices from Events:')]
+  List<String> traceSummary = [
+    '',
+    Heading2('Unsubscribed these Child Devices from Events:')
+  ]
   getChildDevices().each{ d ->
-    traceSummary += Bullet2(d.get)
+    traceSummary += Bullet2(d.getDeviceNetworkId())
     unsubscribe(d)
   }
-  Ltrace('pbsgCoreUpdated()', traceSummary)
+  Ltrace('_unsubscribeChildVswEvents()', traceSummary)
 }
 
 void _subscribeChildVswEvents () {
@@ -264,7 +267,7 @@ void _subscribeChildVswEvents () {
     subscribe(d, VswEventHandler, ['filterEvents': true])
     traceSummary += Bullet2(d.getDeviceNetworkId())
   }
-  Ltrace('pbsgCoreUpdated()', traceSummary)
+  Ltrace('_subscribeChildVswEvents()', traceSummary)
 }
 
 void _pbsgPublishActiveButton() {
