@@ -66,6 +66,7 @@ String Bullet2 (String s) {
 String b (def val) {
   String retVal = '<b>null</b>'
   if (val == '0') retVal = "'<b>0</b>'"
+  else if (val == 0) retVal = "'<b>0</b>'"
   else if (val) retVal = "'<b>${val}</b>'"
   return retVal
 }

@@ -55,7 +55,7 @@ void _buttonOnCallback (String button) {
   state.targetScene = (state.activeButton == 'AUTOMATIC') ? _getSceneForMode() : state.activeButton
   Linfo('_buttonOnCallback()', "For ${b(button)} -> targetScene: ${b(state.targetScene)}")
   state.isManualOverride = false
-  state.moDetected = [:]
+  state.moDetected = [:]  // Empty Map indicates NO Manual Override
   // Process the scene's list of device actions.
   state.scenes[state.targetScene].each{ action ->
     def actionT = action.tokenize('^')
@@ -65,7 +65,6 @@ void _buttonOnCallback (String button) {
     if (value == null) {
       Lerror('_buttonOnCallback() T B D', "Null value for dni: ${b(dni)}")
     }
-    state.moDetected += [(dni): false]  // Initially, assume scene compliance
     switch (devType) {
       case 'Ind':
         // Locate the correct independent device and set its on/off/level
@@ -92,7 +91,7 @@ void _buttonOnCallback (String button) {
           if (d.getDeviceNetworkId() == dni) {
             Ltrace(
               '_buttonOnCallback()',
-              "Pusbing button (${value}) on ${b(dni)}"
+              "Pushing button (${value}) on ${b(dni)}"
             )
             d.push(value)
           } else {
@@ -148,6 +147,12 @@ Boolean _isRoomSceneLedActive() {
   )
   return retVal
 }
+
+Boolean _isIndDeviceMO() {
+  //
+  // state.scenes?.getAt(state.targetScene)
+}
+
 
 Boolean _areRoomSceneDevLevelsCorrect() {
   // Fail true if the current room's scenes DO NOT leverage Independent Devices.
@@ -275,10 +280,77 @@ void repLedHandler (Event e) {
   }
 }
 
+String deviceLabelToDni (String label) {
+  return (label =~ /\((.*)\)/)[0][1]
+}
+
+//-> Integer deviceValueToInt (String value) {
+//->   Integer result = null
+//->   if (value == 'on') result = 100
+//->   else if (value == 'off') result = 0
+//->   else if (value.isInteger()) result = value
+//->   else Lerror('indDeviceHandler()', "Failed to parse ${b(value)}")
+//->   return result
+//-> }
+
 void indDeviceHandler (Event e) {
-  // - This subscription processes Independent Device events. Work is delegated
-  //   to _detectManualOverride.
-  Lerror('indDeviceHandler() T B D', 'MO ACTION IS TBD')
+  // Devices can send varius events (e.g., switch, level, pushed, released).
+  // Only select events support confirming or refuting the presence of a
+  // scene (or Manual Override)
+  String dni = null
+  Integer level = null
+  if (e.name == 'switch') {
+    dni = deviceLabelToDni(e.displayName)
+    if (e.value == 'on') {
+      level = 100
+    } else if (e.value == 'off') {
+      level = 0
+    }
+  } else if (e.name == 'level') {
+    dni = deviceLabelToDni(e.displayName)
+    level = e.value
+  } else {
+    return  // Ignore the event
+  }
+  String currEncoded = "Ind^${dni}^${level}"
+  List<String> sceneList = state.scenes?.getAt(state.targetScene)
+  Boolean confirms = sceneList.contains(currEncoded)
+  //-> Ldebug('#302', [
+  //->   '',
+  //->   "e.name: ${e.name}",
+  //->   "e.value: ${e.value}",
+  //->   "e.displayName ${e.displayName}",
+  //->   "state.targetScene: ${state.targetScene}",
+  //->   "sceneList: ${sceneList}",
+  //->   "----",
+  //->   "dni: ${dni}",
+  //->   "level: ${level}",
+  //->   "currEncoded: ${currEncoded}",
+  //->   "confirms: ${confirms}",
+  //->   EventDetails(e)
+  //-> ])
+  if (confirms) {
+    Ldebug('#333', "${isManualOverride()}")
+    Ltrace(
+      'indDeviceHandler() BEFORE',
+      "removing ${dni} from state.moDetected (${state.moDetected})"
+    )
+    state.moDetected.remove(dni)
+    Ldebug('#339', "${isManualOverride()}")
+  } else {
+    Ldebug('#341', "${isManualOverride()}")
+    Linfo('indDeviceHandler()', [
+      'MANUAL OVERRIDE',
+      "${currEncoded} inconsistent with ${state.targetScene}",
+      "scene list: ${sceneList}"
+    ])
+    state.moDetected[dni] = currEncoded
+    Ldebug('#348', "${isManualOverride()}")
+  }
+}
+
+Boolean isManualOverride () {
+  return state.moDetected
 }
 
 void hubitatModeHandler (Event e) {
