@@ -269,15 +269,28 @@ String _getSceneForMode (String mode = getLocation().getMode()) {
 
 void repLedHandler (Event e) {
   // Process (virtual) LED changes (on or off) from a Lutron Main Repeater
-  // - e.deviceId arrives as a number and must be cast toString()
-  // - If
-  if (
-       (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
-       && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
-       && (e.isStateChange == true)
-  ) {
-    Lerror('repLedHandler() T B D', 'MO ACTION IS TBD')
-  }
+  // The (virtual) LED for a (virtual) Integration Button can confirm or
+  // refute the presence of a scene (or Manual Override)
+  Ltrace('repLedHandler()', EventDetails(e))
+
+  // Ignore PUSH EVENTS
+  //   descriptionText    Control - REP 1 (ra2-1) button 41 was pushed
+  //   displayName    Control - REP 1 (ra2-1)
+  //   deviceId    6825
+  //   name    pushed
+  //   value    41
+  //   isStateChange    true
+
+  String dni = deviceLabelToDni(e.displayName)
+
+
+  //-> if (
+  //->      (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
+  //->      && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
+  //->      && (e.isStateChange == true)
+  //-> ) {
+  //->   Lerror('repLedHandler() T B D', 'MO ACTION IS TBD')
+  //-> }
 }
 
 String deviceLabelToDni (String label) {
@@ -330,22 +343,22 @@ void indDeviceHandler (Event e) {
   //->   EventDetails(e)
   //-> ])
   if (confirms) {
-    Ldebug('#333', "${isManualOverride()}")
+    //-> Ldebug('#333', "${isManualOverride()}")
     Ltrace(
       'indDeviceHandler() BEFORE',
       "removing ${dni} from state.moDetected (${state.moDetected})"
     )
     state.moDetected.remove(dni)
-    Ldebug('#339', "${isManualOverride()}")
+    //-> Ldebug('#339', "${isManualOverride()}")
   } else {
-    Ldebug('#341', "${isManualOverride()}")
+    //-> Ldebug('#341', "${isManualOverride()}")
     Linfo('indDeviceHandler()', [
       'MANUAL OVERRIDE',
       "${currEncoded} inconsistent with ${state.targetScene}",
-      "scene list: ${sceneList}"
+      "expected scene list: ${sceneList}"
     ])
     state.moDetected[dni] = currEncoded
-    Ldebug('#348', "${isManualOverride()}")
+    //-> Ldebug('#348', "${isManualOverride()}")
   }
 }
 
