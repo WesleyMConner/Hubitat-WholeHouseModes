@@ -43,10 +43,6 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
-Integer safeParseInt (String s) {
-  return (s == '0') ? 0 : s.toInteger()
-}
-
 void _buttonOnCallback (String button) {
   // The RSPbsg child App calls this method to communicate its state changes.
   if (!button) Lerror('_buttonOnCallback() T B D', 'Called with null argument')
@@ -54,14 +50,19 @@ void _buttonOnCallback (String button) {
   Ltrace('_buttonOnCallback()', "Button received: ${b(state.activeButton)}")
   state.targetScene = (state.activeButton == 'AUTOMATIC') ? _getSceneForMode() : state.activeButton
   Linfo('_buttonOnCallback()', "For ${b(button)} -> targetScene: ${b(state.targetScene)}")
-  state.isManualOverride = false
+  state._isManualOverride = false
   state.moDetected = [:]  // Empty Map indicates NO Manual Override
+  // Separate scene activation to accommodate motion / lux activation.
+  _activateScene()
+}
+
+void _activateScene () {
   // Process the scene's list of device actions.
   state.scenes[state.targetScene].each{ action ->
     def actionT = action.tokenize('^')
     String devType = actionT[0]
     String dni = actionT[1]
-    Integer value = safeParseInt(actionT[2])
+    Integer value = SafeParseInt(actionT[2])
     if (value == null) {
       Lerror('_buttonOnCallback() T B D', "Null value for dni: ${b(dni)}")
     }
@@ -152,7 +153,6 @@ Boolean _isIndDeviceMO() {
   //
   // state.scenes?.getAt(state.targetScene)
 }
-
 
 Boolean _areRoomSceneDevLevelsCorrect() {
   // Fail true if the current room's scenes DO NOT leverage Independent Devices.
@@ -265,25 +265,139 @@ String _getSceneForMode (String mode = getLocation().getMode()) {
   return result
 }
 
+List<String> _getTargetSceneConfigList() {
+  return state.scenes?.getAt(state.targetScene)
+}
+
+Integer _expectedSceneDeviceValue (String devType, String dni) {
+  Integer retVal = null
+  String prefix = "${devType}^${dni}^"
+  for (encodedConfig in _getTargetSceneConfigList()) {
+    if (encodedConfig.startsWith(prefix)) {
+      retVal = SafeParseInt(encodedConfig.substring(prefix.size()))
+      break
+    }
+  }
+  return retVal
+}
+
+String _deviceLabelToDni (String label) {
+  return (label =~ /\((.*)\)/)[0][1]
+}
+
+Boolean _isManualOverride () {
+  return state.moDetected
+}
+
+
 //---- EVENT HANDLERS
 
+void indDeviceHandler (Event e) {
+  // Devices send various events (e.g., switch, level, pushed, released).
+  // Isolate the events that confirm|refute state.targetScene.
+  String dni = null
+  Integer currLevel = null
+  if (e.name == 'switch') {
+    dni = _deviceLabelToDni(e.displayName)
+    if (e.value == 'on') {
+      currLevel = 100
+    } else if (e.value == 'off') {
+      currLevel = 0
+    }
+  } else if (e.name == 'level') {
+    dni = _deviceLabelToDni(e.displayName)
+    currLevel = SafeParseInt(e.value)
+  } else {
+    return  // Ignore the event
+  }
+  Integer expLevel = _expectedSceneDeviceValue('Ind', dni)
+  if (currLevel == expLevel) {
+    // Scene compliance confirmed
+    Ltrace('indDeviceHandler()', "${dni} complies with scene")
+    state.moDetected.remove(dni)
+  } else {
+    // Scene compliance refuted (i.e., Manual Override)
+    String summary = "${dni} value (${}), expected (${})"
+    Linfo('indDeviceHandler()', [
+      'MANUAL OVERRIDE',
+      summary,
+    ])
+    state.moDetected[dni] = summary
+  }
+}
+
 void repLedHandler (Event e) {
-  // Process (virtual) LED changes (on or off) from a Lutron Main Repeater
-  // The (virtual) LED for a (virtual) Integration Button can confirm or
-  // refute the presence of a scene (or Manual Override)
-  Ltrace('repLedHandler()', EventDetails(e))
+/*_confirmIndDevValue
+  // Main Repeaters send various events (e.g., pushed, buttonLed-##).
+  // Isolate the buttonLed-## events which confirm|refute state.targetScene.
+  if (e.name.startsWith('buttonLed-')) {
+    String dni = _deviceLabelToDni(e.displayName)
+    Integer buttonNumber = SafeParseInt(e.name.substring(10))
+    // Proceed IFF the button number appears in the current scene.
+    String encodedButton = "Rep^${dni}^${buttonNumber}"
+    if (_targetSceneDoesInclude(encodedButton)) {
+      if (e.value == 'on') {
+        // Scene compliance is confirmed
+        Ltrace(
+          'repLedHandler()',
+          "Main Repeater (${dni}) button ${buttonNumber} turned on"
+        )
+      } else if (e.value == 'off') {
+        // Scene compliance is refuted (i.e., Manual Override)
+        Ltrace(
+          'repLedHandler()',
+          "Main Repeater (${dni}) button ${buttonNumber} turned off"
+        )
+      } else {
+        // Error condition
+        Lerror(
+          'repLedHandler()',
+          "Main Repeater (${dni}) with unexpected value (${e.value}"
+        )
+      }
+    }
 
-  // Ignore PUSH EVENTS
-  //   descriptionText    Control - REP 1 (ra2-1) button 41 was pushed
-  //   displayName    Control - REP 1 (ra2-1)
-  //   deviceId    6825
-  //   name    pushed
-  //   value    41
-  //   isStateChange    true
+    List<String> sceneButtons = state.scenes.collect{}
 
-  String dni = deviceLabelToDni(e.displayName)
+    Boolean confirms = _targetSceneDoesInclude(config)
 
-
+    if (confirms) {
+      //-> Ldebug('#333', "${_isManualOverride()}")
+      Ltrace(
+        'indDeviceHandler() BEFORE',
+        "removing ${dni} from state.moDetected (${state.moDetected})"
+      )
+      state.moDetected.remove(dni)
+      //-> Ldebug('#339', "${_isManualOverride()}")
+    } else {
+      //-> Ldebug('#341', "${_isManualOverride()}")
+      Linfo('indDeviceHandler()', [
+        'MANUAL OVERRIDE',
+        "${currEncoded} inconsistent with ${state.targetScene}",
+        "expected scene list: ${sceneList}"
+      ])
+      state.moDetected[dni] = currEncoded
+      //-> Ldebug('#348', "${_isManualOverride()}")
+    }
+    if (e.value == 'on') {
+      Ltrace(
+        'repLedHandler()',
+        "Main Repeater (${dni}) button ${buttonNumber} turned on"
+      )
+    } else if (e.value == 'off') {
+      Ltrace(
+        'repLedHandler()',
+        "Main Repeater (${dni}) button ${buttonNumber} turned off"
+      )
+    } else {
+      Lerror(
+        'repLedHandler()',
+        "Main Repeater (${dni}) with unexpected value (${e.value}"
+      )
+    }
+  } else {
+      Ltrace('repLedHandler()', [ 'UNEXPECTED', EventDetails(e) ])
+  }
   //-> if (
   //->      (e.deviceId.toString() == state.roomSceneRepeaterDeviceId)
   //->      && (e.name == "buttonLed-${state.roomSceneRepeaterLED}")
@@ -291,79 +405,7 @@ void repLedHandler (Event e) {
   //-> ) {
   //->   Lerror('repLedHandler() T B D', 'MO ACTION IS TBD')
   //-> }
-}
-
-String deviceLabelToDni (String label) {
-  return (label =~ /\((.*)\)/)[0][1]
-}
-
-//-> Integer deviceValueToInt (String value) {
-//->   Integer result = null
-//->   if (value == 'on') result = 100
-//->   else if (value == 'off') result = 0
-//->   else if (value.isInteger()) result = value
-//->   else Lerror('indDeviceHandler()', "Failed to parse ${b(value)}")
-//->   return result
-//-> }
-
-void indDeviceHandler (Event e) {
-  // Devices can send varius events (e.g., switch, level, pushed, released).
-  // Only select events support confirming or refuting the presence of a
-  // scene (or Manual Override)
-  String dni = null
-  Integer level = null
-  if (e.name == 'switch') {
-    dni = deviceLabelToDni(e.displayName)
-    if (e.value == 'on') {
-      level = 100
-    } else if (e.value == 'off') {
-      level = 0
-    }
-  } else if (e.name == 'level') {
-    dni = deviceLabelToDni(e.displayName)
-    level = e.value
-  } else {
-    return  // Ignore the event
-  }
-  String currEncoded = "Ind^${dni}^${level}"
-  List<String> sceneList = state.scenes?.getAt(state.targetScene)
-  Boolean confirms = sceneList.contains(currEncoded)
-  //-> Ldebug('#302', [
-  //->   '',
-  //->   "e.name: ${e.name}",
-  //->   "e.value: ${e.value}",
-  //->   "e.displayName ${e.displayName}",
-  //->   "state.targetScene: ${state.targetScene}",
-  //->   "sceneList: ${sceneList}",
-  //->   "----",
-  //->   "dni: ${dni}",
-  //->   "level: ${level}",
-  //->   "currEncoded: ${currEncoded}",
-  //->   "confirms: ${confirms}",
-  //->   EventDetails(e)
-  //-> ])
-  if (confirms) {
-    //-> Ldebug('#333', "${isManualOverride()}")
-    Ltrace(
-      'indDeviceHandler() BEFORE',
-      "removing ${dni} from state.moDetected (${state.moDetected})"
-    )
-    state.moDetected.remove(dni)
-    //-> Ldebug('#339', "${isManualOverride()}")
-  } else {
-    //-> Ldebug('#341', "${isManualOverride()}")
-    Linfo('indDeviceHandler()', [
-      'MANUAL OVERRIDE',
-      "${currEncoded} inconsistent with ${state.targetScene}",
-      "expected scene list: ${sceneList}"
-    ])
-    state.moDetected[dni] = currEncoded
-    //-> Ldebug('#348', "${isManualOverride()}")
-  }
-}
-
-Boolean isManualOverride () {
-  return state.moDetected
+*/
 }
 
 void hubitatModeHandler (Event e) {

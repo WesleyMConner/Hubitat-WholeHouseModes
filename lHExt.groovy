@@ -32,6 +32,10 @@ library (
 //---- CONVENIENCE
 //----
 
+Integer SafeParseInt (String s) {
+  return (s == '0') ? 0 : s.toInteger()
+}
+
 Map<String, List<String>> CompareLists (List<String> existing, List<String> revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
   Map<String, List<String>> map = [:]
