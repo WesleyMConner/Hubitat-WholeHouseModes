@@ -43,12 +43,48 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
+InstAppW _getOrCreateMPbsg () {
+  // Mpbsg depends on Hubitat Mode properties AND NOT local data.
+  InstAppW pbsgApp = app.getChildAppByLabel(state.MPBSG_LABEL)
+  if (!pbsgApp) {
+    Lwarn('_getOrCreateMPbsg()', "Adding Mode PBSG ${state.MPBSG_LABEL}")
+    pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
+  }
+  List<String> modeNames = getLocation().getModes().collect{ it.name }
+  String currModeName = getLocation().currentMode.name
+  pbsgApp.pbsgConfigure(
+    modeNames,     // Create a PBSG button per Hubitat Mode name
+    'Day',         // 'Day' is the default Mode/Button
+    currModeName,  // Activate the Button for the current Mode
+    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+                                     // 'DEBUG' to walk key PBSG methods
+                                     // 'TRACE' to include PBSG and VSW state
+  )
+  return pbsgApp
+}
+
+void _writeMPbsgHref () {
+  InstAppW pbsgApp = _getOrCreateMPbsg()
+  if (pbsgApp) {
+    href(
+      name: AppInfo(pbsgApp),
+      width: 2,
+      url: "/installedapp/configure/${pbsgApp.getId()}/MPbsgPage",
+      style: 'internal',
+      title: "Review ${AppInfo(pbsgApp)}",
+      state: null
+    )
+  } else {
+    paragraph "Creation of the MPbsgHref is pending required data."
+  }
+}
+
 void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
     Ldebug('AllAuto()', "Turning on ${b(manualOverrideSwitchDNI)}")
-    roomApp.getScenePbsg().turnOnSwitch(manualOverrideSwitchDNI)
+    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
 
@@ -63,21 +99,11 @@ void _updateLutronKpadLeds (String currMode) {
   }
 }
 
-void _buttonOnCallback (String mode) {
+void buttonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
-  Linfo('_buttonOnCallback()', "Received mode: ${b(mode)}")
+  Linfo('buttonOnCallback()', "Received mode: ${b(mode)}")
   getLocation().setMode(mode)
   _updateLutronKpadLeds(mode)
-}
-
-void _removeAllChildApps () {
-  getAllChildApps().each{ child ->
-    Ldebug(
-      '_removeAllChildApps()',
-      "child: >${child.getId()}< >${child.getLabel()}<"
-    )
-    deleteChildApp(child.getId())
-  }
 }
 
 //---- EVENT HANDLERS
@@ -131,10 +157,10 @@ void seeTouchModeButtonHandler (Event e) {
   switch (e.name) {
     case 'pushed':
       String targetButton = state.modeButtonMap?.getAt(e.deviceId.toString())
-                                            ?.getAt(e.value)
+                                               ?.getAt(e.value)
       if (targetButton) {
         Ldebug('seeTouchModeButtonHandler()', "turning on ${targetButton}")
-        app.getChildAppByLabel(state.MODE_PBSG_LABEL).pbsgActivateButton(targetButton)
+        _getOrCreateMPbsg().pbsgActivateButton(targetButton)
       }
       if (targetButton == 'Day') {
         Ldebug('seeTouchModeButtonHandler()', 'executing ALL_AUTO')
@@ -162,7 +188,7 @@ void installed () {
 
 void uninstalled () {
   Ldebug('uninstalled()', 'Entered')
-  _removeAllChildApps()
+  RemoveAllChildApps()
 }
 
 void updated () {
@@ -176,8 +202,6 @@ void updated () {
   //---------------------------------------------------------------------------------
   state.remove('MODE_PBSG_APP_LABEL')
   state.remove('MODE_PBSG_APP_NAME')
-
-
   initialize()
 }
 
@@ -336,35 +360,6 @@ void _displayInstantiatedRoomHrefs () {
   }
 }
 
-void _createMPbsgAndPageLink () {
-  InstAppW pbsgApp = app.getChildAppByLabel(state.MODE_PBSG_LABEL)
-  if (!pbsgApp) {
-    Ldebug(
-      '_createMPbsgAndPageLink()',
-      "Adding Mode PBSG ${state.MODE_PBSG_LABEL}"
-    )
-    pbsgApp = addChildApp('wesmc', 'MPbsg', state.MODE_PBSG_LABEL)
-  }
-  List<String> modeNames = getLocation().getModes().collect{ it.name }
-  String currModeName = getLocation().currentMode.name
-  pbsgApp.pbsgConfigure(
-    modeNames,     // Create a PBSG button per Hubitat Mode name
-    'Day',         // 'Day' is the default Mode/Button
-    currModeName,  // Activate the Button for the current Mode
-    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                     // 'DEBUG' to walk key PBSG methods
-                                     // 'TRACE' to include PBSG and VSW state
-  )
-  href(
-    name: AppInfo(pbsgApp),
-    width: 2,
-    url: "/installedapp/configure/${pbsgApp.getId()}/MPbsgPage",
-    style: 'internal',
-    title: "Review ${AppInfo(pbsgApp)}",
-    state: null
-  )
-}
-
 Map WhaPage () {
   return dynamicPage(
     name: 'WhaPage',
@@ -377,7 +372,7 @@ Map WhaPage () {
     uninstall: true
   ) {
     app.updateLabel('WHA')
-    state.MODE_PBSG_LABEL = '_MPbsg'
+    state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
     getGlobalVar('defaultMode').value
     state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
@@ -392,13 +387,13 @@ Map WhaPage () {
       _idKpadModeButtons()
       _wireModeButtons()
       _idParticipatingRooms()
-      _createMPbsgAndPageLink()
+      _writeMPbsgHref()
       if (!settings.rooms) {
         // Don't be too aggressive deleting child apps and their config data.
         paragraph('Management of child apps is pending selection of Room Names.')
       } else {
         PruneAppDups(
-          [*settings.rooms, state.MODE_PBSG_LABEL],
+          [*settings.rooms, state.MPBSG_LABEL],
           false,   // For dups, keep oldest
           app      // The object (parent) pruning dup children
         )

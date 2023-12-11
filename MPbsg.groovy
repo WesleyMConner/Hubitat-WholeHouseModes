@@ -93,7 +93,10 @@ Map MPbsgPage () {
     uninstall: true,
   ) {
     section {
-      paragraph "YOU ARE HERE"
+      paragraph([
+        Heading1('Debug'),
+        *appStateAsBullets(true)
+      ].join('<br/>'))
     }
   }
 }

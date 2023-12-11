@@ -36,6 +36,16 @@ Integer SafeParseInt (String s) {
   return (s == '0') ? 0 : s.toInteger()
 }
 
+void RemoveAllChildApps () {
+  getAllChildApps().each{ child ->
+    Ldebug(
+      'RemoveAllChildApps()',
+      "child: >${child.getId()}< >${child.getLabel()}<"
+    )
+    deleteChildApp(child.getId())
+  }
+}
+
 Map<String, List<String>> CompareLists (List<String> existing, List<String> revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
   Map<String, List<String>> map = [:]

@@ -272,7 +272,7 @@ void _subscribeChildVswEvents () {
 
 void _pbsgPublishActiveButton() {
   // DESIGN NOTES
-  //   - Invokes an "expected" parent callback: _buttonOnCallback(button)
+  //   - Invokes an "expected" parent callback: buttonOnCallback(button)
   //   - The use of a callnback avoids app-to-app subscription issues
   //     (e.g., Hubitat exposed internal SQL in Hubitat Logs)
   //   - Child device subscriptions occur on a delayed basis as a
@@ -311,7 +311,7 @@ void _pbsgPublishActiveButton() {
   //-> Broadcast the state change to subscribers
   //-> sendEvent(event)
   //-----------------------------------------------------------------------
-  parent._buttonOnCallback(activeButton)    // Communicate event to parent.
+  parent.buttonOnCallback(activeButton)    // Communicate event to parent.
   Integer delayInSeconds = 1
   Ltrace(
     '_pbsgPublishActiveButton()',

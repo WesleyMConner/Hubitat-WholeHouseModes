@@ -57,7 +57,7 @@ preferences {
 ////   Boolean pbsgActivatePrior ()
 ////
 //// PARENT CALLBACK
-////   void _buttonOnCallback (String button)
+////   void buttonOnCallback (String button)
 ////
 ////xx PUBLISHED EVENT
 ////xx   Map event = [
@@ -93,7 +93,10 @@ Map RSPbsgPage () {
     uninstall: true,
   ) {
     section {
-      paragraph "YOU ARE HERE"
+      paragraph([
+        Heading1('Debug'),
+        *appStateAsBullets(true)
+      ].join('<br/>'))
     }
   }
 }
