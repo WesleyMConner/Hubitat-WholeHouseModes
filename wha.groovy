@@ -83,7 +83,7 @@ void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
-    Ldebug('AllAuto()', "Turning on ${b(manualOverrideSwitchDNI)}")
+    Ldebug('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
     roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
@@ -101,7 +101,7 @@ void _updateLutronKpadLeds (String currMode) {
 
 void buttonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
-  Linfo('buttonOnCallback()', "Received mode: ${b(mode)}")
+  Linfo('buttonOnCallback', "Received mode: ${b(mode)}")
   getLocation().setMode(mode)
   _updateLutronKpadLeds(mode)
 }
@@ -116,7 +116,7 @@ void seeTouchSpecialFnButtonHandler (Event e) {
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
         case 'ALL_AUTO':
-          Ldebug('seeTouchSpecialFnButtonHandler()', 'executing ALL_AUTO')
+          Ldebug('seeTouchSpecialFnButtonHandler', 'executing ALL_AUTO')
           AllAuto()
           //--TBD--> Update of Kpad LEDs
           break;
@@ -159,11 +159,11 @@ void seeTouchModeButtonHandler (Event e) {
       String targetButton = state.modeButtonMap?.getAt(e.deviceId.toString())
                                                ?.getAt(e.value)
       if (targetButton) {
-        Ldebug('seeTouchModeButtonHandler()', "turning on ${targetButton}")
+        Ldebug('seeTouchModeButtonHandler', "turning on ${targetButton}")
         _getOrCreateMPbsg().pbsgActivateButton(targetButton)
       }
       if (targetButton == 'Day') {
-        Ldebug('seeTouchModeButtonHandler()', 'executing ALL_AUTO')
+        Ldebug('seeTouchModeButtonHandler', 'executing ALL_AUTO')
         AllAuto()
       }
       // Silently ignore buttons that DO NOT impact Hubitat mode.
@@ -181,18 +181,18 @@ void seeTouchModeButtonHandler (Event e) {
 //---- SYSTEM CALLBACKS
 
 void installed () {
-  Ldebug('installed()', 'Entered')
+  Ldebug('installed', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void uninstalled () {
-  Ldebug('uninstalled()', 'Entered')
+  Ldebug('uninstalled', 'Entered')
   RemoveAllChildApps()
 }
 
 void updated () {
-  Ltrace('updated()', 'Entered')
+  Ltrace('updated', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   //---------------------------------------------------------------------------------
   // REMOVE NO LONGER USED SETTINGS AND STATE
@@ -208,16 +208,16 @@ void updated () {
 void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
-  Ldebug('initialize()', 'Entered')
+  Ldebug('initialize', 'Entered')
   settings.seeTouchKpads.each{ d ->
     DevW device = d
-    Ldebug('initialize()', "subscribing ${DeviceInfo(device)} to mode handler."
+    Ldebug('initialize', "subscribing ${DeviceInfo(device)} to mode handler."
     )
     subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
   }
   settings.seeTouchKpads.each{ d ->
     DevW device = d
-    Ldebug('initialize()', "subscribing ${DeviceInfo(device)}")
+    Ldebug('initialize', "subscribing ${DeviceInfo(device)}")
     subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
   }
 }

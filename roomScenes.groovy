@@ -69,12 +69,12 @@ void _activateScene () {
   // Responsibilities:
   //   - Enforce _isRoomOccupied() behavior - activating targetScene or INATIVE scene
   //-> if (state.targetScene == 'AUTOMATIC') {
-  //->   Lerror('_activateScene()', 'targetScene == AUTOMATIC ===> I N V A L I D')
+  //->   Lerror('_activateScene', 'targetScene == AUTOMATIC ===> I N V A L I D')
   //-> } else if (state.targetScene == null) {
-  //->   Lerror('_activateScene()', 'targetScene == null ===> I N V A L I D')
+  //->   Lerror('_activateScene', 'targetScene == null ===> I N V A L I D')
   //-> }
   String executeScene = _isRoomOccupied() ? state.targetScene : 'INACTIVE'
-  Linfo('_activateScene()', "Activating scene: ${executeScene}")
+  Linfo('_activateScene', "Activating scene: ${executeScene}")
   // Process the scene's list of device actions.
   state.scenes[executeScene].each{ action ->
     def actionT = action.tokenize('^')
@@ -82,49 +82,61 @@ void _activateScene () {
     String ra2Id = actionT[1]
     Integer value = SafeParseInt(actionT[2])
     if (value == null) {
-      Lerror('_activateScene()', "Null value for ra2Id: ${b(ra2Id)}")
+      Lerror('_activateScene', "Null value for ra2Id: ${b(ra2Id)}")
     }
     switch (devType) {
       case 'Ind':
-        // Locate the correct independent device and set its on/off/level
         settings.indDevices.each{ d ->
           if (_getDeviceRa2Id(d) == ra2Id) {
+            // Independent Devices (especially RA2 and Caséta) are subject
+            // to stale Hubitat state data if callbacks occur quickly (within
+            // 1/2 second) after a level change. So, briefly unsubscribe
+            // device (see runIn subscribe below) to avoid this situation.
+            _unsubscribeIndDevToHandler(d)
             if (d.hasCommand('setLevel')) {
-              Ltrace('_activateScene()', "Setting ${b(ra2Id)} to level ${b(value)}")
+              // Some devices cannot support level=100
+              if (value == 100) value = 99
+              Ltrace('_activateScene', "Setting ${b(ra2Id)} to level ${b(value)}")
               d.setLevel(value)
             } else if (value == 0) {
-              Ltrace('_activateScene()', "Setting ${b(ra2Id)} to off")
+              Ltrace('_activateScene', "Setting ${b(ra2Id)} to off")
               d.off()
             } else if (value == 100) {
-              Ltrace('_activateScene()', "Setting ${b(ra2Id)} to on")
+              Ltrace('_activateScene', "Setting ${b(ra2Id)} to on")
               d.on()
             }
+            runIn(1, '_subscribeIndDevToHandler', [data: [device: d]])
           } else {
-            Ltrace(_activateScene(), "Skipping Independent ra2Id (${b(ra2Id)})")
+            Ltrace('_activateScene', "Skipping Independent ra2Id (${b(ra2Id)})")
           }
         }
         break
       case 'Rep':
-        // Locate the correct repeater and push its integration button
         settings.mainRepeaters.each{ d ->
           if (_getDeviceRa2Id(d) == ra2Id) {
-            Ltrace('_activateScene()', "Pushing button (${value}) on ${b(ra2Id)}")
+            // Unlike some Independent Devices (RA2 and Caséta) RA2 Main
+            // Repeaters are not particularly subject to stale Hubitat
+            // state; HOWEVER, callbacks that occur quickly (within 1/2
+            // second) after a buton press subject Hubitat to callback
+            // overload (during WHA scene chantes). Briefly unsubscribe /
+            // subscribe to avoid this situation.
+            _unsubscribeMainRepToHandler(d)
+            Ltrace('_activateScene', "Pushing button (${value}) on ${b(ra2Id)}")
             d.push(value)
+            runIn(1, '_subscribeIndDevToHandler', [data: [device: d]])
           } else {
-            Ltrace(_activateScene(), "Skipping Main Repeater rA2Id (${b(ra2Id)})")
+            Ltrace('_activateScene', "Skipping Main Repeater rA2Id (${b(ra2Id)})")
           }
         }
         break
       default:
-        Lwarn('_activateScene()', "Unexpected device type ${b(devType)}")
+        Lwarn('_activateScene', "Unexpected device type ${b(devType)}")
     }
   }
 }
 
 void _updateTargetScene () {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
-  Ldebug('#126', ">${state.activeButton}<, >${state.targetScene}<, >${_isManualOverride()}<")
-  Ldebug('#127', ">${state.activeButton == 'AUTOMATIC'}<, >${!state.targetScene}<, >${!_isManualOverride()}<")
   if (
     (state.activeButton == 'AUTOMATIC' && !state.targetScene)
     || (state.activeButton == 'AUTOMATIC' && !_isManualOverride())
@@ -135,7 +147,7 @@ void _updateTargetScene () {
   } else {
     state.targetScene = state.activeButon
   }
-  Ltrace('_updateTargetScene()', "state.targetScene: ${state.targetScene}")
+  Ltrace('_updateTargetScene', "state.targetScene: ${state.targetScene}")
 }
 
 void buttonOnCallback (String button) {
@@ -148,7 +160,7 @@ void buttonOnCallback (String button) {
     )
   }
   state.activeButton = button ?: 'AUTOMATIC'
-  Ltrace('buttonOnCallback()', "Button received: ${b(state.activeButton)}")
+  Ltrace('buttonOnCallback', "Button received: ${b(state.activeButton)}")
   _clearManualOverride()
   _updateTargetScene()
   _activateScene()
@@ -236,6 +248,148 @@ void _createRSPbsgAndPageLink () {
   }
 }
 
+void addMotionSensorToRoomOccupied (String displayName) {
+  state.roomOccupied = CleanStrings([*state.roomOccupied, displayName])
+}
+
+void removeMotionSensorFromRoomOccupied (String displayName) {
+  state.roomOccupied?.removeAll{ it == displayName }
+}
+
+void _subscribeToIndDeviceHandler () {
+  settings.indDevices.each{ device ->
+    Linfo(
+      '_subscribeToIndDeviceHandler',
+      "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+    )
+    subscribe(device, indDeviceHandler, ['filterEvents': true])
+  }
+}
+
+void _subscribeIndDevToHandler (Map data) {
+  // USAGE:
+  //   runIn(1, '_subscribeIndDevToHandler', [data: [device: d]])
+  // Independent Devices (especially RA2 and Caséta) are subject to stale
+  // Hubitat state data if callbacks occur quickly (within 1/2 second)
+  // after a level change. So, briefly unsubscribe/subscribe to avoid
+  // this situation.
+  Ltrace(
+    '_subscribeIndDevToHandler',
+    "${state.ROOM_LABEL} subscribing ${DeviceInfo(data.device)}"
+  )
+  subscribe(device, indDeviceHandler, ['filterEvents': true])
+}
+
+void _unsubscribeIndDevToHandler (DevW device) {
+  // Independent Devices (especially RA2 and Caséta) are subject to stale
+  // Hubitat state data if callbacks occur quickly (within 1/2 second)
+  // after a level change. So, briefly unsubscribe/subscribe to avoid
+  // this situation.
+  Ltrace(
+    '_unsubscribeToIndDeviceHandler',
+    "${state.ROOM_LABEL} unsubscribing ${DeviceInfo(device)}"
+  )
+  unsubscribe(device)
+}
+
+void _subscribeToKpadHandler () {
+  Linfo(
+    '_subscribeToKpadHandler',
+    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+  )
+  settings.seeTouchKpads.each{ device ->
+    subscribe(device, kpadHandler, ['filterEvents': true])
+  }
+}
+
+void _subscribeToMainRepHandler () {
+  Linfo(
+    '_subscribeToMainRepHandler',
+    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+  )
+  settings.mainRepeaters.each{ device ->
+    Linfo(
+      'initialize()',
+      "${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(device)}"
+    )
+    subscribe(device, mainRepHandler, ['filterEvents': true])
+  }
+}
+
+void _subscribeMainRepToHandler (Map data) {
+  // USAGE:
+  //   runIn(1, '_subscribeMainRepToHandler', [data: [device: d]])
+  // Unlike some Independent Devices (RA2 and Caséta) RA2 Main Repeaters
+  // are not particularly subject to stale Hubitat state; HOWEVER,
+  // callbacks that occur quickly (within 1/2 second) after a buton press
+  // subject Hubitat to callback overload (during WHA scene chantes).
+  // Briefly unsubscribe/subscribe to avoid this situation.
+  Ltrace(
+    '_subscribeMainRepToHandler',
+    "${state.ROOM_LABEL} subscribing ${DeviceInfo(data.device)}"
+  )
+  subscribe(device, mainRepHandler, ['filterEvents': true])
+}
+
+void _unsubscribeMainRepToHandler (DevW device) {
+  // Unlike some Independent Devices (RA2 and Caséta) RA2 Main Repeaters
+  // are not particularly subject to stale Hubitat state; HOWEVER,
+  // callbacks that occur quickly (within 1/2 second) after a buton press
+  // subject Hubitat to callback overload (during WHA scene chantes).
+  // Briefly unsubscribe/subscribe to avoid this situation.
+  Ltrace(
+    '_unsubscribeMainRepToHandler',
+    "${state.ROOM_LABEL} unsubscribing ${DeviceInfo(device)}"
+  )
+  unsubscribe(device)
+}
+
+void _subscribeToModeHandler () {
+  Linfo(
+    '_subscribeToModeHandler',
+    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+  )
+  subscribe(location, "mode", modeHandler)
+}
+
+void _subscribeToMotionSensorHandler () {
+  Linfo(
+    '_subscribeToMotionSensorHandler',
+    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+  )
+  if (settings.motionSensors) {
+    state.roomOccupied = []
+    settings.motionSensors.each{ d ->
+      Linfo(
+        'initialize()',
+        "${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(d)}"
+      )
+      subscribe(d, motionSensorHandler, ['filterEvents': true])
+      if (d.latestState('motion').value == 'active') {
+        addMotionSensorToRoomOccupied (d.getLabel())
+      } else {
+        removeMotionSensorFromRoomOccupied(d.getLabel())
+      }
+    }
+  } else {
+    state.roomOccupied = [ true ]
+  }
+}
+
+void _subscribeToPicoHandler () {
+  Linfo(
+    '_subscribeToPicoHandler',
+    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+  )
+  settings.picos.each{ device ->
+    Linfo(
+      'initialize()',
+      "${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(device)}"
+    )
+    subscribe(device, picoHandler, ['filterEvents': true])
+  }
+}
+
 //---- EVENT HANDLERS
 
 void indDeviceHandler (Event e) {
@@ -259,74 +413,22 @@ void indDeviceHandler (Event e) {
   Integer expLevel = _expectedSceneDeviceValue('Ind', ra2Id)
   if (currLevel == expLevel) {
     // Scene compliance confirmed
-    Ltrace('indDeviceHandler()', "${ra2Id} complies with scene")
+    Ltrace('indDeviceHandler', "${ra2Id} complies with scene")
     state.moDetected.remove(ra2Id)
   } else {
     // Scene compliance refuted (i.e., Manual Override)
     String summary = "${ra2Id} value (${currLevel}), expected (${expLevel})"
-    Linfo('indDeviceHandler()', [ 'MANUAL OVERRIDE', summary ])
+    Linfo('indDeviceHandler', [ 'MANUAL OVERRIDE', summary ])
     state.moDetected[ra2Id] = summary
   }
 }
 
-void repLedHandler (Event e) {
-  // Main Repeaters send various events (e.g., pushed, buttonLed-##).
-  // Isolate the buttonLed-## events which confirm|refute state.targetScene.
-  if (e.name.startsWith('buttonLed-')) {
-    Integer eventButton = SafeParseInt(e.name.substring(10))
-    String ra2Id = _extractRa2IdFromLabel(e.displayName)
-    // Is there an expected sceneButton for the ra2Id?
-    Integer sceneButton = _expectedSceneDeviceValue('Rep', ra2Id)
-    // And if so, does it match the eventButton?
-    if (sceneButton && sceneButton == eventButton) {
-      // This event can be used to confirm or refute the target scene.
-      if (e.value == 'on') {
-        // Scene compliance confirmed
-        Ltrace('repLedHandler()', "${ra2Id} complies with scene")
-        state.moDetected.remove(ra2Id)
-      } else if (e.value == 'off') {
-        // Scene compliance refuted (i.e., Manual Override)
-        String summary = "${ra2Id} button ${eventButton} off, expected on"
-        Linfo('repLedHandler()', [ 'MANUAL OVERRIDE', summary ])
-        state.moDetected[ra2Id] = summary
-      } else {
-        // Error condition
-        Lwarn(
-          'repLedHandler()',
-          "Main Repeater (${ra2Id}) with unexpected value (${e.value}"
-        )
-      }
-    }
-  }
-}
-
-void hubitatModeHandler (Event e) {
-  if (state.activeButton == 'AUTOMATIC') {
-    // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
-    if (e.name == 'mode') {
-      // Let buttonOnCallback() handle activeButton == 'AUTOMATIC'!
-      Ltrace('hubitatModeHandler()', 'Calling buttonOnCallback("AUTOMATIC")')
-      buttonOnCallback('AUTOMATIC')
-    } else {
-      Ltrace('hubitatModeHandler()', ['UNEXPECTED EVENT', EventDetails(e)])
-    }
-  } else {
-    Ltrace(
-      'hubitatModeHandler()', [
-        'Ignored: Mode Change',
-        "state.activeButton: ${b(state.activeButton)}",
-        "state.targetScene: ${b(state.targetScene)}"
-      ]
-    )
-  }
-}
-
-void kpadSceneButtonHandler (Event e) {
+void kpadHandler (Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
   //   - Kpad buttons are matched to state data to activate a scene.
-  Ltrace('kpadSceneButtonHandler()', [
+  Ltrace('kpadHandler', [
     "state.activeButton: ${state.activeButton}",
     "state.targetScene: ${state.targetScene}",
     EventDetails(e)
@@ -344,14 +446,84 @@ void kpadSceneButtonHandler (Event e) {
       // Ignore without logging
       break
     default:
-      Lwarn('kpadSceneButtonHandler()', [
+      Lwarn('kpadHandler()', [
         "DNI: '${b(e.deviceId)}'",
         "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
       ])
   }
 }
 
-void picoButtonHandler (Event e) {
+void mainRepHandler (Event e) {
+  // Main Repeaters send various events (e.g., pushed, buttonLed-##).
+  // Isolate the buttonLed-## events which confirm|refute state.targetScene.
+  if (e.name.startsWith('buttonLed-')) {
+    Integer eventButton = SafeParseInt(e.name.substring(10))
+    String ra2Id = _extractRa2IdFromLabel(e.displayName)
+    // Is there an expected sceneButton for the ra2Id?
+    Integer sceneButton = _expectedSceneDeviceValue('Rep', ra2Id)
+    // And if so, does it match the eventButton?
+    if (sceneButton && sceneButton == eventButton) {
+      // This event can be used to confirm or refute the target scene.
+      if (e.value == 'on') {
+        // Scene compliance confirmed
+        Ltrace('mainRepHandler', "${ra2Id} complies with scene")
+        state.moDetected.remove(ra2Id)
+      } else if (e.value == 'off') {
+        // Scene compliance refuted (i.e., Manual Override)
+        String summary = "${ra2Id} button ${eventButton} off, expected on"
+        Linfo('mainRepHandler', [ 'MANUAL OVERRIDE', summary ])
+        state.moDetected[ra2Id] = summary
+      } else {
+        // Error condition
+        Lwarn(
+          'mainRepHandler()',
+          "Main Repeater (${ra2Id}) with unexpected value (${e.value}"
+        )
+      }
+    }
+  }
+}
+
+void modeHandler (Event e) {
+  if (state.activeButton == 'AUTOMATIC') {
+    // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
+    if (e.name == 'mode') {
+      // Let buttonOnCallback() handle activeButton == 'AUTOMATIC'!
+      Ltrace('modeHandler', 'Calling buttonOnCallback("AUTOMATIC")')
+      buttonOnCallback('AUTOMATIC')
+    } else {
+      Ltrace('modeHandler', ['UNEXPECTED EVENT', EventDetails(e)])
+    }
+  } else {
+    Ltrace(
+      'modeHandler()', [
+        'Ignored: Mode Change',
+        "state.activeButton: ${b(state.activeButton)}",
+        "state.targetScene: ${b(state.targetScene)}"
+      ]
+    )
+  }
+}
+
+void motionSensorHandler (Event e) {
+  // It IS POSSIBLE to have multiple motion sensors per room.
+  //-> Ltrace('motionSensorHandler', EventDetails(e))
+  if (e.name == 'motion') {               // Assume e.isStateChange == true
+    if (e.value == 'active') {
+      Linfo('motionSensorHandler', "${e.displayName} is active")
+      addMotionSensorToRoomOccupied(e.displayName)
+      _activateScene()
+    } else if (e.value == 'inactive') {
+      Linfo('motionSensorHandler', "${e.displayName} is inactive")
+      removeMotionSensorFromRoomOccupied(e.displayName)
+      _activateScene()
+    } else {
+      Lerror('motionSensorHandler', "Unexpected event value (${e.value})")
+    }
+  }
+}
+
+void picoHandler (Event e) {
   Integer changePercentage = 10
   if (e.isStateChange == true) {
     switch (e.name) {
@@ -360,13 +532,13 @@ void picoButtonHandler (Event e) {
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value)
         if (scene) {
-          Lerror('picoButtonHandler()' [
+          Lerror('picoHandler()' [
             '<b>NOT IMPLEMENTED/TESTED</b>',
             "w/ ${e.deviceId}-${e.value} toggling ${scene}"
           ])
           //---> app.getChildAppByLabel(state.RSPBSG_LABEL).toggleSwitch(scenePbsg)
         } else if (e.value == '2') {  // Default "Raise" behavior
-          Linfo('picoButtonHandler()', "Raising ${settings.indDevices}")
+          Linfo('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each{ d ->
             if (getSwitchState(d) == 'off') {
               d.setLevel(5)
@@ -379,7 +551,7 @@ void picoButtonHandler (Event e) {
             }
           }
         } else if (e.value == '4') {  // Default "Lower" behavior
-          Linfo('picoButtonHandler()', "Lowering ${settings.indDevices}")
+          Linfo('picoHandler', "Lowering ${settings.indDevices}")
           settings.indDevices.each{ d ->
               d.setLevel(Math.max(
                 (d.currentValue('level') as Integer) - changePercentage,
@@ -388,8 +560,8 @@ void picoButtonHandler (Event e) {
           }
         } else {
           Ltrace(
-            'picoButtonHandler()',
-            "${state.ROOM_LABEL} picoButtonHandler() w/ ${e.deviceId}-${e.value} no action."
+            'picoHandler()',
+            "${state.ROOM_LABEL} picoHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
         break
@@ -397,41 +569,15 @@ void picoButtonHandler (Event e) {
   }
 }
 
-void addMotionSensorToRoomOccupied (String displayName) {
-  state.roomOccupied = CleanStrings([*state.roomOccupied, displayName])
-}
-
-void removeMotionSensorFromRoomOccupied (String displayName) {
-  state.roomOccupied?.removeAll{ it == displayName }
-}
-
-void motionSensorHandler (Event e) {
-  // It IS POSSIBLE to have multiple motion sensors per room.
-  //-> Ltrace('motionSensorHandler()', EventDetails(e))
-  if (e.name == 'motion') {               // Assume e.isStateChange == true
-    if (e.value == 'active') {
-      Linfo('motionSensorHandler()', "${e.displayName} is active")
-      addMotionSensorToRoomOccupied(e.displayName)
-      _activateScene()
-    } else if (e.value == 'inactive') {
-      Linfo('motionSensorHandler()', "${e.displayName} is inactive")
-      removeMotionSensorFromRoomOccupied(e.displayName)
-      _activateScene()
-    } else {
-      Lerror('motionSensorHandler()', "Unexpected event value (${e.value})")
-    }
-  }
-}
-
 //---- SYSTEM CALLBACKS
 
 void installed () {
-  Ltrace('installed()', 'At Entry')
+  Ltrace('installed', 'At Entry')
   initialize()
 }
 
 void updated () {
-  Ltrace('updated()', 'At Entry')
+  Ltrace('updated', 'At Entry')
   unsubscribe()  // Suspend all events (e.g., child devices, mode changes).
   initialize()
 }
@@ -444,55 +590,13 @@ void initialize () {
   Linfo(
     'initialize()',
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
-      + "Subscribing to hubitatModeHandler."
+      + "Subscribing to modeHandler."
   )
-  // MODE HANDLER
-  subscribe(location, "mode", hubitatModeHandler)
-  settings.seeTouchKpads.each{ device ->
-    subscribe(device, kpadSceneButtonHandler, ['filterEvents': true])
-  }
-  // MAIN REPEATERS
-  settings.mainRepeaters.each{ device ->
-    Linfo(
-      'initialize()',
-      "${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(device)}"
-    )
-    subscribe(device, repLedHandler, ['filterEvents': true])
-  }
-  // PICOS
-  settings.picos.each{ device ->
-    Linfo(
-      'initialize()',
-      "${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(device)}"
-    )
-    subscribe(device, picoButtonHandler, ['filterEvents': true])
-  }
-  // MOTION SENSORS
-  if (settings.motionSensors) {
-    state.roomOccupied = []
-    settings.motionSensors.each{ d ->
-      Linfo(
-        'initialize()',
-        "${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(d)}"
-      )
-      subscribe(d, motionSensorHandler, ['filterEvents': true])
-      if (d.latestState('motion').value == 'active') {
-        addMotionSensorToRoomOccupied (d.getLabel())
-      } else {
-        removeMotionSensorFromRoomOccupied(d.getLabel())
-      }
-    }
-  } else {
-    state.roomOccupied = [ true ]
-  }
-  // INDEPENDENT DEVICES
-  settings.indDevices.each{ device ->
-    Linfo(
-      'initialize()',
-      "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
-    )
-    subscribe(device, indDeviceHandler, ['filterEvents': true])
-  }
+  _subscribeToModeHandler()
+  _subscribeToIndDeviceHandler()
+  _subscribeToMainRepHandler()
+  _subscribeToPicoHandler()
+  _subscribeToMotionSensorHandler()
   // ACTIVATION
   //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
   //     will not be called.
@@ -728,13 +832,27 @@ void selectPicoButtonsForScene (List<DevW> picos) {
   }
 }
 
+void populateStatePicoButtonToTargetScene () {
+  state.picoButtonToTargetScene = [:]
+  settings.findAll{ key, value -> key.contains('picoButtons_') }
+          .each{ key, value ->
+            String scene = key.tokenize('_')[1]
+            value.each{ idAndButton ->
+              List<String> valTok = idAndButton.tokenize('^')
+              String deviceId = valTok[0]
+              String buttonNumber = valTok[1]
+              if (state.picoButtonToTargetScene[deviceId] == null) {
+                state.picoButtonToTargetScene[deviceId] = [:]
+              }
+              state.picoButtonToTargetScene[deviceId][buttonNumber] = scene
+            }
+          }
+}
+
 void _wirePicoButtonsToScenes () {
   if (settings.picos) {
     selectPicoButtonsForScene(settings.picos)
-    Lerror('_wirePicoButtonsToScenes()', [
-      '<b>NOT IMPLEMENTED</b>',
-      "Debug missing populateStatePicoButtonToTargetScene()"
-    ])
+    populateStatePicoButtonToTargetScene()
   }
 }
 
@@ -862,6 +980,7 @@ Map RoomScenesPage () {
     //---------------------------------------------------------------------------------
     state.ROOM_LABEL = app.getLabel()  // WHA creates App w/ Label == Room Name
     state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
+    state.logLevel = LogThreshToLogLevel(settings.appLogThresh) ?: 5
     section {
       solicitLogThreshold('appLogThresh', 'TRACE')           // lHUI
       solicitLogThreshold('pbsgLogThresh', 'INFO')           // lHUI

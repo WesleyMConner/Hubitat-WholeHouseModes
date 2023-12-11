@@ -40,25 +40,25 @@ Boolean pbsgConfigure (
   Boolean retVal = true
   settings.buttons = CleanStrings(buttons)
   if (settings.buttons != buttons) {
-    Ltrace('pbsgConfigure()', "buttons: (${buttons}) -> (${settings.buttons})")
+    Ltrace('pbsgConfigure', "buttons: (${buttons}) -> (${settings.buttons})")
   }
   settings.dfltButton = defaultButton ? defaultButton : null
   if (settings.dfltButton != defaultButton) {
-    Ltrace('pbsgConfigure()', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
+    Ltrace('pbsgConfigure', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
   }
   settings.activeButton = activeButton ? activeButton : null
   if (settings.activeButton != activeButton) {
-    Ltrace('pbsgConfigure()', "activeButton: (${activeButton}) -> (${settings.activeButton})")
+    Ltrace('pbsgConfigure', "activeButton: (${activeButton}) -> (${settings.activeButton})")
   }
   settings.logLevel = ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'].contains(pbsgLogLevel)
     ? pbsgLogLevel : 'TRACE'
   if (settings.logLevel != pbsgLogLevel) {
-    Ltrace('pbsgConfigure()', "pbsgLogLevel: (${pbsgLogLevel}) -> (${settings.logLevel})")
+    Ltrace('pbsgConfigure', "pbsgLogLevel: (${pbsgLogLevel}) -> (${settings.logLevel})")
   }
   Integer buttonCount = settings.buttons?.size() ?: 0
   if (buttonCount < 2) {
     retVal = false
-    Lerror('pbsgConfigure()', "Button count (${buttonCount}) must be two or more")
+    Lerror('pbsgConfigure', "Button count (${buttonCount}) must be two or more")
   }
   if (settings.dfltButton && settings.buttons?.contains(settings.dfltButton) == false) {
     retVal = false
@@ -88,7 +88,7 @@ Boolean pbsgDeactivateButton (String button) {
 Boolean pbsgActivatePrior () {
   _tracePbsgStateAndVswState('pbsgActivatePrior()', 'AT ENTRY')
   String predecessor = state.inactiveDnis.first()
-  Ltrace('pbsgActivatePrior()', "predecessor: ${predecessor}")
+  Ltrace('pbsgActivatePrior', "predecessor: ${predecessor}")
   return _pbsgActivateDni(predecessor)
 }
 
@@ -132,11 +132,11 @@ void _dropDni (String dni) {
 Boolean _pbsgActivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new dni is activated.
-  //-> Ldebug('_pbsgActivateDni()', "DNI: ${b(dni)}")
+  //-> Ldebug('_pbsgActivateDni', "DNI: ${b(dni)}")
   _tracePbsgStateAndVswState('_pbsgActivateDni()', 'AT ENTRY')
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
-    Ldebug('_pbsgActivateDni()', "No action, ${dni} is already active")
+    Ldebug('_pbsgActivateDni', "No action, ${dni} is already active")
   } else if (dni && !_pbsgGetDnis()?.contains(dni)) {
     Lerror(
       '_pbsgActivateDni()',
@@ -144,11 +144,11 @@ Boolean _pbsgActivateDni (String dni) {
     )
   } else {
     isStateChanged = true
-    Ldebug('_pbsgActivateDni()', "Moving active (${state.activeDni}) to inactive")
+    Ldebug('_pbsgActivateDni', "Moving active (${state.activeDni}) to inactive")
     _pbsgMoveActiveToInactive()
     FifoRemove(state.inactiveDnis, dni)
     // Adjust the activeDni and Vsw together
-    Ldebug('_pbsgActivateDni()', "Activating ${dni}")
+    Ldebug('_pbsgActivateDni', "Activating ${dni}")
     state.activeDni = dni
     _pbsgPublishActiveButton()
     _tracePbsgStateAndVswState('_pbsgActivateDni()', 'AT EXIT')
@@ -159,15 +159,15 @@ Boolean _pbsgActivateDni (String dni) {
 Boolean _pbsgDeactivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   _tracePbsgStateAndVswState('_pbsgDeactivateDni()', 'AT ENTRY')
-  Ldebug('_pbsgDeactivateDni()', "DNI: ${b(dni)}")
+  Ldebug('_pbsgDeactivateDni', "DNI: ${b(dni)}")
   Boolean isStateChanged = false
   if (state.inactiveDnis.contains(dni)) {
     // Nothing to do, dni is already inactive
-    Ldebug('_pbsgDeactivateDni()', "Nothing to do for dni: ${b(dni)}")
+    Ldebug('_pbsgDeactivateDni', "Nothing to do for dni: ${b(dni)}")
   } else if (state.activeDni == state.dfltDni) {
     // It is likely that the default DNI has been manually turned off.
     // Update the PBSG state to reflect this likely fact.
-    Ldebug('_pbsgDeactivateDni()', "Moving active (${state.activeDni}) to inactive")
+    Ldebug('_pbsgDeactivateDni', "Moving active (${state.activeDni}) to inactive")
     _pbsgMoveActiveToInactive()
     // Force re-enable the default DNI.
     isStateChange = _pbsgActivateDni(state.dfltDni)
@@ -256,7 +256,7 @@ void _unsubscribeChildVswEvents () {
     traceSummary += Bullet2(d.getDeviceNetworkId())
     unsubscribe(d)
   }
-  Ltrace('_unsubscribeChildVswEvents()', traceSummary)
+  Ltrace('_unsubscribeChildVswEvents', traceSummary)
 }
 
 void _subscribeChildVswEvents () {
@@ -267,7 +267,7 @@ void _subscribeChildVswEvents () {
     subscribe(d, VswEventHandler, ['filterEvents': true])
     traceSummary += Bullet2(d.getDeviceNetworkId())
   }
-  Ltrace('_subscribeChildVswEvents()', traceSummary)
+  Ltrace('_subscribeChildVswEvents', traceSummary)
 }
 
 void _pbsgPublishActiveButton() {
@@ -279,7 +279,7 @@ void _pbsgPublishActiveButton() {
   //     workaround to avoid stale STATE data in Handler methods.
   _tracePbsgStateAndVswState('_pbsgPublishActiveButton()', 'AT ENTRY')
   String activeButton = _dniToButton(state.activeDni)
-  Linfo('_pbsgPublishActiveButton()', "Processing button ${activeButton}")
+  Linfo('_pbsgPublishActiveButton', "Processing button ${activeButton}")
   //-----------------------------------------------------------------------
   //-> TACTICALLY, SUPPRESS APP-TO-APP EVENTS
   //->   List<String> inactiveButtonFifo = state.inactiveDnis.collect{
@@ -295,7 +295,7 @@ void _pbsgPublishActiveButton() {
   //->       'dflt': defaultButton                               // String
   //->     ]
   //->   ]
-  //->   Linfo('_pbsgAdjustVswsAndSendEvent()', [
+  //->   Linfo('_pbsgAdjustVswsAndSendEvent', [
   //->     '<b>EVENT MAP</b>',
   //->     Bullet2("<b>name:</b> ${event.name}"),
   //->     Bullet2("<b>descriptionText:</b> ${event.descriptionText}"),
@@ -362,7 +362,7 @@ void pbsgCoreInstalled (InstAppW app) {
   state.activeDni = null                            // String
   state.inactiveDnis = []                           // List<String>
   state.dfltDni = null                              // String
-  Ltrace('pbsgCoreInstalled()', appStateAsBullets(true))
+  Ltrace('pbsgCoreInstalled', appStateAsBullets(true))
 }
 
 void pbsgCoreUpdated (InstAppW app) {
@@ -393,7 +393,7 @@ void pbsgCoreUpdated (InstAppW app) {
     "<b>dropDnis:</b> ${dropDnis}",
     "<b>addDnis:</b> ${addDnis}"
   ].join('<br/>')
-  Linfo('pbsgCoreUpdated()', [
+  Linfo('pbsgCoreUpdated', [
     [
       '<table style="border-spacing: 0px;" rules="all"><tr>',
       '<th style="width:32%">ENTRY STATE</th><th style="width:2%"/>',
@@ -413,19 +413,19 @@ void pbsgCoreUpdated (InstAppW app) {
   addDnis.each{ dni -> _addDni(dni) }
   // Leverage activation/deactivation methods for initial dni activation.
   if (updatedActiveDni) {
-    Ltrace('pbsgCoreUpdated()', "activating activeDni ${updatedActiveDni}")
+    Ltrace('pbsgCoreUpdated', "activating activeDni ${updatedActiveDni}")
     _pbsgActivateDni(updatedActiveDni)
   } else if (state.activeDni == null && state.dfltDni) {
-    Ltrace('pbsgCoreUpdated()', "activating dfltDni ${state.dfltDni}")
+    Ltrace('pbsgCoreUpdated', "activating dfltDni ${state.dfltDni}")
     _pbsgActivateDni(state.dfltDni)
   }
-  Ltrace('pbsgCoreUpdated()', _pbsgListVswDevices())
+  Ltrace('pbsgCoreUpdated', _pbsgListVswDevices())
   List<DevW> childDevices = getChildDevices()
   _pbsgPublishActiveButton()
 }
 
 void pbsgCoreUninstalled (InstAppW app) {
-  Ldebug('pbsgCoreUninstalled()', 'No action')
+  Ldebug('pbsgCoreUninstalled', 'No action')
 }
 
 //---- EVENT HANDLERS
@@ -440,7 +440,7 @@ void VswEventHandler (Event e) {
   // W A R N I N G
   //   As of 2023-11-30 Handler continues to receive STALE state values!!!
   _tracePbsgStateAndVswState('VswEventHandler()', 'AT ENTRY')
-  Ldebug('VswEventHandler()', e.descriptionText)
+  Ldebug('VswEventHandler', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName
     if (e.value == 'on') {
@@ -453,6 +453,6 @@ void VswEventHandler (Event e) {
         "Unexpected value (${e.value}) for DNI (${dni}")
     }
   } else {
-    Ldebug('VswEventHandler()', "Unexpected event: ${EventDetails(e)}")
+    Ldebug('VswEventHandler', "Unexpected event: ${EventDetails(e)}")
   }
 }

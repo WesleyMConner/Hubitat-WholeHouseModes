@@ -148,7 +148,7 @@ void PruneAppDups (
   if (isWarning) {
     Lwarn('PruneAppDups()', result.join())
   } else {
-    Ltrace('PruneAppDups()', result.join())
+    Ltrace('PruneAppDups', result.join())
   }
 }
 

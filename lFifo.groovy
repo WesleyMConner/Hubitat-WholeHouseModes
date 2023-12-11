@@ -24,11 +24,11 @@ library (
 
 String FifoRemove (List<String> fifo, String item) {
   // Remove and return item if present OR return null.
-  //if (!fifo) Lerror('FifoRemove()', "Received a null value for fifo")
+  //if (!fifo) Lerror('FifoRemove', "Received a null value for fifo")
   return fifo?.removeAll{ it == item } ? item : null
   Boolean retval = null
   if (fifo == null) {
-    Lerror('FifoRemove()', "Received a null value for fifo")
+    Lerror('FifoRemove', "Received a null value for fifo")
   } else if (fifo.removeAll{ it == item }) {
     retval = item
   }
@@ -38,7 +38,7 @@ String FifoRemove (List<String> fifo, String item) {
 Boolean FifoEnqueue (List<String> fifo, String item) {
   Boolean retval = false
   if (fifo == null) {
-    Lerror('FifoEnqueue()', "Received a null value for fifo")
+    Lerror('FifoEnqueue', "Received a null value for fifo")
   } else if (item) {
     fifo.leftShift(item)
     retval = true
@@ -49,7 +49,7 @@ Boolean FifoEnqueue (List<String> fifo, String item) {
 String FifoDequeue (List<String> fifo) {
   String retval = null
   if (fifo == null) {
-    Lerror('FifoDequeue()', "Received a null value for fifo")
+    Lerror('FifoDequeue', "Received a null value for fifo")
   } else if (fifo.size() > 0) {
     retval = fifo.removeAt(0)
   }
