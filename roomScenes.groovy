@@ -68,11 +68,11 @@ Boolean _isRoomOccupied () {
 void _activateScene () {
   // Responsibilities:
   //   - Enforce _isRoomOccupied() behavior - activating targetScene or INATIVE scene
-  if (state.targetScene == 'AUTOMATIC') {
-    Lerror('_activateScene()', 'targetScene == AUTOMATIC ===> I N V A L I D')
-  } else if (state.targetScene == null) {
-    Lerror('_activateScene()', 'targetScene == null ===> I N V A L I D')
-  }
+  //-> if (state.targetScene == 'AUTOMATIC') {
+  //->   Lerror('_activateScene()', 'targetScene == AUTOMATIC ===> I N V A L I D')
+  //-> } else if (state.targetScene == null) {
+  //->   Lerror('_activateScene()', 'targetScene == null ===> I N V A L I D')
+  //-> }
   String executeScene = _isRoomOccupied() ? state.targetScene : 'INACTIVE'
   Linfo('_activateScene()', "Activating scene: ${executeScene}")
   // Process the scene's list of device actions.
@@ -214,7 +214,7 @@ InstAppW _getOrCreateRSPbsg () {
                                          // 'TRACE' to include PBSG and VSW state
       )
     } else {
-      Lerror('_getOrCreateRSPbsg()', 'RSPbsg creation is pending room scenes')
+      Lwarn('_getOrCreateRSPbsg()', 'RSPbsg creation is pending room scenes')
     }
   }
   return pbsgApp
@@ -498,8 +498,16 @@ void initialize () {
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
-  _getOrCreateRSPbsg().pbsgActivateButton('AUTOMATIC')
-  buttonOnCallback('AUTOMATIC')
+  InstAppW pbsg = _getOrCreateRSPbsg()
+  if (pbsg) {
+    pbsg.pbsgActivateButton('AUTOMATIC')
+    buttonOnCallback('AUTOMATIC')
+  } else {
+    Lwarn(
+      'initialize()',
+      'The RSPbsg is pending additional configuration data.'
+    )
+  }
 }
 
 //---- GUI / PAGE RENDERING
@@ -684,10 +692,44 @@ void _authRoomScenesPicos () {
   )
 }
 
+Map<String,String> namePicoButtons (DevW pico) {
+  String label = pico.getLabel()
+  String id = pico.getId()
+  return [
+    "${id}^1": "${label}^1",
+    "${id}^2": "${label}^2",
+    "${id}^3": "${label}^3",
+    "${id}^4": "${label}^4",
+    "${id}^5": "${label}^5"
+  ]
+}
+
+Map<String, String> picoButtonPicklist (List<DevW> picos) {
+  Map<String, String> results = [:]
+  picos.each{ pico -> results << namePicoButtons(pico) }
+  return results
+}
+
+void selectPicoButtonsForScene (List<DevW> picos) {
+  if (state.scenes) {
+    List<String> picoScenes = ['AUTOMATIC'] << _getScenes()
+    picoScenes.flatten().each{ sceneName ->
+      input(
+        name: "picoButtons_${sceneName}",
+        type: 'enum',
+        title: Heading2("Pico Buttons -> ${b(sceneName)}"),
+        width: 4,
+        submitOnChange: true,
+        required: false,
+        multiple: true,
+        options: picoButtonPicklist(picos)
+      )
+    }
+  }
+}
+
 void _wirePicoButtonsToScenes () {
-  if (settings.picos == null) {
-    //paragraph('Selection of pico buttons to activate scenes is pending pre-requisites.')
-  } else {
+  if (settings.picos) {
     selectPicoButtonsForScene(settings.picos)
     Lerror('_wirePicoButtonsToScenes()', [
       '<b>NOT IMPLEMENTED</b>',
@@ -745,12 +787,12 @@ void _configureRoomScene () {
       settings.indDevices?.each{ d ->
         String inputName = "scene^${scene}^Ind^${_getDeviceRa2Id(d)}"
         currSettingsKeys += inputName
-        tableCol += 2
+        tableCol += 3
         input(
           name: inputName,
           type: 'number',
           title: "${b(d.getLabel())}<br/>Level 0..100",
-          width: 2,
+          width: 3,
           submitOnChange: true,
           required: false,
           multiple: false,
@@ -760,12 +802,12 @@ void _configureRoomScene () {
       settings.mainRepeaters?.each{d ->
         String inputName = "scene^${scene}^Rep^${_getDeviceRa2Id(d)}"
         currSettingsKeys += inputName
-        tableCol += 2
+        tableCol += 3
         input(
           name: inputName,
           type: 'number',
           title: "${b(d.getLabel())}<br/>Button #",
-          width: 2,
+          width: 3,
           submitOnChange: true,
           required: false,
           multiple: false,
