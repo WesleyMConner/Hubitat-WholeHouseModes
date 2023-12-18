@@ -78,11 +78,20 @@ Boolean pbsgConfigure (
 }
 
 Boolean pbsgActivateButton (String button) {
+  Ltrace('pbsgActivateButton()', "button: ${b(button)}")
   _pbsgActivateDni(_buttonToDni(button))
 }
 
 Boolean pbsgDeactivateButton (String button) {
+  Ltrace('pbsgDeactivateButton()', "button: ${b(button)}")
   _pbsgDeactivateDni(_buttonToDni(button))
+}
+
+Boolean pbsgToggleButton (String button) {
+  Ltrace('pbsgToggleButton()', "button: ${b(button)}")
+  return (state.activeDni == _buttonToDni(button))
+     ? pbsgDeactivateButton(button)
+     : pbsgActivateButton(button)
 }
 
 Boolean pbsgActivatePrior () {

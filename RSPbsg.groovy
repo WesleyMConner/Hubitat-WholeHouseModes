@@ -41,34 +41,6 @@ preferences {
   page(name: 'RSPbsgPage')
 }
 
-////-----------------------------------------------------------------------
-//// EXTERNAL-FACING METHODS
-////   Boolean pbsgConfigure (
-////     List<String> buttons,
-////     String defaultButton,
-////     String activeButton,
-////     String pbsgLogLevel = 'TRACE'
-////   )
-////
-////   Boolean pbsgActivateButton (String button)
-////
-////   Boolean pbsgDeactivateButton (String button)
-////
-////   Boolean pbsgActivatePrior ()
-////
-//// PARENT CALLBACK
-////   void buttonOnCallback (String button)
-////
-////xx PUBLISHED EVENT
-////xx   Map event = [
-////xx     name: 'PbsgActiveButton',                                 String
-////xx     descriptionText: "Button <activeButton> is active",       String
-////xx     value: [
-////xx         'active': activeButton,                               String
-////xx       'inactive': inactiveButtonFifo,                   List<String>
-////xx           'dflt': defaultButton                               String
-////-----------------------------------------------------------------------
-
 //---- SYSTEM CALLBACKS
 
 void installed () {

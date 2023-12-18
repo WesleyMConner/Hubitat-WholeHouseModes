@@ -47,19 +47,19 @@ InstAppW _getOrCreateMPbsg () {
   // Mpbsg depends on Hubitat Mode properties AND NOT local data.
   InstAppW pbsgApp = app.getChildAppByLabel(state.MPBSG_LABEL)
   if (!pbsgApp) {
-    Lwarn('_getOrCreateMPbsg()', "Adding Mode PBSG ${state.MPBSG_LABEL}")
+    Lwarn('_getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
     pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
+    List<String> modeNames = getLocation().getModes().collect{ it.name }
+    String currModeName = getLocation().currentMode.name
+    pbsgApp.pbsgConfigure(
+      modeNames,     // Create a PBSG button per Hubitat Mode name
+      'Day',         // 'Day' is the default Mode/Button
+      currModeName,  // Activate the Button for the current Mode
+      settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+                                       // 'DEBUG' to walk key PBSG methods
+                                       // 'TRACE' to include PBSG and VSW state
+    )
   }
-  List<String> modeNames = getLocation().getModes().collect{ it.name }
-  String currModeName = getLocation().currentMode.name
-  pbsgApp.pbsgConfigure(
-    modeNames,     // Create a PBSG button per Hubitat Mode name
-    'Day',         // 'Day' is the default Mode/Button
-    currModeName,  // Activate the Button for the current Mode
-    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                     // 'DEBUG' to walk key PBSG methods
-                                     // 'TRACE' to include PBSG and VSW state
-  )
   return pbsgApp
 }
 
@@ -160,7 +160,7 @@ void seeTouchModeButtonHandler (Event e) {
                                                ?.getAt(e.value)
       if (targetButton) {
         Ldebug('seeTouchModeButtonHandler', "turning on ${targetButton}")
-        _getOrCreateMPbsg().pbsgActivateButton(targetButton)
+        _getOrCreateMPbsg().pbsgToggleButton(targetButton)
       }
       if (targetButton == 'Day') {
         Ldebug('seeTouchModeButtonHandler', 'executing ALL_AUTO')

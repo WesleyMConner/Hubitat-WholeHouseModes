@@ -900,7 +900,7 @@ void _configureRoomScene () {
     List<String> currSettingsKeys = []
     state.scenes?.each{ scene, EMPTY_LIST ->
       // Ignore the current componentList. Rebuilt it from scratch.
-      Integer tableCol = 2
+      Integer tableCol = 3
       paragraph("<br/><b>${scene} →</b>", width: 2)
       settings.indDevices?.each{ d ->
         String inputName = "scene^${scene}^Ind^${_getDeviceRa2Id(d)}"
