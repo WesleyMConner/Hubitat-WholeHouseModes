@@ -39,7 +39,7 @@ Integer SafeParseInt (String s) {
 void RemoveAllChildApps () {
   getAllChildApps().each{ child ->
     Ldebug(
-      'RemoveAllChildApps()',
+      'RemoveAllChildApps',
       "child: >${child.getId()}< >${child.getLabel()}<"
     )
     deleteChildApp(child.getId())
@@ -146,7 +146,7 @@ void PruneAppDups (
   }
   result += '</table>'
   if (isWarning) {
-    Lwarn('PruneAppDups()', result.join())
+    Lwarn('PruneAppDups', result.join())
   } else {
     Ltrace('PruneAppDups', result.join())
   }
@@ -155,7 +155,7 @@ void PruneAppDups (
 void RemoveChildApps () {
   getAllChildApps().each{ child ->
     Ldebug(
-      'RemoveChildApps()',
+      'RemoveChildApps',
       "deleting child: ${b(AppInfo(appObj))}"
     )
     deleteChildApp(child.getId())
@@ -172,7 +172,7 @@ InstAppW addChildAppForUniqueLabel (
   InstAppW newApp = null
   if (getChildAppByLabel(instanceLabel)) {
     Lerror(
-      'addChildAppForUniqueLabel()',
+      'addChildAppForUniqueLabel',
       "The instanceLabel ${b(instanceLabel)} is already in use"
     )
   } else {

@@ -126,14 +126,14 @@ void seeTouchSpecialFnButtonHandler (Event e) {
         case 'PANIC':
         case 'QUIET':
           Ldebug(
-            'seeTouchSpecialFnButtonHandler()',
+            'seeTouchSpecialFnButtonHandler',
             "${b(specialtyFunction)} function execution is <b>TBD</b>"
           )
           break
         default:
           // Silently
           Lerror(
-            'seeTouchSpecialFnButtonHandler()',
+            'seeTouchSpecialFnButtonHandler',
             "Unknown specialty function ${b(specialtyFunction)}"
           )
       }
@@ -142,7 +142,7 @@ void seeTouchSpecialFnButtonHandler (Event e) {
     case 'released':
     default:
       Ldebug(
-        'seeTouchSpecialFnButtonHandler()',
+        'seeTouchSpecialFnButtonHandler',
         "ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
@@ -172,7 +172,7 @@ void seeTouchModeButtonHandler (Event e) {
     case 'released':
     default:
       Ldebug(
-        'seeTouchModeButtonHandler()',
+        'seeTouchModeButtonHandler',
         "Ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
   }
@@ -344,7 +344,7 @@ void _displayInstantiatedRoomHrefs () {
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
       Ldebug(
-        'addRoomAppsIfMissing()',
+        'addRoomAppsIfMissing',
         "Adding room ${roomName}"
       )
       roomApp = addChildApp('wesmc', 'RoomScenes', roomName)

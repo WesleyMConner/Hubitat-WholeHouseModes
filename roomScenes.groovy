@@ -175,27 +175,47 @@ void buttonOnCallback (String button) {
   _clearManualOverride()
   _updateTargetScene()
   _activateScene()
+  _updateLutronKpadLeds()
 }
 
-void _updateLutronKpadLeds (String currScene) {
+// currScene -> state.targetScene
+void _updateLutronKpadLeds () {  // old argument was "String currScene"
   settings.sceneButtons.each{ d ->
     String buttonDni = d.getDeviceNetworkId()
     String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
-    if (currScene == sceneTarget) {
+    Linfo('_updateLutronKpadLeds', [
+      "state.targetScene: ${b(state.targetScene)}",
+      "buttonDni: ${b(buttonDni)}",
+      "sceneTarget: ${b(sceneTarget)}"
+    ])
+    if (state.targetScene == sceneTarget) {
       Linfo(
-        '_updateLutronKpadLeds()',
+        '_updateLutronKpadLeds',
         "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
       )
-      ledObj.on()
+      d.on()
     } else {
       Ltrace(
-        '_updateLutronKpadLeds()',
+        '_updateLutronKpadLeds',
         "Turning off LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
       )
+      d.off()
+    }
+  }
+}
+
+/*
+void _updateLutronKpadLeds (String currMode) {
+  settings.lutronModeButtons.each{ ledObj ->
+    String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
+    if (currMode == modeTarget) {
+      ledObj.on()
+    } else {
       ledObj.off()
     }
   }
 }
+*/
 
 List<String> _getTargetSceneConfigList() {
   return state.scenes?.getAt(state.targetScene)
@@ -222,7 +242,7 @@ InstAppW _getOrCreateRSPbsg () {
   InstAppW pbsgApp = app.getChildAppByLabel(state.RSPBSG_LABEL)
   if (!pbsgApp) {
     if (_getScenes()) {
-      Lwarn('_getOrCreateRSPbsg()', "Adding RSPbsg ${state.RSPBSG_LABEL}")
+      Lwarn('_getOrCreateRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
       pbsgApp = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
       List<String> roomScenes = [ *_getScenes(), 'AUTOMATIC' ]
       roomScenes.removeAll{ it == 'INACTIVE' }
@@ -237,7 +257,7 @@ InstAppW _getOrCreateRSPbsg () {
                                          // 'TRACE' to include PBSG and VSW state
       )
     } else {
-      Lwarn('_getOrCreateRSPbsg()', 'RSPbsg creation is pending room scenes')
+      Lwarn('_getOrCreateRSPbsg', 'RSPbsg creation is pending room scenes')
     }
   }
   return pbsgApp
@@ -316,7 +336,7 @@ void _subscribeToKpadHandler () {
 void _subscribeToMainRepHandler () {
   settings.mainRepeaters.each{ d ->
     Linfo(
-      '_subscribeToMainRepHandler()',
+      '_subscribeToMainRepHandler',
       "${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(d)}"
     )
     subscribe(d, mainRepHandler, ['filterEvents': true])
@@ -364,7 +384,7 @@ void _subscribeToMotionSensorHandler () {
     state.roomOccupied = []
     settings.motionSensors.each{ d ->
       Linfo(
-        'initialize()',
+        'initialize',
         "${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(d)}"
       )
       subscribe(d, motionSensorHandler, ['filterEvents': true])
@@ -382,7 +402,7 @@ void _subscribeToMotionSensorHandler () {
 void _subscribeToPicoHandler () {
   settings.picos.each{ d ->
     Linfo(
-      'initialize()',
+      'initialize',
       "${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(d)}"
     )
     subscribe(d, picoHandler, ['filterEvents': true])
@@ -445,7 +465,7 @@ void kpadHandler (Event e) {
       // Ignore without logging
       break
     default:
-      Lwarn('kpadHandler()', [
+      Lwarn('kpadHandler', [
         "DNI: '${b(e.deviceId)}'",
         "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
       ])
@@ -475,7 +495,7 @@ void mainRepHandler (Event e) {
       } else {
         // Error condition
         Lwarn(
-          'mainRepHandler()',
+          'mainRepHandler',
           "Main Repeater (${ra2Id}) with unexpected value (${e.value}"
         )
       }
@@ -495,7 +515,7 @@ void modeHandler (Event e) {
     }
   } else {
     Ltrace(
-      'modeHandler()', [
+      'modeHandler', [
         'Ignored: Mode Change',
         "state.activeButton: ${b(state.activeButton)}",
         "state.targetScene: ${b(state.targetScene)}"
@@ -531,7 +551,7 @@ void picoHandler (Event e) {
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value)
         if (scene) {
-          Lerror('picoHandler()' [
+          Lerror('picoHandler' [
             '<b>NOT IMPLEMENTED/TESTED</b>',
             "w/ ${e.deviceId}-${e.value} toggling ${scene}"
           ])
@@ -559,7 +579,7 @@ void picoHandler (Event e) {
           }
         } else {
           Ltrace(
-            'picoHandler()',
+            'picoHandler',
             "${state.ROOM_LABEL} picoHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
@@ -582,12 +602,12 @@ void updated () {
 }
 
 void uninstalled () {
-  Lwarn('uninstalled()', 'At Entry')
+  Lwarn('uninstalled', 'At Entry')
 }
 
 void initialize () {
   Linfo(
-    'initialize()',
+    'initialize',
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       + "Subscribing to modeHandler."
   )
@@ -608,7 +628,7 @@ void initialize () {
     buttonOnCallback('AUTOMATIC')
   } else {
     Lwarn(
-      'initialize()',
+      'initialize',
       'The RSPbsg is pending additional configuration data.'
     )
   }
@@ -941,7 +961,7 @@ void _configureRoomScene () {
     settings.findAll{ it.key.startsWith('scene^') }.each{ key, value ->
       if (!currSettingsKeys.contains(key)) {
         Lwarn(
-          '_configureRoomScene()',
+          '_configureRoomScene',
           "Removing stale setting, ${key} -> ${value}"
         )
         settings.remove(key)

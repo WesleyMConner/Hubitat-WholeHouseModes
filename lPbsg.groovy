@@ -63,14 +63,14 @@ Boolean pbsgConfigure (
   if (settings.dfltButton && settings.buttons?.contains(settings.dfltButton) == false) {
     retVal = false
     Lerror(
-      'pbsgConfigure()',
+      'pbsgConfigure',
       "defaultButton ${b(settings.dfltButton)} is not found among buttons (${settings.buttons})"
     )
   }
   if (settings.activeButton && settings.buttons?.contains(settings.activeButton) == false) {
     retVal = false
     Lerror(
-      'pbsgConfigure()',
+      'pbsgConfigure',
       "activeDni ${b(settings.activeButton)} is not found among buttons (${settings.buttons})")
   }
   if (retVal) updated()
@@ -78,24 +78,24 @@ Boolean pbsgConfigure (
 }
 
 Boolean pbsgActivateButton (String button) {
-  Ltrace('pbsgActivateButton()', "button: ${b(button)}")
+  Ltrace('pbsgActivateButton', "button: ${b(button)}")
   _pbsgActivateDni(_buttonToDni(button))
 }
 
 Boolean pbsgDeactivateButton (String button) {
-  Ltrace('pbsgDeactivateButton()', "button: ${b(button)}")
+  Ltrace('pbsgDeactivateButton', "button: ${b(button)}")
   _pbsgDeactivateDni(_buttonToDni(button))
 }
 
 Boolean pbsgToggleButton (String button) {
-  Ltrace('pbsgToggleButton()', "button: ${b(button)}")
+  Ltrace('pbsgToggleButton', "button: ${b(button)}")
   return (state.activeDni == _buttonToDni(button))
      ? pbsgDeactivateButton(button)
      : pbsgActivateButton(button)
 }
 
 Boolean pbsgActivatePrior () {
-  _tracePbsgStateAndVswState('pbsgActivatePrior()', 'AT ENTRY')
+  _tracePbsgStateAndVswState('pbsgActivatePrior', 'AT ENTRY')
   String predecessor = state.inactiveDnis.first()
   Ltrace('pbsgActivatePrior', "predecessor: ${predecessor}")
   return _pbsgActivateDni(predecessor)
@@ -120,7 +120,7 @@ void _addDni (String dni) {
   if (dni) {
     if (!state.inactiveDnis) state.inactiveDnis = []
     FifoEnqueue(state.inactiveDnis, dni)
-    Lwarn('_addDni()', "Adding child device (${dni})")
+    Lwarn('_addDni', "Adding child device (${dni})")
     DevW vsw = addChildDevice(
       'hubitat',          // namespace
       'Virtual Switch',   // typeName
@@ -134,7 +134,7 @@ void _dropDni (String dni) {
   // Drop without enforcing Default DNI.
   if (state.activeDni == dni) state.activeDni = null
   else FifoRemove(state.inactiveDnis, dni)
-  Lwarn('_dropDni()', "Dropping child device (${dni})")
+  Lwarn('_dropDni', "Dropping child device (${dni})")
   deleteChildDevice(dni)
 }
 
@@ -142,13 +142,13 @@ Boolean _pbsgActivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new dni is activated.
   //-> Ldebug('_pbsgActivateDni', "DNI: ${b(dni)}")
-  _tracePbsgStateAndVswState('_pbsgActivateDni()', 'AT ENTRY')
+  _tracePbsgStateAndVswState('_pbsgActivateDni', 'AT ENTRY')
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
     Ldebug('_pbsgActivateDni', "No action, ${dni} is already active")
   } else if (dni && !_pbsgGetDnis()?.contains(dni)) {
     Lerror(
-      '_pbsgActivateDni()',
+      '_pbsgActivateDni',
       "DNI >${dni}< does not exist (${_pbsgGetDnis()})"
     )
   } else {
@@ -160,14 +160,14 @@ Boolean _pbsgActivateDni (String dni) {
     Ldebug('_pbsgActivateDni', "Activating ${dni}")
     state.activeDni = dni
     _pbsgPublishActiveButton()
-    _tracePbsgStateAndVswState('_pbsgActivateDni()', 'AT EXIT')
+    _tracePbsgStateAndVswState('_pbsgActivateDni', 'AT EXIT')
   }
   return isStateChanged
 }
 
 Boolean _pbsgDeactivateDni (String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
-  _tracePbsgStateAndVswState('_pbsgDeactivateDni()', 'AT ENTRY')
+  _tracePbsgStateAndVswState('_pbsgDeactivateDni', 'AT ENTRY')
   Ldebug('_pbsgDeactivateDni', "DNI: ${b(dni)}")
   Boolean isStateChanged = false
   if (state.inactiveDnis.contains(dni)) {
@@ -182,7 +182,7 @@ Boolean _pbsgDeactivateDni (String dni) {
     isStateChange = _pbsgActivateDni(state.dfltDni)
   } else {
     Ldebug(
-      '_pbsgDeactivateDni()',
+      '_pbsgDeactivateDni',
       "Activating default ${b(state.dfltDni)}, which deacivates dni: ${b(dni)}"
     )
     isStateChange = _pbsgActivateDni(state.dfltDni)
@@ -240,7 +240,7 @@ void _syncChildVswsToPbsgState () {
   //   - WHEN UPDATING CHILD DEVICES WITH ACTIVE SUBSCRIPTIONS ...
   //   - HUBITAT MAY PROVIDE DEVICE HANDLERS WITH A STALE STATE MAP
   //   - TEMPORARILY SUSPENDING SUBSCRIPTIONS FOR DEVICE CHANGES
-  _tracePbsgStateAndVswState('_syncChildVswsToPbsgState()', 'AT ENTRY')
+  _tracePbsgStateAndVswState('_syncChildVswsToPbsgState', 'AT ENTRY')
   if (state.activeDni) {
     // Make sure the correct VSW is on
     DevW onDevice = getChildDevice(state.activeDni)
@@ -251,7 +251,7 @@ void _syncChildVswsToPbsgState () {
     DevW offDevice = getChildDevice(offDni)
     if (SwitchState(offDevice) != 'off') offDevice.off()
   }
-  _tracePbsgStateAndVswState('_syncChildVswsToPbsgState()', 'AT EXIT')
+  _tracePbsgStateAndVswState('_syncChildVswsToPbsgState', 'AT EXIT')
 }
 
 void _unsubscribeChildVswEvents () {
@@ -286,7 +286,7 @@ void _pbsgPublishActiveButton() {
   //     (e.g., Hubitat exposed internal SQL in Hubitat Logs)
   //   - Child device subscriptions occur on a delayed basis as a
   //     workaround to avoid stale STATE data in Handler methods.
-  _tracePbsgStateAndVswState('_pbsgPublishActiveButton()', 'AT ENTRY')
+  _tracePbsgStateAndVswState('_pbsgPublishActiveButton', 'AT ENTRY')
   String activeButton = _dniToButton(state.activeDni)
   Linfo('_pbsgPublishActiveButton', "Processing button ${activeButton}")
   //-----------------------------------------------------------------------
@@ -323,7 +323,7 @@ void _pbsgPublishActiveButton() {
   parent.buttonOnCallback(activeButton)    // Communicate event to parent.
   Integer delayInSeconds = 1
   Ltrace(
-    '_pbsgPublishActiveButton()',
+    '_pbsgPublishActiveButton',
     "Event subscription delayed for ${delayInSeconds} second(s)."
   )
   runIn(delayInSeconds, '_subscribeChildVswEvents')
@@ -339,13 +339,13 @@ Boolean _pbsgMoveActiveToInactive () {
   Boolean isStateChanged = false
   if (state.activeDni) {
     Ldebug(
-      '_pbsgMoveActiveToInactive()',
+      '_pbsgMoveActiveToInactive',
       "Pushing ${b(state.activeDni)} onto inactiveDnis (${state.inactiveDnis})"
     )
     isStateChanged = true
     state.inactiveDnis = [state.activeDni, *state.inactiveDnis]
     state.activeDni = null
-    _tracePbsgStateAndVswState('_pbsgMoveActiveToInactive()', 'AFTER MOVE')
+    _tracePbsgStateAndVswState('_pbsgMoveActiveToInactive', 'AFTER MOVE')
   }
   return isStateChanged
 }
@@ -448,7 +448,7 @@ void VswEventHandler (Event e) {
   //   - Let downstream functions discard redundant state information
   // W A R N I N G
   //   As of 2023-11-30 Handler continues to receive STALE state values!!!
-  _tracePbsgStateAndVswState('VswEventHandler()', 'AT ENTRY')
+  _tracePbsgStateAndVswState('VswEventHandler', 'AT ENTRY')
   Ldebug('VswEventHandler', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName
@@ -458,7 +458,7 @@ void VswEventHandler (Event e) {
       _pbsgDeactivateDni(dni)
     } else {
       Ldebug(
-        'VswEventHandler()',
+        'VswEventHandler',
         "Unexpected value (${e.value}) for DNI (${dni}")
     }
   } else {
