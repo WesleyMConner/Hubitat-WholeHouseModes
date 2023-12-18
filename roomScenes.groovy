@@ -137,6 +137,12 @@ void _activateScene () {
 
 void _updateTargetScene () {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
+  Ltrace('_updateTargetScene', [
+    'At entry',
+    "state.activeButton: ${b(state.activeButton)}",
+    "state.targetScene: ${b(state.targetScene)}",
+    "_isManualOverride(): ${b(_isManualOverride())}"
+  ])
   if (
     (state.activeButton == 'AUTOMATIC' && !state.targetScene)
     || (state.activeButton == 'AUTOMATIC' && !_isManualOverride())
@@ -145,9 +151,12 @@ void _updateTargetScene () {
     String mode = getLocation().getMode()
     state.targetScene = settings["modeToScene^${mode}"]
   } else {
-    state.targetScene = state.activeButon
+    state.targetScene = state.activeButton
   }
-  Ltrace('_updateTargetScene', "state.targetScene: ${state.targetScene}")
+  Ltrace('_updateTargetScene', [
+    'At exit',
+    "state.targetScene: ${b(state.targetScene)}"
+  ])
 }
 
 void buttonOnCallback (String button) {
@@ -155,12 +164,14 @@ void buttonOnCallback (String button) {
   // Scene activation enforces room occupancy.
   if (!button) {
     Lwarn(
-      'buttonOnCallback()',
+      'buttonOnCallback',
       'A null argument was received, using AUTOMATIC as a default'
     )
   }
   state.activeButton = button ?: 'AUTOMATIC'
-  Ltrace('buttonOnCallback', "Button received: ${b(state.activeButton)}")
+  Ltrace(
+    'buttonOnCallback',
+    "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
   _clearManualOverride()
   _updateTargetScene()
   _activateScene()
@@ -256,13 +267,13 @@ void removeMotionSensorFromRoomOccupied (String displayName) {
   state.roomOccupied?.removeAll{ it == displayName }
 }
 
-void _subscribeToIndDeviceHandler () {
-  settings.indDevices.each{ device ->
+void _subscribeToIndDeviceHandlerNoDelay () {
+  settings.indDevices.each{ d ->
     Linfo(
-      '_subscribeToIndDeviceHandler',
-      "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+      '_subscribeToIndDeviceHandlerNoDelay',
+      "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(d)}"
     )
-    subscribe(device, indDeviceHandler, ['filterEvents': true])
+    subscribe(d, indDeviceHandler, ['filterEvents': true])
   }
 }
 
@@ -293,26 +304,22 @@ void _unsubscribeIndDevToHandler (DevW device) {
 }
 
 void _subscribeToKpadHandler () {
-  Linfo(
-    '_subscribeToKpadHandler',
-    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
-  )
-  settings.seeTouchKpads.each{ device ->
-    subscribe(device, kpadHandler, ['filterEvents': true])
+  settings.seeTouchKpads.each{ d ->
+    Linfo(
+      '_subscribeToKpadHandler',
+      "${state.ROOM_LABEL} subscribing to keypad ${DeviceInfo(d)}"
+    )
+    subscribe(d, kpadHandler, ['filterEvents': true])
   }
 }
 
 void _subscribeToMainRepHandler () {
-  Linfo(
-    '_subscribeToMainRepHandler',
-    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
-  )
-  settings.mainRepeaters.each{ device ->
+  settings.mainRepeaters.each{ d ->
     Linfo(
-      'initialize()',
-      "${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(device)}"
+      '_subscribeToMainRepHandler()',
+      "${state.ROOM_LABEL} subscribing to Repeater ${DeviceInfo(d)}"
     )
-    subscribe(device, mainRepHandler, ['filterEvents': true])
+    subscribe(d, mainRepHandler, ['filterEvents': true])
   }
 }
 
@@ -347,16 +354,12 @@ void _unsubscribeMainRepToHandler (DevW device) {
 void _subscribeToModeHandler () {
   Linfo(
     '_subscribeToModeHandler',
-    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
+    "${state.ROOM_LABEL} subscribing to location 'mode'"
   )
   subscribe(location, "mode", modeHandler)
 }
 
 void _subscribeToMotionSensorHandler () {
-  Linfo(
-    '_subscribeToMotionSensorHandler',
-    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
-  )
   if (settings.motionSensors) {
     state.roomOccupied = []
     settings.motionSensors.each{ d ->
@@ -377,16 +380,12 @@ void _subscribeToMotionSensorHandler () {
 }
 
 void _subscribeToPicoHandler () {
-  Linfo(
-    '_subscribeToPicoHandler',
-    "${state.ROOM_LABEL} subscribing to independentDevice ${DeviceInfo(device)}"
-  )
-  settings.picos.each{ device ->
+  settings.picos.each{ d ->
     Linfo(
       'initialize()',
-      "${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(device)}"
+      "${state.ROOM_LABEL} subscribing to Pico ${DeviceInfo(d)}"
     )
-    subscribe(device, picoHandler, ['filterEvents': true])
+    subscribe(d, picoHandler, ['filterEvents': true])
   }
 }
 
@@ -438,7 +437,7 @@ void kpadHandler (Event e) {
       // Toggle the corresponding scene for the keypad button.
       String scene = state.sceneButtonMap?.getAt(e.deviceId.toString())
                                          ?.getAt(e.value)
-      if (scene) _getOrCreateRSPbsg().pbsgActivateButton(scene)
+      if (scene) _getOrCreateRSPbsg().pbsgToggleButton(scene)
       // The prospective PBSG callback triggers further local processing.
       break
     case 'held':
@@ -592,11 +591,12 @@ void initialize () {
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       + "Subscribing to modeHandler."
   )
-  _subscribeToModeHandler()
-  _subscribeToIndDeviceHandler()
+  _subscribeToIndDeviceHandlerNoDelay()
+  _subscribeToKpadHandler()
   _subscribeToMainRepHandler()
-  _subscribeToPicoHandler()
+  _subscribeToModeHandler()
   _subscribeToMotionSensorHandler()
+  _subscribeToPicoHandler()
   // ACTIVATION
   //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
   //     will not be called.
