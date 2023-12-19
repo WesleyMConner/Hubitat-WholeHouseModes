@@ -204,19 +204,6 @@ void _updateLutronKpadLeds () {  // old argument was "String currScene"
   }
 }
 
-/*
-void _updateLutronKpadLeds (String currMode) {
-  settings.lutronModeButtons.each{ ledObj ->
-    String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
-    if (currMode == modeTarget) {
-      ledObj.on()
-    } else {
-      ledObj.off()
-    }
-  }
-}
-*/
-
 List<String> _getTargetSceneConfigList() {
   return state.scenes?.getAt(state.targetScene)
 }
@@ -547,19 +534,22 @@ void picoHandler (Event e) {
   if (e.isStateChange == true) {
     switch (e.name) {
       case 'pushed':
+//-> Ltrace('picoHander', [
+//->   "e.deviceId.toString(): ${b(e.deviceId.toString())}",
+//->   "e.value: ${b(e.value.toString())}",
+//-> ])
         // Check to see if the received button is assigned to a scene.
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
-                                                    ?.getAt(e.value)
+                                                    ?.getAt(e.value.toString())
         if (scene) {
-          Lerror('picoHandler' [
-            '<b>NOT IMPLEMENTED/TESTED</b>',
-            "w/ ${e.deviceId}-${e.value} toggling ${scene}"
+          Ldebug('picoHandler', [
+            "w/ ${e.deviceId.toString()}-${e.value} toggling ${scene}"
           ])
-          //---> app.getChildAppByLabel(state.RSPBSG_LABEL).toggleSwitch(scenePbsg)
+          _getOrCreateRSPbsg().pbsgToggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
           Linfo('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each{ d ->
-            if (getSwitchState(d) == 'off') {
+            if (SwitchState(d) == 'off') {
               d.setLevel(5)
               //d.on()
              } else {
@@ -572,10 +562,18 @@ void picoHandler (Event e) {
         } else if (e.value == '4') {  // Default "Lower" behavior
           Linfo('picoHandler', "Lowering ${settings.indDevices}")
           settings.indDevices.each{ d ->
+Linfo('picoHandler #565', [
+  "d.getDeviceNetworkId(): ${b(d.getDeviceNetworkId())}",
+  "d.currentValue('level'): ${b(d.currentValue('level'))}"
+])
               d.setLevel(Math.max(
                 (d.currentValue('level') as Integer) - changePercentage,
                 0
               ))
+Linfo('picoHandler #573', [
+  "d.getDeviceNetworkId(): ${b(d.getDeviceNetworkId())}",
+  "d.currentValue('level'): ${b(d.currentValue('level'))}"
+])
           }
         } else {
           Ltrace(
