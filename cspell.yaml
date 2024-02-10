@@ -2,12 +2,13 @@ version: "0.2"
 language: en
 caseSensitive: false
 # Quote entries that include '*' or '**'.
-ignorePaths:
+# ignorePaths:
 words:
   - autowidth
   - hubitat
   - kpad
   - kpads
   - kroki
+  - linfo
   - lutron
   - pbsg
