@@ -104,13 +104,11 @@ Boolean pbsgActivatePrior () {
 //---- CORE METHODS (Internal)
 
 String _buttonToDni (String button) {
-  //-> return "${getLabel()}_${getId()}_${button}"
   String dni = "${app.getLabel()}_${button}"
   return dni
 }
 
 String _dniToButton (String dni) {
-  //-> return dni ? dni.substring("${getLabel()}_${getId()}_".length()) : null
   String button = dni ? dni.substring("${app.getLabel()}_".length()) : null
   return button
 }
@@ -119,7 +117,7 @@ void _addDni (String dni) {
   // All adds are appended to the inactive Fifo.
   if (dni) {
     if (!state.inactiveDnis) state.inactiveDnis = []
-    FifoEnqueue(state.inactiveDnis, dni)
+    fifoEnqueue(state.inactiveDnis, dni)
     Lwarn('_addDni', "Adding child device (${dni})")
     DevW vsw = addChildDevice(
       'hubitat',          // namespace
@@ -133,7 +131,7 @@ void _addDni (String dni) {
 void _dropDni (String dni) {
   // Drop without enforcing Default DNI.
   if (state.activeDni == dni) state.activeDni = null
-  else FifoRemove(state.inactiveDnis, dni)
+  else fifoRemove(state.inactiveDnis, dni)
   Lwarn('_dropDni', "Dropping child device (${dni})")
   deleteChildDevice(dni)
 }
@@ -155,7 +153,7 @@ Boolean _pbsgActivateDni (String dni) {
     isStateChanged = true
     Ldebug('_pbsgActivateDni', "Moving active (${state.activeDni}) to inactive")
     _pbsgMoveActiveToInactive()
-    FifoRemove(state.inactiveDnis, dni)
+    fifoRemove(state.inactiveDnis, dni)
     // Adjust the activeDni and Vsw together
     Ldebug('_pbsgActivateDni', "Activating ${dni}")
     state.activeDni = dni
@@ -194,7 +192,7 @@ List<String> _childVswStates (Boolean includeHeading = false) {
   List<String> results = []
   if (includeHeading) { results += Heading2('VSW States') }
   getChildDevices().each{ d ->
-    if (SwitchState(d) == 'on') {
+    if (switchState(d) == 'on') {
       results += Bullet2("<b>${d.getDeviceNetworkId()}: on</b>")
     } else {
       results += Bullet2("<i>${d.getDeviceNetworkId()}: off</i>")
@@ -244,12 +242,12 @@ void _syncChildVswsToPbsgState () {
   if (state.activeDni) {
     // Make sure the correct VSW is on
     DevW onDevice = getChildDevice(state.activeDni)
-    if (SwitchState(onDevice) != 'on') onDevice.on()
+    if (switchState(onDevice) != 'on') onDevice.on()
   }
   // Make sure other VSWs are off
   state.inactiveDnis.each{ offDni ->
     DevW offDevice = getChildDevice(offDni)
-    if (SwitchState(offDevice) != 'off') offDevice.off()
+    if (switchState(offDevice) != 'off') offDevice.off()
   }
   _tracePbsgStateAndVswState('_syncChildVswsToPbsgState', 'AT EXIT')
 }
@@ -387,7 +385,7 @@ void pbsgCoreUpdated (InstAppW app) {
   updatedActiveDni = settings.activeButton ? _buttonToDni(settings.activeButton) : null
   // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
   state.logLevel = LogThreshToLogLevel(settings.logLevel)
-  Map<String, List<String>> actions = CompareLists(prevDnis, updatedDnis)
+  Map<String, List<String>> actions = compareLists(prevDnis, updatedDnis)
   List<String> retainDnis = actions.retained // Used for accounting only
   List<String> dropDnis = actions.dropped
   List<String> addDnis = actions.added

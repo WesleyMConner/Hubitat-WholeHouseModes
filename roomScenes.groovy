@@ -80,7 +80,7 @@ void _activateScene () {
     def actionT = action.tokenize('^')
     String devType = actionT[0]
     String ra2Id = actionT[1]
-    Integer value = SafeParseInt(actionT[2])
+    Integer value = safeParseInt(actionT[2])
     if (value == null) {
       Lerror('_activateScene', "Null value for ra2Id: ${b(ra2Id)}")
     }
@@ -213,7 +213,7 @@ Integer _expectedSceneDeviceValue (String devType, String dni) {
   String prefix = "${devType}^${dni}^"
   for (encodedConfig in _getTargetSceneConfigList()) {
     if (encodedConfig.startsWith(prefix)) {
-      retVal = SafeParseInt(encodedConfig.substring(prefix.size()))
+      retVal = safeParseInt(encodedConfig.substring(prefix.size()))
       break
     }
   }
@@ -256,7 +256,7 @@ void _createRSPbsgAndPageLink () {
     href(
       name: AppInfo(pbsgApp),
       width: 2,
-      url: "/installedapp/configure/${pbsgApp.getId()}/RSPbsgPage",
+      url: "/installedapp/configure/${pbsgapp.id}/RSPbsgPage",
       style: 'internal',
       title: "Edit <b>${AppInfo(pbsgApp)}</b>",
       state: null
@@ -412,7 +412,7 @@ void indDeviceHandler (Event e) {
     }
   } else if (e.name == 'level') {
     ra2Id = _extractRa2IdFromLabel(e.displayName)
-    currLevel = SafeParseInt(e.value)
+    currLevel = safeParseInt(e.value)
   } else {
     return  // Ignore the event
   }
@@ -463,7 +463,7 @@ void mainRepHandler (Event e) {
   // Main Repeaters send various events (e.g., pushed, buttonLed-##).
   // Isolate the buttonLed-## events which confirm|refute state.targetScene.
   if (e.name.startsWith('buttonLed-')) {
-    Integer eventButton = SafeParseInt(e.name.substring(10))
+    Integer eventButton = safeParseInt(e.name.substring(10))
     String ra2Id = _extractRa2IdFromLabel(e.displayName)
     // Is there an expected sceneButton for the ra2Id?
     Integer sceneButton = _expectedSceneDeviceValue('Rep', ra2Id)
@@ -549,7 +549,7 @@ void picoHandler (Event e) {
         } else if (e.value == '2') {  // Default "Raise" behavior
           Linfo('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each{ d ->
-            if (SwitchState(d) == 'off') {
+            if (switchState(d) == 'off') {
               d.setLevel(5)
               //d.on()
              } else {
@@ -650,7 +650,7 @@ void _idMotionSensors () {
 }
 
 void _selectModesAsScenes () {
-  List<String> scenes = ModeNames()
+  List<String> scenes = modeNames()
   input(
     name: 'modesAsScenes',
     type: 'enum',
@@ -816,7 +816,7 @@ void _authRoomScenesPicos () {
 
 Map<String,String> namePicoButtons (DevW pico) {
   String label = pico.getLabel()
-  String id = pico.getId()
+  String id = pico.id
   return [
     "${id}^1": "${label}^1",
     "${id}^2": "${label}^2",
@@ -1025,7 +1025,7 @@ Map RoomScenesPage () {
       href (
         name: state.RSPBSG_LABEL,
         width: 2,
-        url: "/installedapp/configure/${rsPbsg.getId()}",
+        url: "/installedapp/configure/${rsPbsg.id}",
         style: 'internal',
         title: "Edit <b>${AppInfo(rsPbsg)}</b>",
         state: null

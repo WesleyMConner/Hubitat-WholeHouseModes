@@ -150,14 +150,14 @@ void TEST_pbsgHasExpectedState (
   testLog += Heading2('Button (VSW) State Checks')
   List<String> buttonState = []
   if (activeButton) {
-    String state = SwitchState(getChildDevice(_buttonToDni(activeButton)))
+    String state = switchState(getChildDevice(_buttonToDni(activeButton)))
     Boolean isExpected = (state == 'on')
     state = (state == 'on') ? '<b>on</b>' : '<i>off</i>'
     if (!isExpected) result = false
     buttonState += "${activeButton}: ${state} (${isExpected ? '✅' : '❌'})"
   }
   inactiveButtons.each{ offButton ->
-    String state = SwitchState(getChildDevice(_buttonToDni(offButton)))
+    String state = switchState(getChildDevice(_buttonToDni(offButton)))
     Boolean isExpected = (state == 'off')
     if (!isExpected) result = false
     buttonState += "${offButton}: ${state} (${isExpected ? '✅' : '❌'})"
@@ -171,8 +171,6 @@ void TEST_pbsgHasExpectedState (
 }
 
 void TEST_pbsgCoreFunctionality () {
-  //-> FifoTest()
-  //----
   TEST_pbsgConfigure(1, [], 'A', 'B', '<b>Forced Error:</b> "Inadequate parameters"')
   TEST_pbsgHasExpectedState(1, null, [], null)
   unsubscribe()  // Suspend ALL events that might arise from the last test case.

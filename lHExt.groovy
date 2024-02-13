@@ -16,9 +16,8 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
-import com.hubitat.hub.domain.Event as Event
 
-library (
+library(
  name: 'lHExt',
  namespace: 'wesmc',
  author: 'WesleyMConner',
@@ -32,21 +31,21 @@ library (
 //---- CONVENIENCE
 //----
 
-Integer SafeParseInt (String s) {
+Integer safeParseInt(String s) {
   return (s == '0') ? 0 : s.toInteger()
 }
 
-void RemoveAllChildApps () {
+void removeAllChildApps() {
   getAllChildApps().each{ child ->
     Ldebug(
-      'RemoveAllChildApps',
-      "child: >${child.getId()}< >${child.getLabel()}<"
+      'removeAllChildApps',
+      "child: >${child.id}< >${child.getLabel()}<"
     )
-    deleteChildApp(child.getId())
+    deleteChildApp(child.id)
   }
 }
 
-Map<String, List<String>> CompareLists (List<String> existing, List<String> revised) {
+Map<String, List<String>> compareLists(List<String> existing, List<String> revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
   Map<String, List<String>> map = [:]
   //--DEBUG-> List<String> traceText = ['', "existing: ${existing}", "revised: ${revised}"]
@@ -67,16 +66,16 @@ Map<String, List<String>> CompareLists (List<String> existing, List<String> revi
     map.added.removeAll(existing)
     //--DEBUG-> traceText += "map.added: ${map.added}"
   }
-  //--DEBUG-> Ldebug('CompareLists', traceText)
+  //--DEBUG-> Ldebug('compareLists', traceText)
   return map
 }
 
-List<String> ModeNames () {
+List<String> modeNames() {
   return getLocation().getModes().collect{ it.name }
 }
 
-String SwitchState (DevW d) {
-  List<String> stateValues = d.collect({ it.currentStates.value }).flatten()
+String switchState(DevW d) {
+  List<String> stateValues = d.collect{ it.currentStates.value }.flatten()
   return stateValues.contains('on')
       ? 'on'
       : stateValues.contains('off')
@@ -84,10 +83,10 @@ String SwitchState (DevW d) {
         : 'unknown'
 }
 
-String ShowSwitchAndState (String name, String state) {
-  state = state ?: 'unk'
-  String emphasizedState = (state == 'on') ? "${b(state)}" : "<i>${state}</i>"
-  return "→ ${emphasizedState} - ${swName}"
+String showSwitchAndState(String name, String state) {
+  String adjustedState = state ?: 'unk'
+  String emphasizedState = (state == 'on') ? "${b(adjustedState)}" : "<i>${adjustedState}</i>"
+  return "→ ${emphasizedState} - ${name}"
 }
 
 //----
@@ -133,14 +132,14 @@ void PruneAppDups (
       Boolean isDup = index > 0
       if (isOrphan) {
         isWarning = true
-        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
-        appBase.deleteChildApp(a.getId())
+        result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
+        appBase.deleteChildApp(a.id)
       } else if (isDup) {
         isWarning = true
-        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE', 'font-weight: bold;')}</tr>"
-        appBase.deleteChildApp(a.getId())
+        result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE', 'font-weight: bold;')}</tr>"
+        appBase.deleteChildApp(a.id)
       } else {
-        result += "<tr>${tdCtr(label)}${tdCtr(a.getId())}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
+        result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
       }
     }
   }
@@ -158,7 +157,7 @@ void RemoveChildApps () {
       'RemoveChildApps',
       "deleting child: ${b(AppInfo(appObj))}"
     )
-    deleteChildApp(child.getId())
+    deleteChildApp(child.id)
   }
 }
 

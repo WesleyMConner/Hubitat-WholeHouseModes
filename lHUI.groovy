@@ -190,7 +190,7 @@ void Ltrace (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
 //----   - Simplify debugging
 
 String AppInfo (InstAppW app) {
-  return "${app?.getLabel() ?: 'MISSING_LABEL'} (${app?.getId() ?: 'MISSING_ID'})"
+  return "${app?.getLabel() ?: 'MISSING_LABEL'} (${app?.id ?: 'MISSING_ID'})"
 }
 
 String DeviceInfo (def device) {

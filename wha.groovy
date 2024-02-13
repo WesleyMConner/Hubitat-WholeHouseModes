@@ -69,7 +69,7 @@ void _writeMPbsgHref () {
     href(
       name: AppInfo(pbsgApp),
       width: 2,
-      url: "/installedapp/configure/${pbsgApp.getId()}/MPbsgPage",
+      url: "/installedapp/configure/${pbsgapp.id}/MPbsgPage",
       style: 'internal',
       title: "Review ${AppInfo(pbsgApp)}",
       state: null
@@ -188,7 +188,7 @@ void installed () {
 
 void uninstalled () {
   Ldebug('uninstalled', 'Entered')
-  RemoveAllChildApps()
+  removeAllChildApps()
 }
 
 void updated () {
@@ -352,7 +352,7 @@ void _displayInstantiatedRoomHrefs () {
     href (
       name: roomName,
       width: 2,
-      url: "/installedapp/configure/${roomApp?.getId()}",
+      url: "/installedapp/configure/${roomApp?.id()}",
       style: 'internal',
       title: "${AppInfo(roomApp)} Scenes",
       state: null, //'complete'
