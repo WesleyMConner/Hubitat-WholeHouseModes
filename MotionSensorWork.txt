@@ -14,9 +14,9 @@ roomScenes.groovy
         )
         subscribe(d, motionSensorHandler, ['filterEvents': true])
         if (d.latestState('motion').value == 'active') {
-          addMotionSensorToRoomOccupied (d.getLabel())
+          addMotionSensorToRoomOccupied (d.label)
         } else {
-          removeMotionSensorFromRoomOccupied(d.getLabel())
+          removeMotionSensorFromRoomOccupied(d.label)
         }
       }
     } else {

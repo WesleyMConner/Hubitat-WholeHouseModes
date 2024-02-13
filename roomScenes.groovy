@@ -48,7 +48,7 @@ String _extractRa2IdFromLabel (String deviceLabel) {
 }
 
 String _getDeviceRa2Id (DevW device) {
-  return _extractRa2IdFromLabel(device.getLabel())
+  return _extractRa2IdFromLabel(device.label)
 }
 
 void _clearManualOverride () {
@@ -376,9 +376,9 @@ void _subscribeToMotionSensorHandler () {
       )
       subscribe(d, motionSensorHandler, ['filterEvents': true])
       if (d.latestState('motion').value == 'active') {
-        addMotionSensorToRoomOccupied (d.getLabel())
+        addMotionSensorToRoomOccupied (d.label)
       } else {
-        removeMotionSensorFromRoomOccupied(d.getLabel())
+        removeMotionSensorFromRoomOccupied(d.label)
       }
     }
   } else {
@@ -815,7 +815,7 @@ void _authRoomScenesPicos () {
 }
 
 Map<String,String> namePicoButtons (DevW pico) {
-  String label = pico.getLabel()
+  String label = pico.label
   String id = pico.id
   return [
     "${id}^1": "${label}^1",
@@ -927,7 +927,7 @@ void _configureRoomScene () {
         input(
           name: inputName,
           type: 'number',
-          title: "${b(d.getLabel())}<br/>Level 0..100",
+          title: "${b(d.label)}<br/>Level 0..100",
           width: 3,
           submitOnChange: true,
           required: false,
@@ -942,7 +942,7 @@ void _configureRoomScene () {
         input(
           name: inputName,
           type: 'number',
-          title: "${b(d.getLabel())}<br/>Button #",
+          title: "${b(d.label)}<br/>Button #",
           width: 3,
           submitOnChange: true,
           required: false,
@@ -979,11 +979,11 @@ void _solicitRoomScenes () {
 
 Map RoomScenesPage () {
   // The parent application (Whole House Automation) assigns a unique label
-  // to each WHA Rooms instance. Capture app.getLabel() as state.ROOM_LABEL.
+  // to each WHA Rooms instance. Capture app.label as state.ROOM_LABEL.
   return dynamicPage(
     name: 'RoomScenesPage',
     title: [
-      Heading1("${app.getLabel()} Scenes"),
+      Heading1("${app.label} Scenes"),
       Bullet1('Tab to register changes.'),
       Bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
@@ -996,7 +996,7 @@ Map RoomScenesPage () {
     //-> settings.remove('..')
     //-> state.remove('..')
     //---------------------------------------------------------------------------------
-    state.ROOM_LABEL = app.getLabel()  // WHA creates App w/ Label == Room Name
+    state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
     state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     state.logLevel = LogThreshToLogLevel(settings.appLogThresh) ?: 5
     section {

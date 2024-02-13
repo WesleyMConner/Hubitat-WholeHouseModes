@@ -39,7 +39,7 @@ void removeAllChildApps() {
   getAllChildApps().each{ child ->
     Ldebug(
       'removeAllChildApps',
-      "child: >${child.id}< >${child.getLabel()}<"
+      "child: >${child.id}< >${child.label}<"
     )
     deleteChildApp(child.id)
   }
@@ -126,7 +126,7 @@ void PruneAppDups (
   List<String> result = []
   result += '<table>'
   result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
-  appBase.getAllChildApps()?.groupBy{ it.getLabel() }.each{ label, apps ->
+  appBase.getAllChildApps()?.groupBy{ it.label }.each{ label, apps ->
     Boolean isOrphan = keepLabels.findIndexOf{ it == label } == -1
     apps.eachWithIndex{ a, index ->
       Boolean isDup = index > 0

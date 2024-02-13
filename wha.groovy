@@ -82,7 +82,7 @@ void _writeMPbsgHref () {
 void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDNI = "pbsg_${roomApp.getLabel()}_AUTOMATIC"
+    String manualOverrideSwitchDNI = "pbsg_${roomApp.label}_AUTOMATIC"
     Ldebug('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
     roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }

@@ -41,7 +41,7 @@ void identifyLedButtonsForListItems(
       required: false,
       multiple: true,
       options: ledDevices.collect{ d ->
-        "${d.getLabel()}: ${d.getDeviceNetworkId()}"
+        "${d.label}: ${d.getDeviceNetworkId()}"
       }?.sort()
     )
   }

@@ -104,12 +104,12 @@ Boolean pbsgActivatePrior () {
 //---- CORE METHODS (Internal)
 
 String _buttonToDni (String button) {
-  String dni = "${app.getLabel()}_${button}"
+  String dni = "${app.label}_${button}"
   return dni
 }
 
 String _dniToButton (String dni) {
-  String button = dni ? dni.substring("${app.getLabel()}_".length()) : null
+  String button = dni ? dni.substring("${app.label}_".length()) : null
   return button
 }
 
