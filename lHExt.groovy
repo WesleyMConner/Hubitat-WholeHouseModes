@@ -36,7 +36,7 @@ Integer safeParseInt(String s) {
 }
 
 void removeAllChildApps() {
-  getAllChildApps().each{ child ->
+  getAllChildApps().each { child ->
     Ldebug(
       'removeAllChildApps',
       "child: >${child.id}< >${child.label}<"
@@ -71,7 +71,7 @@ Map<String, List<String>> compareLists(List<String> existing, List<String> revis
 }
 
 List<String> modeNames() {
-  return getLocation().getModes().collect{ it.name }
+  return getLocation().getModes().collect { it.name }
 }
 
 String switchState(DevW d) {
@@ -117,71 +117,44 @@ void asRemoveMapKey(String stateKey, String innerKey)
 //---- APP MANAGEMENT
 //----
 
-void PruneAppDups (
-    List<String> keepLabels,
-    Boolean keepLatest,
-    InstAppW appBase
-  ) {
+void pruneAppDups(List<String> keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"
-  Boolean isWarning = false
   List<String> result = []
   result += '<table>'
   result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
-  appBase.getAllChildApps()?.groupBy{ it.label }.each{ label, apps ->
-    Boolean isOrphan = keepLabels.findIndexOf{ it == label } == -1
-    apps.eachWithIndex{ a, index ->
-      Boolean isDup = index > 0
-      if (isOrphan) {
-        isWarning = true
-        result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
-        appBase.deleteChildApp(a.id)
-      } else if (isDup) {
-        isWarning = true
-        result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('DELETED DUPLICATE', 'font-weight: bold;')}</tr>"
-        appBase.deleteChildApp(a.id)
-      } else {
-        result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
+  appBase.getAllChildApps()
+    ?.groupBy { String appLabel -> appLabel.label }
+    .each { label, apps ->
+      Boolean isOrphan = keepLabels.findIndexOf { String appLabel -> appLabel == label } == -1
+      apps.eachWithIndex { a, index ->
+        Boolean isDup = index > 0
+        if (isOrphan) {
+          isWarning = true
+          result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}"
+            + "${tdCtr('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
+          appBase.deleteChildApp(a.id)
+        } else if (isDup) {
+          isWarning = true
+          result += """<tr>
+            ${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}
+            /* groovylint-disable-next-line DuplicateStringLiteral */
+            ${tdCtr('DELETED DUPLICATE', 'font-weight: bold;')}
+          </tr>""".stripMargin().stripIndent()
+          appBase.deleteChildApp(a.id)
+        } else {
+          result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
+        }
       }
     }
-  }
   result += '</table>'
-  if (isWarning) {
-    Lwarn('PruneAppDups', result.join())
-  } else {
-    Ltrace('PruneAppDups', result.join())
-  }
 }
 
-void RemoveChildApps () {
-  getAllChildApps().each{ child ->
+void removeChildApps() {
+  getAllChildApps().each { child ->
     Ldebug(
-      'RemoveChildApps',
+      'removeChildApps',
       "deleting child: ${b(AppInfo(appObj))}"
     )
     deleteChildApp(child.id)
   }
 }
-
-/*
-InstAppW addChildAppForUniqueLabel (
-    String definitionNamespace,
-    String definitionName,
-    String instanceLabel
-  ) {
-  // Create a new Child App IFF the 'instanceLabel' is not found.
-  InstAppW newApp = null
-  if (getChildAppByLabel(instanceLabel)) {
-    Lerror(
-      'addChildAppForUniqueLabel',
-      "The instanceLabel ${b(instanceLabel)} is already in use"
-    )
-  } else {
-    newApp = app.addChildApp(
-      definitionNamespace,
-      definitionName,
-      instanceLabel
-    )
-  }
-  return newApp
-  }
-*/

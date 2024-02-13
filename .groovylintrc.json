@@ -4,9 +4,13 @@
         "CompileStatic": {
             "enabled": false
         },
+        "UnnecessaryGetter": {
+            "enabled": true,
+            "ignoreMethodNames": "getAllChildApps, getChildDevices"
+        },
         "formatting.Indentation": {
-          "spacesPerIndentLevel": 2,
-          "severity": "info"
-      }
+            "spacesPerIndentLevel": 2,
+            "severity": "info"
+        }
     }
 }

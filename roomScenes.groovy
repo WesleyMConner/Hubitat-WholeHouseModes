@@ -1016,9 +1016,8 @@ Map RoomScenesPage () {
       _idIndDevices()
       _solicitRoomScenes()
       _createRSPbsgAndPageLink()
-      PruneAppDups(
+      pruneAppDups(
         [state.RSPBSG_LABEL],   // App Labels to keep
-        false,                     // For dups, keep oldest
         app                        // Prune children of this app
       )
       /*
