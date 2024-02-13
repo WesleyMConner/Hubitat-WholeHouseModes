@@ -2,11 +2,16 @@
     "extends": "recommended",
     "rules": {
         "CompileStatic": {
-            "enabled": false
+            "enabled": false,
+            "why": "Hubitat library syntax triggers this issue"
+        },
+        "NglParseError": {
+            "enabled": false,
+            "why": "Hubitat #include syntax triggers this issue"
         },
         "UnnecessaryGetter": {
             "enabled": true,
-            "ignoreMethodNames": "getAllChildApps, getChildDevices"
+            "ignoreMethodNames": "getAllChildApps, getChildDevices, getLocation, getModes"
         },
         "formatting.Indentation": {
             "spacesPerIndentLevel": 2,

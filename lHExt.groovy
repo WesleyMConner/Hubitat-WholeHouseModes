@@ -71,7 +71,8 @@ Map<String, List<String>> compareLists(List<String> existing, List<String> revis
 }
 
 List<String> modeNames() {
-  return getLocation().getModes().collect { it.name }
+  //return getLocation().getModes().collect { modeObj -> modeObj.name }
+  return getLocation().getModes()*.name
 }
 
 String switchState(DevW d) {
