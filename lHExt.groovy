@@ -51,10 +51,10 @@ Map<String, List<String>> compareLists(List<String> existing, List<String> revis
   //--DEBUG-> List<String> traceText = ['', "existing: ${existing}", "revised: ${revised}"]
   if (!existing) {
     map.added = revised.collect()
-    //--DEBUG-> traceText += "map.added: ${map.added}"
+  //--DEBUG-> traceText += "map.added: ${map.added}"
   } else if (!revised) {
     map.retained = existing.collect()
-    //--DEBUG-> traceText += "map.retained: ${map.retained}"
+  //--DEBUG-> traceText += "map.retained: ${map.retained}"
   } else {
     map.retained = existing.collect()
     map.retained.retainAll(revised)
@@ -64,7 +64,7 @@ Map<String, List<String>> compareLists(List<String> existing, List<String> revis
     //--DEBUG-> traceText += "map.dropped: ${map.dropped}"
     map.added = revised.collect()
     map.added.removeAll(existing)
-    //--DEBUG-> traceText += "map.added: ${map.added}"
+  //--DEBUG-> traceText += "map.added: ${map.added}"
   }
   //--DEBUG-> Ldebug('compareLists', traceText)
   return map
@@ -75,10 +75,11 @@ List<String> modeNames() {
 }
 
 String switchState(DevW d) {
-  List<String> stateValues = d.collect{ it.currentStates.value }.flatten()
-  return stateValues.contains('on')
+  /* groovylint-disable-next-line UseCollectMany */
+  List<String> stateValues = d.collect { device -> device.currentStates.value }.flatten()
+  return stateValues?.contains('on')
       ? 'on'
-      : stateValues.contains('off')
+      : stateValues?.contains('off')
         ? 'off'
         : 'unknown'
 }
@@ -182,5 +183,5 @@ InstAppW addChildAppForUniqueLabel (
     )
   }
   return newApp
-}
+  }
 */
