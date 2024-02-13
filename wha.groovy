@@ -392,9 +392,8 @@ Map WhaPage () {
         // Don't be too aggressive deleting child apps and their config data.
         paragraph('Management of child apps is pending selection of Room Names.')
       } else {
-        PruneAppDups(
+        pruneAppDups(
           [*settings.rooms, state.MPBSG_LABEL],
-          false,   // For dups, keep oldest
           app      // The object (parent) pruning dup children
         )
         _displayInstantiatedRoomHrefs()
