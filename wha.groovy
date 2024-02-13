@@ -103,7 +103,7 @@ void buttonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
   Linfo('buttonOnCallback', "Received mode: ${b(mode)}")
   getLocation().setMode(mode)
-  _updateLutronKpad(mode)
+  _updateLutronKpadLeds(mode)
 }
 
 //---- EVENT HANDLERS
