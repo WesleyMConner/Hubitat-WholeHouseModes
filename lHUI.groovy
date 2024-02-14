@@ -17,9 +17,8 @@
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
-import com.hubitat.hub.domain.Hub as Hub
 
-library (
+library(
  name: 'lHUI',
  namespace: 'wesmc',
  author: 'WesleyMConner',
@@ -31,9 +30,9 @@ library (
 
 //---- GENERAL PURPOSE
 
-List<String> CleanStrings (List<String> list) {
+List<String> CleanStrings(List<String> list) {
   // Prune nulls, empty strings and dups
-  return list.findAll{ it ?: null }.unique()
+  return list.findAll { s -> s ?: null }.unique()
 }
 
 //---- HTML FORMATTING
@@ -43,61 +42,65 @@ String BLACKBAR() { return '<hr style="border: 5px solid black;"/>' }
 String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
 String REDBAR() { return '<hr style="border: 5px solid red;"/>' }
 
-String Heading1 (String s) {
+String Heading1(String s) {
   return """<span style='font-size: 2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String Heading2 (String s) {
+String Heading2(String s) {
   return """<span style='font-size: 1.2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String Heading3 (String s) {
+String Heading3(String s) {
   return """<span style='font-size: 1.1em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String Bullet1 (String s) {
+String Bullet1(String s) {
   return "&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String Bullet2 (String s) {
+String Bullet2(String s) {
   return "&nbsp;&nbsp;&nbsp;&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String b (def val) {
+String b(def val) {
   String retVal = '<b>null</b>'
-  if (val == '0') retVal = "'<b>0</b>'"
-  else if (val == 0) retVal = "'<b>0</b>'"
-  else if (val) retVal = "'<b>${val}</b>'"
+  if (val == '0') {
+    retVal = "'<b>0</b>'"
+  } else if (val == 0) {
+    retVal = "'<b>0</b>'"
+  } else if (val) {
+    retVal = "'<b>${val}</b>'"
+  }
   return retVal
 }
 
-String i (def val) {
-  return val ? "'<i>${val}</i>'" : "<i>null</i>"
+String i(def val) {
+  return val ? "'<i>${val}</i>'" : '<i>null</i>'
 }
 
 //---- HTML TABLES
 //----   -- Focused on Hubitat contexts
 
-String tdLft (def x) {
+String tdLft(def x) {
   return "<td style='text-align: left; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
 
-String tdCtr (def x, String css = null) {
+String tdCtr(def x, String css = null) {
   return "<td style='text-align: center; padding-left: 10px; padding-right: 10px; ${css}'>${x}</td>"
 }
 
-String tdRght (def x) {
+String tdRght(def x) {
   return "<td style='text-align: right; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
 
 //---- LOGGING
 //----   - Adjust log levels to reduce noise and improve performance
 
-void solicitLogThreshold (String settingsKey, String dfltThresh = 'TRACE') {
+void solicitLogThreshold(String settingsKey, String dfltThresh = 'TRACE') {
   // By passing in the settings key, clients can:
   //   - Specify their choice of settings key.
   //   - Solicit two differentiate keys (e.g., App's level vs child PBSG's level)
-  input (
+  input(
     name: settingsKey,
     type: 'enum',
     title: Heading2("Select ${settingsKey}"),
@@ -107,9 +110,9 @@ void solicitLogThreshold (String settingsKey, String dfltThresh = 'TRACE') {
   )
 }
 
-Integer LogThreshToLogLevel (String logThresh) {
+Integer LogThreshToLogLevel(String logThresh) {
   Integer retval
-  switch(logThresh ?: 'TRACE') {
+  switch (logThresh ?: 'TRACE') {
     case 'TRACE':
       retval = 5
       break
@@ -129,71 +132,72 @@ Integer LogThreshToLogLevel (String logThresh) {
       log.error("${AppInfo(app)} LogThreshToLogLevel() bad logThresh: ${b(logThresh)}")
       retval = 5
   }
+  return retval
 }
 
-void Lerror (String fnName, String s) {
+void Lerror(String fnName, String s) {
   // No conditional test ensures errors appear.
   log.error(
     "${AppInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
-void Lwarn (String fnName, String s) {
+void Lwarn(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 1) {
     log.warn("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Linfo (String fnName, String s) {
+void Linfo(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 2) {
     log.info("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Ldebug (String fnName, String s) {
+void Ldebug(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 3) {
     log.debug("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Ltrace (String fnName, String s) {
+void Ltrace(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 4) {
     log.trace("${AppInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Lerror (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void Lerror(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
   Lerror(fnName, ls.join(delim))
 }
 
-void Lwarn (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void Lwarn(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
   Lwarn(fnName, ls.join(delim))
 }
 
-void Linfo (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void Linfo(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
   Linfo(fnName, ls.join(delim))
 }
 
-void Ldebug (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void Ldebug(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
   Ldebug(fnName, ls.join(delim))
 }
 
-void Ltrace (String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void Ltrace(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
   Ltrace(fnName, ls.join(delim))
 }
 
 //---- Convenience
 //----   - Simplify debugging
 
-String AppInfo (InstAppW app) {
+String AppInfo(InstAppW app) {
   return "${app?.label ?: 'MISSING_LABEL'} (${app?.id ?: 'MISSING_ID'})"
 }
 
-String DeviceInfo (def device) {
+String DeviceInfo(def device) {
   // Design Note:
   //   - The parameter is passed as 'def' in lieu of 'DevW'.
   //   - When devices are used from a LinkedHashMap (e.g., settings, state),
@@ -202,7 +206,7 @@ String DeviceInfo (def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-String EventDetails (Event e, Boolean DEEP = false) {
+String EventDetails(Event e) {
   String rows = """
     <tr>
       <th align='right'>descriptionText</th>
@@ -229,36 +233,23 @@ String EventDetails (Event e, Boolean DEEP = false) {
       <td>${e.isStateChange}</td>
     </tr>
     """
-  if (DEEP) rows += """
-    <tr>
-      <th align='right'>date</th>
-      <td>${e.date}</td>
-    </tr>
-    <tr>
-      <th align='right'>class</th>
-      <td>${e.class}</td>
-    </tr>
-    <tr>
-      <th align='right'>unixTime</th>
-      <td>${e.unixTime}</td>
-    </tr>"""
   return "<table>${rows}</table>"
 }
 
-List<String> appStateAsBullets (Boolean includeHeading = false) {
+List<String> appStateAsBullets(Boolean includeHeading = false) {
   List<String> result = []
-  if (includeHeading) result += Heading2("${AppInfo(app)} STATE")
-  state.sort().each{ k, v ->
+  if (includeHeading) { result += Heading2("${AppInfo(app)} STATE") }
+  state.sort().each { k, v ->
     result += Bullet2("<b>${k}</b> → ${v}")
   }
-  return result.size() != 0 ? result : [ Heading2('NO STATE DATA AVAILABLE') ]
+  return result.size() == 0 ? [ Heading2('NO STATE DATA AVAILABLE') ] : result
 }
 
-List<String> appSettingsAsBullets (Boolean includeHeading = false) {
+List<String> appSettingsAsBullets(Boolean includeHeading = false) {
   List<String> result = []
-  if (includeHeading) result += Heading2("${AppInfo(app)} SETTINGS")
-  settings.sort().each{ k, v ->
+  if (includeHeading) { result += Heading2("${AppInfo(app)} SETTINGS") }
+  settings.sort().each { k, v ->
     result += Bullet1("<b>${k}</b> → ${v}")
   }
-  return result.size() != 0 ? result : [ Heading2('<i>NO SETTINGS DATA AVAILABLE</i>') ]
+  return result.size() == 0 ? [ Heading2('<i>NO SETTINGS DATA AVAILABLE</i>') ] : result
 }

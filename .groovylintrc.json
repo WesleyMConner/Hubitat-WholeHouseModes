@@ -13,13 +13,29 @@
             "enabled": false,
             "why": "Literal strings in Hubitat (class None) trigger this issue"
         },
+        "MethodCount": {
+            "enabled": false,
+            "why": "With Hubitat, class None has a high method count"
+        },
+        "MethodName": {
+            "enabled": false,
+            "why": "Global Fns use initial caps, but end up in class None"
+        },
+        "MethodParameterTypeRequired": {
+            "enabled": false
+        },
         "NglParseError": {
             "enabled": false,
             "why": "Hubitat #include syntax triggers this issue"
         },
+        "NoDef": {
+            "enabled": false,
+            "why": "Hubitat does not allow T in lieu of def"
+        },
         "UnnecessaryGetter": {
             "enabled": true,
-            "ignoreMethodNames": "getAllChildApps, getChildDevices, getLocation, getModes"
+            "ignoreMethodNames": "getAllChildApps, getChildDevices, getLocation, getModes",
+            "why": "These are actual Hubitat methods with not allow T in lieu of def"
         },
         "formatting.Indentation": {
             "spacesPerIndentLevel": 2,
