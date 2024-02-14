@@ -1,10 +1,9 @@
 version: "0.2"
 language: en
 caseSensitive: false
-# Quote entries that include '*' or '**'.
-# ignorePaths:
 words:
   - autowidth
+  - groovylintrc
   - hubitat
   - kpad
   - kpads

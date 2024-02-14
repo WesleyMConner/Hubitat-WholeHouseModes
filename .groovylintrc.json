@@ -1,5 +1,11 @@
+// ----------------------------------------------------
+// For .vscode/settings.json:
+//   "files.associations": {
+//     ".groovylintrc.json": "jsonc"
+//   },
+//   "groovyLint.basic.config": "./.groovylintrc.json",
+// ----------------------------------------------------
 {
-  // When using VsCode, set
   "extends": "recommended",
   "rules": {
     "CompileStatic": {

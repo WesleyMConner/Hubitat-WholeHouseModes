@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
+// The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -49,7 +50,6 @@ void updated () {
 void uninstalled () {s
   pbsgCoreUninstalled()
 }
-
 
 //---- RENDERING AND DISPLAY
 
