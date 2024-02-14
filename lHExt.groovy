@@ -87,7 +87,7 @@ String switchState(DevW d) {
 
 String showSwitchAndState(String name, String state) {
   String adjustedState = state ?: 'unk'
-  String emphasizedState = (state == 'on') ? "${b(adjustedState)}" : "<i>${adjustedState}</i>"
+  String emphasizedState = state == 'on' ? "${b(adjustedState)}" : "<i>${adjustedState}</i>"
   return "→ ${emphasizedState} - ${name}"
 }
 

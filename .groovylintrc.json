@@ -5,6 +5,14 @@
             "enabled": false,
             "why": "Hubitat library syntax triggers this issue"
         },
+        "DuplicateNumberLiteral": {
+            "enabled": false,
+            "why": "Literal numbers in Hubitat (class None) trigger this issue"
+        },
+        "DuplicateStringLiteral": {
+            "enabled": false,
+            "why": "Literal strings in Hubitat (class None) trigger this issue"
+        },
         "NglParseError": {
             "enabled": false,
             "why": "Hubitat #include syntax triggers this issue"

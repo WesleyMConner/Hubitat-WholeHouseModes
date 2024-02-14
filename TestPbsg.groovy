@@ -43,11 +43,11 @@ void installed () {
 }
 
 void updated () {
-  pbsgCoreUpdated(app)
+  pbsgCoreUpdated()
 }
 
-void uninstalled () {
-  app.pbsgCoreUninstalled()
+void uninstalled () {s
+  pbsgCoreUninstalled()
 }
 
 
@@ -105,9 +105,9 @@ void TEST_pbsgHasExpectedState (
     List<String> inactiveButtons,
     String dfltButton
   ) {
-  String activeDni = activeButton ? _buttonToDni(activeButton) : null
-  List<String> inactiveDnis = inactiveButtons ? inactiveButtons.collect{ _buttonToDni(it) } : null
-  String dfltDni = dfltButton ? _buttonToDni(dfltButton) : null
+  String activeDni = activeButton ? buttonToDni(activeButton) : null
+  List<String> inactiveDnis = inactiveButtons ? inactiveButtons.collect{ buttonToDni(it) } : null
+  String dfltDni = dfltButton ? buttonToDni(dfltButton) : null
   Boolean result = true
   Integer actualInactiveDnisSize = state.inactiveDnis?.size() ?: 0
   Integer expectedInactiveDnisSize = inactiveDnis?.size() ?: 0
@@ -150,14 +150,14 @@ void TEST_pbsgHasExpectedState (
   testLog += Heading2('Button (VSW) State Checks')
   List<String> buttonState = []
   if (activeButton) {
-    String state = switchState(getChildDevice(_buttonToDni(activeButton)))
+    String state = switchState(getChildDevice(buttonToDni(activeButton)))
     Boolean isExpected = (state == 'on')
     state = (state == 'on') ? '<b>on</b>' : '<i>off</i>'
     if (!isExpected) result = false
     buttonState += "${activeButton}: ${state} (${isExpected ? '✅' : '❌'})"
   }
   inactiveButtons.each{ offButton ->
-    String state = switchState(getChildDevice(_buttonToDni(offButton)))
+    String state = switchState(getChildDevice(buttonToDni(offButton)))
     Boolean isExpected = (state == 'off')
     if (!isExpected) result = false
     buttonState += "${offButton}: ${state} (${isExpected ? '✅' : '❌'})"

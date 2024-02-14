@@ -44,15 +44,15 @@ preferences {
 //---- SYSTEM CALLBACKS
 
 void installed () {
-  pbsgCoreInstalled(app)
+  pbsgCoreInstalled()
 }
 
 void updated () {
-  pbsgCoreUpdated(app)
+  pbsgCoreUpdated()
 }
 
 void uninstalled () {
-  pbsgCoreUninstalled(app)
+  pbsgCoreUninstalled()
 }
 
 //---- RENDERING AND DISPLAY

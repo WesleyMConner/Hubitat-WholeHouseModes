@@ -36,13 +36,3 @@ Boolean fifoEnqueue(List<String> fifo, String item) {
   }
   return retval
 }
-
-String fifoEnqueue(List<String> fifo) {
-  String retval = null
-  if (fifo == null) {
-    Lerror('fifoEnqueue', 'Received a null value for fifo')
-  } else if (fifo.size() > 0) {
-    retval = fifo.removeAt(0)
-  }
-  return retval
-}
