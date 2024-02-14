@@ -19,7 +19,7 @@
 //   - #include wesmc.lHExt
 //   - #include wesmc.lHUI
 
-library (
+library(
   name: 'lPbsg',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
@@ -42,11 +42,11 @@ Boolean pbsgConfigure(
   if (settings.buttons != buttons) {
     Ltrace('pbsgConfigure', "buttons: (${buttons}) -> (${settings.buttons})")
   }
-  settings.dfltButton = defaultButton ? defaultButton : null
+  settings.dfltButton = defaultButton ?: null
   if (settings.dfltButton != defaultButton) {
     Ltrace('pbsgConfigure', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
   }
-  settings.activeButton = activeButton ? activeButton : null
+  settings.activeButton = activeButton ?: null
   if (settings.activeButton != activeButton) {
     Ltrace('pbsgConfigure', "activeButton: (${activeButton}) -> (${settings.activeButton})")
   }
@@ -75,16 +75,16 @@ Boolean pbsgConfigure(
   }
   if (retVal) { updated() }
   return retVal
-}
+  }
 
 Boolean pbsgActivateButton(String button) {
   Ltrace('pbsgActivateButton', "button: ${b(button)}")
-  pbsgActivateDni(buttonToDni(button))
+  return pbsgActivateDni(buttonToDni(button))
 }
 
 Boolean pbsgDeactivateButton(String button) {
   Ltrace('pbsgDeactivateButton', "button: ${b(button)}")
-  pbsgDeactivateDni(buttonToDni(button))
+  return pbsgDeactivateDni(buttonToDni(button))
 }
 
 Boolean pbsgToggleButton(String button) {
@@ -116,7 +116,7 @@ String dniToButton(String dni) {
 void addDni(String dni) {
   // All adds are appended to the inactive Fifo.
   if (dni) {
-    if (!state.inactiveDnis) { state.inactiveDnis = [] }
+    state.inactiveDnis = state.inactiveDnis ?: []
     fifoEnqueue(state.inactiveDnis, dni)
     Lwarn('addDni', "Adding child device (${dni})")
     addChildDevice(
@@ -194,34 +194,34 @@ Boolean pbsgDeactivateDni(String dni) {
 List<String> childVswStates(Boolean includeHeading = false) {
   List<String> results = []
   if (includeHeading) { results += Heading2('VSW States') }
-  getChildDevices().each{ d ->
+  getChildDevices().each { d ->
     if (switchState(d) == 'on') {
-      results += Bullet2("<b>${d.getDeviceNetworkId()}: on</b>")
+      results += Bullet2("<b>${d.deviceNetworkId}: on</b>")
     } else {
-      results += Bullet2("<i>${d.getDeviceNetworkId()}: off</i>")
+      results += Bullet2("<i>${d.deviceNetworkId}: off</i>")
     }
   }
   return results
 }
 
-String getPbsgStateAndVswState() {
+String pbsgAndVswStateAsString() {
   return [
     "<table style='border-spacing: 0px;' rules='all'><tr>",
     "<th style='width:49%'>STATE</th>",
-    "<th/>",
+    '<th/>',
     "<th style='width:49%'>VSW STATUS</th>",
-    "</tr><tr>",
+    '</tr><tr>',
     "<td>${appStateAsBullets().join('<br/>')}</td>",
-    "<td/>",
+    '<td/>',
     "<td>${childVswStates().join('<br/>')}</td>",
-    "</tr></table"
+    '</tr></table'
   ].join()
 }
 
 void tracePbsgStateAndVswState(String fnName, String heading) {
   Ltrace(fnName, [
     heading,
-    getPbsgStateAndVswState()
+    pbsgAndVswStateAsString()
     /*
     "<table style='border-spacing: 0px;' rules='all'><tr>",
     "<th style='width:49%'>STATE</th>",
@@ -248,7 +248,7 @@ void syncChildVswsToPbsgState() {
     if (switchState(onDevice) != 'on') { onDevice.on() }
   }
   // Make sure other VSWs are off
-  state.inactiveDnis.each{ offDni ->
+  state.inactiveDnis.each { offDni ->
     DevW offDevice = getChildDevice(offDni)
     if (switchState(offDevice) != 'off') { offDevice.off() }
   }
@@ -262,8 +262,8 @@ void unsubscribeChildVswEvents() {
     '',
     Heading2('Unsubscribed these Child Devices from Events:')
   ]
-  getChildDevices().each{ d ->
-    traceSummary += Bullet2(d.getDeviceNetworkId())
+  getChildDevices().each { d ->
+    traceSummary += Bullet2(d.deviceNetworkId)
     unsubscribe(d)
   }
   Ltrace('unsubscribeChildVswEvents', traceSummary)
@@ -273,9 +273,9 @@ void subscribeChildVswEvents() {
   //-> Avoid the List version of subscribe. It seems flaky.
   //-> subscribe(childDevices, VswEventHandler, ['filterEvents': true])
   List<String> traceSummary = [Heading2('Subscribing to VswEventHandler')]
-  childDevices.each{ d ->
+  childDevices.each { d ->
     subscribe(d, VswEventHandler, ['filterEvents': true])
-    traceSummary += Bullet2(d.getDeviceNetworkId())
+    traceSummary += Bullet2(d.deviceNetworkId)
   }
   Ltrace('subscribeChildVswEvents', traceSummary)
 }
@@ -354,7 +354,7 @@ Boolean pbsgMoveActiveToInactive() {
 List<String> pbsgListVswDevices() {
   List<String> outputText = [ Heading2('DEVICES') ]
   List<InstAppW> devices = getChildDevices()
-  devices.each{ d -> outputText += Bullet2(d.getDeviceNetworkId()) }
+  devices.each { d -> outputText += Bullet2(d.deviceNetworkId) }
   return outputText
 }
 
@@ -383,7 +383,7 @@ void pbsgCoreUpdated() {
   //   - settings.logLevel
   // PROCESS SETTINGS (BUTTONS) INTO TARGET VSW DNIS
   List<String> prevDnis = pbsgGetDnis() ?: []
-  updatedDnis = settings.buttons.collect{ buttonToDni(it) }
+  updatedDnis = settings.buttons.collect { buttonObj -> buttonToDni(buttonObj) }
   updatedDfltDni = settings.dfltButton ? buttonToDni(settings.dfltButton) : null
   updatedActiveDni = settings.activeButton ? buttonToDni(settings.activeButton) : null
   // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
@@ -419,8 +419,8 @@ void pbsgCoreUpdated() {
   // it also takes out Mode change event subscriptions, et al.
   unsubscribeChildVswEvents()
   state.dfltDni = updatedDfltDni
-  dropDnis.each{ dni -> dropDni(dni) }
-  addDnis.each{ dni -> addDni(dni) }
+  dropDnis.each { dni -> dropDni(dni) }
+  addDnis.each { dni -> addDni(dni) }
   // Leverage activation/deactivation methods for initial dni activation.
   if (updatedActiveDni) {
     Ltrace('pbsgCoreUpdated', "activating activeDni ${updatedActiveDni}")

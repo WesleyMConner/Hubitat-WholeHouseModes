@@ -1,4 +1,5 @@
 {
+  // When using VsCode, set
   "extends": "recommended",
   "rules": {
     "CompileStatic": {
@@ -19,6 +20,10 @@
     },
     "MethodName": {
       // Global Fns use initial caps, but end up in class None
+      "enabled": false
+    },
+    "MethodParameterTypeRequired": {
+      // Hubitat does not allow use of T in lieu of def
       "enabled": false
     },
     "NglParseError": {
