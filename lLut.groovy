@@ -15,7 +15,7 @@
 // limitations under the License.
 // ---------------------------------------------------------------------------------
 
-library (
+library(
   name: 'lLut',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
@@ -31,7 +31,7 @@ void identifyLedButtonsForListItems(
   // Kpad LEDs are used as a proxy for Kpad buttons.
   //   - The button's displayName is meaningful to clients.
   //   - The button's deviceNetworkId is <KPAD Dni> hyphen <BUTTON #>
-  list.each{ item ->
+  list.each { item ->
     input(
       name: "${prefix}_${item}",
       title: Heading2("Select the Button(s) that activate ${b(item)}"),
@@ -40,14 +40,14 @@ void identifyLedButtonsForListItems(
       submitOnChange: true,
       required: false,
       multiple: true,
-      options: ledDevices.collect{ d ->
-        "${d.label}: ${d.getDeviceNetworkId()}"
+      options: ledDevices.collect { d ->
+        "${d.label}: ${d.deviceNetworkId}"
       }?.sort()
     )
   }
 }
 
-void populateStateKpadButtons (String prefix) {
+void populateStateKpadButtons(String prefix) {
   // Design Note
   //   The Kpad LEDs collected by selectForMode() function as a proxy for
   //   Kpad button presses. Settings data includes the user-friendly
@@ -69,10 +69,10 @@ void populateStateKpadButtons (String prefix) {
   //   - Kpad Button number
   String stateKey = "${prefix}Map"
   state[stateKey] = [:]
-  settings.each{ key, value ->
+  settings.each { key, value ->
     if (key.contains("${prefix}_")) {
-      String base = key.minus("${prefix}_")
-      value.each{ item ->
+      String base = key - "${prefix}_"
+      value.each { item ->
         List<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
           if (state[stateKey][kpadDniAndButtons[0]] == null) {

@@ -1,0 +1,27 @@
+CompileStatic - Not Enabled
+  Hubitat library syntax triggers this issue
+
+DuplicateNumberLiteral - Not Enabled
+  Literal numbers in Hubitat (class None) trigger this issue
+
+DuplicateStringLiteral - Not Enabled
+  Literal strings in Hubitat (class None) trigger this issue
+
+MethodCount - Not Enabled
+  With Hubitat, class None has a high method count
+
+MethodName - Not Enabled
+  Global Fns use initial caps, but end up in class None
+
+MethodParameterTypeRequired - Not Enabled
+
+NglParseError - Not Enabled
+  Hubitat #include syntax triggers this issue
+
+NoDef - Not Enabled
+  Hubitat does not allow T in lieu of def
+
+UnnecessaryGetter - Enabled
+  ignoreMethodNames - Is Populated
+  These are actual Hubitat methods with not allow T in lieu of def
+

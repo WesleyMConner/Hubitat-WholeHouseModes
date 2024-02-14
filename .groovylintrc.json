@@ -1,45 +1,43 @@
 {
-    "extends": "recommended",
-    "rules": {
-        "CompileStatic": {
-            "enabled": false,
-            "why": "Hubitat library syntax triggers this issue"
-        },
-        "DuplicateNumberLiteral": {
-            "enabled": false,
-            "why": "Literal numbers in Hubitat (class None) trigger this issue"
-        },
-        "DuplicateStringLiteral": {
-            "enabled": false,
-            "why": "Literal strings in Hubitat (class None) trigger this issue"
-        },
-        "MethodCount": {
-            "enabled": false,
-            "why": "With Hubitat, class None has a high method count"
-        },
-        "MethodName": {
-            "enabled": false,
-            "why": "Global Fns use initial caps, but end up in class None"
-        },
-        "MethodParameterTypeRequired": {
-            "enabled": false
-        },
-        "NglParseError": {
-            "enabled": false,
-            "why": "Hubitat #include syntax triggers this issue"
-        },
-        "NoDef": {
-            "enabled": false,
-            "why": "Hubitat does not allow T in lieu of def"
-        },
-        "UnnecessaryGetter": {
-            "enabled": true,
-            "ignoreMethodNames": "getAllChildApps, getChildDevices, getLocation, getModes",
-            "why": "These are actual Hubitat methods with not allow T in lieu of def"
-        },
-        "formatting.Indentation": {
-            "spacesPerIndentLevel": 2,
-            "severity": "info"
-        }
+  "extends": "recommended",
+  "rules": {
+    "CompileStatic": {
+      // Hubitat library syntax triggers this issue
+      "enabled": false
+    },
+    "DuplicateNumberLiteral": {
+      // Literal numbers in Hubitat (class None) trigger this issue
+      "enabled": false
+    },
+    "DuplicateStringLiteral": {
+      // Literal strings in Hubitat (class None) trigger this issue
+      "enabled": false
+    },
+    "MethodCount": {
+      // With Hubitat, class None has a high method count
+      "enabled": false
+    },
+    "MethodName": {
+      // Global Fns use initial caps, but end up in class None
+      "enabled": false
+    },
+    "NglParseError": {
+      // Hubitat #include syntax triggers this issue
+      "enabled": false
+    },
+    "NoDef": {
+      // Hubitat does not allow T in lieu of def
+      "enabled": false
+    },
+    "UnnecessaryGetter": {
+      // These are actual Hubitat methods with not allow T in lieu of def
+      "enabled": true,
+      "ignoreMethodNames": "getAllChildApps, getChildDevices, getLocation, getModes"
+    },
+    "formatting.Indentation": {
+      // Personal preference is 2 space (vs 4 space) tabs
+      "spacesPerIndentLevel": 2,
+      "severity": "info"
     }
+  }
 }
