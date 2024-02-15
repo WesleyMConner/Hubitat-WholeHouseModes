@@ -39,6 +39,7 @@
     ],
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
+  "asciidoc.antora.enableAntoraSupport": true,
   "asciidoc.extensions.enableKroki": true,
   "editor.fontLigatures": true,
   "editor.fontSize": 14,
