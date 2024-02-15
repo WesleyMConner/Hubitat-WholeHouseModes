@@ -272,10 +272,10 @@ void unsubscribeChildVswEvents() {
 
 void subscribeChildVswEvents() {
   //-> Avoid the List version of subscribe. It seems flaky.
-  //-> subscribe(childDevices, VswEventHandler, ['filterEvents': true])
-  List<String> traceSummary = [heading2('Subscribing to VswEventHandler')]
+  //-> subscribe(childDevices, vswEventHandler, ['filterEvents': true])
+  List<String> traceSummary = [heading2('Subscribing to vswEventHandler')]
   childDevices.each { d ->
-    subscribe(d, VswEventHandler, ['filterEvents': true])
+    subscribe(d, vswEventHandler, ['filterEvents': true])
     traceSummary += bullet2(d.deviceNetworkId)
   }
   logTrace('subscribeChildVswEvents', traceSummary)
@@ -440,7 +440,7 @@ void pbsgCoreUninstalled() {
 
 //---- EVENT HANDLERS
 
-void VswEventHandler(Event e) {
+void vswEventHandler(Event e) {
   // Design Notes
   //   - Events can arise from:
   //       1. Methods in this App that change state
@@ -449,8 +449,8 @@ void VswEventHandler(Event e) {
   //   - Let downstream functions discard redundant state information
   // W A R N I N G
   //   As of 2023-11-30 Handler continues to receive STALE state values!!!
-  tracePbsgStateAndVswState('VswEventHandler', 'AT ENTRY')
-  logDebug('VswEventHandler', e.descriptionText)
+  tracePbsgStateAndVswState('vswEventHandler', 'AT ENTRY')
+  logDebug('vswEventHandler', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName
     if (e.value == 'on') {
@@ -459,10 +459,10 @@ void VswEventHandler(Event e) {
       pbsgDeactivateDni(dni)
     } else {
       logDebug(
-        'VswEventHandler',
+        'vswEventHandler',
         "Unexpected value (${e.value}) for DNI (${dni}")
     }
   } else {
-    logDebug('VswEventHandler', "Unexpected event: ${eventDetails(e)}")
+    logDebug('vswEventHandler', "Unexpected event: ${eventDetails(e)}")
   }
 }
