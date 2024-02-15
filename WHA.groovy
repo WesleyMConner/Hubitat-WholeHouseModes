@@ -90,7 +90,7 @@ void AllAuto () {
   }
 }
 
-void _updateLutronKpadLeds (String currMode) {
+void updateLutronKpadLeds (String currMode) {
   settings.lutronModeButtons.each{ ledObj ->
     String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
     if (currMode == modeTarget) {
@@ -105,7 +105,7 @@ void buttonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
   logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
   getLocation().setMode(mode)
-  _updateLutronKpadLeds(mode)
+  updateLutronKpadLeds(mode)
 }
 
 //---- EVENT HANDLERS

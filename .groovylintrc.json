@@ -24,10 +24,6 @@
       // With Hubitat, class None has a high method count
       "enabled": false
     },
-    "MethodName": {
-      //hold-> Global Fns use initial caps, but end up in class None
-      "enabled": true
-    },
     "MethodParameterTypeRequired": {
       // Hubitat does not allow use of T in lieu of def
       "enabled": false
