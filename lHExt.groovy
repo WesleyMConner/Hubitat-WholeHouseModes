@@ -37,7 +37,7 @@ Integer safeParseInt(String s) {
 
 void removeAllChildApps() {
   getAllChildApps().each { child ->
-    Ldebug(
+    logDebug(
       'removeAllChildApps',
       "child: >${child.id}< >${child.label}<"
     )
@@ -66,7 +66,7 @@ Map<String, List<String>> compareLists(List<String> existing, List<String> revis
     map.added.removeAll(existing)
   //--DEBUG-> traceText += "map.added: ${map.added}"
   }
-  //--DEBUG-> Ldebug('compareLists', traceText)
+  //--DEBUG-> logDebug('compareLists', traceText)
   return map
 }
 
@@ -152,9 +152,9 @@ void pruneAppDups(List<String> keepLabels, InstAppW appBase) {
 
 void removeChildApps() {
   getAllChildApps().each { child ->
-    Ldebug(
+    logDebug(
       'removeChildApps',
-      "deleting child: ${b(AppInfo(appObj))}"
+      "deleting child: ${b(appInfo(appObj))}"
     )
     deleteChildApp(child.id)
   }

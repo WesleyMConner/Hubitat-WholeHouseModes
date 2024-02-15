@@ -30,7 +30,7 @@ library(
 
 //---- GENERAL PURPOSE
 
-List<String> CleanStrings(List<String> list) {
+List<String> cleanStrings(List<String> list) {
   // Prune nulls, empty strings and dups
   return list.findAll { s -> s ?: null }.unique()
 }
@@ -38,27 +38,27 @@ List<String> CleanStrings(List<String> list) {
 //---- HTML FORMATTING
 //----   -- Focused on Hubitat contexts
 
-String BLACKBAR() { return '<hr style="border: 5px solid black;"/>' }
-String GREENBAR() { return '<hr style="border: 5px solid green;"/>' }
-String REDBAR() { return '<hr style="border: 5px solid red;"/>' }
+String blackBar() { return '<hr style="border: 5px solid black;"/>' }
+String greenBar() { return '<hr style="border: 5px solid green;"/>' }
+String redBar() { return '<hr style="border: 5px solid red;"/>' }
 
-String Heading1(String s) {
+String heading1(String s) {
   return """<span style='font-size: 2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String Heading2(String s) {
+String heading2(String s) {
   return """<span style='font-size: 1.2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String Heading3(String s) {
+String heading3(String s) {
   return """<span style='font-size: 1.1em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String Bullet1(String s) {
+String bullet1(String s) {
   return "&#x2022;&nbsp;&nbsp;${s}"
 }
 
-String Bullet2(String s) {
+String bullet2(String s) {
   return "&nbsp;&nbsp;&nbsp;&#x2022;&nbsp;&nbsp;${s}"
 }
 
@@ -103,14 +103,14 @@ void solicitLogThreshold(String settingsKey, String dfltThresh = 'TRACE') {
   input(
     name: settingsKey,
     type: 'enum',
-    title: Heading2("Select ${settingsKey}"),
+    title: heading2("Select ${settingsKey}"),
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     defaultValue: dfltThresh,
     submitOnChange: true
   )
 }
 
-Integer LogThreshToLogLevel(String logThresh) {
+Integer logThreshToLogLevel(String logThresh) {
   Integer retval
   switch (logThresh ?: 'TRACE') {
     case 'TRACE':
@@ -129,75 +129,75 @@ Integer LogThreshToLogLevel(String logThresh) {
       retval = 1
       break
     default:
-      log.error("${AppInfo(app)} LogThreshToLogLevel() bad logThresh: ${b(logThresh)}")
+      log.error("${appInfo(app)} logThreshToLogLevel() bad logThresh: ${b(logThresh)}")
       retval = 5
   }
   return retval
 }
 
-void Lerror(String fnName, String s) {
+void logError(String fnName, String s) {
   // No conditional test ensures errors appear.
   log.error(
-    "${AppInfo(app)} <b>${fnName}</b> → ${s}"
+    "${appInfo(app)} <b>${fnName}</b> → ${s}"
   )
 }
 
-void Lwarn(String fnName, String s) {
+void logWarn(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 1) {
-    log.warn("${AppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.warn("${appInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Linfo(String fnName, String s) {
+void logInfo(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 2) {
-    log.info("${AppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.info("${appInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Ldebug(String fnName, String s) {
+void logDebug(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 3) {
-    log.debug("${AppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.debug("${appInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Ltrace(String fnName, String s) {
+void logTrace(String fnName, String s) {
   // Fail closed if logLevel is missing.
   if ((state.logLevel ?: 5) > 4) {
-    log.trace("${AppInfo(app)} <b>${fnName}</b> → ${s}")
+    log.trace("${appInfo(app)} <b>${fnName}</b> → ${s}")
   }
 }
 
-void Lerror(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
-  Lerror(fnName, ls.join(delim))
+void logError(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  logError(fnName, ls.join(delim))
 }
 
-void Lwarn(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
-  Lwarn(fnName, ls.join(delim))
+void logWarn(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  logWarn(fnName, ls.join(delim))
 }
 
-void Linfo(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
-  Linfo(fnName, ls.join(delim))
+void logInfo(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  logInfo(fnName, ls.join(delim))
 }
 
-void Ldebug(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
-  Ldebug(fnName, ls.join(delim))
+void logDebug(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  logDebug(fnName, ls.join(delim))
 }
 
-void Ltrace(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
-  Ltrace(fnName, ls.join(delim))
+void logTrace(String fnName, List<String> ls, String delim = '<br/>&nbsp&nbsp') {
+  logTrace(fnName, ls.join(delim))
 }
 
 //---- Convenience
 //----   - Simplify debugging
 
-String AppInfo(InstAppW app) {
+String appInfo(InstAppW app) {
   return "${app?.label ?: 'MISSING_LABEL'} (${app?.id ?: 'MISSING_ID'})"
 }
 
-String DeviceInfo(def device) {
+String deviceInfo(def device) {
   // Design Note:
   //   - The parameter is passed as 'def' in lieu of 'DevW'.
   //   - When devices are used from a LinkedHashMap (e.g., settings, state),
@@ -206,7 +206,7 @@ String DeviceInfo(def device) {
   return device ? "${device.displayName} (${device.id})" : null
 }
 
-String EventDetails(Event e) {
+String eventDetails(Event e) {
   String rows = """
     <tr>
       <th align='right'>descriptionText</th>
@@ -238,18 +238,18 @@ String EventDetails(Event e) {
 
 List<String> appStateAsBullets(Boolean includeHeading = false) {
   List<String> result = []
-  if (includeHeading) { result += Heading2("${AppInfo(app)} STATE") }
+  if (includeHeading) { result += heading2("${appInfo(app)} STATE") }
   state.sort().each { k, v ->
-    result += Bullet2("<b>${k}</b> → ${v}")
+    result += bullet2("<b>${k}</b> → ${v}")
   }
-  return result.size() == 0 ? [ Heading2('NO STATE DATA AVAILABLE') ] : result
+  return result.size() == 0 ? [ heading2('NO STATE DATA AVAILABLE') ] : result
 }
 
 List<String> appSettingsAsBullets(Boolean includeHeading = false) {
   List<String> result = []
-  if (includeHeading) { result += Heading2("${AppInfo(app)} SETTINGS") }
+  if (includeHeading) { result += heading2("${appInfo(app)} SETTINGS") }
   settings.sort().each { k, v ->
-    result += Bullet1("<b>${k}</b> → ${v}")
+    result += bullet1("<b>${k}</b> → ${v}")
   }
-  return result.size() == 0 ? [ Heading2('<i>NO SETTINGS DATA AVAILABLE</i>') ] : result
+  return result.size() == 0 ? [ heading2('<i>NO SETTINGS DATA AVAILABLE</i>') ] : result
 }

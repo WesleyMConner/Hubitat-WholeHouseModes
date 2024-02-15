@@ -34,7 +34,7 @@ void identifyLedButtonsForListItems(
   list.each { item ->
     input(
       name: "${prefix}_${item}",
-      title: Heading2("Select the Button(s) that activate ${b(item)}"),
+      title: heading2("Select the Button(s) that activate ${b(item)}"),
       type: 'enum',
       width: 6,
       submitOnChange: true,

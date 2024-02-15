@@ -24,7 +24,7 @@ library(
 
 String fifoRemove(List<String> fifo, String item) {
   // Remove and return item if present OR return null.
-  //if (!fifo) Lerror('FifoRemove', "Received a null value for fifo")
+  //if (!fifo) logError('FifoRemove', "Received a null value for fifo")
   return fifo?.removeAll { member -> member == item } ? item : null
 }
 

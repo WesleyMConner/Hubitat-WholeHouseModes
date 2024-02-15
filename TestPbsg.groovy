@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
+
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
@@ -56,7 +57,7 @@ void uninstalled () {s
 Map TestPbsgPage () {
   return dynamicPage(
     name: 'TestPbsgPage',
-    title: Heading1(AppInfo(app)),
+    title: heading1(appInfo(app)),
     install: true,
     uninstall: true,
   ) {
@@ -79,8 +80,8 @@ void TEST_pbsgConfigure (
   List<String> logMsg = []
   if (forcedError) logMsg += forcedError
   logMsg += "dnis=${b(list)}, dfltButton=${b(dflt)}, activeDni=${b(on)}"
-  logMsg += (forcedError ? REDBAR() : GREENBAR())
-  Linfo("TEST ${n} CONFIG", logMsg)
+  logMsg += (forcedError ? redBar() : greenBar())
+  logInfo("TEST ${n} CONFIG", logMsg)
   // Simulate a Page update (GUI settings) via the System updated() callback.
   // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE' .. 'TRACE' for HEAVY DEBUG
   pbsgConfigure(list, dflt, on, 'INFO')
@@ -95,8 +96,8 @@ void TEST_PbsgActivation (
   List<String> logMsg = []
   logMsg += description
   if (forcedError) { logMsg += forcedError }
-  logMsg += (forcedError ? REDBAR() : GREENBAR())
-  Linfo("TEST ${n} ACTION", logMsg)
+  logMsg += (forcedError ? redBar() : greenBar())
+  logInfo("TEST ${n} ACTION", logMsg)
 }
 
 void TEST_pbsgHasExpectedState (
@@ -112,42 +113,42 @@ void TEST_pbsgHasExpectedState (
   Integer actualInactiveDnisSize = state.inactiveDnis?.size() ?: 0
   Integer expectedInactiveDnisSize = inactiveDnis?.size() ?: 0
   List<String> testLog = []
-  testLog += Heading2('PBSG State Checks')
+  testLog += heading2('PBSG State Checks')
   if (state.dfltDni != dfltDni) {
     result = false
-    testLog += Bullet2("dfltDni ${state.dfltDni} != ${dfltDni}")
+    testLog += bullet2("dfltDni ${state.dfltDni} != ${dfltDni}")
   } else if (state.activeDni != activeDni) {
     result = false
-    testLog += Bullet2("activeDni ${state.activeDni} != ${activeDni}")
+    testLog += bullet2("activeDni ${state.activeDni} != ${activeDni}")
   } else if (actualInactiveDnisSize != expectedInactiveDnisSize) {
     result = false
-    testLog += Bullet2("inActiveDnis size ${actualInactiveDnisSize} != ${expectedInactiveDnisSize}")
-    testLog += Bullet2("expected: ${inactiveDnis }} got: ${state.inactiveDnis}")
+    testLog += bullet2("inActiveDnis size ${actualInactiveDnisSize} != ${expectedInactiveDnisSize}")
+    testLog += bullet2("expected: ${inactiveDnis }} got: ${state.inactiveDnis}")
   } else {
     state.inactiveDnis.eachWithIndex{ dni, index ->
       String expectedDni = inactiveDnis[index]
       if (dni != expectedDni) {
         result = false
-        testLog += Bullet2("At ${index}: inactiveDni ${dni} != ${expectedDni}")
+        testLog += bullet2("At ${index}: inactiveDni ${dni} != ${expectedDni}")
       }
     }
   }
   if (state.activeDni == activeDni) {
-    testLog += Bullet2("<i>activeDni: ${state.activeDni}</i>")
+    testLog += bullet2("<i>activeDni: ${state.activeDni}</i>")
   } else {
-    testLog += Bullet2("<i>activeDni: ${state.activeDni}</i> => <b>expected: ${activeDni}</b>")
+    testLog += bullet2("<i>activeDni: ${state.activeDni}</i> => <b>expected: ${activeDni}</b>")
   }
   if ((state.inactiveDnis == inactiveDnis) || (!state.inactiveDnis && !inactiveDnis)) {
-    testLog += Bullet2("<i>inactiveDnis: ${state.inactiveDnis}</i>")
+    testLog += bullet2("<i>inactiveDnis: ${state.inactiveDnis}</i>")
   } else {
-    testLog += Bullet2("<i>inactiveDnis:</b> ${state.inactiveDnis}</i> => <b>expected: ${inactiveDnis}</b>")
+    testLog += bullet2("<i>inactiveDnis:</b> ${state.inactiveDnis}</i> => <b>expected: ${inactiveDnis}</b>")
   }
   if(state.dfltDni == dfltDni) {
-    testLog += Bullet2("<i>dfltDni: ${state.dfltDni}</i>")
+    testLog += bullet2("<i>dfltDni: ${state.dfltDni}</i>")
   } else {
-    testLog += Bullet2("<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>")
+    testLog += bullet2("<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>")
   }
-  testLog += Heading2('Button (VSW) State Checks')
+  testLog += heading2('Button (VSW) State Checks')
   List<String> buttonState = []
   if (activeButton) {
     String state = switchState(getChildDevice(buttonToDni(activeButton)))
@@ -164,7 +165,7 @@ void TEST_pbsgHasExpectedState (
   }
   testLog += buttonState.join(', ')
   // results.join('<br/>')
-  Linfo(
+  logInfo(
     "TEST ${n} ${ result ? 'passed' : '<b>F A I L E D</b>' }",
     "<br/>${testLog.join('<br/>')}"
   )

@@ -8,9 +8,9 @@ roomScenes.groovy
     if (settings.motionSensors) {
       state.roomOccupied = []
       settings.motionSensors.each{ d ->
-        Linfo(
+        logInfo(
           'initialize',
-          "${state.ROOM_LABEL} subscribing to Motion Sensor ${DeviceInfo(d)}"
+          "${state.ROOM_LABEL} subscribing to Motion Sensor ${deviceInfo(d)}"
         )
         subscribe(d, motionSensorHandler, ['filterEvents': true])
         if (d.latestState('motion').value == 'active') {

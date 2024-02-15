@@ -15,6 +15,8 @@
 // ---------------------------------------------------------------------------------
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
+import com.hubitat.hub.domain.Event as Event
+
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
@@ -62,13 +64,13 @@ void uninstalled () {
 Map MPbsgPage () {
   return dynamicPage(
     name: 'MPbsgPage',
-    title: Heading1(AppInfo(app)),
+    title: heading1(appInfo(app)),
     install: true,
     uninstall: true,
   ) {
     section {
       paragraph([
-        Heading1('Debug'),
+        heading1('Debug'),
         *appStateAsBullets(true)
       ].join('<br/>'))
     }

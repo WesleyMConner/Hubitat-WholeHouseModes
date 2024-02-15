@@ -25,8 +25,8 @@
       "enabled": false
     },
     "MethodName": {
-      // Global Fns use initial caps, but end up in class None
-      "enabled": false
+      //hold-> Global Fns use initial caps, but end up in class None
+      "enabled": true
     },
     "MethodParameterTypeRequired": {
       // Hubitat does not allow use of T in lieu of def
