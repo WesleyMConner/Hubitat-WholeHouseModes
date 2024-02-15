@@ -1,9 +1,0 @@
-git rev-parse --short head
-
-b20bac6 - 2023/11/28 Save w/ Stabilized PbsgCore.groovy
-
-198705c - 2023/11/30 Save for inspection w/ whaOnDeck.groovy
-
-681b2d5 - 2023/11/30 WIP: RoomScenes (retired whaRoom)
-
-8767233 - 2023/12/01 Pre-Party Commit
