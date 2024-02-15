@@ -354,7 +354,7 @@ void _displayInstantiatedRoomHrefs () {
     href (
       name: roomName,
       width: 2,
-      url: "/installedapp/configure/${roomApp?.id()}",
+      url: "/installedapp/configure/${roomApp?.id}",
       style: 'internal',
       title: "${appInfo(roomApp)} Scenes",
       state: null, //'complete'
@@ -366,7 +366,7 @@ Map WhaPage () {
   return dynamicPage(
     name: 'WhaPage',
     title: [
-      heading1("Whole House Automation (WHA) - ${app.getId()}"),
+      heading1("Whole House Automation (WHA) - ${app.id}"),
       bullet1('Tab to register changes.'),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
@@ -394,10 +394,10 @@ Map WhaPage () {
         // Don't be too aggressive deleting child apps and their config data.
         paragraph('Management of child apps is pending selection of Room Names.')
       } else {
-        pruneAppDups(
-          [*settings.rooms, state.MPBSG_LABEL],
-          app      // The object (parent) pruning dup children
-        )
+        //TBD-> pruneAppDups(
+        //TBD->   [*settings.rooms, state.MPBSG_LABEL],
+        //TBD->   app      // The object (parent) pruning dup children
+        //TBD-> )
         _displayInstantiatedRoomHrefs()
       }
       paragraph([

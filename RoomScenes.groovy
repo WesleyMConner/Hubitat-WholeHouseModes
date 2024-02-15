@@ -976,7 +976,7 @@ Map RoomScenesPage() {
   return dynamicPage(
     name: 'RoomScenesPage',
     title: [
-      heading1("${app.label} Scenes"),
+      heading1("${app.label} Scenes - ${app.id}"),
       bullet1('Tab to register changes.'),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
@@ -1009,10 +1009,10 @@ Map RoomScenesPage() {
       idIndDevices()
       solicitRoomScenes()
       createRSPbsgAndPageLink()
-      pruneAppDups(
-        [state.RSPBSG_LABEL],   // App Labels to keep
-        app                        // Prune children of this app
-      )
+      //TBD-> pruneAppDups(
+      //TBD->   [state.RSPBSG_LABEL],   // App Labels to keep
+      //TBD->   app                        // Prune children of this app
+      //TBD-> )
       /*
       href (
         name: state.RSPBSG_LABEL,
