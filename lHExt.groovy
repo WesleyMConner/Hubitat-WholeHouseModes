@@ -37,7 +37,7 @@ Integer safeParseInt(String s) {
 
 void removeAllChildApps() {
   getAllChildApps().each { child ->
-    logDebug(
+    logWarn(
       'removeAllChildApps',
       "child: >${child.id}< >${child.label}<"
     )
@@ -48,25 +48,18 @@ void removeAllChildApps() {
 Map<String, List<String>> compareLists(List<String> existing, List<String> revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
   Map<String, List<String>> map = [:]
-  //--DEBUG-> List<String> traceText = ['', "existing: ${existing}", "revised: ${revised}"]
   if (!existing) {
     map.added = revised.collect()
-  //--DEBUG-> traceText += "map.added: ${map.added}"
   } else if (!revised) {
     map.retained = existing.collect()
-  //--DEBUG-> traceText += "map.retained: ${map.retained}"
   } else {
     map.retained = existing.collect()
     map.retained.retainAll(revised)
-    //--DEBUG-> traceText += "map.retained: ${map.retained}"
     map.dropped = existing.collect()
     map.dropped.removeAll(revised)
-    //--DEBUG-> traceText += "map.dropped: ${map.dropped}"
     map.added = revised.collect()
     map.added.removeAll(existing)
-  //--DEBUG-> traceText += "map.added: ${map.added}"
   }
-  //--DEBUG-> logDebug('compareLists', traceText)
   return map
 }
 

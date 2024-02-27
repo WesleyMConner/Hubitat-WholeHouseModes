@@ -45,6 +45,13 @@ preferences {
 //---- CORE METHODS (Internal)
 
 String extractRa2IdFromLabel(String deviceLabel) {
+  //->x = (deviceLabel =~ /\((.*)\)/)
+  //->logDebug('extractRa2IdFromLabel', [
+  //->  "deviceLabel: ${deviceLabel}",
+  //->  "x: ${x}",
+  //->  "x[0]: ${x[0]}",
+  //->  "x[0]: ${x[0][1]}",
+  //->])
   return (deviceLabel =~ /\((.*)\)/)[0][1]
 }
 
@@ -61,77 +68,100 @@ Boolean isManualOverride() {
 }
 
 Boolean isRoomOccupied() {
-  // Sensors denote occupancy by entering their label in the roomOccupied
-  // List<String>. In the absence of a sensor, roomOccupied = [ true ]
-  return (state.roomOccupied)
+  // If any Motion sensor for a room detects occupancy (i.e., appears in the
+  // following state variable array), then the room is occupied.
+  // In the absence of a sensor, state.activeMotionSensors = [ true ]
+  return state.activeMotionSensors
+}
+
+Boolean isSufficientLight() {
+  // If any Lux sensor for a room has sufficient light (i.e., appears in the
+  // following state variable array), then the room has sufficient light.
+  // In the absence of a sensor, state.brightLuxSensors = [ ]
+  return state.brightLuxSensors
+}
+
+String expectedScene() {
+  return (isRoomOccupied() == false || isSufficientLight() == true)
+    ? 'INACTIVE' : state.activeScene
 }
 
 void activateScene() {
-  // Responsibilities:
-  //   - Enforce isRoomOccupied() behavior - activating targetScene or INATIVE scene
-  //-> if (state.targetScene == 'AUTOMATIC') {
-  //->   logError('activateScene', 'targetScene == AUTOMATIC ===> I N V A L I D')
-  //-> } else if (state.targetScene == null) {
-  //->   logError('activateScene', 'targetScene == null ===> I N V A L I D')
+  //-> if (isRoomOccupied() == false || isSufficientLight() == true) {
+  //->   state.currScene = 'INACTIVE'
+  //-> } else if (isRoomOccupied() == true && isSufficientLight() == false) {
+  //->   state.currScene = state.activeScene
   //-> }
-  String executeScene = isRoomOccupied() ? state.targetScene : 'INACTIVE'
-  logInfo('activateScene', "Activating scene: ${executeScene}")
-  // Process the scene's list of device actions.
-  state.scenes[executeScene].each{ action ->
-    def actionT = action.tokenize('^')
-    String devType = actionT[0]
-    String ra2Id = actionT[1]
-    Integer value = safeParseInt(actionT[2])
-    if (value == null) {
-      logError('activateScene', "Null value for ra2Id: ${b(ra2Id)}")
-    }
-    switch (devType) {
-      case 'Ind':
-        settings.indDevices.each{ d ->
-          if (getDeviceRa2Id(d) == ra2Id) {
-            // Independent Devices (especially RA2 and Caséta) are subject
-            // to stale Hubitat state data if callbacks occur quickly (within
-            // 1/2 second) after a level change. So, briefly unsubscribe
-            // device (see runIn subscribe below) to avoid this situation.
-            unsubscribeIndDevToHandler(d)
-            if (d.hasCommand('setLevel')) {
-              // Some devices cannot support level=100
-              if (value == 100) value = 99
-              logTrace('activateScene', "Setting ${b(ra2Id)} to level ${b(value)}")
-              d.setLevel(value)
-            } else if (value == 0) {
-              logTrace('activateScene', "Setting ${b(ra2Id)} to off")
-              d.off()
-            } else if (value == 100) {
-              logTrace('activateScene', "Setting ${b(ra2Id)} to on")
-              d.on()
+  String expectedScene = expectedScene()
+  if (state.currScene != expectedScene) {
+    logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
+    state.currScene = expectedScene
+    // Decode and process the scene's per-device actions
+    state.scenes[state.currScene].each{ action ->
+      def actionT = action.tokenize('^')
+      String devType = actionT[0]
+      String ra2Id = actionT[1]
+      Integer value = safeParseInt(actionT[2])
+      if (value != null) {
+        logTrace(
+          'activateScene',
+          "For scene '${state.currScene}', adjusting ${ra2Id} (${devType}) to ${value}"
+        )
+        switch (devType) {
+          case 'Ind':
+            settings.indDevices.each{ d ->
+              if (getDeviceRa2Id(d) == ra2Id) {
+                // Independent Devices (especially RA2 and Caséta) are subject
+                // to stale Hubitat state data if callbacks occur quickly (within
+                // 1/2 second) after a level change. So, briefly unsubscribe
+                // device (see runIn subscribe below) to avoid this situation.
+                unsubscribeIndDevToHandler(d)
+                if (d.hasCommand('setLevel')) {
+                  // Some devices cannot support level=100
+                  if (value == 100) value = 99
+                  logTrace('activateScene', "Setting ${b(ra2Id)} to level ${b(value)}")
+                  d.setLevel(value)
+                } else if (value == 0) {
+                  logTrace('activateScene', "Setting ${b(ra2Id)} to off")
+                  d.off()
+                } else if (value == 100) {
+                  logTrace('activateScene', "Setting ${b(ra2Id)} to on")
+                  d.on()
+                }
+                runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
+              }
             }
-            runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
-          } else {
-            logTrace('activateScene', "Skipping Independent ra2Id (${b(ra2Id)})")
-          }
+            break
+          case 'Rep':
+            //--
+            //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND RA2ID
+            //--
+            settings.mainRepeaters.each{ d ->
+              if (getDeviceRa2Id(d) == ra2Id) {
+                // Unlike some Independent Devices (RA2 and Caséta) RA2 Main
+                // Repeaters are not particularly subject to stale Hubitat
+                // state; HOWEVER, callbacks that occur quickly (within 1/2
+                // second) after a button press subject Hubitat to callback
+                // overload (during WHA scene chantes). Briefly unsubscribe /
+                // subscribe to avoid this situation.
+                unsubscribeMainRepToHandler(d)
+                logTrace('activateScene', "Pushing button (${value}) on ${b(ra2Id)}")
+                d.push(value)
+                runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
+              } else {
+                logWarn('activateScene', "Unexpected reference to Main Repeater rA2Id: '${b(ra2Id)}'")
+              }
+            }
+            break
+          default:
+            logWarn('activateScene', "Unexpected device type ${b(devType)}")
         }
-        break
-      case 'Rep':
-        settings.mainRepeaters.each{ d ->
-          if (getDeviceRa2Id(d) == ra2Id) {
-            // Unlike some Independent Devices (RA2 and Caséta) RA2 Main
-            // Repeaters are not particularly subject to stale Hubitat
-            // state; HOWEVER, callbacks that occur quickly (within 1/2
-            // second) after a buton press subject Hubitat to callback
-            // overload (during WHA scene chantes). Briefly unsubscribe /
-            // subscribe to avoid this situation.
-            unsubscribeMainRepToHandler(d)
-            logTrace('activateScene', "Pushing button (${value}) on ${b(ra2Id)}")
-            d.push(value)
-            runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
-          } else {
-            logTrace('activateScene', "Skipping Main Repeater rA2Id (${b(ra2Id)})")
-          }
-        }
-        break
-      default:
-        logWarn('activateScene', "Unexpected device type ${b(devType)}")
+      } else {
+        logError(
+          'activateScene',
+          "For scene '${state.currScene}', no integer value for ${ra2Id} (${devType})"
+        )
+      }
     }
   }
 }
@@ -141,22 +171,22 @@ void updateTargetScene() {
   logTrace('updateTargetScene', [
     'At entry',
     "state.activeButton: ${b(state.activeButton)}",
-    "state.targetScene: ${b(state.targetScene)}",
+    "state.activeScene: ${b(state.activeScene)}",
     "isManualOverride(): ${b(isManualOverride())}"
   ])
   if (
-    (state.activeButton == 'AUTOMATIC' && !state.targetScene)
+    (state.activeButton == 'AUTOMATIC' && !state.activeScene)
     || (state.activeButton == 'AUTOMATIC' && !isManualOverride())
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     String mode = getLocation().getMode()
-    state.targetScene = settings["modeToScene^${mode}"]
+    state.activeScene = settings["modeToScene^${mode}"]
   } else {
-    state.targetScene = state.activeButton
+    state.activeScene = state.activeButton
   }
   logTrace('updateTargetScene', [
     'At exit',
-    "state.targetScene: ${b(state.targetScene)}"
+    "state.activeScene: ${b(state.activeScene)}"
   ])
 }
 
@@ -179,17 +209,11 @@ void buttonOnCallback(String button) {
   updateLutronKpadLeds()
 }
 
-// currScene -> state.targetScene
 void updateLutronKpadLeds() {  // old argument was "String currScene"
   settings.sceneButtons.each{ d ->
     String buttonDni = d.getDeviceNetworkId()
     String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
-    logInfo('updateLutronKpadLeds', [
-      "state.targetScene: ${b(state.targetScene)}",
-      "buttonDni: ${b(buttonDni)}",
-      "sceneTarget: ${b(sceneTarget)}"
-    ])
-    if (state.targetScene == sceneTarget) {
+    if (state.activeScene == sceneTarget) {
       logInfo(
         'updateLutronKpadLeds',
         "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
@@ -206,7 +230,7 @@ void updateLutronKpadLeds() {  // old argument was "String currScene"
 }
 
 List<String> getTargetSceneConfigList() {
-  return state.scenes?.getAt(state.targetScene)
+  return state.scenes?.getAt(state.activeScene)
 }
 
 Integer expectedSceneDeviceValue(String devType, String dni) {
@@ -265,14 +289,6 @@ void createRSPbsgAndPageLink() {
   } else {
     paragraph "Creation of the MPbsgHref is pending required data."
   }
-}
-
-void addMotionSensorToRoomOccupied(String displayName) {
-  state.roomOccupied = cleanStrings([*state.roomOccupied, displayName])
-}
-
-void removeMotionSensorFromRoomOccupied(String displayName) {
-  state.roomOccupied?.removeAll{ it == displayName }
 }
 
 void subscribeToIndDeviceHandlerNoDelay() {
@@ -369,7 +385,7 @@ void subscribeToModeHandler() {
 
 void subscribeToMotionSensorHandler() {
   if (settings.motionSensors) {
-    state.roomOccupied = []
+    state.activeMotionSensors = []
     settings.motionSensors.each{ d ->
       logInfo(
         'initialize',
@@ -377,13 +393,32 @@ void subscribeToMotionSensorHandler() {
       )
       subscribe(d, motionSensorHandler, ['filterEvents': true])
       if (d.latestState('motion').value == 'active') {
-        addMotionSensorToRoomOccupied (d.label)
+        state.activeMotionSensors = cleanStrings([*state.activeMotionSensors, displayName])
+        activateScene()
       } else {
-        removeMotionSensorFromRoomOccupied(d.label)
+        state.activeMotionSensors?.removeAll{ it == displayName }
+        activateScene()
       }
     }
   } else {
-    state.roomOccupied = [ true ]
+    state.activeMotionSensors = [ true ]
+  }
+}
+
+void subscribeToLuxSensorHandler() {
+  logTrace("#409", "subscribeToLuxSensorHandler >$settings.luxSensors<")
+  if (settings.luxSensors) {
+    state.brightLuxSensors = []
+    settings.luxSensors.each{ d ->
+      logInfo(
+        'initialize',
+        "${state.ROOM_LABEL} subscribing to Lux Sensor ${deviceInfo(d)}"
+      )
+      subscribe(d, luxSensorHandler, ['filterEvents': true])
+logTrace("#418", [deviceInfo(d), d.latestState])
+    }
+  } else {
+    state.brightLuxSensors = [ ]
   }
 }
 
@@ -401,7 +436,7 @@ void subscribeToPicoHandler() {
 
 void indDeviceHandler(Event e) {
   // Devices send various events (e.g., switch, level, pushed, released).
-  // Isolate the events that confirm|refute state.targetScene.
+  // Isolate the events that confirm|refute state.activeScene.
   String ra2Id = null
   Integer currLevel = null
   if (e.name == 'switch') {
@@ -437,7 +472,7 @@ void kpadHandler(Event e) {
   //   - Kpad buttons are matched to state data to activate a scene.
   logTrace('kpadHandler', [
     "state.activeButton: ${state.activeButton}",
-    "state.targetScene: ${state.targetScene}",
+    "state.activeScene: ${state.activeScene}",
     eventDetails(e)
   ])
   switch (e.name) {
@@ -462,7 +497,7 @@ void kpadHandler(Event e) {
 
 void mainRepHandler(Event e) {
   // Main Repeaters send various events (e.g., pushed, buttonLed-##).
-  // Isolate the buttonLed-## events which confirm|refute state.targetScene.
+  // Isolate the buttonLed-## events which confirm|refute state.activeScene.
   if (e.name.startsWith('buttonLed-')) {
     Integer eventButton = safeParseInt(e.name.substring(10))
     String ra2Id = extractRa2IdFromLabel(e.displayName)
@@ -499,14 +534,14 @@ void modeHandler(Event e) {
       logTrace('modeHandler', 'Calling buttonOnCallback("AUTOMATIC")')
       buttonOnCallback('AUTOMATIC')
     } else {
-      logTrace('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
+      logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
   } else {
     logTrace(
       'modeHandler', [
         'Ignored: Mode Change',
         "state.activeButton: ${b(state.activeButton)}",
-        "state.targetScene: ${b(state.targetScene)}"
+        "state.activeScene: ${b(state.activeScene)}"
       ]
     )
   }
@@ -514,19 +549,43 @@ void modeHandler(Event e) {
 
 void motionSensorHandler(Event e) {
   // It IS POSSIBLE to have multiple motion sensors per room.
-  //-> logTrace('motionSensorHandler', eventDetails(e))
-  if (e.name == 'motion') {               // Assume e.isStateChange == true
+  logDebug('motionSensorHandler', eventDetails(e))
+  if (e.name == 'motion') {
     if (e.value == 'active') {
       logInfo('motionSensorHandler', "${e.displayName} is active")
-      addMotionSensorToRoomOccupied(e.displayName)
+      state.activeMotionSensors = cleanStrings([*state.activeMotionSensors, e.displayName])
       activateScene()
     } else if (e.value == 'inactive') {
       logInfo('motionSensorHandler', "${e.displayName} is inactive")
-      removeMotionSensorFromRoomOccupied(e.displayName)
+      state.activeMotionSensors?.removeAll{ it == e.displayName }
       activateScene()
     } else {
-      logError('motionSensorHandler', "Unexpected event value (${e.value})")
+      logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
     }
+  }
+}
+
+void luxSensorHandler(Event e) {
+  // It IS POSSIBLE to have multiple lux sensors impacting a room. The lux
+  // sensor(s) change values frequently. The activateScene() method is only
+  // invoked if the aggregate light level changes materially (i.e., from
+  // no sensor detecting sufficient light to one or more sensors detecting
+  // sufficient light).
+  if (e.name == 'illuminance') {
+    if (e.value.toInteger() >= settings.lowLuxThreshold) {
+      // Add sensor to list of sensors with sufficient light.
+      state.brightLuxSensors = cleanStrings([*state.brightLuxSensors, e.displayName])
+    } else {
+      // Remove sensor from list of sensors with sufficient light.
+      state.brightLuxSensors?.removeAll{ it == e.displayName }
+    }
+    logTrace('luxSensorHandler', [
+      "sensor name: ${e.displayName}",
+      "illuminance level: ${e.value}",
+      "sufficient light threshold: ${settings.lowLuxThreshold}",
+      "sufficient light: ${state.brightLuxSensors}"
+    ])
+    activateScene()
   }
 }
 
@@ -535,20 +594,16 @@ void picoHandler(Event e) {
   if (e.isStateChange == true) {
     switch (e.name) {
       case 'pushed':
-//-> logTrace('picoHander', [
-//->   "e.deviceId.toString(): ${b(e.deviceId.toString())}",
-//->   "e.value: ${b(e.value.toString())}",
-//-> ])
         // Check to see if the received button is assigned to a scene.
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value.toString())
         if (scene) {
-          logDebug('picoHandler', [
+          logInfo('picoHandler', [
             "w/ ${e.deviceId.toString()}-${e.value} toggling ${scene}"
           ])
           getOrCreateRSPbsg().pbsgToggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
-          logInfo('picoHandler', "Raising ${settings.indDevices}")
+          logTrace('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each{ d ->
             if (switchState(d) == 'off') {
               d.setLevel(5)
@@ -561,7 +616,7 @@ void picoHandler(Event e) {
             }
           }
         } else if (e.value == '4') {  // Default "Lower" behavior
-          logInfo('picoHandler', "Lowering ${settings.indDevices}")
+          logTrace('picoHandler', "Lowering ${settings.indDevices}")
           settings.indDevices.each{ d ->
               d.setLevel(Math.max(
                 (d.currentValue('level') as Integer) - changePercentage,
@@ -607,6 +662,7 @@ void initialize() {
   subscribeToMainRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
+  subscribeToLuxSensorHandler()
   subscribeToPicoHandler()
   // ACTIVATION
   //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
@@ -642,6 +698,34 @@ void idMotionSensors() {
   )
 }
 
+void idLuxSensors() {
+  input(
+    name: 'luxSensors',
+    title: [
+      heading3('Identify Room Lux Sensors'),
+      bullet2('The special scene INACTIVE is automatically added'),
+      bullet2('INACTIVE is invoked when no Lux Sensor is above threshold')
+    ].join('<br/>'),
+    type: 'capability.illuminanceMeasurement',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void idLowLightThreshold() {
+  input(
+    name: 'lowLuxThreshold',
+    title: [
+      heading3('Identify Low-Light Lux Threshold')
+    ].join('<br/>'),
+    type: 'number',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
+}
+
 void selectModesAsScenes() {
   List<String> scenes = modeNames()
   input(
@@ -658,7 +742,7 @@ void selectModesAsScenes() {
 void nameCustomScenes() {
   String prefix = 'customScene'
   LinkedHashMap<String, String> slots = [
-    "${prefix}1": settings.motionSensors ? 'INACTIVE' : settings["${prefix}1"],
+    "${prefix}1": settings["${prefix}1"],
     "${prefix}2": settings["${prefix}2"],
     "${prefix}3": settings["${prefix}3"],
     "${prefix}4": settings["${prefix}4"],
@@ -689,18 +773,21 @@ void nameCustomScenes() {
 void populateStateScenesKeysOnly() {
   List<String> scenes = settings.modesAsScenes ?: []
   scenes = scenes.flatten()
+  if (settings.motionSensors || settings.luxSensors) {
+    scenes += 'INACTIVE'
+  }
   String prefix = 'customScene'
-  List<String> customScenes = [
-    settings["${prefix}1"],
-    settings["${prefix}2"],
-    settings["${prefix}3"],
-    settings["${prefix}4"],
-    settings["${prefix}5"],
-    settings["${prefix}6"],
-    settings["${prefix}7"],
-    settings["${prefix}8"],
-    settings["${prefix}9"],
-  ].findAll{it != null}
+  List<String> customScenes = []
+  customScenes += settings["${prefix}1"]
+  customScenes += settings["${prefix}2"]
+  customScenes += settings["${prefix}3"]
+  customScenes += settings["${prefix}4"]
+  customScenes += settings["${prefix}5"]
+  customScenes += settings["${prefix}6"]
+  customScenes += settings["${prefix}7"]
+  customScenes += settings["${prefix}8"]
+  customScenes += settings["${prefix}9"]
+  customScenes.removeAll{it == null}
   if (customScenes) {
     scenes << customScenes
     scenes = scenes.flatten().toUnique()
@@ -950,11 +1037,11 @@ void configureRoomScene() {
     }
     // Prune stale Settings keys
     settings.findAll{ it.key.startsWith('scene^') }.each{ key, value ->
+      logInfo('configureRoomScene', [
+        "Removing stale setting, ${key} -> ${value}",
+        "currSettingsKeys: ${currSettingsKeys}"
+      ])
       if (!currSettingsKeys.contains(key)) {
-        logWarn(
-          'configureRoomScene',
-          "Removing stale setting, ${key} -> ${value}"
-        )
         settings.remove(key)
       }
     }
@@ -992,10 +1079,14 @@ Map RoomScenesPage() {
     state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
     state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
+    state.remove('sufficientLight') // No longer used
+    state.remove('targetScene') // No longer used
     section {
-      solicitLogThreshold('appLogThresh', 'TRACE')           // lHUI
-      solicitLogThreshold('pbsgLogThresh', 'INFO')           // lHUI
+      solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+      solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       idMotionSensors()
+      idLuxSensors()
+      if (settings.luxSensors) { idLowLightThreshold() }
       selectModesAsScenes()
       nameCustomScenes()
       populateStateScenesKeysOnly()

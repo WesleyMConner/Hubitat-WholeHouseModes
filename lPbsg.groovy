@@ -143,11 +143,10 @@ void dropDni(String dni) {
 Boolean pbsgActivateDni(String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new dni is activated.
-  //-> logDebug('pbsgActivateDni', "DNI: ${b(dni)}")
   tracePbsgStateAndVswState('pbsgActivateDni', 'AT ENTRY')
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
-    logDebug('pbsgActivateDni', "No action, ${dni} is already active")
+    logTrace('pbsgActivateDni', "No action, ${dni} is already active")
   } else if (dni && !pbsgGetDnis()?.contains(dni)) {
     logError(
       'pbsgActivateDni',
@@ -155,11 +154,11 @@ Boolean pbsgActivateDni(String dni) {
     )
   } else {
     isStateChanged = true
-    logDebug('pbsgActivateDni', "Moving active (${state.activeDni}) to inactive")
+    logInfo('pbsgActivateDni', "Moving active (${state.activeDni}) to inactive")
     pbsgMoveActiveToInactive()
     fifoRemove(state.inactiveDnis, dni)
     // Adjust the activeDni and Vsw together
-    logDebug('pbsgActivateDni', "Activating ${dni}")
+    logTrace('pbsgActivateDni', "Activating ${dni}")
     state.activeDni = dni
     pbsgPublishActiveButton()
     tracePbsgStateAndVswState('pbsgActivateDni', 'AT EXIT')
@@ -170,20 +169,20 @@ Boolean pbsgActivateDni(String dni) {
 Boolean pbsgDeactivateDni(String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   tracePbsgStateAndVswState('pbsgDeactivateDni', 'AT ENTRY')
-  logDebug('pbsgDeactivateDni', "DNI: ${b(dni)}")
+  logTrace('pbsgDeactivateDni', "DNI: ${b(dni)}")
   Boolean isStateChange = false
   if (state.inactiveDnis.contains(dni)) {
     // Nothing to do, dni is already inactive
-    logDebug('pbsgDeactivateDni', "Nothing to do for dni: ${b(dni)}")
+    logTrace('pbsgDeactivateDni', "Nothing to do for dni: ${b(dni)}")
   } else if (state.activeDni == state.dfltDni) {
     // It is likely that the default DNI has been manually turned off.
     // Update the PBSG state to reflect this likely fact.
-    logDebug('pbsgDeactivateDni', "Moving active (${state.activeDni}) to inactive")
+    logInfo('pbsgDeactivateDni', "Moving active (${state.activeDni}) to inactive")
     pbsgMoveActiveToInactive()
     // Force re-enable the default DNI.
     isStateChange = pbsgActivateDni(state.dfltDni)
   } else {
-    logDebug(
+    logInfo(
       'pbsgDeactivateDni',
       "Activating default ${b(state.dfltDni)}, which deacivates dni: ${b(dni)}"
     )
@@ -292,29 +291,6 @@ void pbsgPublishActiveButton() {
   String activeButton = dniToButton(state.activeDni)
   logInfo('pbsgPublishActiveButton', "Processing button ${activeButton}")
   //-----------------------------------------------------------------------
-  //-> TACTICALLY, SUPPRESS APP-TO-APP EVENTS
-  //->   List<String> inactiveButtonFifo = state.inactiveDnis.collect{
-  //->     dniToButton(it)
-  //->   }
-  //->   String defaultButton = dniToButton(state.dfltDni)
-  //->   Map event = [
-  //->     name: 'PbsgActiveButton',                             // String
-  //->     descriptionText: "Button ${activeButton} is active",  // String
-  //->     value: [
-  //->       'active': activeButton,                             // String
-  //->       'inactive': inactiveButtonFifo,                // List<String>
-  //->       'dflt': defaultButton                               // String
-  //->     ]
-  //->   ]
-  //->   logInfo('_pbsgAdjustVswsAndSendEvent', [
-  //->     '<b>EVENT MAP</b>',
-  //->     bullet2("<b>name:</b> ${event.name}"),
-  //->     bullet2("<b>descriptionText:</b> ${event.descriptionText}"),
-  //->     bullet2("<b>value.active:</b> ${event.value['active']}"),
-  //->     bullet2("<b>value.inactive:</b> ${event.value['inactive']}"),
-  //->     bullet2("<b>value.dflt:</b> ${event.value['dflt']}")
-  //->   ])
-  //-----------------------------------------------------------------------
   // Box event subscriptions to reduce stale STATE data in Handlers
   unsubscribeChildVswEvents()
   syncChildVswsToPbsgState()
@@ -340,7 +316,7 @@ Boolean pbsgMoveActiveToInactive() {
   // This method DOES NOT (1) activate a dfltDni OR (2) publish an event change
   Boolean isStateChanged = false
   if (state.activeDni) {
-    logDebug(
+    logTrace(
       'pbsgMoveActiveToInactive',
       "Pushing ${b(state.activeDni)} onto inactiveDnis (${state.inactiveDnis})"
     )
@@ -435,7 +411,7 @@ void pbsgCoreUpdated() {
 }
 
 void pbsgCoreUninstalled() {
-  logDebug('pbsgCoreUninstalled', 'No action')
+  logTrace('pbsgCoreUninstalled', 'No action')
 }
 
 //---- EVENT HANDLERS
@@ -450,7 +426,7 @@ void vswEventHandler(Event e) {
   // W A R N I N G
   //   As of 2023-11-30 Handler continues to receive STALE state values!!!
   tracePbsgStateAndVswState('vswEventHandler', 'AT ENTRY')
-  logDebug('vswEventHandler', e.descriptionText)
+  logTrace('vswEventHandler', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName
     if (e.value == 'on') {
@@ -458,11 +434,11 @@ void vswEventHandler(Event e) {
     } else if (e.value == 'off') {
       pbsgDeactivateDni(dni)
     } else {
-      logDebug(
+      logWarn(
         'vswEventHandler',
         "Unexpected value (${e.value}) for DNI (${dni}")
     }
   } else {
-    logDebug('vswEventHandler', "Unexpected event: ${eventDetails(e)}")
+    logWarn('vswEventHandler', "Unexpected event: ${eventDetails(e)}")
   }
 }

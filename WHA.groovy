@@ -85,7 +85,7 @@ void AllAuto () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "pbsg_${roomApp.label}_AUTOMATIC"
-    logDebug('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
+    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
     roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
@@ -118,7 +118,7 @@ void seeTouchSpecialFnButtonHandler (Event e) {
       if (specialtyFunction == null) return
       switch(specialtyFunction) {
         case 'ALL_AUTO':
-          logDebug('seeTouchSpecialFnButtonHandler', 'executing ALL_AUTO')
+          logInfo('seeTouchSpecialFnButtonHandler', 'executing ALL_AUTO')
           AllAuto()
           //--TBD--> Update of Kpad LEDs
           break;
@@ -127,7 +127,7 @@ void seeTouchSpecialFnButtonHandler (Event e) {
         case 'FLASH':
         case 'PANIC':
         case 'QUIET':
-          logDebug(
+          logWarn(
             'seeTouchSpecialFnButtonHandler',
             "${b(specialtyFunction)} function execution is <b>TBD</b>"
           )
@@ -143,7 +143,7 @@ void seeTouchSpecialFnButtonHandler (Event e) {
     case 'held':
     case 'released':
     default:
-      logDebug(
+      logWarn(
         'seeTouchSpecialFnButtonHandler',
         "ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
@@ -161,11 +161,11 @@ void seeTouchModeButtonHandler (Event e) {
       String targetButton = state.modeButtonMap?.getAt(e.deviceId.toString())
                                                ?.getAt(e.value)
       if (targetButton) {
-        logDebug('seeTouchModeButtonHandler', "turning on ${targetButton}")
+        logInfo('seeTouchModeButtonHandler', "turning on ${targetButton}")
         _getOrCreateMPbsg().pbsgToggleButton(targetButton)
       }
       if (targetButton == 'Day') {
-        logDebug('seeTouchModeButtonHandler', 'executing ALL_AUTO')
+        logInfo('seeTouchModeButtonHandler', 'executing ALL_AUTO')
         AllAuto()
       }
       // Silently ignore buttons that DO NOT impact Hubitat mode.
@@ -173,7 +173,7 @@ void seeTouchModeButtonHandler (Event e) {
     case 'held':
     case 'released':
     default:
-      logDebug(
+      logWarn(
         'seeTouchModeButtonHandler',
         "Ignoring ${e.name} ${e.deviceId}-${e.value}"
       )
@@ -183,18 +183,18 @@ void seeTouchModeButtonHandler (Event e) {
 //---- SYSTEM CALLBACKS
 
 void installed () {
-  logDebug('installed', 'Entered')
+  logWarn('installed', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   initialize()
 }
 
 void uninstalled () {
-  logDebug('uninstalled', 'Entered')
+  logWarn('uninstalled', 'Entered')
   removeAllChildApps()
 }
 
 void updated () {
-  logTrace('updated', 'Entered')
+  logWarn('updated', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
   //---------------------------------------------------------------------------------
   // REMOVE NO LONGER USED SETTINGS AND STATE
@@ -210,16 +210,16 @@ void updated () {
 void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
-  logDebug('initialize', 'Entered')
+  logTrace('initialize', 'Entered')
   settings.seeTouchKpads.each{ d ->
     DevW device = d
-    logDebug('initialize', "subscribing ${deviceInfo(device)} to mode handler."
+    logInfo('initialize', "subscribing ${deviceInfo(device)} to mode handler."
     )
     subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
   }
   settings.seeTouchKpads.each{ d ->
     DevW device = d
-    logDebug('initialize', "subscribing ${deviceInfo(device)}")
+    logInfo('initialize', "subscribing ${deviceInfo(device)}")
     subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
   }
 }
@@ -345,7 +345,7 @@ void _displayInstantiatedRoomHrefs () {
   settings.rooms.each{ roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
-      logDebug(
+      logWarn(
         'addRoomAppsIfMissing',
         "Adding room ${roomName}"
       )
@@ -380,8 +380,8 @@ Map WhaPage () {
     state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
       'FLASH', 'PANIC', 'QUIET']
     section {
-      solicitLogThreshold('appLogThresh')        // <- provided by Utils
-      solicitLogThreshold('pbsgLogThresh')       // <- provided by Utils
+      solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+      solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       _idSpecialFnMainRepeater()
       _idSpecialFnButtons()
       _idKpadsWithModeButtons()

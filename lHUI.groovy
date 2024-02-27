@@ -96,7 +96,7 @@ String tdRght(def x) {
 //---- LOGGING
 //----   - Adjust log levels to reduce noise and improve performance
 
-void solicitLogThreshold(String settingsKey, String dfltThresh = 'TRACE') {
+void solicitLogThreshold(String settingsKey, String dfltThresh) {
   // By passing in the settings key, clients can:
   //   - Specify their choice of settings key.
   //   - Solicit two differentiate keys (e.g., App's level vs child PBSG's level)
