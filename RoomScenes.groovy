@@ -87,11 +87,6 @@ String expectedScene() {
 }
 
 void activateScene() {
-  //-> if (isRoomOccupied() == false || isSufficientLight() == true) {
-  //->   state.currScene = 'INACTIVE'
-  //-> } else if (isRoomOccupied() == true && isSufficientLight() == false) {
-  //->   state.currScene = state.activeScene
-  //-> }
   String expectedScene = expectedScene()
   if (state.currScene != expectedScene) {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
@@ -406,7 +401,6 @@ void subscribeToMotionSensorHandler() {
 }
 
 void subscribeToLuxSensorHandler() {
-  logTrace("#409", "subscribeToLuxSensorHandler >$settings.luxSensors<")
   if (settings.luxSensors) {
     state.brightLuxSensors = []
     settings.luxSensors.each{ d ->
@@ -415,7 +409,6 @@ void subscribeToLuxSensorHandler() {
         "${state.ROOM_LABEL} subscribing to Lux Sensor ${deviceInfo(d)}"
       )
       subscribe(d, luxSensorHandler, ['filterEvents': true])
-logTrace("#418", [deviceInfo(d), d.latestState])
     }
   } else {
     state.brightLuxSensors = [ ]

@@ -295,9 +295,6 @@ void pbsgPublishActiveButton() {
   unsubscribeChildVswEvents()
   syncChildVswsToPbsgState()
   //-----------------------------------------------------------------------
-  //-> Broadcast the state change to subscribers
-  //-> sendEvent(event)
-  //-----------------------------------------------------------------------
   parent.buttonOnCallback(activeButton)    // Communicate event to parent.
   Integer delayInSeconds = 1
   logTrace(
