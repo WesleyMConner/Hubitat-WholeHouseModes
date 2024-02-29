@@ -245,7 +245,7 @@ void activateScene() {
             //--
             //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND RA2ID
             //--
-            settings.ra2Repeaters.each{ d ->
+            settings.repeaters.each{ d ->
               if (getDeviceId(d) == deviceId) {
                 // Callbacks that occur quickly (within 1/2
                 // second) after a button press subject Hubitat to callback
@@ -443,12 +443,12 @@ void subscribeToKpadHandler() {
 }
 
 void subscribeToRepHandler() {
-  settings.ra2Repeaters.each{ d ->
+  settings.repeaters.each{ d ->
     logInfo(
       'subscribeToRepHandler',
       "${state.ROOM_LABEL} subscribing to Repeater ${deviceInfo(d)}"
     )
-    subscribe(d, ra2RepHandler, ['filterEvents': true])
+    subscribe(d, repeaterHandler, ['filterEvents': true])
   }
 }
 
@@ -464,7 +464,7 @@ void subscribeRepToHandler(Map data) {
     'subscribeRepToHandler',
     "${state.ROOM_LABEL} subscribing ${deviceInfo(data.device)}"
   )
-  subscribe(device, ra2RepHandler, ['filterEvents': true])
+  subscribe(device, repeaterHandler, ['filterEvents': true])
 }
 
 void unsubscribeRepToHandler(DevW device) {
@@ -598,7 +598,7 @@ void kpadHandler(Event e) {
   }
 }
 
-void ra2RepHandler(Event e) {
+void repeaterHandler(Event e) {
   // Main Repeaters send various events (e.g., pushed, buttonLed-##).
   // Isolate the buttonLed-## events which confirm|refute state.activeScene.
   if (e.name.startsWith('buttonLed-')) {
@@ -611,17 +611,17 @@ void ra2RepHandler(Event e) {
       // This event can be used to confirm or refute the target scene.
       if (e.value == 'on') {
         // Scene compliance confirmed
-        logTrace('ra2RepHandler', "${deviceId} complies with scene")
+        logTrace('repeaterHandler', "${deviceId} complies with scene")
         state.moDetected.remove(deviceId)
       } else if (e.value == 'off') {
         // Scene compliance refuted (i.e., Manual Override)
         String summary = "${deviceId} button ${eventButton} off, expected on"
-        logInfo('ra2RepHandler', [ 'MANUAL OVERRIDE', summary ])
+        logInfo('repeaterHandler', [ 'MANUAL OVERRIDE', summary ])
         state.moDetected[deviceId] = summary
       } else {
         // Error condition
         logWarn(
-          'ra2RepHandler',
+          'repeaterHandler',
           "Main Repeater (${deviceId}) with unexpected value (${e.value}"
         )
       }
@@ -1059,7 +1059,7 @@ void wirePicoButtonsToScenes() {
 
 void idRa2RepeatersImplementingScenes() {
   input(
-    name: 'ra2Repeaters',
+    name: 'repeaters',
     title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
     type: 'device.LutronKeypad',
     submitOnChange: true,
@@ -1118,7 +1118,7 @@ void configureRoomScene() {
           defaultValue: 0
         )
       }
-      settings.ra2Repeaters?.each{d ->
+      settings.repeaters?.each{d ->
         String inputName = "scene^${scene}^Rep^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3
@@ -1152,7 +1152,7 @@ void configureRoomScene() {
 }
 
 void solicitRoomScenes() {
-  if (getScenes() && (settings.indDevices || settings.ra2Repeaters)) {
+  if (getScenes() && (settings.indDevices || settings.repeaters)) {
     configureRoomScene()
     populateStateScenesAssignValues()
   } else {
