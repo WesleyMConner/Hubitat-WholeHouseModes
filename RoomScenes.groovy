@@ -158,6 +158,18 @@ Map repButtons = [
 
 //---- CORE METHODS (Internal)
 
+Map getDeviceValues (String scene) {
+  String keyPrefix = "scene^${scene}^"
+  Map results = settings.findAll{ key, value -> key.startsWith(keyPrefix) }
+    .collectEntries { key, value ->
+      List<String> typeAndId = key.substring(keyPrefix.size()).tokenize('^')
+      //-> logInfo('#166', [ typeAndId[0], typeAndId[1], value, [(typeAndId[1]): value] ])
+      [ typeAndId[0], [ (typeAndId[1]) : value] ]
+    }
+    //-> logInfo('#169', "${results}")
+    return results
+}
+
 String extractDeviceIdFromLabel(String deviceLabel) {
   //->x = (deviceLabel =~ /\((.*)\)/)
   //->logDebug('extractDeviceIdFromLabel', [
@@ -205,12 +217,17 @@ void activateScene() {
   if (state.currScene != expectedScene) {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
     state.currScene = expectedScene
+    //-> logInfo('#220', "${getDeviceValues(state.currScene)}")
     // Decode and process the scene's per-device actions
-    state.scenes[state.currScene].each{ action ->
-      def actionT = action.tokenize('^')
-      String devType = actionT[0]
-      String deviceId = actionT[1]
-      Integer value = safeParseInt(actionT[2])
+    //-> state.scenes[state.currScene].each{ action ->
+    getDeviceValues(state.currScene).each{ devType, data ->
+      data.each{ deviceId, value ->
+        logInfo('#225', "${devType}..${deviceId}..${value}")
+      }
+      //-> def actionT = action.tokenize('^')
+      //-> String devType = actionT[0]
+      //-> String deviceId = actionT[1]
+      //-> Integer value = safeParseInt(actionT[2])
       if (value != null) {
         logTrace(
           'activateScene',
