@@ -798,7 +798,7 @@ void idSceneForMode() {
     paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
   } else {
     paragraph heading2('Identify a Scene for each Hubitat Mode')
-    getLocation().getModes().collect{mode -> mode.name}.each{ modeName ->
+    getLocation().getModes().collect{mode -> mode.name}.sort().each{ modeName ->
       String inputName = "modeToScene^${modeName}"
       String defaultValue = settings[inputName]
         ?: sceneExists(modeName) ? modeName : null

@@ -3,6 +3,7 @@ language: en
 caseSensitive: false
 words:
   - autowidth
+  - Caséta
   - groovylintrc
   - hubitat
   - kpad
