@@ -131,20 +131,20 @@ void activateScene() {
             //--
             //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND RA2ID
             //--
-            settings.mainRepeaters.each{ d ->
+            settings.ra2Repeaters.each{ d ->
               if (getDeviceRa2Id(d) == ra2Id) {
-                // Unlike some Independent Devices (RA2 and Caséta) RA2 Main
+                // Unlike some Independent Devices (RA2 and Caséta) RA2
                 // Repeaters are not particularly subject to stale Hubitat
                 // state; HOWEVER, callbacks that occur quickly (within 1/2
                 // second) after a button press subject Hubitat to callback
                 // overload (during WHA scene chantes). Briefly unsubscribe /
                 // subscribe to avoid this situation.
-                unsubscribeMainRepToHandler(d)
+                unsubscribeRa2RepToHandler(d)
                 logTrace('activateScene', "Pushing button (${value}) on ${b(ra2Id)}")
                 d.push(value)
                 runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
               } else {
-                logWarn('activateScene', "Unexpected reference to Main Repeater rA2Id: '${b(ra2Id)}'")
+                logWarn('activateScene', "Unexpected reference to RA2 Repeater rA2Id: '${b(ra2Id)}'")
               }
             }
             break
@@ -332,39 +332,39 @@ void subscribeToKpadHandler() {
   }
 }
 
-void subscribeToMainRepHandler() {
-  settings.mainRepeaters.each{ d ->
+void subscribeToRa2RepHandler() {
+  settings.ra2Repeaters.each{ d ->
     logInfo(
-      'subscribeToMainRepHandler',
+      'subscribeToRa2RepHandler',
       "${state.ROOM_LABEL} subscribing to Repeater ${deviceInfo(d)}"
     )
-    subscribe(d, mainRepHandler, ['filterEvents': true])
+    subscribe(d, ra2RepHandler, ['filterEvents': true])
   }
 }
 
-void subscribeMainRepToHandler(Map data) {
+void subscribeRa2RepToHandler(Map data) {
   // USAGE:
-  //   runIn(1, 'subscribeMainRepToHandler', [data: [device: d]])
-  // Unlike some Independent Devices (RA2 and Caséta) RA2 Main Repeaters
+  //   runIn(1, 'subscribeRa2RepToHandler', [data: [device: d]])
+  // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
   // callbacks that occur quickly (within 1/2 second) after a buton press
   // subject Hubitat to callback overload (during WHA scene chantes).
   // Briefly unsubscribe/subscribe to avoid this situation.
   logTrace(
-    'subscribeMainRepToHandler',
+    'subscribeRa2RepToHandler',
     "${state.ROOM_LABEL} subscribing ${deviceInfo(data.device)}"
   )
-  subscribe(device, mainRepHandler, ['filterEvents': true])
+  subscribe(device, ra2RepHandler, ['filterEvents': true])
 }
 
-void unsubscribeMainRepToHandler(DevW device) {
-  // Unlike some Independent Devices (RA2 and Caséta) RA2 Main Repeaters
+void unsubscribeRa2RepToHandler(DevW device) {
+  // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
   // callbacks that occur quickly (within 1/2 second) after a buton press
   // subject Hubitat to callback overload (during WHA scene chantes).
   // Briefly unsubscribe/subscribe to avoid this situation.
   logTrace(
-    'unsubscribeMainRepToHandler',
+    'unsubscribeRa2RepToHandler',
     "${state.ROOM_LABEL} unsubscribing ${deviceInfo(device)}"
   )
   unsubscribe(device)
@@ -488,7 +488,7 @@ void kpadHandler(Event e) {
   }
 }
 
-void mainRepHandler(Event e) {
+void ra2RepHandler(Event e) {
   // Main Repeaters send various events (e.g., pushed, buttonLed-##).
   // Isolate the buttonLed-## events which confirm|refute state.activeScene.
   if (e.name.startsWith('buttonLed-')) {
@@ -501,17 +501,17 @@ void mainRepHandler(Event e) {
       // This event can be used to confirm or refute the target scene.
       if (e.value == 'on') {
         // Scene compliance confirmed
-        logTrace('mainRepHandler', "${ra2Id} complies with scene")
+        logTrace('ra2RepHandler', "${ra2Id} complies with scene")
         state.moDetected.remove(ra2Id)
       } else if (e.value == 'off') {
         // Scene compliance refuted (i.e., Manual Override)
         String summary = "${ra2Id} button ${eventButton} off, expected on"
-        logInfo('mainRepHandler', [ 'MANUAL OVERRIDE', summary ])
+        logInfo('ra2RepHandler', [ 'MANUAL OVERRIDE', summary ])
         state.moDetected[ra2Id] = summary
       } else {
         // Error condition
         logWarn(
-          'mainRepHandler',
+          'ra2RepHandler',
           "Main Repeater (${ra2Id}) with unexpected value (${e.value}"
         )
       }
@@ -652,7 +652,7 @@ void initialize() {
   )
   subscribeToIndDeviceHandlerNoDelay()
   subscribeToKpadHandler()
-  subscribeToMainRepHandler()
+  subscribeToRa2RepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
@@ -949,7 +949,7 @@ void wirePicoButtonsToScenes() {
 
 void idMainRepeatersImplementingScenes() {
   input(
-    name: 'mainRepeaters',
+    name: 'ra2Repeaters',
     title: heading3("Identify Main Repeaters with Integration Buttons for Room Scenes"),
     type: 'device.LutronKeypad',
     submitOnChange: true,
@@ -1008,7 +1008,7 @@ void configureRoomScene() {
           defaultValue: 0
         )
       }
-      settings.mainRepeaters?.each{d ->
+      settings.ra2Repeaters?.each{d ->
         String inputName = "scene^${scene}^Rep^${getDeviceRa2Id(d)}"
         currSettingsKeys += inputName
         tableCol += 3
@@ -1042,7 +1042,7 @@ void configureRoomScene() {
 }
 
 void solicitRoomScenes() {
-  if (getScenes() && (settings.indDevices || settings.mainRepeaters)) {
+  if (getScenes() && (settings.indDevices || settings.ra2Repeaters)) {
     configureRoomScene()
     populateStateScenesAssignValues()
   } else {
