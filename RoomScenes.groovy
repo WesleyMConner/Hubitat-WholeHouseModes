@@ -127,7 +127,7 @@ void activateScene() {
               }
             }
             break
-          case 'Rep':
+          case 'RA2':
             //--
             //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND RA2ID
             //--
@@ -495,7 +495,7 @@ void ra2RepHandler(Event e) {
     Integer eventButton = safeParseInt(e.name.substring(10))
     String ra2Id = extractRa2IdFromLabel(e.displayName)
     // Is there an expected sceneButton for the ra2Id?
-    Integer sceneButton = expectedSceneDeviceValue('Rep', ra2Id)
+    Integer sceneButton = expectedSceneDeviceValue('RA2', ra2Id)
     // And if so, does it match the eventButton?
     if (sceneButton && sceneButton == eventButton) {
       // This event can be used to confirm or refute the target scene.
@@ -947,7 +947,7 @@ void wirePicoButtonsToScenes() {
   }
 }
 
-void idMainRepeatersImplementingScenes() {
+void idRa2RepeatersImplementingScenes() {
   input(
     name: 'ra2Repeaters',
     title: heading3("Identify Main Repeaters with Integration Buttons for Room Scenes"),
@@ -974,10 +974,10 @@ void configureRoomScene() {
   //   There are three steps to populate "state.scenes" map.
   //   (1) populateStateScenesKeysOnly() creates a per-scene key and
   //       sets the value to [].
-  //   (2) This method populates Settings keys "scene^SCENENAME^Ind|Rep^DNI".
+  //   (2) This method populates Settings keys "scene^SCENENAME^Ind|RA2^DNI".
   //       with Integer values:
   //         - 'light level' for Independent devices (Ind)
-  //         - 'virtual button number' for Main Repeaters (Rep)
+  //         - 'virtual button number' for RA2 Repeaters (RA2)
   //   (3) populateStateScenesAssignValues() harvests the settings from
   //       Step 2 to complete the "state.scenes" map.
   // VIRTUAL TABLE
@@ -1009,7 +1009,7 @@ void configureRoomScene() {
         )
       }
       settings.ra2Repeaters?.each{d ->
-        String inputName = "scene^${scene}^Rep^${getDeviceRa2Id(d)}"
+        String inputName = "scene^${scene}^RA2^${getDeviceRa2Id(d)}"
         currSettingsKeys += inputName
         tableCol += 3
         input(
@@ -1089,7 +1089,7 @@ Map RoomScenesPage() {
       wireKpadButtonsToScenes()
       authRoomScenesPicos()
       wirePicoButtonsToScenes()
-      idMainRepeatersImplementingScenes()
+      idRa2RepeatersImplementingScenes()
       idIndDevices()
       solicitRoomScenes()
       createRSPbsgAndPageLink()
