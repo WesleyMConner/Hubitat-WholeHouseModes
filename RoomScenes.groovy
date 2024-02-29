@@ -40,6 +40,120 @@ preferences {
   page(name: 'RoomScenesPage')
 }
 
+//---- Repeater Integration Buttons
+
+/*
+Map repButtons = [
+  'RA2 Repeater 1 (ra2-1)': [
+    'DenLamp Chill': 11,
+    'DenLamp Clean': 12,
+    'DenLamp Day': 13,
+    'DenLamp Night': 14,
+    'DenLamp Off': 15,
+    'DenLamp Party': 16,
+    'DenLamp Supp': 17,
+    'DenLamp TV': 18,
+    'Kitchen Chill': 21,
+    'Kitchen Clean': 22,
+    'Kitchen Day': 23,
+    'Kitchen Night': 24,
+    'Kitchen Off': 25,
+    'Kitchen Party': 26,
+    'Kitchen Supp': 27,
+    'Kitchen TV': 28,
+    'Kitchen _Cook': 29,
+    'Den Chill': 41,
+    'Den Clean': 42,
+    'Den Day': 43,
+    'Den Night': 44,
+    'Den Off': 45,
+    'Den Party': 46,
+    'Den Supp': 47,
+    'Den TV': 48,
+    'Guest Chill': 51,
+    'Guest Clean': 52,
+    'Guest Day': 53,
+    'Guest Night': 54,
+    'Guest Off': 55,
+    'Guest Party': 56,
+    'Guest Supp': 57,
+    'Guest TV': 58,
+    'BathLHS Chill': 61,
+    'BathLHS Clean': 62,
+    'BathLHS Day': 63,
+    'BathLHS Night': 64,
+    'BathLHS Off': 65,
+    'BathLHS Party': 66,
+    'BathLHS Supp': 67,
+    'BathLHS TV': 68,
+    'BathRHS Chill': 71,
+    'BathRHS Clean': 72,
+    'BathRHS Day': 73,
+    'BathRHS Night': 74,
+    'BathRHS Off': 75,
+    'BathRHS Party': 76,
+    'BathRHS Supp': 77,
+    'BathRHS TV': 78,
+    'Main Chill': 81,
+    'Main Clean': 82,
+    'Main Day': 83,
+    'Main Night': 84,
+    'Main Off': 85,
+    'Main Party': 86,
+    'Main Supp': 87,
+    'Main TV': 88
+  ],
+  'RA2 Repeater 2 (ra2-83)': [
+    'PrimBath Chill': 11,
+    'PrimBath Clean': 12,
+    'PrimBath Day': 13,
+    'PrimBath Night': 14,
+    'PrimBath Off': 15,
+    'PrimBath Party': 16,
+    'PrimBath Supp': 17,
+    'PrimBath TV': 18,
+    'Primary Chill': 21,
+    'Primary Clean': 22,
+    'Primary Day': 23,
+    'Primary Night': 24,
+    'Primary Off': 25,
+    'Primary Party': 26,
+    'Primary Supp': 27,
+    'Primary TV': 28,
+    'Office Chill': 51,
+    'Office Clean': 52,
+    'Office Day': 53,
+    'Office Night': 54,
+    'Office Off': 55,
+    'Office Party': 56,
+    'Office Supp': 57,
+    'Office TV': 58,
+    'Yard High': 61,
+    'Yard Low': 62,
+    'Yard Off': 63,
+    'Lanai Chill': 71,
+    'Lanai Clean': 72,
+    'Lanai Day': 73,
+    'Lanai Night': 74,
+    'Lanai Off': 75,
+    'Lanai Party': 76,
+    'Lanai Supp': 77,
+    'Lanai TV': 78,
+    'Lanai _Games': 79
+  ],
+  'Caséta Repeater': [
+    'Lanai Chill' : 1,
+    'Lanai Cleaning' : 2,
+    'Lanai Day' : 3,
+    'Lanai Games' : 4,
+    'Lanai Night' : 5,
+    'Lanai Party' : 6,
+    'Lanai Supp' : 7,
+    'Lanai TV' : 8
+  ]
+]
+*/
+
 //---- CORE METHODS (External)
 
 //---- CORE METHODS (Internal)
@@ -98,7 +212,7 @@ void activateScene() {
       String ra2Id = actionT[1]
       Integer value = safeParseInt(actionT[2])
       if (value != null) {
-        logTrace(
+logInfo(
           'activateScene',
           "For scene '${state.currScene}', adjusting ${ra2Id} (${devType}) to ${value}"
         )
@@ -133,18 +247,14 @@ void activateScene() {
             //--
             settings.ra2Repeaters.each{ d ->
               if (getDeviceRa2Id(d) == ra2Id) {
-                // Unlike some Independent Devices (RA2 and Caséta) RA2
-                // Repeaters are not particularly subject to stale Hubitat
-                // state; HOWEVER, callbacks that occur quickly (within 1/2
+                // Callbacks that occur quickly (within 1/2
                 // second) after a button press subject Hubitat to callback
                 // overload (during WHA scene chantes). Briefly unsubscribe /
                 // subscribe to avoid this situation.
-                unsubscribeRa2RepToHandler(d)
+                unsubscribeRepToHandler(d)
                 logTrace('activateScene', "Pushing button (${value}) on ${b(ra2Id)}")
                 d.push(value)
                 runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
-              } else {
-                logWarn('activateScene', "Unexpected reference to RA2 Repeater rA2Id: '${b(ra2Id)}'")
               }
             }
             break
@@ -332,39 +442,39 @@ void subscribeToKpadHandler() {
   }
 }
 
-void subscribeToRa2RepHandler() {
+void subscribeToRepHandler() {
   settings.ra2Repeaters.each{ d ->
     logInfo(
-      'subscribeToRa2RepHandler',
+      'subscribeToRepHandler',
       "${state.ROOM_LABEL} subscribing to Repeater ${deviceInfo(d)}"
     )
     subscribe(d, ra2RepHandler, ['filterEvents': true])
   }
 }
 
-void subscribeRa2RepToHandler(Map data) {
+void subscribeRepToHandler(Map data) {
   // USAGE:
-  //   runIn(1, 'subscribeRa2RepToHandler', [data: [device: d]])
+  //   runIn(1, 'subscribeRepToHandler', [data: [device: d]])
   // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
   // callbacks that occur quickly (within 1/2 second) after a buton press
   // subject Hubitat to callback overload (during WHA scene chantes).
   // Briefly unsubscribe/subscribe to avoid this situation.
   logTrace(
-    'subscribeRa2RepToHandler',
+    'subscribeRepToHandler',
     "${state.ROOM_LABEL} subscribing ${deviceInfo(data.device)}"
   )
   subscribe(device, ra2RepHandler, ['filterEvents': true])
 }
 
-void unsubscribeRa2RepToHandler(DevW device) {
+void unsubscribeRepToHandler(DevW device) {
   // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
   // callbacks that occur quickly (within 1/2 second) after a buton press
   // subject Hubitat to callback overload (during WHA scene chantes).
   // Briefly unsubscribe/subscribe to avoid this situation.
   logTrace(
-    'unsubscribeRa2RepToHandler',
+    'unsubscribeRepToHandler',
     "${state.ROOM_LABEL} unsubscribing ${deviceInfo(device)}"
   )
   unsubscribe(device)
@@ -652,7 +762,7 @@ void initialize() {
   )
   subscribeToIndDeviceHandlerNoDelay()
   subscribeToKpadHandler()
-  subscribeToRa2RepHandler()
+  subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
@@ -950,7 +1060,7 @@ void wirePicoButtonsToScenes() {
 void idRa2RepeatersImplementingScenes() {
   input(
     name: 'ra2Repeaters',
-    title: heading3("Identify Main Repeaters with Integration Buttons for Room Scenes"),
+    title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
