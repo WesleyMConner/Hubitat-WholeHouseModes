@@ -158,9 +158,9 @@ Map repButtons = [
 
 //---- CORE METHODS (Internal)
 
-String extractRa2IdFromLabel(String deviceLabel) {
+String extractDeviceIdFromLabel(String deviceLabel) {
   //->x = (deviceLabel =~ /\((.*)\)/)
-  //->logDebug('extractRa2IdFromLabel', [
+  //->logDebug('extractDeviceIdFromLabel', [
   //->  "deviceLabel: ${deviceLabel}",
   //->  "x: ${x}",
   //->  "x[0]: ${x[0]}",
@@ -169,8 +169,8 @@ String extractRa2IdFromLabel(String deviceLabel) {
   return (deviceLabel =~ /\((.*)\)/)[0][1]
 }
 
-String getDeviceRa2Id(DevW device) {
-  return extractRa2IdFromLabel(device.label)
+String getDeviceId(DevW device) {
+  return extractDeviceIdFromLabel(device.label)
 }
 
 void clearManualOverride() {
@@ -209,17 +209,17 @@ void activateScene() {
     state.scenes[state.currScene].each{ action ->
       def actionT = action.tokenize('^')
       String devType = actionT[0]
-      String ra2Id = actionT[1]
+      String deviceId = actionT[1]
       Integer value = safeParseInt(actionT[2])
       if (value != null) {
-logInfo(
+        logTrace(
           'activateScene',
-          "For scene '${state.currScene}', adjusting ${ra2Id} (${devType}) to ${value}"
+          "For '${state.currScene}': ${deviceId} (${devType}) to ${value}"
         )
         switch (devType) {
           case 'Ind':
             settings.indDevices.each{ d ->
-              if (getDeviceRa2Id(d) == ra2Id) {
+              if (getDeviceId(d) == deviceId) {
                 // Independent Devices (especially RA2 and Caséta) are subject
                 // to stale Hubitat state data if callbacks occur quickly (within
                 // 1/2 second) after a level change. So, briefly unsubscribe
@@ -228,31 +228,31 @@ logInfo(
                 if (d.hasCommand('setLevel')) {
                   // Some devices cannot support level=100
                   if (value == 100) value = 99
-                  logTrace('activateScene', "Setting ${b(ra2Id)} to level ${b(value)}")
+                  logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(value)}")
                   d.setLevel(value)
                 } else if (value == 0) {
-                  logTrace('activateScene', "Setting ${b(ra2Id)} to off")
+                  logTrace('activateScene', "Setting ${b(deviceId)} to off")
                   d.off()
                 } else if (value == 100) {
-                  logTrace('activateScene', "Setting ${b(ra2Id)} to on")
+                  logTrace('activateScene', "Setting ${b(deviceId)} to on")
                   d.on()
                 }
                 runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
               }
             }
             break
-          case 'RA2':
+          case 'Rep':
             //--
             //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND RA2ID
             //--
             settings.ra2Repeaters.each{ d ->
-              if (getDeviceRa2Id(d) == ra2Id) {
+              if (getDeviceId(d) == deviceId) {
                 // Callbacks that occur quickly (within 1/2
                 // second) after a button press subject Hubitat to callback
                 // overload (during WHA scene chantes). Briefly unsubscribe /
                 // subscribe to avoid this situation.
                 unsubscribeRepToHandler(d)
-                logTrace('activateScene', "Pushing button (${value}) on ${b(ra2Id)}")
+                logTrace('activateScene', "Pushing button (${value}) on ${b(deviceId)}")
                 d.push(value)
                 runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
               }
@@ -264,7 +264,7 @@ logInfo(
       } else {
         logError(
           'activateScene',
-          "For scene '${state.currScene}', no integer value for ${ra2Id} (${devType})"
+          "For scene '${state.currScene}', no integer value for ${deviceId} (${devType})"
         )
       }
     }
@@ -540,31 +540,31 @@ void subscribeToPicoHandler() {
 void indDeviceHandler(Event e) {
   // Devices send various events (e.g., switch, level, pushed, released).
   // Isolate the events that confirm|refute state.activeScene.
-  String ra2Id = null
+  String deviceId = null
   Integer currLevel = null
   if (e.name == 'switch') {
-    ra2Id = extractRa2IdFromLabel(e.displayName)
+    deviceId = extractDeviceIdFromLabel(e.displayName)
     if (e.value == 'on') {
       currLevel = 100
     } else if (e.value == 'off') {
       currLevel = 0
     }
   } else if (e.name == 'level') {
-    ra2Id = extractRa2IdFromLabel(e.displayName)
+    deviceId = extractDeviceIdFromLabel(e.displayName)
     currLevel = safeParseInt(e.value)
   } else {
     return  // Ignore the event
   }
-  Integer expLevel = expectedSceneDeviceValue('Ind', ra2Id)
+  Integer expLevel = expectedSceneDeviceValue('Ind', deviceId)
   if (currLevel == expLevel) {
     // Scene compliance confirmed
-    logTrace('indDeviceHandler', "${ra2Id} complies with scene")
-    state.moDetected.remove(ra2Id)
+    logTrace('indDeviceHandler', "${deviceId} complies with scene")
+    state.moDetected.remove(deviceId)
   } else {
     // Scene compliance refuted (i.e., Manual Override)
-    String summary = "${ra2Id} value (${currLevel}), expected (${expLevel})"
+    String summary = "${deviceId} value (${currLevel}), expected (${expLevel})"
     logInfo('indDeviceHandler', [ 'MANUAL OVERRIDE', summary ])
-    state.moDetected[ra2Id] = summary
+    state.moDetected[deviceId] = summary
   }
 }
 
@@ -603,26 +603,26 @@ void ra2RepHandler(Event e) {
   // Isolate the buttonLed-## events which confirm|refute state.activeScene.
   if (e.name.startsWith('buttonLed-')) {
     Integer eventButton = safeParseInt(e.name.substring(10))
-    String ra2Id = extractRa2IdFromLabel(e.displayName)
-    // Is there an expected sceneButton for the ra2Id?
-    Integer sceneButton = expectedSceneDeviceValue('RA2', ra2Id)
+    String deviceId = extractDeviceIdFromLabel(e.displayName)
+    // Is there an expected sceneButton for the deviceId?
+    Integer sceneButton = expectedSceneDeviceValue('Rep', deviceId)
     // And if so, does it match the eventButton?
     if (sceneButton && sceneButton == eventButton) {
       // This event can be used to confirm or refute the target scene.
       if (e.value == 'on') {
         // Scene compliance confirmed
-        logTrace('ra2RepHandler', "${ra2Id} complies with scene")
-        state.moDetected.remove(ra2Id)
+        logTrace('ra2RepHandler', "${deviceId} complies with scene")
+        state.moDetected.remove(deviceId)
       } else if (e.value == 'off') {
         // Scene compliance refuted (i.e., Manual Override)
-        String summary = "${ra2Id} button ${eventButton} off, expected on"
+        String summary = "${deviceId} button ${eventButton} off, expected on"
         logInfo('ra2RepHandler', [ 'MANUAL OVERRIDE', summary ])
-        state.moDetected[ra2Id] = summary
+        state.moDetected[deviceId] = summary
       } else {
         // Error condition
         logWarn(
           'ra2RepHandler',
-          "Main Repeater (${ra2Id}) with unexpected value (${e.value}"
+          "Main Repeater (${deviceId}) with unexpected value (${e.value}"
         )
       }
     }
@@ -1084,7 +1084,7 @@ void configureRoomScene() {
   //   There are three steps to populate "state.scenes" map.
   //   (1) populateStateScenesKeysOnly() creates a per-scene key and
   //       sets the value to [].
-  //   (2) This method populates Settings keys "scene^SCENENAME^Ind|RA2^DNI".
+  //   (2) This method populates Settings keys "scene^SCENENAME^Ind|Rep^DNI".
   //       with Integer values:
   //         - 'light level' for Independent devices (Ind)
   //         - 'virtual button number' for RA2 Repeaters (RA2)
@@ -1104,7 +1104,7 @@ void configureRoomScene() {
       Integer tableCol = 3
       paragraph("<br/><b>${scene} →</b>", width: 2)
       settings.indDevices?.each{ d ->
-        String inputName = "scene^${scene}^Ind^${getDeviceRa2Id(d)}"
+        String inputName = "scene^${scene}^Ind^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3
         input(
@@ -1119,7 +1119,7 @@ void configureRoomScene() {
         )
       }
       settings.ra2Repeaters?.each{d ->
-        String inputName = "scene^${scene}^RA2^${getDeviceRa2Id(d)}"
+        String inputName = "scene^${scene}^Rep^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3
         input(
