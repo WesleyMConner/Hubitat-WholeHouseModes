@@ -24,7 +24,7 @@ library(
 )
 
 void identifyLedButtonsForListItems(
-  ArrayList<String> list,
+  List<String> list,
   List<DevW> ledDevices,
   String prefix
   ) {

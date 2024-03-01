@@ -154,29 +154,12 @@ Map repButtons = [
 ]
 */
 
-//---- CORE METHODS (External)
+//---- MANAGE STATE SCENES
 
 //---- CORE METHODS (Internal)
 
-Map getDeviceValues (String scene) {
-  // Structure of resulting Map
-  // Map['Rep': Map[repeaterId : button], 'Ind': [deviceId, level]]
-  //-> logInfo('M_IN', scene)
-  String keyPrefix = "scene^${scene}^"
-  Map results = [Rep: [], Ind: []]
-  settings.findAll{ k1, v1 -> k1.startsWith(keyPrefix) }.each { k2, v2 ->
-    //-> logInfo('MA', "k2: ${k2}, v2: ${v2}")
-    ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
-    if (typeAndId[0] == 'RA2') {
-      logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
-      app.removeSetting(k2)
-    } else {
-      //-> logInfo('MAB Keeping', "deviceType: ${typeAndId[0]}, deviceId: ${typeAndId[1]}, value: ${v2}")
-      results[typeAndId[0]] << [ (typeAndId[1]) : v2 ]
-    }
-  }
-  //-> logInfo('M_OUT', "${results}")
-  return results
+List<String> getScenes() {
+  return state.scenes.collect{ it.key }
 }
 
 String extractDeviceIdFromLabel(String deviceLabel) {
@@ -191,7 +174,7 @@ String extractDeviceIdFromLabel(String deviceLabel) {
 }
 
 String getDeviceId(DevW device) {
-  return extractDeviceIdFromLabel(device.label)
+  return device?.label ? extractDeviceIdFromLabel(device.label) : null
 }
 
 void clearManualOverride() {
@@ -221,75 +204,53 @@ String expectedScene() {
     ? 'INACTIVE' : state.activeScene
 }
 
+void pushRepeaterButton (String repeaterId, Integer buttonNumber) {
+  settings.repeaters.each{ repeater ->
+    if (getDeviceId(repeater) == repeaterId) {
+      repeater.push(buttonNumber)
+    }
+  }
+}
+
+void setDeviceLevel (String deviceId, Integer level) {
+  settings.indDevices.each{ device ->
+    if (getDeviceId(repeater) == repeaterId) {
+      if (device.hasCommand('setLevel')) {
+        // Some devices cannot support level=100
+        if (level == 100) level = 99
+        logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
+        device.setLevel(level)
+        //-> device.on() // NOT PART OF ORIGINAL, MAY BE IMPLIED
+      }
+      if (value == 0) {
+        logTrace('activateScene', "Setting ${b(deviceId)} to off")
+        device.off()
+      } else if (value == 100) {
+        logTrace('activateScene', "Setting ${b(deviceId)} to on")
+        device.on()
+      }
+    }
+  }
+}
+
 void activateScene() {
   String expectedScene = expectedScene()
   if (state.currScene != expectedScene) {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
     state.currScene = expectedScene
     // Decode and process the scene's per-device actions
-    getDeviceValues(state.currScene).each{ devType, data ->
-      data.each{ deviceId, value ->
-        //-> def actionT = action.tokenize('^')
-        //-> String devType = actionT[0]
-        //-> String deviceId = actionT[1]
-        //-> Integer value = safeParseInt(actionT[2])
-        if (value != null) {
-          logTrace(
-            'activateScene',
-            "For '${state.currScene}': ${deviceId} (${devType}) to ${value}"
-          )
-          switch (devType) {
-            case 'Ind':
-              settings.indDevices.each{ d ->
-                if (getDeviceId(d) == deviceId) {
-                  // Independent Devices (especially RA2 and Caséta) are subject
-                  // to stale Hubitat state data if callbacks occur quickly (within
-                  // 1/2 second) after a level change. So, briefly unsubscribe
-                  // device (see runIn subscribe below) to avoid this situation.
-                  unsubscribeIndDevToHandler(d)
-                  if (d.hasCommand('setLevel')) {
-                    // Some devices cannot support level=100
-                    if (value == 100) value = 99
-                    logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(value)}")
-                    d.setLevel(value)
-                  } else if (value == 0) {
-                    logTrace('activateScene', "Setting ${b(deviceId)} to off")
-                    d.off()
-                  } else if (value == 100) {
-                    logTrace('activateScene', "Setting ${b(deviceId)} to on")
-                    d.on()
-                  }
-                  runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
-                }
-              }
-              break
-            case 'Rep':
-              //--
-              //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
-              //--
-              settings.repeaters.each{ d ->
-                if (getDeviceId(d) == deviceId) {
-                  // Callbacks that occur quickly (within 1/2
-                  // second) after a button press subject Hubitat to callback
-                  // overload (during WHA scene chantes). Briefly unsubscribe /
-                  // subscribe to avoid this situation.
-                  unsubscribeRepToHandler(d)
-                  logTrace('activateScene', "Pushing button (${value}) on ${b(deviceId)}")
-                  d.push(value)
-                  runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
-                }
-              }
-              break
-            default:
-              logWarn('activateScene', "Ignoring device type ${b(devType)}")
-          }
-        } else {
-          logError(
-            'activateScene',
-            "For scene '${state.currScene}', no integer value for ${deviceId} (${devType})"
-          )
-        }
-      }
+    Map actions = state.scenes.get(state.currScene)
+    actions.get('Rep').each{ repeaterId, button ->
+      //-> unsubscribeRepToHandler(repeaterId)
+      logTrace('activateScene', "Pushing repeater (${repeaterId} button (${button})")
+      pushRepeaterButton(repeaterId, button)
+      //-> runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
+    }
+    actions.get('Ind').each{ deviceId, value ->
+      //-> unsubscribeIndDevToHandler(d)
+      logTrace('activateScene', "Setting device (${deviceId} to level (${value})")
+      setDeviceLevel(deviceId, value)
+      //-> runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
     }
   }
 }
@@ -357,14 +318,14 @@ void updateLutronKpadLeds() {  // old argument was "String currScene"
   }
 }
 
-Boolean isDeviceTypeis(String devTypeCandidate) {
+Boolean isDeviceType(String devTypeCandidate) {
   return ['Rep', 'Ind'].contains(devTypeCandidate)
 }
 
-Integer expectedSceneDeviceValue(String devType, String dni) {
+Integer expectedSceneDeviceValue(String devType, String deviceId) {
   Integer retVal = null
   if (isDeviceType(devType)) {
-    retVal = state.scenes[state.activeScene][devType][dni]
+    retVal = state.scenes.get(state.activeScene).get(devType).get(deviceId)
   } else {
     logError('expectedSceneDeviceValue', "devType (${devType}) not recognized")
   }
@@ -375,7 +336,7 @@ InstAppW getOrCreateRSPbsg() {
   // The PBSG is created by createRSPbsgAndPageLink()
   InstAppW pbsgApp = app.getChildAppByLabel(state.RSPBSG_LABEL)
   if (!pbsgApp) {
-    Set scenes = state.scenes.keySet()
+    List<String> scenes = getScenes()
     if (scenes) {
       logWarn('getOrCreateRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
       pbsgApp = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
@@ -755,20 +716,6 @@ void picoHandler(Event e) {
   }
 }
 
-void populateStateScenesValuesForExistingKeys() {
-  Set scenes = state.scenes.keySet()
-  if (scenes && (settings.indDevices || settings.repeaters)) {
-    //-> logInfo('Q', [
-    //->   "scenes: ${scenes}",
-    //->   "settings.indDevices: ${settings.indDevices}",
-    //->   "settings.repeaters: ${settings.repeaters}"
-    //-> ])
-    populateStateScenesAssignValues()
-  } else {
-    // paragraph 'Soliciation of Room scenes is pending pre-requisite data.'
-  }
-}
-
 //---- SYSTEM CALLBACKS
 
 void installed() {
@@ -792,8 +739,7 @@ void initialize() {
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       + "Subscribing to modeHandler."
   )
-  populateStateScenesValuesForExistingKeys()
-  //-> logInfo('A', "state.scenes: ${state.scenes}")
+  populateStateScenesAssignValues()
   subscribeToIndDeviceHandlerNoDelay()
   subscribeToKpadHandler()
   subscribeToRepHandler()
@@ -929,12 +875,7 @@ void adjustStateScenesKeys() {
     assembleScenes << customScenes
     assembleScenes = assembleScenes.flatten().toUnique()
   }
-  //-> logInfo('X1', [
-  //->   "state.scenes: ${state.scenes}",
-  //->   "assembleScenes: ${assembleScenes}"
-  //-> ])
-  // Care must be taken to adjust keys without displacing key values.
-  //   (1) Keep state.scenes keys present in assembleScenes
+  // Keep existing scenes keys that are present in assembleScenes.
   state.scenes = state.scenes.collectEntries{ key, value ->
     if (assembleScenes.contains(key)) {
       [key, value]
@@ -942,32 +883,19 @@ void adjustStateScenesKeys() {
       []
     }
   }
-  //-> logInfo('X2', [
-  //->   "state.scenes: ${state.scenes}",
-  //->   "assembleScenes: ${assembleScenes}"
-  //-> ])
-  //   (2) Add any new keys from assembleScenes to state.scenes
-  assembleScenes.removeAll{ scene -> state.scenes.keySet().contains(scene)}
+  // Add any new scene keys from assembleScenes.
+  assembleScenes.removeAll{ scene -> getScenes() }
   state.scenes << assembleScenes?.collectEntries{ [(it): []] }
-  //-> logInfo('X3', [
-  //->   "state.scenes: ${state.scenes}",
-  //->   "assembleScenes: ${assembleScenes}"
-  //-> ])
-}
-
-Boolean sceneExists(String scene) {
-  return state.scenes.containsKey(scene)
+  //-> logInfo('#871', "state.scenes: ${state.scenes}")
 }
 
 void idSceneForMode() {
-  if (state.scenes == null) {
-    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
-  } else {
+  if (state.scenes) {
     paragraph heading2('Identify a Scene for each Hubitat Mode')
     getLocation().getModes().collect{mode -> mode.name}.sort().each{ modeName ->
       String inputName = "modeToScene^${modeName}"
       String defaultValue = settings[inputName]
-        ?: sceneExists(modeName) ? modeName : null
+        ?: state.scenes.containsKey(modeName) ? modeName : null
       input(
         name: inputName,
         type: 'enum',
@@ -976,10 +904,12 @@ void idSceneForMode() {
         submitOnChange: true,
         required: true,
         multiple: false,
-        options: state.scenes.keySet(), // state.scenes.collect{ it.key },
+        options: getScenes(),
         defaultValue: defaultValue
       )
     }
+  } else {
+    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
   }
 }
 
@@ -1016,7 +946,7 @@ void mapKpadButtonDniToScene() {
 }
 
 void wireKpadButtonsToScenes() {
-  ArrayList<String> scenes = state.scenes.collect{ it.key }
+  List<String> scenes = getScenes()
   if (scenes == null || settings?.sceneButtons == null) {
     //paragraph('No Room Scene Kpad buttons have been identified.')
   } else {
@@ -1030,15 +960,37 @@ void wireKpadButtonsToScenes() {
   }
 }
 
+Map getDeviceValues (String scene) {
+  // Structure of resulting Map
+  // Map['Rep': Map[repeaterId : button], 'Ind': [deviceId : level]]
+  //-> logInfo('M_IN', scene)
+  String keyPrefix = "scene^${scene}^"
+  List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
+  List<String> allowedDeviceIds = allowedDevices.collect{ getDeviceId(it) }
+  //-> logWarn('#960', "allowedDevices: ${allowedDevices}")
+  Map results = ['Rep': [:], 'Ind': [:]]
+  settings.findAll{ k1, v1 -> k1.startsWith(keyPrefix) }.each { k2, v2 ->
+    ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
+    if (typeAndId[0] == 'RA2') {
+      logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
+      app.removeSetting(k2)
+    } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
+      logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
+      //app.removeSetting(k2)
+    } else {
+      results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
+      //-> logInfo('#972', "results: ${results}")
+    }
+  }
+  //-> logInfo('M_OUT', "${results}")
+  return results
+}
+
 void populateStateScenesAssignValues() {
-  //-> logInfo('R_IN', "state.scenes: ${state.scenes}")
   state.scenes = state.scenes.collectEntries{ scene, map ->
-    //-> logInfo('RA', "scene: ${scene}, buttons: ${map['Rep']}, levels: ${map['Ind']}")
     Map M = getDeviceValues(scene)
-    //-> logInfo('RB', "M: ${M}")
     if (M) [scene, M]
   }
-  //-> logInfo('R_OUT', "state.scenes: ${state.scenes}")
 }
 
 void authRoomScenesPicos() {
@@ -1071,7 +1023,7 @@ Map<String, String> picoButtonPicklist(List<DevW> picos) {
 }
 
 void selectPicoButtonsForScene(List<DevW> picos) {
-  Set scenes = state.scenes.keySet()
+  List<String> scenes = getScenes()
   if (scenes) {
     ArrayList<String> picoScenes = ['AUTOMATIC'] << scenes
     picoScenes.flatten().each{ sceneName ->
@@ -1152,7 +1104,6 @@ void configureRoomScene() {
   //     - Phone-sized displays are 4 cells wide.
   //   To ensure that each scene starts on a new row, this method adds
   //   empty cells (modulo 12) to ensure each scene begins in column 1.
-  adjustStateScenesKeys()
   if (state.scenes) {
     ArrayList<String> currSettingsKeys = []
     state.scenes?.each{ sceneName, ignoredValue ->
@@ -1220,12 +1171,11 @@ Map RoomScenesPage() {
     state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
     state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-    state.remove('sufficientLight')   // No longer used
-    state.remove('targetScene')       // No longer used
-    app.removeSetting('ra2Repeaters')   // No longer used
-    app.removeSetting('mainRepeaters')  // No longer used
-    // Make sure stale RA2 settings are really gone.
-    //--DEAD->settings.each{ key, value -> if (key.contains('RA2')) app.removeSetting(key) }
+    state.remove('sufficientLight')
+    state.remove('targetScene')
+    /*
+    app.removeSetting('ra2Repeaters')
+    app.removeSetting('mainRepeaters')
     app.removeSetting('hubitatQueryString')
     app.removeSetting('mainRepeaters')
     app.removeSetting('ra2Repeaters')
@@ -1261,6 +1211,7 @@ Map RoomScenesPage() {
     app.removeSetting('scene^TV^RA2^ra2-83')
     app.removeSetting('scene^TV^Rep^ra2-1')
     app.removeSetting('scene^TV^Rep^ra2-83')
+    */
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
