@@ -261,6 +261,7 @@ void activateScene() {
           case 'Rep':
             //--
             //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
+            //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
             //--
             settings.repeaters.each{ d ->
               if (getDeviceId(d) == deviceId) {
@@ -276,6 +277,7 @@ void activateScene() {
             }
             break
           default:
+            logWarn('activateScene', "Ignoring device type ${b(devType)}")
             logWarn('activateScene', "Ignoring device type ${b(devType)}")
         }
       } else {
@@ -1199,39 +1201,34 @@ Map RoomScenesPage() {
     state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
     state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-    state.remove('sufficientLight') // No longer used
-    state.remove('targetScene') // No longer used
+    state.remove('sufficientLight')   // No longer used
+    state.remove('targetScene')       // No longer used
+    settings.remove('ra2Repeaters')   // No longer used
+    settings.remove('mainRepeaters')  // No longer used
+    // Make sure stale RA2 settings are really gone.
+    //--DEAD->settings.each{ key, value -> if (key.contains('RA2')) settings.remove(key) }
     settings.remove('hubitatQueryString')
     settings.remove('mainRepeaters')
     settings.remove('ra2Repeaters')
-    settings.remove('scene^Chill^RA2^pro2-1')
     settings.remove('scene^Chill^RA2^ra2-1')
     settings.remove('scene^Chill^RA2^ra2-83')
-    settings.remove('scene^Cleaning^RA2^pro2-1')
     settings.remove('scene^Cleaning^RA2^ra2-1')
     settings.remove('scene^Cleaning^RA2^ra2-83')
     settings.remove('scene^Cook^Rep^ra2-1')
-    settings.remove('scene^Day^RA2^pro2-1')
     settings.remove('scene^Day^RA2^ra2-1')
     settings.remove('scene^Day^RA2^ra2-83')
-    settings.remove('scene^Games^RA2^pro2-1')
-    settings.remove('scene^Games^RA2^ra2-83')
     settings.remove('scene^Games^Rep^ra2-1')
     settings.remove('scene^Games^Rep^ra2-83')
     settings.remove('scene^INACTIVE^RA2^ra2-1')
     settings.remove('scene^INACTIVE^RA2^ra2-83')
-    settings.remove('scene^Night^RA2^pro2-1')
     settings.remove('scene^Night^RA2^ra2-1')
     settings.remove('scene^Night^RA2^ra2-83')
     settings.remove('scene^Off^RA2^ra2-1')
     settings.remove('scene^Off^RA2^ra2-83')
-    settings.remove('scene^Party^RA2^pro2-1')
     settings.remove('scene^Party^RA2^ra2-1')
     settings.remove('scene^Party^RA2^ra2-83')
-    settings.remove('scene^Supplement^RA2^pro2-1')
     settings.remove('scene^Supplement^RA2^ra2-1')
     settings.remove('scene^Supplement^RA2^ra2-83')
-    settings.remove('scene^TV^RA2^pro2-1')
     settings.remove('scene^TV^RA2^ra2-1')
     settings.remove('scene^TV^RA2^ra2-83')
     settings.remove('scene^TV^Rep^ra2-1')
