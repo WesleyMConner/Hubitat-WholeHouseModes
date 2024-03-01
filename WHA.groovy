@@ -204,6 +204,7 @@ void updated () {
   //---------------------------------------------------------------------------------
   state.remove('MODE_PBSG_APP_LABEL')
   state.remove('MODE_PBSG_APP_NAME')
+  settings.remove('hubitatQueryString')
   initialize()
 }
 

@@ -243,7 +243,7 @@ void activateScene() {
             break
           case 'Rep':
             //--
-            //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND RA2ID
+            //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
             //--
             settings.repeaters.each{ d ->
               if (getDeviceId(d) == deviceId) {
@@ -259,7 +259,7 @@ void activateScene() {
             }
             break
           default:
-            logWarn('activateScene', "Unexpected device type ${b(devType)}")
+            logWarn('activateScene', "Ignoring device type ${b(devType)}")
         }
       } else {
         logError(
@@ -1139,15 +1139,15 @@ void configureRoomScene() {
       }
     }
     // Prune stale Settings keys
-    settings.findAll{ it.key.startsWith('scene^') }.each{ key, value ->
-      logInfo('configureRoomScene', [
-        "Removing stale setting, ${key} -> ${value}",
-        "currSettingsKeys: ${currSettingsKeys}"
-      ])
-      if (!currSettingsKeys.contains(key)) {
-        settings.remove(key)
-      }
-    }
+    //-> settings.findAll{ it.key.startsWith('scene^') }.each{ key, value ->
+    //->   logInfo('configureRoomScene', [
+    //->     "Removing stale setting, ${key} -> ${value}",
+    //->     "currSettingsKeys: ${currSettingsKeys}"
+    //->   ])
+    //->   if (!currSettingsKeys.contains(key)) {
+    //->     settings.remove(key)
+    //->   }
+    //-> }
   }
 }
 
@@ -1184,6 +1184,32 @@ Map RoomScenesPage() {
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
     state.remove('sufficientLight') // No longer used
     state.remove('targetScene') // No longer used
+    settings.remove('hubitatQueryString')
+    settings.remove('mainRepeaters')
+    settings.remove('ra2Repeaters')
+    settings.remove('scene^Chill^RA2^ra2-1')
+    settings.remove('scene^Chill^RA2^ra2-83')
+    settings.remove('scene^Cleaning^RA2^ra2-1')
+    settings.remove('scene^Cleaning^RA2^ra2-83')
+    settings.remove('scene^Cook^Rep^ra2-1')
+    settings.remove('scene^Day^RA2^ra2-1')
+    settings.remove('scene^Day^RA2^ra2-83')
+    settings.remove('scene^Games^Rep^ra2-1')
+    settings.remove('scene^Games^Rep^ra2-83')
+    settings.remove('scene^INACTIVE^RA2^ra2-1')
+    settings.remove('scene^INACTIVE^RA2^ra2-83')
+    settings.remove('scene^Night^RA2^ra2-1')
+    settings.remove('scene^Night^RA2^ra2-83')
+    settings.remove('scene^Off^RA2^ra2-1')
+    settings.remove('scene^Off^RA2^ra2-83')
+    settings.remove('scene^Party^RA2^ra2-1')
+    settings.remove('scene^Party^RA2^ra2-83')
+    settings.remove('scene^Supplement^RA2^ra2-1')
+    settings.remove('scene^Supplement^RA2^ra2-83')
+    settings.remove('scene^TV^RA2^ra2-1')
+    settings.remove('scene^TV^RA2^ra2-83')
+    settings.remove('scene^TV^Rep^ra2-1')
+    settings.remove('scene^TV^Rep^ra2-83')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
