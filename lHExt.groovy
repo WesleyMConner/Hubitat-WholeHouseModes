@@ -45,9 +45,9 @@ void removeAllChildApps() {
   }
 }
 
-Map<String, List<String>> compareLists(List<String> existing, List<String> revised) {
+Map<String, ArrayList<String>> compareLists(ArrayList<String> existing, ArrayList<String> revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
-  Map<String, List<String>> map = [:]
+  Map<String, ArrayList<String>> map = [:]
   if (!existing) {
     map.added = revised.collect()
   } else if (!revised) {
@@ -63,14 +63,14 @@ Map<String, List<String>> compareLists(List<String> existing, List<String> revis
   return map
 }
 
-List<String> modeNames() {
+ArrayList<String> modeNames() {
   //return getLocation().getModes().collect { modeObj -> modeObj.name }
   return getLocation().getModes()*.name
 }
 
 String switchState(DevW d) {
   /* groovylint-disable-next-line UseCollectMany */
-  List<String> stateValues = d.collect { device -> device.currentStates.value }.flatten()
+  ArrayList<String> stateValues = d.collect { device -> device.currentStates.value }.flatten()
   return stateValues?.contains('on')
       ? 'on'
       : stateValues?.contains('off')
@@ -111,9 +111,9 @@ void asRemoveMapKey(String stateKey, String innerKey)
 //---- APP MANAGEMENT
 //----
 
-void pruneAppDups(List<String> keepLabels, InstAppW appBase) {
+void pruneAppDups(ArrayList<String> keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"
-  List<String> result = []
+  ArrayList<String> result = []
   result += '<table>'
   result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
   appBase.getAllChildApps()

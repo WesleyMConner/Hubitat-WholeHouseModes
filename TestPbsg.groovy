@@ -71,13 +71,13 @@ Map TestPbsgPage () {
 
 void TEST_pbsgConfigure (
     Integer n,
-    List<String> list,
+    ArrayList<String> list,
     String dflt,
     String on,
     String forcedError = null
   ) {
   // Logs display newest to oldest; so, write logs backwards
-  List<String> logMsg = []
+  ArrayList<String> logMsg = []
   if (forcedError) logMsg += forcedError
   logMsg += "dnis=${b(list)}, dfltButton=${b(dflt)}, activeDni=${b(on)}"
   logMsg += (forcedError ? redBar() : greenBar())
@@ -93,7 +93,7 @@ void TEST_PbsgActivation (
     String forcedError = null
   ){
   // Logs display newest to oldest; so, write logs backwards
-  List<String> logMsg = []
+  ArrayList<String> logMsg = []
   logMsg += description
   if (forcedError) { logMsg += forcedError }
   logMsg += (forcedError ? redBar() : greenBar())
@@ -103,16 +103,16 @@ void TEST_PbsgActivation (
 void TEST_pbsgHasExpectedState (
     Integer n,
     String activeButton,
-    List<String> inactiveButtons,
+    ArrayList<String> inactiveButtons,
     String dfltButton
   ) {
   String activeDni = activeButton ? buttonToDni(activeButton) : null
-  List<String> inactiveDnis = inactiveButtons ? inactiveButtons.collect{ buttonToDni(it) } : null
+  ArrayList<String> inactiveDnis = inactiveButtons ? inactiveButtons.collect{ buttonToDni(it) } : null
   String dfltDni = dfltButton ? buttonToDni(dfltButton) : null
   Boolean result = true
   Integer actualInactiveDnisSize = state.inactiveDnis?.size() ?: 0
   Integer expectedInactiveDnisSize = inactiveDnis?.size() ?: 0
-  List<String> testLog = []
+  ArrayList<String> testLog = []
   testLog += heading2('PBSG State Checks')
   if (state.dfltDni != dfltDni) {
     result = false
@@ -149,7 +149,7 @@ void TEST_pbsgHasExpectedState (
     testLog += bullet2("<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>")
   }
   testLog += heading2('Button (VSW) State Checks')
-  List<String> buttonState = []
+  ArrayList<String> buttonState = []
   if (activeButton) {
     String state = switchState(getChildDevice(buttonToDni(activeButton)))
     Boolean isExpected = (state == 'on')

@@ -24,7 +24,7 @@ library(
 )
 
 void identifyLedButtonsForListItems(
-  List<String> list,
+  ArrayList<String> list,
   List<DevW> ledDevices,
   String prefix
   ) {
@@ -73,7 +73,7 @@ void populateStateKpadButtons(String prefix) {
     if (key.contains("${prefix}_")) {
       String base = key - "${prefix}_"
       value.each { item ->
-        List<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
+        ArrayList<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
           if (state[stateKey][kpadDniAndButtons[0]] == null) {
             state[stateKey][kpadDniAndButtons[0]] = [:]

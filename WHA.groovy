@@ -51,7 +51,7 @@ InstAppW _getOrCreateMPbsg () {
   if (!pbsgApp) {
     logWarn('_getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
     pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
-    List<String> modeNames = getLocation().getModes().collect{ it.name }
+    ArrayList<String> modeNames = getLocation().getModes().collect{ it.name }
     String currModeName = getLocation().currentMode.name
     pbsgApp.pbsgConfigure(
       modeNames,     // Create a PBSG button per Hubitat Mode name
@@ -200,11 +200,11 @@ void updated () {
   // REMOVE NO LONGER USED SETTINGS AND STATE
   //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
   //   - state.remove('X')
-  //   - settings.remove('Y')
+  //   - app.removeSetting('Y')
   //---------------------------------------------------------------------------------
   state.remove('MODE_PBSG_APP_LABEL')
   state.remove('MODE_PBSG_APP_NAME')
-  settings.remove('hubitatQueryString')
+  app.removeSetting('hubitatQueryString')
   initialize()
 }
 

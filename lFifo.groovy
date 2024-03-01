@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------------
 // F I F O   Q U E U E   M E T H O D S
-//   Creates a List<String> fifo that reads left (first) to right (last)
+//   Creates a ArrayList<String> fifo that reads left (first) to right (last)
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -18,16 +18,16 @@ library(
   name: 'lFifo',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'Fifo methods on a List<String>',
+  description: 'Fifo methods on a ArrayList<String>',
   category: 'general purpose'
 )
 
-String fifoRemove(List<String> fifo, String item) {
+String fifoRemove(ArrayList<String> fifo, String item) {
   // Remove and return item if present OR return null.
   return fifo?.removeAll { member -> member == item } ? item : null
 }
 
-Boolean fifoEnqueue(List<String> fifo, String item) {
+Boolean fifoEnqueue(ArrayList<String> fifo, String item) {
   Boolean retval = false
   if (item) {
     fifo << (item)
