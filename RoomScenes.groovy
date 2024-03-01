@@ -160,14 +160,18 @@ Map repButtons = [
 
 Map getDeviceValues (String scene) {
   String keyPrefix = "scene^${scene}^"
-  Map results = settings.findAll{ key, value -> key.startsWith(keyPrefix) }
-    .collectEntries { key, value ->
-      List<String> typeAndId = key.substring(keyPrefix.size()).tokenize('^')
-      //-> logInfo('#166', [ typeAndId[0], typeAndId[1], value, [(typeAndId[1]): value] ])
+  Map results = settings.findAll{ key, value ->
+    key.startsWith(keyPrefix)
+  }.collectEntries { key, value ->
+    List<String> typeAndId = key.substring(keyPrefix.size()).tokenize('^')
+    if (typeAndId[0] == 'RA2') {
+      // Skip stale RA2 keys !!!
+      [ ]
+    } else {
       [ typeAndId[0], [ (typeAndId[1]) : value] ]
     }
-    //-> logInfo('#169', "${results}")
-    return results
+  }
+  return results
 }
 
 String extractDeviceIdFromLabel(String deviceLabel) {
@@ -222,69 +226,66 @@ void activateScene() {
     //-> state.scenes[state.currScene].each{ action ->
     getDeviceValues(state.currScene).each{ devType, data ->
       data.each{ deviceId, value ->
-        logInfo('#225', "${devType}..${deviceId}..${value}")
-      }
-      //-> def actionT = action.tokenize('^')
-      //-> String devType = actionT[0]
-      //-> String deviceId = actionT[1]
-      //-> Integer value = safeParseInt(actionT[2])
-      if (value != null) {
-        logTrace(
-          'activateScene',
-          "For '${state.currScene}': ${deviceId} (${devType}) to ${value}"
-        )
-        switch (devType) {
-          case 'Ind':
-            settings.indDevices.each{ d ->
-              if (getDeviceId(d) == deviceId) {
-                // Independent Devices (especially RA2 and Caséta) are subject
-                // to stale Hubitat state data if callbacks occur quickly (within
-                // 1/2 second) after a level change. So, briefly unsubscribe
-                // device (see runIn subscribe below) to avoid this situation.
-                unsubscribeIndDevToHandler(d)
-                if (d.hasCommand('setLevel')) {
-                  // Some devices cannot support level=100
-                  if (value == 100) value = 99
-                  logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(value)}")
-                  d.setLevel(value)
-                } else if (value == 0) {
-                  logTrace('activateScene', "Setting ${b(deviceId)} to off")
-                  d.off()
-                } else if (value == 100) {
-                  logTrace('activateScene', "Setting ${b(deviceId)} to on")
-                  d.on()
+        //-> def actionT = action.tokenize('^')
+        //-> String devType = actionT[0]
+        //-> String deviceId = actionT[1]
+        //-> Integer value = safeParseInt(actionT[2])
+        if (value != null) {
+          logTrace(
+            'activateScene',
+            "For '${state.currScene}': ${deviceId} (${devType}) to ${value}"
+          )
+          switch (devType) {
+            case 'Ind':
+              settings.indDevices.each{ d ->
+                if (getDeviceId(d) == deviceId) {
+                  // Independent Devices (especially RA2 and Caséta) are subject
+                  // to stale Hubitat state data if callbacks occur quickly (within
+                  // 1/2 second) after a level change. So, briefly unsubscribe
+                  // device (see runIn subscribe below) to avoid this situation.
+                  unsubscribeIndDevToHandler(d)
+                  if (d.hasCommand('setLevel')) {
+                    // Some devices cannot support level=100
+                    if (value == 100) value = 99
+                    logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(value)}")
+                    d.setLevel(value)
+                  } else if (value == 0) {
+                    logTrace('activateScene', "Setting ${b(deviceId)} to off")
+                    d.off()
+                  } else if (value == 100) {
+                    logTrace('activateScene', "Setting ${b(deviceId)} to on")
+                    d.on()
+                  }
+                  runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
                 }
-                runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
               }
-            }
-            break
-          case 'Rep':
-            //--
-            //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
-            //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
-            //--
-            settings.repeaters.each{ d ->
-              if (getDeviceId(d) == deviceId) {
-                // Callbacks that occur quickly (within 1/2
-                // second) after a button press subject Hubitat to callback
-                // overload (during WHA scene chantes). Briefly unsubscribe /
-                // subscribe to avoid this situation.
-                unsubscribeRepToHandler(d)
-                logTrace('activateScene', "Pushing button (${value}) on ${b(deviceId)}")
-                d.push(value)
-                runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
+              break
+            case 'Rep':
+              //--
+              //-- SCROLL TRHOUGH THE AVAILABLE REPEATERS TO FIND DEVICE ID
+              //--
+              settings.repeaters.each{ d ->
+                if (getDeviceId(d) == deviceId) {
+                  // Callbacks that occur quickly (within 1/2
+                  // second) after a button press subject Hubitat to callback
+                  // overload (during WHA scene chantes). Briefly unsubscribe /
+                  // subscribe to avoid this situation.
+                  unsubscribeRepToHandler(d)
+                  logTrace('activateScene', "Pushing button (${value}) on ${b(deviceId)}")
+                  d.push(value)
+                  runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
+                }
               }
-            }
-            break
-          default:
-            logWarn('activateScene', "Ignoring device type ${b(devType)}")
-            logWarn('activateScene', "Ignoring device type ${b(devType)}")
+              break
+            default:
+              logWarn('activateScene', "Ignoring device type ${b(devType)}")
+          }
+        } else {
+          logError(
+            'activateScene',
+            "For scene '${state.currScene}', no integer value for ${deviceId} (${devType})"
+          )
         }
-      } else {
-        logError(
-          'activateScene',
-          "For scene '${state.currScene}', no integer value for ${deviceId} (${devType})"
-        )
       }
     }
   }

@@ -40,11 +40,7 @@
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/RoomScenes.groovy",
       "id": 353,
       "codeType": "app",
-<<<<<<< HEAD
-      "version": 378
-=======
-      "version": 398
->>>>>>> 5456471 (Brute force remove RA2 pro2 settings)
+      "version": 388
     },
     {
       "filepath": "/Users/wes/development/GitHub/Hubitat-WholeHouseAutomation/RSPbsg.groovy",
