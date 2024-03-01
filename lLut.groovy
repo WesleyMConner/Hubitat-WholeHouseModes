@@ -73,6 +73,7 @@ void populateStateKpadButtons(String prefix) {
     if (key.contains("${prefix}_")) {
       String base = key - "${prefix}_"
       value.each { item ->
+        /* groovylint-disable-next-line ImplementationAsType */
         ArrayList<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
           if (state[stateKey][kpadDniAndButtons[0]] == null) {
