@@ -204,22 +204,23 @@ String expectedScene() {
     ? 'INACTIVE' : state.activeScene
 }
 
-void pushRepeaterButton (String repeaterId, Integer buttonNumber) {
+void pushRepeaterButton (String repeaterId, Long buttonNumber) {
+  //---> logInfo('#208', "${repeaterId}..${buttonNumber}")
   settings.repeaters.each{ repeater ->
     if (getDeviceId(repeater) == repeaterId) {
+      //---> logInfo('#211', "${getDeviceId(repeater)}, ${repeaterId}, ${buttonNumber}")
       repeater.push(buttonNumber)
     }
   }
 }
 
-void setDeviceLevel (String deviceId, Integer level) {
+void setDeviceLevel (String deviceId, Long level) {
   settings.indDevices.each{ device ->
     if (getDeviceId(repeater) == repeaterId) {
       if (device.hasCommand('setLevel')) {
-        // Some devices cannot support level=100
-        if (level == 100) level = 99
         logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
-        device.setLevel(level)
+        // Some devices do not support a level of 100.
+        device.setLevel(level == 100 ? 99 : level)
         //-> device.on() // NOT PART OF ORIGINAL, MAY BE IMPLIED
       }
       if (value == 0) {
@@ -238,31 +239,33 @@ void activateScene() {
   if (state.currScene != expectedScene) {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
     state.currScene = expectedScene
+//---> logInfo('#242', "${state.currScene}..${expectedScene}")
     // Decode and process the scene's per-device actions
     Map actions = state.scenes.get(state.currScene)
+//---> logInfo('#245', "${actions}")
     actions.get('Rep').each{ repeaterId, button ->
-      //-> unsubscribeRepToHandler(repeaterId)
-      logTrace('activateScene', "Pushing repeater (${repeaterId} button (${button})")
+//---> logInfo('#247', "${repeaterId}..${button}")
+      logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
       pushRepeaterButton(repeaterId, button)
-      //-> runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
     }
+//---> logInfo('#251', "-")
     actions.get('Ind').each{ deviceId, value ->
-      //-> unsubscribeIndDevToHandler(d)
+//---> logInfo('#253', "${deviceId}..${value}")
       logTrace('activateScene', "Setting device (${deviceId} to level (${value})")
       setDeviceLevel(deviceId, value)
-      //-> runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
     }
+//---> logInfo('#257', "-")
   }
 }
 
 void updateTargetScene() {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
-  logTrace('updateTargetScene', [
-    'At entry',
-    "state.activeButton: ${b(state.activeButton)}",
-    "state.activeScene: ${b(state.activeScene)}",
-    "isManualOverride(): ${b(isManualOverride())}"
-  ])
+  //---> logTrace('updateTargetScene', [
+  //--->   'At entry',
+  //--->   "state.activeButton: ${b(state.activeButton)}",
+  //--->   "state.activeScene: ${b(state.activeScene)}",
+  //--->   "isManualOverride(): ${b(isManualOverride())}"
+  //---> ])
   if (
     (state.activeButton == 'AUTOMATIC' && !state.activeScene)
     || (state.activeButton == 'AUTOMATIC' && !isManualOverride())
@@ -273,10 +276,10 @@ void updateTargetScene() {
   } else {
     state.activeScene = state.activeButton
   }
-  logTrace('updateTargetScene', [
-    'At exit',
-    "state.activeScene: ${b(state.activeScene)}"
-  ])
+  //---> logTrace('updateTargetScene', [
+  //--->   'At exit',
+  //--->   "state.activeScene: ${b(state.activeScene)}"
+  //---> ])
 }
 
 void buttonOnCallback(String button) {
@@ -325,7 +328,8 @@ Boolean isDeviceType(String devTypeCandidate) {
 Integer expectedSceneDeviceValue(String devType, String deviceId) {
   Integer retVal = null
   if (isDeviceType(devType)) {
-    retVal = state.scenes.get(state.activeScene).get(devType).get(deviceId)
+    retVal = state.scenes?.get(state.activeScene)?.get(devType)?.get(deviceId)
+    //-> logInfo('#328', "${devType}..${deviceId} -> ${retVal}")
   } else {
     logError('expectedSceneDeviceValue', "devType (${devType}) not recognized")
   }
@@ -519,32 +523,25 @@ void subscribeToPicoHandler() {
 void indDeviceHandler(Event e) {
   // Devices send various events (e.g., switch, level, pushed, released).
   // Isolate the events that confirm|refute state.activeScene.
-  String deviceId = null
-  Integer currLevel = null
-  if (e.name == 'switch') {
-    deviceId = extractDeviceIdFromLabel(e.displayName)
-    if (e.value == 'on') {
-      currLevel = 100
-    } else if (e.value == 'off') {
-      currLevel = 0
+  Integer reported
+  // Only select events are considered for MANUAL OVERRIDE detection.
+  if (e.name == 'level') {
+    reported = safeParseInt(e.value)
+  } else if (e.name == 'switch' && e.value == 'off') {
+    reported = 0
+  }
+  String deviceId = extractDeviceIdFromLabel(e.displayName)
+  Integer expected = expectedSceneDeviceValue('Ind', deviceId)
+  expected = (expected == 100) ? 99 : expected
+  //---> logInfo('indDeviceHandler #532', "${deviceId}: ${reported} (${expected})")
+  if (reported == expected) {
+    state.moDetected = state.moDetected.collect{ key, value ->
+      if (key != deviceId) { [key, value] }
     }
-  } else if (e.name == 'level') {
-    deviceId = extractDeviceIdFromLabel(e.displayName)
-    currLevel = safeParseInt(e.value)
   } else {
-    return  // Ignore the event
+    state.moDetected.put(deviceId, "${reported} (${expected})")
   }
-  Integer expLevel = expectedSceneDeviceValue('Ind', deviceId)
-  if (currLevel == expLevel) {
-    // Scene compliance confirmed
-    logTrace('indDeviceHandler', "${deviceId} complies with scene")
-    state.moDetected.remove(deviceId)
-  } else {
-    // Scene compliance refuted (i.e., Manual Override)
-    String summary = "${deviceId} value (${currLevel}), expected (${expLevel})"
-    logInfo('indDeviceHandler', [ 'MANUAL OVERRIDE', summary ])
-    state.moDetected[deviceId] = summary
-  }
+  //---> logInfo('indDeviceHandler #540', "${state.moDetected}")
 }
 
 void kpadHandler(Event e) {
@@ -690,7 +687,7 @@ void picoHandler(Event e) {
             if (switchState(d) == 'off') {
               d.setLevel(5)
               //d.on()
-             } else {
+            } else {
               d.setLevel(Math.min(
                 (d.currentValue('level') as Integer) + changePercentage,
                 100
@@ -700,10 +697,10 @@ void picoHandler(Event e) {
         } else if (e.value == '4') {  // Default "Lower" behavior
           logTrace('picoHandler', "Lowering ${settings.indDevices}")
           settings.indDevices.each{ d ->
-              d.setLevel(Math.max(
-                (d.currentValue('level') as Integer) - changePercentage,
-                0
-              ))
+            d.setLevel(Math.max(
+              (d.currentValue('level') as Integer) - changePercentage,
+              0
+            ))
           }
         } else {
           logTrace(
@@ -739,8 +736,11 @@ void initialize() {
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       + "Subscribing to modeHandler."
   )
+  state.brightLuxSensors = []
   populateStateScenesAssignValues()
-  subscribeToIndDeviceHandlerNoDelay()
+  clearManualOverride()
+  //-> subscribeToIndDeviceHandlerNoDelay()
+  settings.indDevices.each{ device -> unsubscribe(device) }
   subscribeToKpadHandler()
   subscribeToRepHandler()
   subscribeToModeHandler()
@@ -961,33 +961,49 @@ void wireKpadButtonsToScenes() {
 }
 
 Map getDeviceValues (String scene) {
-  // Structure of resulting Map
-  // Map['Rep': Map[repeaterId : button], 'Ind': [deviceId : level]]
-  //-> logInfo('M_IN', scene)
   String keyPrefix = "scene^${scene}^"
   List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
   List<String> allowedDeviceIds = allowedDevices.collect{ getDeviceId(it) }
-  //-> logWarn('#960', "allowedDevices: ${allowedDevices}")
   Map results = ['Rep': [:], 'Ind': [:]]
-  settings.findAll{ k1, v1 -> k1.startsWith(keyPrefix) }.each { k2, v2 ->
+  //---> logInfo('#966', [
+  //--->   "scene: ${scene}",
+  //--->   "keyPrefix: ${keyPrefix}",
+  //--->   "allowedDevices: ${allowedDevices}",
+  //--->   "allowedDeviceIds: ${allowedDeviceIds}",
+  //--->   "results: ${results}"
+  //---> ])
+  settings.findAll{ k1, v1 ->
+    //---> logInfo('#974', "k1: ${k1}, v1: ${v1}")
+    k1.startsWith(keyPrefix)
+  }.each { k2, v2 ->
+    //---> logInfo('#977', "k2: ${k2}, v2: ${v2}")
     ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
     if (typeAndId[0] == 'RA2') {
       logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
       app.removeSetting(k2)
     } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
       logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
-      //app.removeSetting(k2)
     } else {
-      results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
-      //-> logInfo('#972', "results: ${results}")
+      //---> logInfo('#985', "${typeAndId[0]}..${typeAndId[1]}..${v2}")
+      // Enforce min/max constraints on Independent (Ind) device value.
+      if (typeAndId[1] == 'Ind') {
+        if (v2 > 100) {
+          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):100])
+        } else if (v2 < 0) {
+          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):0])
+        }
+      } else {
+        results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
+      }
     }
+    //---> logInfo('#997', "results: ${results}")
   }
-  //-> logInfo('M_OUT', "${results}")
   return results
 }
 
 void populateStateScenesAssignValues() {
   state.scenes = state.scenes.collectEntries{ scene, map ->
+    //---> logInfo('#991', "scene: ${scene}, map: ${map}")
     Map M = getDeviceValues(scene)
     if (M) [scene, M]
   }
@@ -1117,7 +1133,7 @@ void configureRoomScene() {
         input(
           name: inputName,
           type: 'number',
-          title: "${b(d.label)}<br/>Level 0..100",
+          title: "${b(d.label)}<br/>Level 0..99",
           width: 3,
           submitOnChange: true,
           required: false,
@@ -1173,6 +1189,7 @@ Map RoomScenesPage() {
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
     state.remove('sufficientLight')
     state.remove('targetScene')
+    state.brightLuxSensors = []
     /*
     app.removeSetting('ra2Repeaters')
     app.removeSetting('mainRepeaters')
