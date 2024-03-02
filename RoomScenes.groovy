@@ -205,10 +205,8 @@ String expectedScene() {
 }
 
 void pushRepeaterButton (String repeaterId, Long buttonNumber) {
-  //---> logInfo('#208', "${repeaterId}..${buttonNumber}")
   settings.repeaters.each{ repeater ->
     if (getDeviceId(repeater) == repeaterId) {
-      //---> logInfo('#211', "${getDeviceId(repeater)}, ${repeaterId}, ${buttonNumber}")
       repeater.push(buttonNumber)
     }
   }
@@ -216,18 +214,17 @@ void pushRepeaterButton (String repeaterId, Long buttonNumber) {
 
 void setDeviceLevel (String deviceId, Long level) {
   settings.indDevices.each{ device ->
-    if (getDeviceId(repeater) == repeaterId) {
+    if (getDeviceId(device) == deviceId) {
       if (device.hasCommand('setLevel')) {
-        logTrace('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
-        // Some devices do not support a level of 100.
+        logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
+        // Some devices DO NOT support a level of 100.
         device.setLevel(level == 100 ? 99 : level)
-        //-> device.on() // NOT PART OF ORIGINAL, MAY BE IMPLIED
       }
-      if (value == 0) {
-        logTrace('activateScene', "Setting ${b(deviceId)} to off")
+      if (level == 0) {
+        logInfo('activateScene', "Setting ${b(deviceId)} to off")
         device.off()
-      } else if (value == 100) {
-        logTrace('activateScene', "Setting ${b(deviceId)} to on")
+      } else if (level == 100) {
+        logInfo('activateScene', "Setting ${b(deviceId)} to on")
         device.on()
       }
     }
@@ -239,33 +236,20 @@ void activateScene() {
   if (state.currScene != expectedScene) {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
     state.currScene = expectedScene
-//---> logInfo('#242', "${state.currScene}..${expectedScene}")
     // Decode and process the scene's per-device actions
     Map actions = state.scenes.get(state.currScene)
-//---> logInfo('#245', "${actions}")
     actions.get('Rep').each{ repeaterId, button ->
-//---> logInfo('#247', "${repeaterId}..${button}")
       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
       pushRepeaterButton(repeaterId, button)
     }
-//---> logInfo('#251', "-")
     actions.get('Ind').each{ deviceId, value ->
-//---> logInfo('#253', "${deviceId}..${value}")
-      logTrace('activateScene', "Setting device (${deviceId} to level (${value})")
       setDeviceLevel(deviceId, value)
     }
-//---> logInfo('#257', "-")
   }
 }
 
 void updateTargetScene() {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
-  //---> logTrace('updateTargetScene', [
-  //--->   'At entry',
-  //--->   "state.activeButton: ${b(state.activeButton)}",
-  //--->   "state.activeScene: ${b(state.activeScene)}",
-  //--->   "isManualOverride(): ${b(isManualOverride())}"
-  //---> ])
   if (
     (state.activeButton == 'AUTOMATIC' && !state.activeScene)
     || (state.activeButton == 'AUTOMATIC' && !isManualOverride())
@@ -276,10 +260,6 @@ void updateTargetScene() {
   } else {
     state.activeScene = state.activeButton
   }
-  //---> logTrace('updateTargetScene', [
-  //--->   'At exit',
-  //--->   "state.activeScene: ${b(state.activeScene)}"
-  //---> ])
 }
 
 void buttonOnCallback(String button) {
@@ -532,8 +512,6 @@ void indDeviceHandler(Event e) {
   }
   String deviceId = extractDeviceIdFromLabel(e.displayName)
   Integer expected = expectedSceneDeviceValue('Ind', deviceId)
-  expected = (expected == 100) ? 99 : expected
-  //---> logInfo('indDeviceHandler #532', "${deviceId}: ${reported} (${expected})")
   if (reported == expected) {
     state.moDetected = state.moDetected.collect{ key, value ->
       if (key != deviceId) { [key, value] }
@@ -541,7 +519,6 @@ void indDeviceHandler(Event e) {
   } else {
     state.moDetected.put(deviceId, "${reported} (${expected})")
   }
-  //---> logInfo('indDeviceHandler #540', "${state.moDetected}")
 }
 
 void kpadHandler(Event e) {
@@ -965,18 +942,9 @@ Map getDeviceValues (String scene) {
   List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
   List<String> allowedDeviceIds = allowedDevices.collect{ getDeviceId(it) }
   Map results = ['Rep': [:], 'Ind': [:]]
-  //---> logInfo('#966', [
-  //--->   "scene: ${scene}",
-  //--->   "keyPrefix: ${keyPrefix}",
-  //--->   "allowedDevices: ${allowedDevices}",
-  //--->   "allowedDeviceIds: ${allowedDeviceIds}",
-  //--->   "results: ${results}"
-  //---> ])
   settings.findAll{ k1, v1 ->
-    //---> logInfo('#974', "k1: ${k1}, v1: ${v1}")
     k1.startsWith(keyPrefix)
   }.each { k2, v2 ->
-    //---> logInfo('#977', "k2: ${k2}, v2: ${v2}")
     ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
     if (typeAndId[0] == 'RA2') {
       logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
@@ -984,7 +952,6 @@ Map getDeviceValues (String scene) {
     } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
       logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
     } else {
-      //---> logInfo('#985', "${typeAndId[0]}..${typeAndId[1]}..${v2}")
       // Enforce min/max constraints on Independent (Ind) device value.
       if (typeAndId[1] == 'Ind') {
         if (v2 > 100) {
@@ -996,14 +963,12 @@ Map getDeviceValues (String scene) {
         results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
       }
     }
-    //---> logInfo('#997', "results: ${results}")
   }
   return results
 }
 
 void populateStateScenesAssignValues() {
   state.scenes = state.scenes.collectEntries{ scene, map ->
-    //---> logInfo('#991', "scene: ${scene}, map: ${map}")
     Map M = getDeviceValues(scene)
     if (M) [scene, M]
   }
@@ -1133,7 +1098,7 @@ void configureRoomScene() {
         input(
           name: inputName,
           type: 'number',
-          title: "${b(d.label)}<br/>Level 0..99",
+          title: "${b(d.label)}<br/>Level 0..100",
           width: 3,
           submitOnChange: true,
           required: false,
