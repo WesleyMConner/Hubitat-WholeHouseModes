@@ -245,6 +245,8 @@ void activateScene() {
     actions.get('Ind').each{ deviceId, value ->
       setDeviceLevel(deviceId, value)
     }
+    //-> logInfo('activateScene() #248', 'BRUTE FORCE push ra2-1 button 40')
+    //-> pushRepeaterButton ('ra2-1', 40)
   }
 }
 
@@ -526,11 +528,11 @@ void kpadHandler(Event e) {
   //   - The field e.deviceId arrives as a number and must be cast toString().
   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
   //   - Kpad buttons are matched to state data to activate a scene.
-  logTrace('kpadHandler', [
-    "state.activeButton: ${state.activeButton}",
-    "state.activeScene: ${state.activeScene}",
-    eventDetails(e)
-  ])
+  //-> logTrace('kpadHandler', [
+  //->   "state.activeButton: ${state.activeButton}",
+  //->   "state.activeScene: ${state.activeScene}",
+  //->   eventDetails(e)
+  //-> ])
   switch (e.name) {
     case 'pushed':
       // Toggle the corresponding scene for the keypad button.
@@ -719,7 +721,7 @@ void initialize() {
   //-> subscribeToIndDeviceHandlerNoDelay()
   settings.indDevices.each{ device -> unsubscribe(device) }
   subscribeToKpadHandler()
-  subscribeToRepHandler()
+  //-> subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
@@ -1087,7 +1089,7 @@ void configureRoomScene() {
   //   empty cells (modulo 12) to ensure each scene begins in column 1.
   if (state.scenes) {
     ArrayList<String> currSettingsKeys = []
-    state.scenes?.each{ sceneName, ignoredValue ->
+    state.scenes?.sort().each{ sceneName, ignoredValue ->
       // Ignore the current componentList. Rebuilt it from scratch.
       Integer tableCol = 3
       paragraph("<br/><b>${sceneName} →</b>", width: 2)

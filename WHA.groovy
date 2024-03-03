@@ -180,6 +180,29 @@ void seeTouchModeButtonHandler (Event e) {
   }
 }
 
+String extractDeviceIdFromLabel(String deviceLabel) {
+  //->x = (deviceLabel =~ /\((.*)\)/)
+  //->logDebug('extractDeviceIdFromLabel', [
+  //->  "deviceLabel: ${deviceLabel}",
+  //->  "x: ${x}",
+  //->  "x[0]: ${x[0]}",
+  //->  "x[0]: ${x[0][1]}",
+  //->])
+  return (deviceLabel =~ /\((.*)\)/)[0][1]
+}
+
+void repeaterHandler(Event e) {
+  logInfo('WHA repeaterHandler', "At entry ${e.descriptionText}")
+  // Isolate Main Repeater (ra2-1, ra2-83, pro2-1) buttonLed-## events to
+  // capture de-centralized Room Scene activation.
+  if (e.name.startsWith('buttonLed-')) {
+    Integer eventButton = safeParseInt(e.name.substring(10))
+    String deviceId = extractDeviceIdFromLabel(e.displayName)
+    logInfo('WHA repeaterHandler', "${deviceId}..${eventButton}..${e.value}")
+  }
+}
+
+
 //---- SYSTEM CALLBACKS
 
 void installed () {
@@ -212,16 +235,18 @@ void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
   logTrace('initialize', 'Entered')
-  settings.seeTouchKpads.each{ d ->
-    DevW device = d
+  settings.seeTouchKpads.each{ device ->
     logInfo('initialize', "subscribing ${deviceInfo(device)} to mode handler."
     )
     subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
   }
-  settings.seeTouchKpads.each{ d ->
-    DevW device = d
-    logInfo('initialize', "subscribing ${deviceInfo(device)}")
+  settings.seeTouchKpads.each{ device ->
+    logInfo('initialize', "subscribing ${deviceInfo(device)} to Keypad Handler")
     subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
+  }
+  settings.mainRepeaters.each{ device ->
+    logInfo('initialize', "subscribing ${deviceInfo(device)} to Repeater Handler")
+    subscribe(device, repeaterHandler, ['filterEvents': true])
   }
 }
 
@@ -229,15 +254,15 @@ void initialize () {
 
 void _idSpecialFnMainRepeater () {
   input(
-    name: 'specialtyFnMainRepeater',
+    name: 'mainRepeaters',
     title: [
-      heading2('Identify Lutron Repeater(s) Supporting Specialty Functions'),
+      heading2('Identify Lutron Main Repeater(s) for Room Scene LED Events'),
       bullet2('e.g., ALL_AUTO, ALARM, AWAY, FLASH, PANIC, QUIET')
     ].join('<br/>'),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
-    multiple: false
+    multiple: true
   )
 }
 
