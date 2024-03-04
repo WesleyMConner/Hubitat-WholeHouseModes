@@ -245,8 +245,6 @@ void activateScene() {
     actions.get('Ind').each{ deviceId, value ->
       setDeviceLevel(deviceId, value)
     }
-    //-> logInfo('activateScene() #248', 'BRUTE FORCE push ra2-1 button 40')
-    //-> pushRepeaterButton ('ra2-1', 40)
   }
 }
 
@@ -407,31 +405,6 @@ void subscribeToKpadHandler() {
   }
 }
 
-void subscribeToRepHandler() {
-  settings.repeaters.each{ d ->
-    logInfo(
-      'subscribeToRepHandler',
-      "${state.ROOM_LABEL} subscribing to Repeater ${deviceInfo(d)}"
-    )
-    subscribe(d, repeaterHandler, ['filterEvents': true])
-  }
-}
-
-void subscribeRepToHandler(Map data) {
-  // USAGE:
-  //   runIn(1, 'subscribeRepToHandler', [data: [device: d]])
-  // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
-  // are not particularly subject to stale Hubitat state; HOWEVER,
-  // callbacks that occur quickly (within 1/2 second) after a buton press
-  // subject Hubitat to callback overload (during WHA scene chantes).
-  // Briefly unsubscribe/subscribe to avoid this situation.
-  logTrace(
-    'subscribeRepToHandler',
-    "${state.ROOM_LABEL} subscribing ${deviceInfo(data.device)}"
-  )
-  subscribe(device, repeaterHandler, ['filterEvents': true])
-}
-
 void unsubscribeRepToHandler(DevW device) {
   // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
@@ -550,37 +523,6 @@ void kpadHandler(Event e) {
         "DNI: '${b(e.deviceId)}'",
         "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
       ])
-  }
-}
-
-void repeaterHandler(Event e) {
-  // Main Repeaters send various events (e.g., pushed, buttonLed-##).
-  // Isolate the buttonLed-## events which confirm|refute state.activeScene.
-  if (e.name.startsWith('buttonLed-')) {
-    Integer eventButton = safeParseInt(e.name.substring(10))
-    String deviceId = extractDeviceIdFromLabel(e.displayName)
-    // Is there an expected sceneButton for the deviceId?
-    Integer sceneButton = expectedSceneDeviceValue('Rep', deviceId)
-    // And if so, does it match the eventButton?
-    if (sceneButton && sceneButton == eventButton) {
-      // This event can be used to confirm or refute the target scene.
-      if (e.value == 'on') {
-        // Scene compliance confirmed
-        logTrace('repeaterHandler', "${deviceId} complies with scene")
-        state.moDetected.remove(deviceId)
-      } else if (e.value == 'off') {
-        // Scene compliance refuted (i.e., Manual Override)
-        String summary = "${deviceId} button ${eventButton} off, expected on"
-        logInfo('repeaterHandler', [ 'MANUAL OVERRIDE', summary ])
-        state.moDetected[deviceId] = summary
-      } else {
-        // Error condition
-        logWarn(
-          'repeaterHandler',
-          "Main Repeater (${deviceId}) with unexpected value (${e.value}"
-        )
-      }
-    }
   }
 }
 
@@ -721,7 +663,6 @@ void initialize() {
   //-> subscribeToIndDeviceHandlerNoDelay()
   settings.indDevices.each{ device -> unsubscribe(device) }
   subscribeToKpadHandler()
-  //-> subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
