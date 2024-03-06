@@ -1,0 +1,36 @@
+Terminology and Best Practices
+
+  - In Lutron RA2 Inclusive software, the terminology is based on where
+    'Lutron devices' (switches, dimmers, keypads) are "ganged" and how
+    faceplates are ordered and (optionally) labeled.
+        Zone Location - The installation room for a Lutron Device
+      Device Location - The name of a ganged collection of Lutron Devices
+            Zone Name - The circuit the Lutron Device controls
+  - Unlike Lutron, Hubitat rooms typically denote a group of circuits, a
+    functional grouping of devices rather than a physical grouping of devices.
+  - For improved clarity, Lutron "Zone Names" (effectively device labels),
+    include the circuit's room (Den, Kitchen, ...) as a prefix.
+      Example:
+        Lutron Room / Zone Location - Den              // Installation Room
+             Lutron Device Location - Kitchen Slider   // Ganged Box Location
+                  Hubitat Room Name - Lanai            // Circuit's Room
+                          Zone Name - Lanai Pendants   // Circuit's Name
+ROOMS    | DEVICES
+Den      | 6
+DenLamp  | 1
+Guest    |
+Hers     |
+His      |
+Kitchen  | 3
+Lanai    |
+Laundry  |
+LhsBath  |
+LhsBdrm  |
+Main     |
+Office   |
+Pantry   |
+PrimBath |
+PrimBdrm |
+RhsBath  |
+RhsBdrm  |
+Yard     |

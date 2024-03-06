@@ -18,7 +18,7 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
-// The Groovy Linter generates false positives on Hubitat #include !!!
+// The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -40,6 +40,127 @@ definition (
 preferences {
   page(name: 'WhaPage')
 }
+
+[
+  'ra2-1': [
+    '11': ['Den_Lamp', 'Chill'],
+    '12': ['Den_Lamp', 'Clean'],
+    '13': ['Den_Lamp', '!!! Day'],
+    '14': ['Den_Lamp', '!!! Night'],
+    '15': ['Den_Lamp', 'Off'],
+    '16': ['Den_Lamp', 'Party'],
+    '17': ['Den_Lamp', 'Supp'],
+    '18': ['Den_Lamp', 'TV'],
+    '21': ['Kitchen', 'Chill'],
+    '22': ['Kitchen', 'Clean'],
+    '23': ['Kitchen', '!!! Day'],
+    '24': ['Kitchen', '!!! Night'],
+    '25': ['Kitchen', 'Off'],
+    '26': ['Kitchen', 'Party'],
+    '27': ['Kitchen', 'Supp'],
+    '28': ['Kitchen', 'TV'],
+    '29': ['Kitchen', '_Cook'],
+    '41': ['Den', 'Chill'],
+    '42': ['Den', 'Clean'],
+    '43': ['Den', '!!! Day'],
+    '44': ['Den', '!!! Night'],
+    '45': ['Den', 'Off'],
+    '46': ['Den', 'Party'],
+    '47': ['Den', 'Supp'],
+    '48': ['Den', 'TV'],
+    '51': ['Guest_Wing', 'Chill'],
+    '52': ['Guest_Wing', 'Clean'],
+    '53': ['Guest_Wing', '!!! Day'],
+    '54': ['Guest_Wing', '!!! Night'],
+    '55': ['Guest_Wing', 'Off'],
+    '56': ['Guest_Wing', 'Party'],
+    '57': ['Guest_Wing', 'Supp'],
+    '58': ['Guest_Wing', 'TV'],
+    '60': ['LHS_Bath', 'Chill'],
+    '62': ['LHS_Bath', 'Clean'],
+    '63': ['LHS_Bath', 'Day'],
+    '64': ['LHS_Bath', 'Night'],
+    '65': ['LHS_Bath', 'Off'],
+    '66': ['LHS_Bath', 'Party'],
+    '67': ['LHS_Bath', 'Supp'],
+    '68': ['LHS_Bath', 'TV'],
+    '70': ['RHS_Bath', 'Chill'],
+    '72': ['RHS_Bath', 'Clean'],
+    '73': ['RHS_Bath', 'Day'],
+    '74': ['RHS_Bath', 'Night'],
+    '75': ['RHS_Bath', 'Off'],
+    '76': ['RHS_Bath', 'Party'],
+    '77': ['RHS_Bath', 'Supp'],
+    '78': ['RHS_Bath', 'TV'],
+    '79': ['Main', 'Chill'],
+    '82': ['Main', 'Clean'],
+    '83': ['Main', 'Day'],
+    '84': ['Main', 'Night'],
+    '85': ['Main', 'Off'],
+    '86': ['Main', 'Party'],
+    '87': ['Main', 'Supp'],
+    '88': ['Main', 'TV']
+  ], 'ra2-83': [
+    '10': ['PrimBath', 'Chill'],
+    '12': ['PrimBath', 'Clean'],
+    '13': ['PrimBath', 'Day'],
+    '14': ['PrimBath', 'Night'],
+    '15': ['PrimBath', 'Off'],
+    '16': ['PrimBath', 'Party'],
+    '17': ['PrimBath', 'Supp'],
+    '18': ['PrimBath', 'TV'],
+    '21': ['Primary', 'Chill'],
+    '22': ['Primary', 'Clean'],
+    '23': ['Primary', 'Day'],
+    '24': ['Primary', 'Night'],
+    '25': ['Primary', 'Off'],
+    '26': ['Primary', 'Party'],
+    '27': ['Primary', 'Supp'],
+    '28': ['Primary', 'TV'],
+    '41': ['LhsBdrm', 'Chill'],
+    '42': ['LhsBdrm', 'Clean'],
+    '43': ['LhsBdrm', 'Day'],
+    '44': ['LhsBdrm', 'Night'],
+    '45': ['LhsBdrm', 'Off'],
+    '46': ['LhsBdrm', 'Party'],
+    '47': ['LhsBdrm', 'Supp'],
+    '48': ['LhsBdrm', 'TV'],
+    '51': ['Office', 'Chill'],
+    '52': ['Office', 'Clean'],
+    '53': ['Office', '!!! Day'],
+    '54': ['Office', '!!! Night'],
+    '55': ['Office', 'Off'],
+    '56': ['Office', 'Party'],
+    '57': ['Office', 'Supp'],
+    '58': ['Office', 'TV'],
+    '61': ['Yard', 'Chill'],
+    '62': ['Yard', '!!! Clean'],
+    '63': ['Yard', '!!! Day'],
+    '64': ['Yard', 'Night'],
+    '65': ['Yard', 'Off'],
+    '66': ['Yard', '!!! Party'],
+    '67': ['Yard', '!!! Supp'],
+    '68': ['Yard', '!!! TV'],
+    '71': ['Lanai', 'Chill'],
+    '72': ['Lanai', '!!! Clean'],
+    '73': ['Lanai', '!!! Day'],
+    '74': ['Lanai', 'Night'],
+    '75': ['Lanai', 'Off'],
+    '76': ['Lanai', 'Party'],
+    '77': ['Lanai', 'Supp'],
+    '78': ['Lanai', 'TV'],
+    '79': ['Lanai', '_Games'],
+  ] 'pro2-1': [
+    '1': ['Lanai', 'Chill'],
+    '2': ['Lanai', 'Cleaning'],
+    '3': ['Lanai', 'Day'],
+    '4': ['Lanai', 'Games'],
+    '5': ['Lanai', 'Night'],
+    '6': ['Lanai', 'Party'],
+    '7': ['Lanai', 'Supplement'],
+    '8': ['Lanai', 'TV']
+  ]
+]
 
 //---- CORE METHODS (External)
 
@@ -201,7 +322,6 @@ void repeaterHandler(Event e) {
     logInfo('WHA repeaterHandler', "${deviceId}..${eventButton}..${e.value}")
   }
 }
-
 
 //---- SYSTEM CALLBACKS
 

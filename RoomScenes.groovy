@@ -16,7 +16,7 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
-// The Groovy Linter generates false positives on Hubitat #include !!!
+// The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -45,6 +45,14 @@ preferences {
 /*
 Map repButtons = [
   'RA2 Repeater 1 (ra2-1)': [
+    'All Chill': 11,
+    'All Clean': 12,
+    'All Day': 13,
+    'All Night': 14,
+    'All Off': 15,
+    'All Party': 16,
+    'All Supp': 17,
+    'All TV': 18,
     'DenLamp Chill': 11,
     'DenLamp Clean': 12,
     'DenLamp Day': 13,
@@ -61,7 +69,7 @@ Map repButtons = [
     'Kitchen Party': 26,
     'Kitchen Supp': 27,
     'Kitchen TV': 28,
-    'Kitchen _Cook': 29,
+    'Kitchen Cook': 29,
     'Den Chill': 41,
     'Den Clean': 42,
     'Den Day': 43,
@@ -78,22 +86,22 @@ Map repButtons = [
     'Guest Party': 56,
     'Guest Supp': 57,
     'Guest TV': 58,
-    'BathLHS Chill': 61,
-    'BathLHS Clean': 62,
-    'BathLHS Day': 63,
-    'BathLHS Night': 64,
-    'BathLHS Off': 65,
-    'BathLHS Party': 66,
-    'BathLHS Supp': 67,
-    'BathLHS TV': 68,
-    'BathRHS Chill': 71,
-    'BathRHS Clean': 72,
-    'BathRHS Day': 73,
-    'BathRHS Night': 74,
-    'BathRHS Off': 75,
-    'BathRHS Party': 76,
-    'BathRHS Supp': 77,
-    'BathRHS TV': 78,
+    'LhsBath Chill': 61,
+    'LhsBath Clean': 62,
+    'LhsBath Day': 63,
+    'LhsBath Night': 64,
+    'LhsBath Off': 65,
+    'LhsBath Party': 66,
+    'LhsBath Supp': 67,
+    'LhsBath TV': 68,
+    'RhsBath Chill': 71,
+    'RhsBath Clean': 72,
+    'RhsBath Day': 73,
+    'RhsBath Night': 74,
+    'RhsBath Off': 75,
+    'RhsBath Party': 76,
+    'RhsBath Supp': 77,
+    'RhsBath TV': 78,
     'Main Chill': 81,
     'Main Clean': 82,
     'Main Day': 83,
@@ -102,8 +110,15 @@ Map repButtons = [
     'Main Party': 86,
     'Main Supp': 87,
     'Main TV': 88
+    'Main Play': 89
   ],
   'RA2 Repeater 2 (ra2-83)': [
+    'ALARM': 1,
+    'AUTO': 2,
+    'AWAY': 3,
+    'FLASH': 4,
+    'PANIC': 5,
+    'QUIET': 6,
     'PrimBath Chill': 11,
     'PrimBath Clean': 12,
     'PrimBath Day': 13,
@@ -112,14 +127,22 @@ Map repButtons = [
     'PrimBath Party': 16,
     'PrimBath Supp': 17,
     'PrimBath TV': 18,
-    'Primary Chill': 21,
-    'Primary Clean': 22,
-    'Primary Day': 23,
-    'Primary Night': 24,
-    'Primary Off': 25,
-    'Primary Party': 26,
-    'Primary Supp': 27,
-    'Primary TV': 28,
+    'PrimBdrm Chill': 21,
+    'PrimBdrm Clean': 22,
+    'PrimBdrm Day': 23,
+    'PrimBdrm Night': 24,
+    'PrimBdrm Off': 25,
+    'PrimBdrm Party': 26,
+    'PrimBdrm Supp': 27,
+    'PrimBdrm TV': 28,
+    'LhsBdrm Chill': 51,
+    'LhsBdrm Clean': 52,
+    'LhsBdrm Day': 53,
+    'LhsBdrm Night': 54,
+    'LhsBdrm Off': 55,
+    'LhsBdrm Party': 56,
+    'LhsBdrm Supp': 57,
+    'LhsBdrm TV': 58,
     'Office Chill': 51,
     'Office Clean': 52,
     'Office Day': 53,
@@ -139,13 +162,13 @@ Map repButtons = [
     'Lanai Party': 76,
     'Lanai Supp': 77,
     'Lanai TV': 78,
-    'Lanai _Games': 79
+    'Lanai Play': 79
   ],
   'Caséta Repeater': [
     'Lanai Chill' : 1,
     'Lanai Cleaning' : 2,
     'Lanai Day' : 3,
-    'Lanai Games' : 4,
+    'Lanai Play' : 4,
     'Lanai Night' : 5,
     'Lanai Party' : 6,
     'Lanai Supp' : 7,
@@ -796,17 +819,13 @@ void adjustStateScenesKeys() {
     assembleScenes = assembleScenes.flatten().toUnique()
   }
   // Keep existing scenes keys that are present in assembleScenes.
-  state.scenes = state.scenes.collectEntries{ key, value ->
-    if (assembleScenes.contains(key)) {
-      [key, value]
-    } else {
-      []
+  Map currSceneMap = state.scenes
+  assembleScenes.each{ candidate ->
+    if (! currSceneMap.getAt(candidate)) {
+      currSceneMap << [ "${candidate}" : [] ]
     }
   }
-  // Add any new scene keys from assembleScenes.
-  assembleScenes.removeAll{ scene -> getScenes() }
-  state.scenes << assembleScenes?.collectEntries{ [(it): []] }
-  //-> logInfo('#871', "state.scenes: ${state.scenes}")
+  state.scenes = currSceneMap
 }
 
 void idSceneForMode() {
@@ -989,16 +1008,16 @@ void wirePicoButtonsToScenes() {
   }
 }
 
-void idRa2RepeatersImplementingScenes() {
-  input(
-    name: 'repeaters',
-    title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
-    type: 'device.LutronKeypad',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
+//void idRa2RepeatersImplementingScenes() {
+//  input(
+//    name: 'repeaters',
+//    title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
+//    type: 'device.LutronKeypad',
+//    submitOnChange: true,
+//    required: false,
+//    multiple: true
+//  )
+//}
 
 void idIndDevices() {
   input(
@@ -1085,7 +1104,7 @@ Map RoomScenesPage() {
     install: true,
     uninstall: true,
   ) {
-    //-> state.scenes = [ : ]
+    // state.scenes = [ : ]
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
@@ -1152,7 +1171,7 @@ Map RoomScenesPage() {
       wireKpadButtonsToScenes()
       authRoomScenesPicos()
       wirePicoButtonsToScenes()
-      idRa2RepeatersImplementingScenes()
+      //idRa2RepeatersImplementingScenes()
       idIndDevices()
       configureRoomScene()
       createRSPbsgAndPageLink()

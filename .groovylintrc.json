@@ -20,6 +20,10 @@
       // Literal strings in Hubitat (class None) trigger this issue
       "enabled": false
     },
+    "ImplementationAsType": {
+      // Hubitat's Groovy sand box does not allow Groovy best practices
+      "enabled": false
+    },
     "MethodCount": {
       // With Hubitat, class None has a high method count
       "enabled": false

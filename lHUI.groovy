@@ -217,7 +217,7 @@ String eventDetails(Event e) {
       <td>${e.displayName}</td>
     </tr>
     <tr>
-      <th align='right'>deviceId</th>
+      <th align='right'>hubitatDeviceId</th>
       <td>${e.deviceId}</td>
     </tr>
     <tr>
