@@ -467,23 +467,26 @@ void pro2RepHandler(Event e) {
   // CASETA EXAMPLE
   //   descriptionText  Caséta Repeater (pro2-1) button 4 was pushed
   //   displayName  Caséta Repeater (pro2-1)
-  //   hubitatDeviceId  9129
+  //   deviceId  9129
   //   name  pushed
   //   value  4
   //   isStateChange  true
-  logInfo('#474', eventDetails(e))
-  //if (e.name.startsWith('buttonLed-')) {
-  //  String eventButton = e.name.substring(10)
-  //  String repDeviceId = extractDeviceIdFromLabel(e.displayName)
-  //  Map repMap = getRoomSceneMapForRep(e.deviceId)
-  //  Map rsMap = repMap."${eventButton}"
-  //  rsMap.each{ room, scene ->
-  //    logInfo(
-  //      'ra2RepHandler',
-  //      "${e.deviceId} (${repMap.repNativeId}), ${room} ${scene} ${e.value}"
-  //    )
-  //  }
-  //}
+  // NOTES:
+  //   - A Caseta scene button press implies 'on'.
+  //   - There is no event equivalent to scene 'off'.
+  //   - Detection of 'scene off' requires device monitoring.
+  if (e.name == 'pushed') {
+    String eventButton = e.value
+    String repDeviceId = extractDeviceIdFromLabel(e.displayName)
+    Map repMap = getRoomSceneMapForRep(e.deviceId)
+    Map rsMap = repMap."${eventButton}"
+    rsMap.each{ room, scene ->
+      logInfo(
+        'pro2RepHandler',
+        "${e.deviceId} (${repMap.repNativeId}), ${room} ${scene} ${e.value} on"
+      )
+    }
+  }
 }
 
 void ra2RepHandler(Event e) {
