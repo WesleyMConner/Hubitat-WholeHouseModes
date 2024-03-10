@@ -910,7 +910,7 @@ Map getDeviceValues (String scene) {
     ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
     if (typeAndId[0] == 'RA2') {
       logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
-      app.removeSetting(k2)
+      settingsRemoveAndLog(k2)
     } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
       logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
     } else {
@@ -1091,6 +1091,49 @@ void configureRoomScene() {
   }
 }
 
+
+void stateAndSessionCleanup () {
+  stateRemoveAndLog('sufficientLight')
+  stateRemoveAndLog('targetScene')
+    settingsRemoveAndLog('ra2Repeaters')
+    settingsRemoveAndLog('mainRepeaters')
+    settingsRemoveAndLog('hubitatQueryString')
+    settingsRemoveAndLog('mainRepeaters')
+    settingsRemoveAndLog('ra2Repeaters')
+    settingsRemoveAndLog('scene^Chill^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Chill^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Chill^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Cleaning^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Cleaning^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Cleaning^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Cook^Rep^ra2-1')
+    settingsRemoveAndLog('scene^Day^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Day^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Day^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Games^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Games^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Games^Rep^ra2-1')
+    settingsRemoveAndLog('scene^Games^Rep^ra2-83')
+    settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-1')
+    settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Night^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Night^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Night^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Off^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Off^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Party^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Party^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Party^RA2^ra2-83')
+    settingsRemoveAndLog('scene^Supplement^RA2^pro2-1')
+    settingsRemoveAndLog('scene^Supplement^RA2^ra2-1')
+    settingsRemoveAndLog('scene^Supplement^RA2^ra2-83')
+    settingsRemoveAndLog('scene^TV^RA2^pro2-1')
+    settingsRemoveAndLog('scene^TV^RA2^ra2-1')
+    settingsRemoveAndLog('scene^TV^RA2^ra2-83')
+    settingsRemoveAndLog('scene^TV^Rep^ra2-1')
+    settingsRemoveAndLog('scene^TV^Rep^ra2-83')
+}
+
 Map RoomScenesPage() {
   // The parent application (Whole House Automation) assigns a unique label
   // to each WHA Rooms instance. Capture app.label as state.ROOM_LABEL.
@@ -1108,57 +1151,17 @@ Map RoomScenesPage() {
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> app.removeSetting('..')
-    //-> state.remove('..')
+    //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
+    //-> Prefer stateRemoveAndLog() over state.remove('..')
     //---------------------------------------------------------------------------------
     state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
     state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
-    state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-    state.remove('sufficientLight')
-    state.remove('targetScene')
+    stateAndSessionCleanup()
     state.brightLuxSensors = []
-    /*
-    app.removeSetting('ra2Repeaters')
-    app.removeSetting('mainRepeaters')
-    app.removeSetting('hubitatQueryString')
-    app.removeSetting('mainRepeaters')
-    app.removeSetting('ra2Repeaters')
-    app.removeSetting('scene^Chill^RA2^pro2-1')
-    app.removeSetting('scene^Chill^RA2^ra2-1')
-    app.removeSetting('scene^Chill^RA2^ra2-83')
-    app.removeSetting('scene^Cleaning^RA2^pro2-1')
-    app.removeSetting('scene^Cleaning^RA2^ra2-1')
-    app.removeSetting('scene^Cleaning^RA2^ra2-83')
-    app.removeSetting('scene^Cook^Rep^ra2-1')
-    app.removeSetting('scene^Day^RA2^pro2-1')
-    app.removeSetting('scene^Day^RA2^ra2-1')
-    app.removeSetting('scene^Day^RA2^ra2-83')
-    app.removeSetting('scene^Games^RA2^pro2-1')
-    app.removeSetting('scene^Games^RA2^ra2-83')
-    app.removeSetting('scene^Games^Rep^ra2-1')
-    app.removeSetting('scene^Games^Rep^ra2-83')
-    app.removeSetting('scene^INACTIVE^RA2^ra2-1')
-    app.removeSetting('scene^INACTIVE^RA2^ra2-83')
-    app.removeSetting('scene^Night^RA2^pro2-1')
-    app.removeSetting('scene^Night^RA2^ra2-1')
-    app.removeSetting('scene^Night^RA2^ra2-83')
-    app.removeSetting('scene^Off^RA2^ra2-1')
-    app.removeSetting('scene^Off^RA2^ra2-83')
-    app.removeSetting('scene^Party^RA2^pro2-1')
-    app.removeSetting('scene^Party^RA2^ra2-1')
-    app.removeSetting('scene^Party^RA2^ra2-83')
-    app.removeSetting('scene^Supplement^RA2^pro2-1')
-    app.removeSetting('scene^Supplement^RA2^ra2-1')
-    app.removeSetting('scene^Supplement^RA2^ra2-83')
-    app.removeSetting('scene^TV^RA2^pro2-1')
-    app.removeSetting('scene^TV^RA2^ra2-1')
-    app.removeSetting('scene^TV^RA2^ra2-83')
-    app.removeSetting('scene^TV^Rep^ra2-1')
-    app.removeSetting('scene^TV^Rep^ra2-83')
-    */
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+      state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       idMotionSensors()
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }

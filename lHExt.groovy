@@ -31,6 +31,20 @@ library(
 //---- CONVENIENCE
 //----
 
+void stateRemoveAndLog (String stateKey) {
+  if (state."${stateKey}") {
+    logInfo('stateRemoveAndLog', "Removing stale state key >${stateKey}")
+    //state.remove(stateKey)
+  }
+}
+
+void settingsRemoveAndLog (String settingKey) {
+  if (settings."${settingKey}") {
+    logInfo('settingsRemoveAndLog', "Removing stale setting >${settingKey}")
+    //app.removeSetting(settingKey)
+  }
+}
+
 Integer safeParseInt(String s) {
   return (s == '0') ? 0 : s.toInteger()
 }

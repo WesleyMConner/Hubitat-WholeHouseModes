@@ -41,126 +41,277 @@ preferences {
   page(name: 'WhaPage')
 }
 
-[
-  'ra2-1': [
-    '11': ['Den_Lamp', 'Chill'],
-    '12': ['Den_Lamp', 'Clean'],
-    '13': ['Den_Lamp', '!!! Day'],
-    '14': ['Den_Lamp', '!!! Night'],
-    '15': ['Den_Lamp', 'Off'],
-    '16': ['Den_Lamp', 'Party'],
-    '17': ['Den_Lamp', 'Supp'],
-    '18': ['Den_Lamp', 'TV'],
-    '21': ['Kitchen', 'Chill'],
-    '22': ['Kitchen', 'Clean'],
-    '23': ['Kitchen', '!!! Day'],
-    '24': ['Kitchen', '!!! Night'],
-    '25': ['Kitchen', 'Off'],
-    '26': ['Kitchen', 'Party'],
-    '27': ['Kitchen', 'Supp'],
-    '28': ['Kitchen', 'TV'],
-    '29': ['Kitchen', '_Cook'],
-    '41': ['Den', 'Chill'],
-    '42': ['Den', 'Clean'],
-    '43': ['Den', '!!! Day'],
-    '44': ['Den', '!!! Night'],
-    '45': ['Den', 'Off'],
-    '46': ['Den', 'Party'],
-    '47': ['Den', 'Supp'],
-    '48': ['Den', 'TV'],
-    '51': ['Guest_Wing', 'Chill'],
-    '52': ['Guest_Wing', 'Clean'],
-    '53': ['Guest_Wing', '!!! Day'],
-    '54': ['Guest_Wing', '!!! Night'],
-    '55': ['Guest_Wing', 'Off'],
-    '56': ['Guest_Wing', 'Party'],
-    '57': ['Guest_Wing', 'Supp'],
-    '58': ['Guest_Wing', 'TV'],
-    '60': ['LHS_Bath', 'Chill'],
-    '62': ['LHS_Bath', 'Clean'],
-    '63': ['LHS_Bath', 'Day'],
-    '64': ['LHS_Bath', 'Night'],
-    '65': ['LHS_Bath', 'Off'],
-    '66': ['LHS_Bath', 'Party'],
-    '67': ['LHS_Bath', 'Supp'],
-    '68': ['LHS_Bath', 'TV'],
-    '70': ['RHS_Bath', 'Chill'],
-    '72': ['RHS_Bath', 'Clean'],
-    '73': ['RHS_Bath', 'Day'],
-    '74': ['RHS_Bath', 'Night'],
-    '75': ['RHS_Bath', 'Off'],
-    '76': ['RHS_Bath', 'Party'],
-    '77': ['RHS_Bath', 'Supp'],
-    '78': ['RHS_Bath', 'TV'],
-    '79': ['Main', 'Chill'],
-    '82': ['Main', 'Clean'],
-    '83': ['Main', 'Day'],
-    '84': ['Main', 'Night'],
-    '85': ['Main', 'Off'],
-    '86': ['Main', 'Party'],
-    '87': ['Main', 'Supp'],
-    '88': ['Main', 'TV']
-  ], 'ra2-83': [
-    '10': ['PrimBath', 'Chill'],
-    '12': ['PrimBath', 'Clean'],
-    '13': ['PrimBath', 'Day'],
-    '14': ['PrimBath', 'Night'],
-    '15': ['PrimBath', 'Off'],
-    '16': ['PrimBath', 'Party'],
-    '17': ['PrimBath', 'Supp'],
-    '18': ['PrimBath', 'TV'],
-    '21': ['Primary', 'Chill'],
-    '22': ['Primary', 'Clean'],
-    '23': ['Primary', 'Day'],
-    '24': ['Primary', 'Night'],
-    '25': ['Primary', 'Off'],
-    '26': ['Primary', 'Party'],
-    '27': ['Primary', 'Supp'],
-    '28': ['Primary', 'TV'],
-    '41': ['LhsBdrm', 'Chill'],
-    '42': ['LhsBdrm', 'Clean'],
-    '43': ['LhsBdrm', 'Day'],
-    '44': ['LhsBdrm', 'Night'],
-    '45': ['LhsBdrm', 'Off'],
-    '46': ['LhsBdrm', 'Party'],
-    '47': ['LhsBdrm', 'Supp'],
-    '48': ['LhsBdrm', 'TV'],
-    '51': ['Office', 'Chill'],
-    '52': ['Office', 'Clean'],
-    '53': ['Office', '!!! Day'],
-    '54': ['Office', '!!! Night'],
-    '55': ['Office', 'Off'],
-    '56': ['Office', 'Party'],
-    '57': ['Office', 'Supp'],
-    '58': ['Office', 'TV'],
-    '61': ['Yard', 'Chill'],
-    '62': ['Yard', '!!! Clean'],
-    '63': ['Yard', '!!! Day'],
-    '64': ['Yard', 'Night'],
-    '65': ['Yard', 'Off'],
-    '66': ['Yard', '!!! Party'],
-    '67': ['Yard', '!!! Supp'],
-    '68': ['Yard', '!!! TV'],
-    '71': ['Lanai', 'Chill'],
-    '72': ['Lanai', '!!! Clean'],
-    '73': ['Lanai', '!!! Day'],
-    '74': ['Lanai', 'Night'],
-    '75': ['Lanai', 'Off'],
-    '76': ['Lanai', 'Party'],
-    '77': ['Lanai', 'Supp'],
-    '78': ['Lanai', 'TV'],
-    '79': ['Lanai', '_Games'],
-  ] 'pro2-1': [
-    '1': ['Lanai', 'Chill'],
-    '2': ['Lanai', 'Cleaning'],
-    '3': ['Lanai', 'Day'],
-    '4': ['Lanai', 'Games'],
-    '5': ['Lanai', 'Night'],
-    '6': ['Lanai', 'Party'],
-    '7': ['Lanai', 'Supplement'],
-    '8': ['Lanai', 'TV']
+/* groovylint-disable-next-line LineLength */
+// state.repToRS → [pro2-1:[1:[Lanai, Chill], 2:[Lanai, Cleaning], 3:[Lanai, Day], 4:[Lanai, Games], 5:[Lanai, Night], 6:[Lanai, Party], 7:[Lanai, Supplement], 8:[Lanai, TV]], ra2-83:[22:[Primary, Clean], 23:[Primary, Day], 24:[Primary, Night], 25:[Primary, Off], 26:[Primary, Party], 27:[Primary, Supp], 28:[Primary, TV], 71:[Lanai, Chill], 72:[Lanai, Clean], 51:[Office, Chill], 73:[Lanai, Day], 52:[Office, Clean], 74:[Lanai, Night], 53:[Office, Day], 75:[Lanai, Off], 10:[PrimBath, Chill], 54:[Office, Night], 76:[Lanai, Party], 55:[Office, Off], 77:[Lanai, Supp], 12:[PrimBath, Clean], 56:[Office, Party], 78:[Lanai, TV], 13:[PrimBath, Day], 57:[Office, Supp], 79:[Lanai, _Games], 14:[PrimBath, Night], 58:[Office, TV], 15:[PrimBath, Off], 16:[PrimBath, Party], 17:[PrimBath, Supp], 18:[PrimBath, TV], 61:[Yard, High], 62:[Yard, Low], 63:[Yard, Off], 21:[Primary, Chill]], ra2-1:[44:[Den, Night], 88:[Main, TV], 45:[Den, Off], 46:[Den, Party], 47:[Den, Supp], 48:[Den, TV], 51:[Guest_Wing, Chill], 52:[Guest_Wing, Clean], 53:[Guest_Wing, Day], 54:[Guest_Wing, Night], 11:[Den_Lamp, Chill], 55:[Guest_Wing, Off], 12:[Den_Lamp, Clean], 56:[Guest_Wing, Party], 13:[Den_Lamp, Day], 57:[Guest_Wing, Supp], 14:[Den_Lamp, Night], 58:[Guest_Wing, TV], 15:[Den_Lamp, Off], 16:[Den_Lamp, Party], 17:[Den_Lamp, Supp], 18:[Den_Lamp, TV], 60:[LHS_Bath, Chill], 62:[LHS_Bath, Clean], 63:[LHS_Bath, Day], 64:[LHS_Bath, Night], 21:[Kitchen, Chill], 65:[LHS_Bath, Off], 22:[Kitchen, Clean], 66:[LHS_Bath, Party], 23:[Kitchen, Day], 67:[LHS_Bath, Supp], 24:[Kitchen, Night], 68:[LHS_Bath, TV], 25:[Kitchen, Off], 26:[Kitchen, Party], 27:[Kitchen, Supp], 28:[Kitchen, TV], 29:[Kitchen, _Cook], 70:[RHS_Bath, Chill], 72:[RHS_Bath, Clean], 73:[RHS_Bath, Day], 74:[RHS_Bath, Night], 75:[RHS_Bath, Off], 76:[RHS_Bath, Party], 77:[RHS_Bath, Supp], 78:[RHS_Bath, TV], 79:[Main, Chill], 82:[Main, Clean], 83:[Main, Day], 84:[Main, Night], 41:[Den, Chill], 85:[Main, Off], 42:[Den, Clean], 86:[Main, Party], 43:[Den, Day], 87:[Main, Supp]]]
+
+// hubitatDeviceId: 6825, displayName: 'RA2 Repeater 1 (ra2-1)'
+// hubitatDeviceId: 6892, displayName: 'RA2 Repeater 2 (ra2-83)'
+//   -> button <value> (##) was <name> (pushed/released)
+//   -> Integer eventButton = safeParseInt(e.name.substring(10))
+//
+// hubitatDeviceId: 9129, displayName: 'Caséta Repeater (pro2-1)'
+//   - button # was pushed
+//   - button # was released
+
+state.hubitatIdToRepeaterData = [
+  '6825': [
+    type: 'ra2',
+    nativeId: '1',
+    buttons: [
+      [button: 1, room: 'WHA', scene: 'Chill'],
+      [button: 2, room: 'WHA', scene: 'Clean'],
+      [button: 3, room: 'WHA', rsvdScene: 'Day', altButton: 5],
+      [button: 4, room: 'WHA', scene: 'Night'],
+      [button: 5, room: 'WHA', scene: 'Off'],
+      [button: 6, room: 'WHA', scene: 'Party'],
+      [button: 7, room: 'WHA', scene: 'Supp'],
+      [button: 8, room: 'WHA', scene: 'TV'],
+      [button: 11, room: 'DenLamp', scene: 'Chill'],
+      [button: 12, room: 'DenLamp', scene: 'Clean'],
+      [button: 13, room: 'DenLamp', rsvdScene: 'Day', altButton: 15],
+      [button: 14, room: 'DenLamp', rsvdScene: 'Night', altButton: 15],
+      [button: 15, room: 'DenLamp', scene: 'Off'],
+      [button: 16, room: 'DenLamp', scene: 'Party'],
+      [button: 17, room: 'DenLamp', scene: 'Supp'],
+      [button: 18, room: 'DenLamp', rsvdScene: 'TV', altButton: 15],
+      [button: 21, room: 'Kitchen', scene: 'Chill'],
+      [button: 22, room: 'Kitchen', scene: 'Clean'],
+      [button: 23, room: 'Kitchen', rsvdScene: 'Day', altButton: 25],
+      [button: 24, room: 'Kitchen', rsvdScene: 'Night', altButton: 25],
+      [button: 25, room: 'Kitchen', scene: 'Off'],
+      [button: 26, room: 'Kitchen', scene: 'Party'],
+      [button: 27, room: 'Kitchen', scene: 'Supp'],
+      [button: 28, room: 'Kitchen', scene: 'TV'],
+      [button: 29, room: 'Kitchen', scene: '_Cook'],
+      [button: 41, room: 'Den', scene: 'Chill'],
+      [button: 42, room: 'Den', scene: 'Clean'],
+      [button: 43, room: 'Den', rsvdScene: 'Day', altButton: 45],
+      [button: 44, room: 'Den', rsvdScene: 'Night', altButton: 45],
+      [button: 45, room: 'Den', scene: 'Off'],
+      [button: 46, room: 'Den', scene: 'Party'],
+      [button: 47, room: 'Den', scene: 'Supp'],
+      [button: 48, room: 'Den', scene: 'TV'],
+      [button: 51, room: 'Guest', scene: 'Chill'],
+      [button: 52, room: 'Guest', scene: 'Clean'],
+      [button: 53, room: 'Guest', rsvdScene: 'Day', altButton: 55],
+      [button: 54, room: 'Guest', rsvdScene: 'Night', altButton: 55],
+      [button: 55, room: 'Guest', scene: 'Off'],
+      [button: 56, room: 'Guest', scene: 'Party'],
+      [button: 57, room: 'Guest', scene: 'Supp'],
+      [button: 58, room: 'Guest', scene: 'TV'],
+      [button: 60, room: 'LhsBath', scene: 'Chill'],
+      [button: 62, room: 'LhsBath', scene: 'Clean'],
+      [button: 63, room: 'LhsBath', scene: 'Day'],
+      [button: 64, room: 'LhsBath', scene: 'Night'],
+      [button: 65, room: 'LhsBath', scene: 'Off'],
+      [button: 66, room: 'LhsBath', scene: 'Party'],
+      [button: 67, room: 'LhsBath', scene: 'Supp'],
+      [button: 68, room: 'LhsBath', scene: 'TV'],
+      [button: 70, room: 'RhsBath', scene: 'Chill'],
+      [button: 72, room: 'RhsBath', scene: 'Clean'],
+      [button: 73, room: 'RhsBath', scene: 'Day'],
+      [button: 74, room: 'RhsBath', scene: 'Night'],
+      [button: 75, room: 'RhsBath', scene: 'Off'],
+      [button: 76, room: 'RhsBath', scene: 'Party'],
+      [button: 77, room: 'RhsBath', scene: 'Supp'],
+      [button: 78, room: 'RhsBath', scene: 'TV'],
+      [button: 79, room: 'Main', scene: 'Chill'],
+      [button: 82, room: 'Main', rsvdScene: 'Clean', altButton: 85],
+      [button: 83, room: 'Main', rsvdScene: 'Day', altButton: 85],
+      [button: 84, room: 'Main', scene: 'Night'],
+      [button: 85, room: 'Main', scene: 'Off'],
+      [button: 86, room: 'Main', scene: 'Party'],
+      [button: 87, room: 'Main', scene: 'Supp'],
+      [button: 88, room: 'Main', scene: 'TV']
+    ]
+  ],
+  '6892': [
+    type: 'ra2',
+    nativeId: '83',
+    buttons: [
+      [button: 1, room: 'ALARM', scene: 'ALARM'],
+      [button: 2, room: 'AUTO', scene: 'AUTO'],
+      [button: 3, room: 'AWAY', scene: 'AWAY'],
+      [button: 4, room: 'FLASH', scene: 'FLASH'],
+      [button: 5, room: 'PANIC', scene: 'PANIC'],
+      [button: 6, room: 'QUIET', scene: 'QUIET'],
+      [button: 10, room: 'PrimBath', scene: 'Chill'],
+      [button: 12, room: 'PrimBath', scene: 'Clean'],
+      [button: 13, room: 'PrimBath', rsvdScene: 'Day', altButton: 15],
+      [button: 14, room: 'PrimBath', rsvdScene: 'Night', altButton: 15],
+      [button: 15, room: 'PrimBath', scene: 'Off'],
+      [button: 16, room: 'PrimBath', scene: 'Party'],
+      [button: 17, room: 'PrimBath', scene: 'Supp'],
+      [button: 18, room: 'PrimBath', scene: 'TV'],
+      [button: 21, room: 'PrimBdrm', scene: 'Chill'],
+      [button: 22, room: 'PrimBdrm', scene: 'Clean'],
+      [button: 23, room: 'PrimBdrm', rsvdScene: 'Day', altButton: 25],
+      [button: 24, room: 'PrimBdrm', rsvdScene: 'Night', altButton: 25],
+      [button: 25, room: 'PrimBdrm', scene: 'Off'],
+      [button: 26, room: 'PrimBdrm', scene: 'Party'],
+      [button: 27, room: 'PrimBdrm', scene: 'Supp'],
+      [button: 28, room: 'PrimBdrm', scene: 'TV'],
+      [button: 41, room: 'LhsBdrm', scene: 'Chill'],
+      [button: 42, room: 'LhsBdrm', scene: 'Clean'],
+      [button: 43, room: 'LhsBdrm', rsvdScene: 'Day', altButton: 45],
+      [button: 44, room: 'LhsBdrm', rsvdScene: 'Night', altButton: 45],
+      [button: 45, room: 'LhsBdrm', scene: 'Off'],
+      [button: 46, room: 'LhsBdrm', scene: 'Party'],
+      [button: 47, room: 'LhsBdrm', rsvdScene: 'Supp', altButton: 41],
+      [button: 48, room: 'LhsBdrm', scene: 'TV'],
+      [button: 51, room: 'Office', scene: 'Chill'],
+      [button: 52, room: 'Office', scene: 'Clean'],
+      [button: 53, room: 'Office', rsvdScene: 'Day', altButton: 55],
+      [button: 54, room: 'Office', rsvdScene: 'Night', altButton: 55],
+      [button: 55, room: 'Office', scene: 'Off'],
+      [button: 56, room: 'Office', scene: 'Party'],
+      [button: 57, room: 'Office', scene: 'Supp'],
+      [button: 58, room: 'Office', scene: 'TV'],
+      [button: 61, room: 'Yard', scene: 'Chill'],
+      [button: 62, room: 'Yard', rsvdScene: 'Clean', altButton: 65],
+      [button: 63, room: 'Yard', rsvdScene: 'Day', altButton: 65],
+      [button: 64, room: 'Yard', scene: 'Night'],
+      [button: 65, room: 'Yard', scene: 'Off'],
+      [button: 66, room: 'Yard', rsvdScene: 'Party', altButton: 61],
+      [button: 67, room: 'Yard', rsvdScene: 'Supp', altButton: 61],
+      [button: 68, room: 'Yard', rsvdScene: 'TV', altButton: 61],
+      [button: 71, room: 'Lanai', scene: 'Chill'],
+      [button: 72, room: 'Lanai', rsvdScene: 'Clean', altButton: 75],
+      [button: 73, room: 'Lanai', rsvdScene: 'Day', altButton: 75],
+      [button: 74, room: 'Lanai', scene: 'Night'],
+      [button: 75, room: 'Lanai', scene: 'Off'],
+      [button: 76, room: 'Lanai', scene: 'Party'],
+      [button: 77, room: 'Lanai', scene: 'Supp'],
+      [button: 78, room: 'Lanai', scene: 'TV'],
+      [button: 79, room: 'Lanai', scene: '_Games']
+    ],
+  ],
+  '9129': [
+    type: 'pro2',
+    nativeId: '1',
+    buttons: [
+      [button: 1, room: 'Lanai', scene: 'Chill'],
+      [button: 2, room: 'Lanai', scene: 'Cleaning'],
+      [button: 3, room: 'Lanai', scene: 'Day'],
+      [button: 4, room: 'Lanai', scene: 'Games'],
+      [button: 5, room: 'Lanai', scene: 'Night'],
+      [button: 6, room: 'Lanai', scene: 'Party'],
+      [button: 7, room: 'Lanai', scene: 'Supplement'],
+      [button: 8, room: 'Lanai', scene: 'TV']
+    ]
   ]
 ]
+
+Map getRoomSceneForRepButton (Long repHubId, String button) {
+  return state.repButtonToRS."${repHubId}"?."${button}"
+}
+
+Map getRoomSceneMapForRep (Long repHubId) {
+  return state.repButtonToRS."${repHubId}"
+}
+
+void refreshRepButtonToRS() {
+  // GOAL: [repHubId: [
+  //         repNativeId: ra2-1 .. ra2-83 .. pro2-1
+  //         button: [room: scene]]] (one room.scene per button)
+  state.repButtonToRS = [:]
+  state.hubitatIdToRepeaterData.each{ repHubId, map1 ->
+    String repNativeId = "${map1.type}-${map1.nativeId}"
+    logTrace('refreshRepButtonToRS', [
+      "repHubId: ${repHubId}, repNativeId: ${repNativeId}",
+      "map1.buttons: ${map1.buttons}"
+    ])
+    map1.buttons.each{ map2 ->
+      String button = map2.button ?: map2.altButton
+      String room = map2.room
+      String scene = map2.scene ?: map2.rsvdScene
+      if (room && scene && button) {
+        logTrace(
+          'refreshRepButtonToRS',
+          "repHubId: ${repHubId}, button: ${button}, room: ${room}, scene: ${scene}"
+        )
+        // If missing, init button Map for this repHubId
+        if (! state.repButtonToRS."${repHubId}") {
+          state.repButtonToRS.put(repHubId, ['repNativeId': repNativeId])
+        }
+        // If missing, init room-to-scene Map for this button
+        if (! state.repButtonToRS."${repHubId}"."${button}") {
+          state.repButtonToRS."${repHubId}".put(button, [:])
+        }
+        // Install the single-entry [room: scene] Map for the button
+        if (room && scene) {
+          state.repButtonToRS."${repHubId}"."${button}".put(room, scene)
+        }
+      } else {
+        logError('refreshRepButtonToRS', [
+          "repHubId: ${repHubId}, repNativeId: ${repNativeId}",
+          "map2: ${map2}",
+          "button: ${button}, room: ${room}, scene: ${scene}"
+        ])      }
+    }
+  }
+}
+
+/*
+void pressButtonsForRoomScene (String room, String scene) {
+  state.rsToRepButton."${room}"?."${scene}"?.each{ repHubId, buttonList ->
+    buttonList.each{ button ->
+      settings.ra2Repeaters{ rep ->
+        //if (rep.label)
+      }
+      // Filter for the repeater instance (from settings)
+    }
+  }
+  Map repButtonsMap = state.rsToRepButton.collectEntries{ k1, map1 ->
+    if (k1 == room) {
+      map1.each{ k2, map2 ->
+        if (k2 = scene) {
+          [map2.repHub]
+        }
+      }
+    }
+  }
+}
+*/
+
+void refreshRStoRepButton() {
+  // GOAL: [room: [scene: [repHubId: [unique buttons]]]]
+  state.rsToRepButton = [:]
+  state.hubitatIdToRepeaterData.each{ repHubId, map1 ->
+    String repNativeId = "${map1.type}-${map1.nativeId}"
+    logTrace('refreshRStoRepButton', "repHubId: ${repHubId}, repNativeId: ${repNativeId}")
+    map1.buttons.each{ map2 ->
+      String room = map2.room
+      String scene = map2.scene ?: map2.rsvdScene
+      String button = map2.button ?: map2.altButton
+      if (room && scene && button) {
+        logTrace(
+          'refreshRStoRepButton',
+          "room: ${room}, scene: ${scene}, repHubId: ${repHubId}, button: ${button}"
+        )
+        // If missing, init room Map
+        if (! state.rsToRepButton."${room}") {
+          state.rsToRepButton.put(room, [:])
+        }
+        // If missing, init room.scene Map
+        if (! state.rsToRepButton."${room}"."${scene}") {
+          state.rsToRepButton."${room}".put(scene, [:])
+        }
+        // If missing, init room.scene.repHub List
+        if (! state.rsToRepButton."${room}"."${scene}"."${repHubId}") {
+          state.rsToRepButton."${room}"."${scene}".put(repHubId, [])
+        }
+        // Add repeater button if not already present
+        //if (! state.rsToRepButton."${room}"."${scene}"."${repHubId}".findAll{ it == button }) {
+        if (! state.rsToRepButton."${room}"."${scene}"."${repHubId}".contains(button)) {
+          state.rsToRepButton."${room}"."${scene}"."${repHubId}" << button
+        }
+      } else {
+        logError('refreshRStoRepButton', "repHubId: ${repHubId}, room: ${room}, scene: ${scene}, button: ${button}")
+      }
+    }
+  }
+}
 
 //---- CORE METHODS (External)
 
@@ -312,14 +463,48 @@ String extractDeviceIdFromLabel(String deviceLabel) {
   return (deviceLabel =~ /\((.*)\)/)[0][1]
 }
 
-void repeaterHandler(Event e) {
-  logInfo('WHA repeaterHandler', "At entry ${e.descriptionText}")
-  // Isolate Main Repeater (ra2-1, ra2-83, pro2-1) buttonLed-## events to
-  // capture de-centralized Room Scene activation.
+void pro2RepHandler(Event e) {
+  // CASETA EXAMPLE
+  //   descriptionText  Caséta Repeater (pro2-1) button 4 was pushed
+  //   displayName  Caséta Repeater (pro2-1)
+  //   hubitatDeviceId  9129
+  //   name  pushed
+  //   value  4
+  //   isStateChange  true
+  logInfo('#474', eventDetails(e))
+  //if (e.name.startsWith('buttonLed-')) {
+  //  String eventButton = e.name.substring(10)
+  //  String repDeviceId = extractDeviceIdFromLabel(e.displayName)
+  //  Map repMap = getRoomSceneMapForRep(e.deviceId)
+  //  Map rsMap = repMap."${eventButton}"
+  //  rsMap.each{ room, scene ->
+  //    logInfo(
+  //      'ra2RepHandler',
+  //      "${e.deviceId} (${repMap.repNativeId}), ${room} ${scene} ${e.value}"
+  //    )
+  //  }
+  //}
+}
+
+void ra2RepHandler(Event e) {
+  // Example Event
+  //   descriptionText  RA2 Repeater 2 (ra2-83) button 73 was pushed
+  //   displayName  RA2 Repeater 2 (ra2-83)
+  //   deviceId  6892
+  //   name  pushed
+  //   value  73
+  //   isStateChange  true
   if (e.name.startsWith('buttonLed-')) {
-    Integer eventButton = safeParseInt(e.name.substring(10))
-    String deviceId = extractDeviceIdFromLabel(e.displayName)
-    logInfo('WHA repeaterHandler', "${deviceId}..${eventButton}..${e.value}")
+    String eventButton = e.name.substring(10)
+    String repDeviceId = extractDeviceIdFromLabel(e.displayName)
+    Map repMap = getRoomSceneMapForRep(e.deviceId)
+    Map rsMap = repMap."${eventButton}"
+    rsMap.each{ room, scene ->
+      logInfo(
+        'ra2RepHandler',
+        "${e.deviceId} (${repMap.repNativeId}), ${room} ${scene} ${e.value}"
+      )
+    }
   }
 }
 
@@ -339,15 +524,6 @@ void uninstalled () {
 void updated () {
   logWarn('updated', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
-  //---------------------------------------------------------------------------------
-  // REMOVE NO LONGER USED SETTINGS AND STATE
-  //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-  //   - state.remove('X')
-  //   - app.removeSetting('Y')
-  //---------------------------------------------------------------------------------
-  state.remove('MODE_PBSG_APP_LABEL')
-  state.remove('MODE_PBSG_APP_NAME')
-  app.removeSetting('hubitatQueryString')
   initialize()
 }
 
@@ -355,6 +531,8 @@ void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
   logTrace('initialize', 'Entered')
+  refreshRepButtonToRS()
+  refreshRStoRepButton()
   settings.seeTouchKpads.each{ device ->
     logInfo('initialize', "subscribing ${deviceInfo(device)} to mode handler."
     )
@@ -364,21 +542,33 @@ void initialize () {
     logInfo('initialize', "subscribing ${deviceInfo(device)} to Keypad Handler")
     subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
   }
-  settings.mainRepeaters.each{ device ->
+  settings.ra2Repeaters.each{ device ->
     logInfo('initialize', "subscribing ${deviceInfo(device)} to Repeater Handler")
-    subscribe(device, repeaterHandler, ['filterEvents': true])
+    subscribe(device, ra2RepHandler, ['filterEvents': true])
+  }
+  settings.pro2Repeaters.each{ device ->
+    logInfo('initialize', "subscribing ${deviceInfo(device)} to Repeater Handler")
+    subscribe(device, pro2RepHandler, ['filterEvents': true])
   }
 }
 
 //---- GUI / PAGE RENDERING
 
-void _idSpecialFnMainRepeater () {
+void _idRa2Repeaters () {
   input(
-    name: 'mainRepeaters',
-    title: [
-      heading2('Identify Lutron Main Repeater(s) for Room Scene LED Events'),
-      bullet2('e.g., ALL_AUTO, ALARM, AWAY, FLASH, PANIC, QUIET')
-    ].join('<br/>'),
+    name: 'ra2Repeaters',
+    title: heading2('Identify Lutron RA2 Repeater(s)'),
+    type: 'device.LutronKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void _idPro2Repeaters () {
+  input(
+    name: 'pro2Repeaters',
+    title: heading2('Identify Lutron Caseta (Pro2) Repeater(s)'),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
@@ -519,6 +709,17 @@ Map WhaPage () {
     install: true,
     uninstall: true
   ) {
+    //---------------------------------------------------------------------------------
+    // REMOVE NO LONGER USED SETTINGS AND STATE
+    //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
+    //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
+    //-> Prefer stateRemoveAndLog() over state.remove('..')
+    //---------------------------------------------------------------------------------
+    //--NO LONGER REQUIRED-> stateRemoveAndLog('MODE_PBSG_APP_LABEL')
+    //--NO LONGER REQUIRED-> stateRemoveAndLog('MODE_PBSG_APP_NAME')
+    //--NO LONGER REQUIRED-> stateRemoveAndLog('repToRS')
+    //--NO LONGER REQUIRED-> app.removeSetting('hubitatQueryString')
+    //---------------------------------------------------------------------------------
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
@@ -528,7 +729,9 @@ Map WhaPage () {
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      _idSpecialFnMainRepeater()
+      state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
+      _idRa2Repeaters()
+      _idPro2Repeaters()
       _idSpecialFnButtons()
       _idKpadsWithModeButtons()
       _wireSpecialFnButtons()
