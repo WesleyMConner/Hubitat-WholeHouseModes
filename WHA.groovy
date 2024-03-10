@@ -117,12 +117,12 @@ state.hubitatIdToRepeaterData = [
     type: 'ra2',
     nativeId: '83',
     buttons: [
-      [button: 1, room: 'WHA', scene: 'ALARM'],
-      [button: 2, room: 'WHA', scene: 'AUTO'],
-      [button: 3, room: 'WHA', scene: 'AWAY'],
-      [button: 4, room: 'WHA', scene: 'FLASH'],
-      [button: 5, room: 'WHA', scene: 'PANIC'],
-      [button: 6, room: 'WHA', scene: 'QUIET'],
+      [button: 1, room: 'WHA', scene: '_ALARM'],
+      [button: 2, room: 'WHA', scene: '_AUTO'],
+      [button: 3, room: 'WHA', scene: '_AWAY'],
+      [button: 4, room: 'WHA', scene: '_FLASH'],
+      [button: 5, room: 'WHA', scene: '_PANIC'],
+      [button: 6, room: 'WHA', scene: '_QUIET'],
       [button: 10, room: 'PrimBath', scene: 'Chill'],
       [button: 12, room: 'PrimBath', scene: 'Clean'],
       [button: 13, room: 'PrimBath', rsvdScene: 'Day', altButton: 15],
@@ -348,15 +348,6 @@ void _writeMPbsgHref () {
   }
 }
 
-void AllAuto () {
-  settings.rooms.each{ roomName ->
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDNI = "pbsg_${roomApp.label}_AUTOMATIC"
-    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
-    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
-  }
-}
-
 //---- EVENT HANDLERS
 
 String extractDeviceIdFromLabel(String deviceLabel) {
@@ -419,11 +410,15 @@ void ra2RepHandler(Event e) {
       )
       if (room == 'WHA') {
         switch(scene) {
+          case 'Off':
+            // The button that turns RA2 lights off DOES NOT adjust mode.
+            // Room Scene apps may individually react.
+            logTrace('ra2RepHandler', "All ${scene} w/ nothing to do.")
+            break
           case 'Chill':
           case 'Clean':
           case 'Day':
           case 'Night':
-          case 'Off':
           case 'Party':
           case 'Supp':
           case 'TV':
@@ -433,12 +428,22 @@ void ra2RepHandler(Event e) {
               getOrCreateMPbsg().pbsgActivateButton(scene)
             }
             break;
-          case 'ALARM':
-          case 'AUTO':
-          case 'AWAY':
-          case 'FLASH':
-          case 'PANIC':
-          case 'QUIET':
+          case '_AUTO':
+            if (e.value == 'on') {
+              // Force room Pbsg's into AUTO (to follow the Hubitat mode)
+              settings.rooms.each{ roomName ->
+                logInfo('ra2RepHandler', "Force ${roomName} to AUTOMATIC")
+                app.getChildAppByLabel(roomName)
+                   .getOrCreateRSPbsg()
+                   .pbsgActivateButton('AUTOMATIC')
+              }
+            }
+            break
+          case '_ALARM':
+          case '_AWAY':
+          case '_FLASH':
+          case '_PANIC':
+          case '_QUIET':
             logWarn('ra2RepHandler', "WHA scene '${scene}' is not implemented!")
             break
           default:
