@@ -41,18 +41,6 @@ preferences {
   page(name: 'WhaPage')
 }
 
-/* groovylint-disable-next-line LineLength */
-// state.repToRS → [pro2-1:[1:[Lanai, Chill], 2:[Lanai, Cleaning], 3:[Lanai, Day], 4:[Lanai, Games], 5:[Lanai, Night], 6:[Lanai, Party], 7:[Lanai, Supplement], 8:[Lanai, TV]], ra2-83:[22:[Primary, Clean], 23:[Primary, Day], 24:[Primary, Night], 25:[Primary, Off], 26:[Primary, Party], 27:[Primary, Supp], 28:[Primary, TV], 71:[Lanai, Chill], 72:[Lanai, Clean], 51:[Office, Chill], 73:[Lanai, Day], 52:[Office, Clean], 74:[Lanai, Night], 53:[Office, Day], 75:[Lanai, Off], 10:[PrimBath, Chill], 54:[Office, Night], 76:[Lanai, Party], 55:[Office, Off], 77:[Lanai, Supp], 12:[PrimBath, Clean], 56:[Office, Party], 78:[Lanai, TV], 13:[PrimBath, Day], 57:[Office, Supp], 79:[Lanai, _Games], 14:[PrimBath, Night], 58:[Office, TV], 15:[PrimBath, Off], 16:[PrimBath, Party], 17:[PrimBath, Supp], 18:[PrimBath, TV], 61:[Yard, High], 62:[Yard, Low], 63:[Yard, Off], 21:[Primary, Chill]], ra2-1:[44:[Den, Night], 88:[Main, TV], 45:[Den, Off], 46:[Den, Party], 47:[Den, Supp], 48:[Den, TV], 51:[Guest_Wing, Chill], 52:[Guest_Wing, Clean], 53:[Guest_Wing, Day], 54:[Guest_Wing, Night], 11:[Den_Lamp, Chill], 55:[Guest_Wing, Off], 12:[Den_Lamp, Clean], 56:[Guest_Wing, Party], 13:[Den_Lamp, Day], 57:[Guest_Wing, Supp], 14:[Den_Lamp, Night], 58:[Guest_Wing, TV], 15:[Den_Lamp, Off], 16:[Den_Lamp, Party], 17:[Den_Lamp, Supp], 18:[Den_Lamp, TV], 60:[LHS_Bath, Chill], 62:[LHS_Bath, Clean], 63:[LHS_Bath, Day], 64:[LHS_Bath, Night], 21:[Kitchen, Chill], 65:[LHS_Bath, Off], 22:[Kitchen, Clean], 66:[LHS_Bath, Party], 23:[Kitchen, Day], 67:[LHS_Bath, Supp], 24:[Kitchen, Night], 68:[LHS_Bath, TV], 25:[Kitchen, Off], 26:[Kitchen, Party], 27:[Kitchen, Supp], 28:[Kitchen, TV], 29:[Kitchen, _Cook], 70:[RHS_Bath, Chill], 72:[RHS_Bath, Clean], 73:[RHS_Bath, Day], 74:[RHS_Bath, Night], 75:[RHS_Bath, Off], 76:[RHS_Bath, Party], 77:[RHS_Bath, Supp], 78:[RHS_Bath, TV], 79:[Main, Chill], 82:[Main, Clean], 83:[Main, Day], 84:[Main, Night], 41:[Den, Chill], 85:[Main, Off], 42:[Den, Clean], 86:[Main, Party], 43:[Den, Day], 87:[Main, Supp]]]
-
-// hubitatDeviceId: 6825, displayName: 'RA2 Repeater 1 (ra2-1)'
-// hubitatDeviceId: 6892, displayName: 'RA2 Repeater 2 (ra2-83)'
-//   -> button <value> (##) was <name> (pushed/released)
-//   -> Integer eventButton = safeParseInt(e.name.substring(10))
-//
-// hubitatDeviceId: 9129, displayName: 'Caséta Repeater (pro2-1)'
-//   - button # was pushed
-//   - button # was released
-
 state.hubitatIdToRepeaterData = [
   '6825': [
     type: 'ra2',
@@ -129,12 +117,12 @@ state.hubitatIdToRepeaterData = [
     type: 'ra2',
     nativeId: '83',
     buttons: [
-      [button: 1, room: 'ALARM', scene: 'ALARM'],
-      [button: 2, room: 'AUTO', scene: 'AUTO'],
-      [button: 3, room: 'AWAY', scene: 'AWAY'],
-      [button: 4, room: 'FLASH', scene: 'FLASH'],
-      [button: 5, room: 'PANIC', scene: 'PANIC'],
-      [button: 6, room: 'QUIET', scene: 'QUIET'],
+      [button: 1, room: 'WHA', scene: 'ALARM'],
+      [button: 2, room: 'WHA', scene: 'AUTO'],
+      [button: 3, room: 'WHA', scene: 'AWAY'],
+      [button: 4, room: 'WHA', scene: 'FLASH'],
+      [button: 5, room: 'WHA', scene: 'PANIC'],
+      [button: 6, room: 'WHA', scene: 'QUIET'],
       [button: 10, room: 'PrimBath', scene: 'Chill'],
       [button: 12, room: 'PrimBath', scene: 'Clean'],
       [button: 13, room: 'PrimBath', rsvdScene: 'Day', altButton: 15],
@@ -252,6 +240,13 @@ void refreshRepButtonToRS() {
   }
 }
 
+void buttonOnCallback (String mode) {
+  // - The WHA MPbsg instance calls this method to reflect a state change.
+  // - WHA sets the Hubitat Mode on certain RA2 Repeater button presses.
+  // - WHA ignores Mode change events, allowing the Room Scenes to react.
+  logTrace('buttonOnCallback', "WHA ignoring new mode: ${b(mode)}")
+}
+
 /*
 void pressButtonsForRoomScene (String room, String scene) {
   state.rsToRepButton."${room}"?."${scene}"?.each{ repHubId, buttonList ->
@@ -317,11 +312,11 @@ void refreshRStoRepButton() {
 
 //---- CORE METHODS (Internal)
 
-InstAppW _getOrCreateMPbsg () {
+InstAppW getOrCreateMPbsg () {
   // Mpbsg depends on Hubitat Mode properties AND NOT local data.
   InstAppW pbsgApp = app.getChildAppByLabel(state.MPBSG_LABEL)
   if (!pbsgApp) {
-    logWarn('_getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
+    logWarn('getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
     pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
     ArrayList<String> modeNames = getLocation().getModes().collect{ it.name }
     String currModeName = getLocation().currentMode.name
@@ -338,7 +333,7 @@ InstAppW _getOrCreateMPbsg () {
 }
 
 void _writeMPbsgHref () {
-  InstAppW pbsgApp = _getOrCreateMPbsg()
+  InstAppW pbsgApp = getOrCreateMPbsg()
   if (pbsgApp) {
     href(
       name: appInfo(pbsgApp),
@@ -362,95 +357,7 @@ void AllAuto () {
   }
 }
 
-void updateLutronKpadLeds (String currMode) {
-  settings.lutronModeButtons.each{ ledObj ->
-    String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
-    if (currMode == modeTarget) {
-      ledObj.on()
-    } else {
-      ledObj.off()
-    }
-  }
-}
-
-void buttonOnCallback (String mode) {
-  // - The MPbsg instance calls this method to reflect a state change.
-  logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
-  getLocation().setMode(mode)
-  updateLutronKpadLeds(mode)
-}
-
 //---- EVENT HANDLERS
-
-void seeTouchSpecialFnButtonHandler (Event e) {
-  switch (e.name) {
-    case 'pushed':
-      String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
-                                                         ?.getAt(e.value)
-      if (specialtyFunction == null) return
-      switch(specialtyFunction) {
-        case 'ALL_AUTO':
-          logInfo('seeTouchSpecialFnButtonHandler', 'executing ALL_AUTO')
-          AllAuto()
-          //--TBD--> Update of Kpad LEDs
-          break;
-        case 'ALARM':
-        case 'AWAY':
-        case 'FLASH':
-        case 'PANIC':
-        case 'QUIET':
-          logWarn(
-            'seeTouchSpecialFnButtonHandler',
-            "${b(specialtyFunction)} function execution is <b>TBD</b>"
-          )
-          break
-        default:
-          // Silently
-          logError(
-            'seeTouchSpecialFnButtonHandler',
-            "Unknown specialty function ${b(specialtyFunction)}"
-          )
-      }
-      break;
-    case 'held':
-    case 'released':
-    default:
-      logWarn(
-        'seeTouchSpecialFnButtonHandler',
-        "ignoring ${e.name} ${e.deviceId}-${e.value}"
-      )
-  }
-}
-
-void seeTouchModeButtonHandler (Event e) {
-  // Design Note
-  //   - Process Lutron SeeTouch Kpad events.
-  //   - The field e.deviceId arrives as a number and must be cast toString().
-  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Kpad buttons are matched to state data to activate a PBSG button.
-  switch (e.name) {
-    case 'pushed':
-      String targetButton = state.modeButtonMap?.getAt(e.deviceId.toString())
-                                               ?.getAt(e.value)
-      if (targetButton) {
-        logInfo('seeTouchModeButtonHandler', "turning on ${targetButton}")
-        _getOrCreateMPbsg().pbsgToggleButton(targetButton)
-      }
-      if (targetButton == 'Day') {
-        logInfo('seeTouchModeButtonHandler', 'executing ALL_AUTO')
-        AllAuto()
-      }
-      // Silently ignore buttons that DO NOT impact Hubitat mode.
-      break;
-    case 'held':
-    case 'released':
-    default:
-      logWarn(
-        'seeTouchModeButtonHandler',
-        "Ignoring ${e.name} ${e.deviceId}-${e.value}"
-      )
-  }
-}
 
 String extractDeviceIdFromLabel(String deviceLabel) {
   //->x = (deviceLabel =~ /\((.*)\)/)
@@ -489,6 +396,9 @@ void pro2RepHandler(Event e) {
   }
 }
 
+
+
+
 void ra2RepHandler(Event e) {
   // Example Event
   //   descriptionText  RA2 Repeater 2 (ra2-83) button 73 was pushed
@@ -507,6 +417,34 @@ void ra2RepHandler(Event e) {
         'ra2RepHandler',
         "${e.deviceId} (${repMap.repNativeId}), ${room} ${scene} ${e.value}"
       )
+      if (room == 'WHA') {
+        switch(scene) {
+          case 'Chill':
+          case 'Clean':
+          case 'Day':
+          case 'Night':
+          case 'Off':
+          case 'Party':
+          case 'Supp':
+          case 'TV':
+            if (e.value == 'on') {
+              // Activation sets mode. Deactivation does nothing.
+              logInfo('ra2RepHandler', "Activating mode ${scene} (via PBSG)")
+              getOrCreateMPbsg().pbsgActivateButton(scene)
+            }
+            break;
+          case 'ALARM':
+          case 'AUTO':
+          case 'AWAY':
+          case 'FLASH':
+          case 'PANIC':
+          case 'QUIET':
+            logWarn('ra2RepHandler', "WHA scene '${scene}' is not implemented!")
+            break
+          default:
+            logWarn('ra2RepHandler', "WHA scene '${scene}' is not implemented.")
+        }
+      }
     }
   }
 }
@@ -536,15 +474,15 @@ void initialize () {
   logTrace('initialize', 'Entered')
   refreshRepButtonToRS()
   refreshRStoRepButton()
-  settings.seeTouchKpads.each{ device ->
-    logInfo('initialize', "subscribing ${deviceInfo(device)} to mode handler."
-    )
-    subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
-  }
-  settings.seeTouchKpads.each{ device ->
-    logInfo('initialize', "subscribing ${deviceInfo(device)} to Keypad Handler")
-    subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
-  }
+  //x--> settings.seeTouchKpads.each{ device ->
+  //x-->   logInfo('initialize', "subscribing ${deviceInfo(device)} to mode handler."
+  //x-->   )
+  //x-->   subscribe(device, seeTouchModeButtonHandler, ['filterEvents': true])
+  //x--> }
+  //x--> settings.seeTouchKpads.each{ device ->
+  //x-->   logInfo('initialize', "subscribing ${deviceInfo(device)} to Keypad Handler")
+  //x-->   subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
+  //x--> }
   settings.ra2Repeaters.each{ device ->
     logInfo('initialize', "subscribing ${deviceInfo(device)} to Repeater Handler")
     subscribe(device, ra2RepHandler, ['filterEvents': true])
@@ -577,93 +515,6 @@ void _idPro2Repeaters () {
     required: false,
     multiple: true
   )
-}
-
-void _idSpecialFnButtons () {
-  input(
-    name: 'specialFnButtons',
-    title: [
-      heading2('Identify Special Function Buttons'),
-      bullet2("Examples: ${state.SPECIALTY_BUTTONS}")
-    ].join('<br/>'),
-    type: 'device.LutronComponentSwitch',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void _populateSpecialFnButtonMap () {
-  Map<String, String> result = [:]
-  state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, specialtyFn ->
-      result["${kpadDni}-${buttonNumber}"] = specialtyFn
-    }
-  }
-  state.kpadButtonDniToSpecialtyFn = result
-}
-
-void _wireSpecialFnButtons () {
-  if (settings?.specialFnButtons == null) {
-    paragraph bullet2('No specialty activation buttons are selected.')
-  } else {
-    identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
-      state.SPECIALTY_BUTTONS,              //   - list
-      settings.specialFnButtons,            //   - ledDevices
-      'specialFnButton'                     //   - prefix
-    )
-    populateStateKpadButtons('specialFnButton')
-    _populateSpecialFnButtonMap()
-  }
-}
-
-void _idKpadsWithModeButtons () {
-  input(
-    name: 'seeTouchKpads',
-    title: [
-      heading2('Identify Kpad(s) with Mode Selection Buttons'),
-      bullet2('The identified buttons are used to set the Hubitat mode')
-    ].join('<br/>'),
-    type: 'device.LutronSeeTouchKeypad',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void _idKpadModeButtons () {
-  input(
-    name: 'lutronModeButtons',
-    title: heading2('Identify Kpad Mode Selection Buttons'),
-    type: 'device.LutronComponentSwitch',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void _populateStateKpadButtonDniToTargetMode () {
-  Map<String, String> result = [:]
-  state.modeButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, targetMode ->
-      result["${kpadDni}-${buttonNumber}"] = targetMode
-    }
-  }
-  state.kpadButtonDniToTargetMode = result
-}
-
-void _wireModeButtons () {
-  if (state.MODES == null || settings?.lutronModeButtons == null) {
-    paragraph('Mode activation buttons are pending pre-requisites.')
-  } else {
-    identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
-      state.MODES,                          //   - list
-      settings.lutronModeButtons,           //   - ledDevices
-      'modeButton'                          //   - prefix
-    )
-    populateStateKpadButtons('modeButton')
-    _populateStateKpadButtonDniToTargetMode()
-  }
 }
 
 void _idParticipatingRooms () {
@@ -718,11 +569,6 @@ Map WhaPage () {
     //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
     //-> Prefer stateRemoveAndLog() over state.remove('..')
     //---------------------------------------------------------------------------------
-    //--NO LONGER REQUIRED-> stateRemoveAndLog('MODE_PBSG_APP_LABEL')
-    //--NO LONGER REQUIRED-> stateRemoveAndLog('MODE_PBSG_APP_NAME')
-    //--NO LONGER REQUIRED-> stateRemoveAndLog('repToRS')
-    //--NO LONGER REQUIRED-> app.removeSetting('hubitatQueryString')
-    //---------------------------------------------------------------------------------
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
@@ -735,11 +581,11 @@ Map WhaPage () {
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       _idRa2Repeaters()
       _idPro2Repeaters()
-      _idSpecialFnButtons()
-      _idKpadsWithModeButtons()
-      _wireSpecialFnButtons()
-      _idKpadModeButtons()
-      _wireModeButtons()
+      //x--> _idSpecialFnButtons()
+      //x--> _idKpadsWithModeButtons()
+      //x--> _wireSpecialFnButtons()
+      //x--> _idKpadModeButtons()
+      //x--> _wireModeButtons()
       _idParticipatingRooms()
       _writeMPbsgHref()
       if (!settings.rooms) {

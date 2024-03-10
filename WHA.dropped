@@ -1,0 +1,176 @@
+//x--> void _idSpecialFnButtons () {
+//x-->   input(
+//x-->     name: 'specialFnButtons',
+//x-->     title: [
+//x-->       heading2('Identify Special Function Buttons'),
+//x-->       bullet2("Examples: ${state.SPECIALTY_BUTTONS}")
+//x-->     ].join('<br/>'),
+//x-->     type: 'device.LutronComponentSwitch',
+//x-->     submitOnChange: true,
+//x-->     required: false,
+//x-->         multiple: true
+//x-->       )
+//x-->     }
+
+//x--> void _populateSpecialFnButtonMap () {
+//x-->   Map<String, String> result = [:]
+//x-->   state.specialFnButtonMap.collect{ kpadDni, buttonMap ->
+//x-->     buttonMap.each{ buttonNumber, specialtyFn ->
+//x-->       result["${kpadDni}-${buttonNumber}"] = specialtyFn
+//x-->     }
+//x-->   }
+//x-->   state.kpadButtonDniToSpecialtyFn = result
+//x--> }
+
+//x--> void _wireSpecialFnButtons () {
+//x-->   if (settings?.specialFnButtons == null) {
+//x-->     paragraph bullet2('No specialty activation buttons are selected.')
+//x-->   } else {
+//x-->     identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
+//x-->       state.SPECIALTY_BUTTONS,              //   - list
+//x-->       settings.specialFnButtons,            //   - ledDevices
+//x-->       'specialFnButton'                     //   - prefix
+//x-->     )
+//x-->     populateStateKpadButtons('specialFnButton')
+//x-->     _populateSpecialFnButtonMap()
+//x-->   }
+//x--> }
+
+//x--> void _idKpadsWithModeButtons () {
+//x-->   input(
+//x-->     name: 'seeTouchKpads',
+//x-->     title: [
+//x-->       heading2('Identify Kpad(s) with Mode Selection Buttons'),
+//x-->       bullet2('The identified buttons are used to set the Hubitat mode')
+//x-->     ].join('<br/>'),
+//x-->     type: 'device.LutronSeeTouchKeypad',
+//x-->     submitOnChange: true,
+//x-->     required: false,
+//x-->     multiple: true
+//x-->   )
+//x--> }
+
+//x--> void _idKpadModeButtons () {
+//x-->   input(
+//x-->     name: 'lutronModeButtons',
+//x-->     title: heading2('Identify Kpad Mode Selection Buttons'),
+//x-->     type: 'device.LutronComponentSwitch',
+//x-->     submitOnChange: true,
+//x-->     required: false,
+//x-->     multiple: true
+//x-->   )
+//x--> }
+
+//x--> void _populateStateKpadButtonDniToTargetMode () {
+//x-->   Map<String, String> result = [:]
+//x-->   state.modeButtonMap.collect{ kpadDni, buttonMap ->
+//x-->     buttonMap.each{ buttonNumber, targetMode ->
+//x-->       result["${kpadDni}-${buttonNumber}"] = targetMode
+//x-->     }
+//x-->   }
+//x-->   state.kpadButtonDniToTargetMode = result
+//x--> }
+
+//x--> void _wireModeButtons () {
+//x-->   if (state.MODES == null || settings?.lutronModeButtons == null) {
+//x-->     paragraph('Mode activation buttons are pending pre-requisites.')
+//x-->   } else {
+//x-->     identifyLedButtonsForListItems(         // From UtilsLibrary.groovy
+//x-->       state.MODES,                          //   - list
+//x-->       settings.lutronModeButtons,           //   - ledDevices
+//x-->       'modeButton'                          //   - prefix
+//x-->     )
+//x-->     populateStateKpadButtons('modeButton')
+//x-->     _populateStateKpadButtonDniToTargetMode()
+//x-->   }
+//x--> }
+
+//-> void updateLutronKpadLeds (String currMode) {
+//->   settings.lutronModeButtons.each{ ledObj ->
+//->     String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
+//->     if (currMode == modeTarget) {
+//->       ledObj.on()
+//->     } else {
+//->       ledObj.off()
+//->     }
+//->   }
+//-> }
+
+//-> void buttonOnCallback (String mode) {
+//->   // - The MPbsg instance calls this method to reflect a state change.
+//->   logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
+//->   getLocation().setMode(mode)
+//->   //-> updateLutronKpadLeds(mode)
+//-> }
+
+//-> void seeTouchSpecialFnButtonHandler (Event e) {
+//->   switch (e.name) {
+//->     case 'pushed':
+//->       String specialtyFunction = state.specialFnButtonMap?.getAt(e.deviceId.toString())
+//->                                                          ?.getAt(e.value)
+//->       if (specialtyFunction == null) return
+//->       switch(specialtyFunction) {
+//->         case 'ALL_AUTO':
+//->           logInfo('seeTouchSpecialFnButtonHandler', 'executing ALL_AUTO')
+//->           AllAuto()
+//->           //--TBD--> Update of Kpad LEDs
+//->           break;
+//->         case 'ALARM':
+//->         case 'AWAY':
+//->         case 'FLASH':
+//->         case 'PANIC':
+//->         case 'QUIET':
+//->           logWarn(
+//->             'seeTouchSpecialFnButtonHandler',
+//->             "${b(specialtyFunction)} function execution is <b>TBD</b>"
+//->           )
+//->           break
+//->         default:
+//->           // Silently
+//->           logError(
+//->             'seeTouchSpecialFnButtonHandler',
+//->             "Unknown specialty function ${b(specialtyFunction)}"
+//->           )
+//->       }
+//->       break;
+//->     case 'held':
+//->     case 'released':
+//->     default:
+//->       logWarn(
+//->         'seeTouchSpecialFnButtonHandler',
+//->         "ignoring ${e.name} ${e.deviceId}-${e.value}"
+//->       )
+//->   }
+//-> }
+
+//-> void seeTouchModeButtonHandler (Event e) {
+//->   // Design Note
+//->   //   - Process Lutron SeeTouch Kpad events.
+//->   //   - The field e.deviceId arrives as a number and must be cast toString().
+//->   //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
+//->   //   - Kpad buttons are matched to state data to activate a PBSG button.
+//->   switch (e.name) {
+//->     case 'pushed':
+//->       String targetButton = state.modeButtonMap?.getAt(e.deviceId.toString())
+//->                                                ?.getAt(e.value)
+//->       if (targetButton) {
+//->         logInfo('seeTouchModeButtonHandler', "turning on ${targetButton}")
+//->         _getOrCreateMPbsg().pbsgToggleButton(targetButton)
+//->       }
+//->       if (targetButton == 'Day') {
+//->         logInfo('seeTouchModeButtonHandler', 'executing ALL_AUTO')
+//->         AllAuto()
+//->       }
+//->       // Silently ignore buttons that DO NOT impact Hubitat mode.
+//->       break;
+//->     case 'held':
+//->     case 'released':
+//->     default:
+//->       logWarn(
+//->         'seeTouchModeButtonHandler',
+//->         "Ignoring ${e.name} ${e.deviceId}-${e.value}"
+//->       )
+//->   }
+//-> }
+
+
