@@ -1,0 +1,398 @@
+ArrayList<String> getScenes() {
+  return state.scenes.collect{ it.key }
+}
+
+void selectModesAsScenes() {
+  ArrayList<String> scenes = modeNames()
+  input(
+    name: 'modesAsScenes',
+    type: 'enum',
+    title: heading2('Select Mode Names to use as Scenes Names'),
+    submitOnChange: true,
+    required: false,
+    multiple: true,
+    options: scenes.sort()
+  )
+}
+
+void nameCustomScenes() {
+  String prefix = 'customScene'
+  LinkedHashMap<String, String> slots = [
+    "${prefix}1": settings["${prefix}1"],
+    "${prefix}2": settings["${prefix}2"],
+    "${prefix}3": settings["${prefix}3"],
+    "${prefix}4": settings["${prefix}4"],
+    "${prefix}5": settings["${prefix}5"],
+    "${prefix}6": settings["${prefix}6"],
+    "${prefix}7": settings["${prefix}7"],
+    "${prefix}8": settings["${prefix}8"],
+    "${prefix}9": settings["${prefix}9"]
+  ]
+  LinkedHashMap<String, String> filled = slots?.findAll{it.value}
+  // Only present 1 empty sceen "slot" at a time.
+  LinkedHashMap<String, String> firstOpen = slots?.findAll{!it.value}?.take(1)
+  LinkedHashMap<String, String> custom = \
+    firstOpen + filled.sort{ a, b -> a.value <=> b.value }
+  custom.each{ key, value ->
+    input(
+      name: key,
+      type: 'text',
+      title: heading2('Custom Scene Name (Optional)'),
+      width: 4,
+      submitOnChange: true,
+      required: false,
+      defaultValue: value
+    )
+  }
+}
+
+void adjustStateScenesKeys() {
+  ArrayList<String> assembleScenes = settings.modesAsScenes ?: []
+  assembleScenes = assembleScenes.flatten()
+  if (settings.motionSensors || settings.luxSensors) {
+    assembleScenes += 'INACTIVE'
+  }
+  String prefix = 'customScene'
+  ArrayList<String> customScenes = []
+  customScenes += settings["${prefix}1"]
+  customScenes += settings["${prefix}2"]
+  customScenes += settings["${prefix}3"]
+  customScenes += settings["${prefix}4"]
+  customScenes += settings["${prefix}5"]
+  customScenes += settings["${prefix}6"]
+  customScenes += settings["${prefix}7"]
+  customScenes += settings["${prefix}8"]
+  customScenes += settings["${prefix}9"]
+  customScenes.removeAll{it == null}
+  if (customScenes) {
+    assembleScenes << customScenes
+    assembleScenes = assembleScenes.flatten().toUnique()
+  }
+  // Keep existing scenes keys that are present in assembleScenes.
+  Map currSceneMap = state.scenes
+  assembleScenes.each{ candidate ->
+    if (! currSceneMap.getAt(candidate)) {
+      currSceneMap << [ "${candidate}" : [] ]
+    }
+  }
+  state.scenes = currSceneMap
+}
+
+void idSceneForMode() {
+  if (state.scenes) {
+    paragraph heading2('Identify a Scene for each Hubitat Mode')
+    getLocation().getModes().collect{mode -> mode.name}.sort().each{ modeName ->
+      String inputName = "modeToScene^${modeName}"
+      String defaultValue = settings[inputName]
+        ?: state.scenes.containsKey(modeName) ? modeName : null
+      input(
+        name: inputName,
+        type: 'enum',
+        title: heading3(modeName),
+        width: 2,
+        submitOnChange: true,
+        required: true,
+        multiple: false,
+        options: getParent().getRoomScenes(),
+        defaultValue: defaultValue
+      )
+    }
+  } else {
+    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
+  }
+}
+
+void authSeeTouchKpads() {
+  input(
+    name: 'seeTouchKpads',
+    title: heading3("Identify Keypads used to Activate Room Scenes"),
+    type: 'device.LutronSeeTouchKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void idRoomSceneButtons() {
+  input(
+    name: 'sceneButtons',
+    title: heading3("Identify Keypad Buttons that Activate a Room Scene"),
+    type: 'device.LutronComponentSwitch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void mapKpadButtonDniToScene() {
+  Map<String, String> result = [:]
+  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
+    buttonMap.each{ buttonNumber, targetScene ->
+      result["${kpadDni}-${buttonNumber}"] = targetScene
+    }
+  }
+  state.kpadButtonDniToTargetScene = result
+}
+
+void wireKpadButtonsToScenes() {
+  ArrayList<String> scenes = getParent().getRoomScenes()
+  if (scenes == null || settings?.sceneButtons == null) {
+    //paragraph('No Room Scene Kpad buttons have been identified.')
+  } else {
+    identifyLedButtonsForListItems(
+      scenes,
+      settings.sceneButtons,
+      'sceneButton'
+    )
+    populateStateKpadButtons('sceneButton')
+    mapKpadButtonDniToScene()
+  }
+}
+
+void populateStateScenesAssignValues() {
+  state.scenes = state.scenes.collectEntries{ scene, map ->
+    Map M = getDeviceValues(scene)
+    if (M) [scene, M]
+  }
+}
+
+void idRa2RepeatersImplementingScenes() {
+  input(
+    name: 'repeaters',
+    title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
+    type: 'device.LutronKeypad',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+Map getDeviceValues (String scene) {
+  String keyPrefix = "scene^${scene}^"
+  List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
+  List<String> allowedDeviceIds = allowedDevices.collect{ getDeviceId(it) }
+  Map results = ['Rep': [:], 'Ind': [:]]
+  settings.findAll{ k1, v1 ->
+    k1.startsWith(keyPrefix)
+  }.each { k2, v2 ->
+    ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
+    if (typeAndId[0] == 'RA2') {
+      logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
+      settingsRemoveAndLog(k2)
+    } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
+      logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
+    } else {
+      // Enforce min/max constraints on Independent (Ind) device value.
+      if (typeAndId[1] == 'Ind') {
+        if (v2 > 100) {
+          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):100])
+        } else if (v2 < 0) {
+          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):0])
+        }
+      } else {
+        results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
+      }
+    }
+  }
+  return results
+}
+
+void pushRepeaterButton (String repeaterId, Long buttonNumber) {
+  settings.repeaters.each{ repeater ->
+    if (getDeviceId(repeater) == repeaterId) {
+      repeater.push(buttonNumber)
+    }
+  }
+}
+
+void kpadHandler(Event e) {
+  // Design Note
+  //   - The field e.deviceId arrives as a number and must be cast toString().
+  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
+  //   - Kpad buttons are matched to state data to activate a scene.
+  //-> logTrace('kpadHandler', [
+  //->   "state.activeButton: ${state.activeButton}",
+  //->   "state.activeScene: ${state.activeScene}",
+  //->   eventDetails(e)
+  //-> ])
+  switch (e.name) {
+    case 'pushed':
+      // Toggle the corresponding scene for the keypad button.
+      String scene = state.sceneButtonMap?.getAt(e.deviceId.toString())
+                                         ?.getAt(e.value)
+      if (scene) getOrCreateRSPbsg().pbsgToggleButton(scene)
+      // The prospective PBSG callback triggers further local processing.
+      break
+    case 'held':
+    case 'released':
+      // Ignore without logging
+      break
+    default:
+      logWarn('kpadHandler', [
+        "DNI: '${b(e.deviceId)}'",
+        "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
+      ])
+  }
+}
+
+void updateLutronKpadLeds() {  // old argument was "String currScene"
+  settings.sceneButtons.each{ d ->
+    String buttonDni = d.getDeviceNetworkId()
+    String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
+    if (state.activeScene == sceneTarget) {
+      logInfo(
+        'updateLutronKpadLeds',
+        "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
+      )
+      d.on()
+    } else {
+      logTrace(
+        'updateLutronKpadLeds',
+        "Turning off LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
+      )
+      d.off()
+    }
+  }
+}
+
+void subscribeToIndDeviceHandlerNoDelay() {
+  settings.indDevices.each{ d ->
+    logInfo(
+      'subscribeToIndDeviceHandlerNoDelay',
+      "${state.ROOM_LABEL} subscribing to independentDevice ${deviceInfo(d)}"
+    )
+    subscribe(d, indDeviceHandler, ['filterEvents': true])
+  }
+}
+
+void subscribeIndDevToHandler(Map data) {
+  // USAGE:
+  //   runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
+  // Independent Devices (especially RA2 and Caséta) are subject to stale
+  // Hubitat state data if callbacks occur quickly (within 1/2 second)
+  // after a level change. So, briefly unsubscribe/subscribe to avoid
+  // this situation.
+  logTrace(
+    'subscribeIndDevToHandler',
+    "${state.ROOM_LABEL} subscribing ${deviceInfo(data.device)}"
+  )
+  subscribe(device, indDeviceHandler, ['filterEvents': true])
+}
+
+void unsubscribeIndDevToHandler(DevW device) {
+  // Independent Devices (especially RA2 and Caséta) are subject to stale
+  // Hubitat state data if callbacks occur quickly (within 1/2 second)
+  // after a level change. So, briefly unsubscribe/subscribe to avoid
+  // this situation.
+  logTrace(
+    '_unsubscribeToIndDeviceHandler',
+    "${state.ROOM_LABEL} unsubscribing ${deviceInfo(device)}"
+  )
+  unsubscribe(device)
+}
+
+void subscribeToKpadHandler() {
+  settings.seeTouchKpads.each{ d ->
+    logInfo(
+      'subscribeToKpadHandler',
+      "${state.ROOM_LABEL} subscribing to keypad ${deviceInfo(d)}"
+    )
+    subscribe(d, kpadHandler, ['filterEvents': true])
+  }
+}
+
+void unsubscribeRepToHandler(DevW device) {
+  // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
+  // are not particularly subject to stale Hubitat state; HOWEVER,
+  // callbacks that occur quickly (within 1/2 second) after a buton press
+  // subject Hubitat to callback overload (during WHA scene chantes).
+  // Briefly unsubscribe/subscribe to avoid this situation.
+  logTrace(
+    'unsubscribeRepToHandler',
+    "${state.ROOM_LABEL} unsubscribing ${deviceInfo(device)}"
+  )
+  unsubscribe(device)
+}
+
+void indDeviceHandler(Event e) {
+  // Devices send various events (e.g., switch, level, pushed, released).
+  // Isolate the events that confirm|refute state.activeScene.
+  Integer reported
+  // Only select events are considered for MANUAL OVERRIDE detection.
+  if (e.name == 'level') {
+    reported = safeParseInt(e.value)
+  } else if (e.name == 'switch' && e.value == 'off') {
+    reported = 0
+  }
+  String deviceId = extractNativeIdFromLabel(e.displayName)
+  Integer expected = expectedSceneDeviceValue('Ind', deviceId)
+  if (reported == expected) {
+    state.moDetected = state.moDetected.collect{ key, value ->
+      if (key != deviceId) { [key, value] }
+    }
+  } else {
+    state.moDetected.put(deviceId, "${reported} (${expected})")
+  }
+}
+
+void idIndDevices() {
+  input(
+    name: 'indDevices',
+    title: heading3("Identify the Room's Non-RA2 Devices (e.g., Lutron Caséta, Z-Wave)"),
+    type: 'capability.switch',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void configureRoomScene() {
+  // VIRTUAL TABLE
+  //   Hubitat page display logic simulates table cells.
+  //     - Full-sized displays (computer monitors) are 12 cells wide.
+  //     - Phone-sized displays are 4 cells wide.
+  //   To ensure that each scene starts on a new row, this method adds
+  //   empty cells (modulo 12) to ensure each scene begins in column 1.
+  if (state.scenes) {
+    ArrayList<String> currSettingsKeys = []
+    state.scenes?.sort().each{ sceneName, ignoredValue ->
+      // Ignore the current componentList. Rebuilt it from scratch.
+      Integer tableCol = 3
+      paragraph("<br/><b>${sceneName} →</b>", width: 2)
+      settings.indDevices?.each{ d ->
+        String inputName = "scene^${sceneName}^Ind^${getDeviceId(d)}"
+        currSettingsKeys += inputName
+        tableCol += 3
+        input(
+          name: inputName,
+          type: 'number',
+          title: "${b(d.label)}<br/>Level 0..100",
+          width: 3,
+          submitOnChange: true,
+          required: false,
+          multiple: false,
+          defaultValue: 0
+        )
+      }
+      settings.repeaters?.each{d ->
+        String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
+        currSettingsKeys += inputName
+        tableCol += 3
+        input(
+          name: inputName,
+          type: 'number',
+          title: "${b(d.label)}<br/>Button #",
+          width: 3,
+          submitOnChange: true,
+          required: false,
+          multiple: false,
+          defaultValue: 0
+        )
+      }
+      // Pad the remainder of the table row with empty cells.
+      while (tableCol++ % 12) {
+        paragraph('', width: 1)
+      }
+    }
+  }
+}

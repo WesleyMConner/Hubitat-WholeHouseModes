@@ -38,7 +38,7 @@ void stateRemoveAndLog (String stateKey) {
   }
 }
 
-void settingsRemoveAndLog (String settingKey) {
+void settingsRemoveAndLog(String settingKey) {
   if (settings."${settingKey}") {
     logInfo('settingsRemoveAndLog', "Removing stale setting >${settingKey}")
     //app.removeSetting(settingKey)

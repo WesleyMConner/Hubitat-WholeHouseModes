@@ -36,6 +36,7 @@ Boolean pbsgConfigure(
     String activeButton,
     String pbsgLogLevel = 'TRACE'
   ) {
+  // CALLED IMMEDIATELY AFTER PBSG INSTANCE CREATION TO SET INITIAL DATA
   // Returns true if configuration is accepted, false otherwise.
   //   - Log levels: 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
   Boolean retVal = true
@@ -96,7 +97,7 @@ Boolean pbsgToggleButton(String button) {
 }
 
 Boolean pbsgActivatePrior() {
-  tracePbsgStateAndVswState('pbsgActivatePrior', 'AT ENTRY')
+  logTrace('pbsgActivatePrior', pbsgAndVswStateAsString())
   String predecessor = state.inactiveDnis.first()
   logTrace('pbsgActivatePrior', "predecessor: ${predecessor}")
   return pbsgActivateDni(predecessor)
@@ -143,7 +144,7 @@ void dropDni(String dni) {
 Boolean pbsgActivateDni(String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
   // Publish an event ONLY IF/WHEN a new dni is activated.
-  tracePbsgStateAndVswState('pbsgActivateDni', 'AT ENTRY')
+  logTrace('pbsgActivateDni (Entry)', pbsgAndVswStateAsString())
   Boolean isStateChanged = false
   if (state.activeDni == dni) {
     logTrace('pbsgActivateDni', "No action, ${dni} is already active")
@@ -161,14 +162,14 @@ Boolean pbsgActivateDni(String dni) {
     logTrace('pbsgActivateDni', "Activating ${dni}")
     state.activeDni = dni
     pbsgPublishActiveButton()
-    tracePbsgStateAndVswState('pbsgActivateDni', 'AT EXIT')
+    logTrace('pbsgActivateDni (Adjusted)', pbsgAndVswStateAsString())
   }
   return isStateChanged
 }
 
 Boolean pbsgDeactivateDni(String dni) {
   // Return TRUE on a configuration change, FALSE otherwise.
-  tracePbsgStateAndVswState('pbsgDeactivateDni', 'AT ENTRY')
+  logTrace('pbsgDeactivateDni', pbsgAndVswStateAsString())
   logTrace('pbsgDeactivateDni', "DNI: ${b(dni)}")
   Boolean isStateChange = false
   if (state.inactiveDnis.contains(dni)) {
@@ -218,30 +219,12 @@ String pbsgAndVswStateAsString() {
   ].join()
 }
 
-void tracePbsgStateAndVswState(String fnName, String heading) {
-  logTrace(fnName, [
-    heading,
-    pbsgAndVswStateAsString()
-    /*
-    "<table style='border-spacing: 0px;' rules='all'><tr>",
-    "<th style='width:49%'>STATE</th>",
-    "<th/>",
-    "<th style='width:49%'>VSW STATUS</th>",
-    "</tr><tr>",
-    "<td>${appStateAsBullets().join('<br/>')}</td>",
-    "<td/>",
-    "<td>${childVswStates().join('<br/>')}</td>",
-    "</tr></table"
-    */
-  ].join())
-}
-
 void syncChildVswsToPbsgState() {
   // W A R N I N G
   //   - WHEN UPDATING CHILD DEVICES WITH ACTIVE SUBSCRIPTIONS ...
   //   - HUBITAT MAY PROVIDE DEVICE HANDLERS WITH A STALE STATE MAP
   //   - TEMPORARILY SUSPENDING SUBSCRIPTIONS FOR DEVICE CHANGES
-  tracePbsgStateAndVswState('syncChildVswsToPbsgState', 'AT ENTRY')
+  logTrace('syncChildVswsToPbsgState (Entry)', pbsgAndVswStateAsString())
   if (state.activeDni) {
     // Make sure the correct VSW is on
     DevW onDevice = getChildDevice(state.activeDni)
@@ -252,7 +235,7 @@ void syncChildVswsToPbsgState() {
     DevW offDevice = getChildDevice(offDni)
     if (switchState(offDevice) != 'off') { offDevice.off() }
   }
-  tracePbsgStateAndVswState('syncChildVswsToPbsgState', 'AT EXIT')
+  logTrace('syncChildVswsToPbsgState (Adjusted)', pbsgAndVswStateAsString())
 }
 
 void unsubscribeChildVswEvents() {
@@ -281,13 +264,7 @@ void subscribeChildVswEvents() {
 }
 
 void pbsgPublishActiveButton() {
-  // DESIGN NOTES
-  //   - Invokes an "expected" parent callback: buttonOnCallback(button)
-  //   - The use of a callnback avoids app-to-app subscription issues
-  //     (e.g., Hubitat exposed internal SQL in Hubitat Logs)
-  //   - Child device subscriptions occur on a delayed basis as a
-  //     workaround to avoid stale STATE data in Handler methods.
-  tracePbsgStateAndVswState('pbsgPublishActiveButton', 'AT ENTRY')
+  logTrace('pbsgPublishActiveButton', pbsgAndVswStateAsString())
   String activeButton = dniToButton(state.activeDni)
   logInfo('pbsgPublishActiveButton', "Processing button ${activeButton}")
   //-----------------------------------------------------------------------
@@ -295,7 +272,7 @@ void pbsgPublishActiveButton() {
   unsubscribeChildVswEvents()
   syncChildVswsToPbsgState()
   //-----------------------------------------------------------------------
-  parent.buttonOnCallback(activeButton)    // Communicate event to parent.
+  parent.pbsgButtonOnCallback(activeButton)
   Integer delayInSeconds = 1
   logTrace(
     'pbsgPublishActiveButton',
@@ -320,7 +297,7 @@ Boolean pbsgMoveActiveToInactive() {
     isStateChanged = true
     state.inactiveDnis = [state.activeDni, *state.inactiveDnis]
     state.activeDni = null
-    tracePbsgStateAndVswState('pbsgMoveActiveToInactive', 'AFTER MOVE')
+    logTrace('pbsgMoveActiveToInactive', pbsgAndVswStateAsString())
   }
   return isStateChanged
 }
@@ -422,7 +399,7 @@ void vswEventHandler(Event e) {
   //   - Let downstream functions discard redundant state information
   // W A R N I N G
   //   As of 2023-11-30 Handler continues to receive STALE state values!!!
-  tracePbsgStateAndVswState('vswEventHandler', 'AT ENTRY')
+  logTrace('vswEventHandler (ENTRY)', pbsgAndVswStateAsString())
   logTrace('vswEventHandler', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName

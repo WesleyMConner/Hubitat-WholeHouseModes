@@ -41,6 +41,63 @@ preferences {
   page(name: 'WhaPage')
 }
 
+ArrayList<String> getRoomNames () {
+  // SAMPLE CONTEXT
+  // state.hubitatIdToRepeaterData = [
+  //   '6825': [
+  //     type: 'ra2',
+  //     nativeId: '1',
+  //     buttons: [
+  //       [button: 1, room: 'WHA', scene: 'Chill'],
+  //                   ^^^^^^^^^^^
+  ArrayList<String> rooms = []
+  state.hubitatIdToRepeaterData.each{ repHubId, map ->
+    map.buttons.each{ buttonMap ->
+      String candidateRoom = buttonMap.room
+      if (candidateRoom && candidateRoom != 'WHA') {
+        if (! rooms.contains(candidateRoom)) {
+          rooms << candidateRoom
+        }
+      }
+    }
+  }
+  return rooms
+}
+
+ArrayList<String> getSceneNames (String room) {
+  // SAMPLE CONTEXT
+  // state.hubitatIdToRepeaterData = [
+  //   '6825': [
+  //     type: 'ra2',
+  //     nativeId: '1',
+  //     buttons: [
+  //       [button: 1, room: 'WHA', scene: 'Chill'],
+  //                                ^^^^^^^^^^^^^^
+  ArrayList<String> roomScenes = []
+  state.hubitatIdToRepeaterData.each{ repHubId, map ->
+    map.buttons.each{ buttonMap ->
+      String candidateScene = buttonMap.scene
+      if (candidateScene) {
+        if (! roomScenes.contains(candidateScene)) {
+          roomScenes << candidateScene
+        }
+      }
+    }
+  }
+  return roomScenes
+}
+
+//state.RoomSceneIndDeviceLevels = [
+//  [room: '', scene: '', hubDeviceId: '1', level: '']
+//]
+//  HUB ID          LABEL
+//  ======   ====================
+//       1   Den Fireplace (02)
+//    5232   Pool Pong (05)
+//    5831   Uplighting (Front)
+//    5533   Uplighting (Guest)
+//    5534   Uplighting (Primary)
+
 state.hubitatIdToRepeaterData = [
   '6825': [
     type: 'ra2',
@@ -117,12 +174,6 @@ state.hubitatIdToRepeaterData = [
     type: 'ra2',
     nativeId: '83',
     buttons: [
-      [button: 1, room: 'WHA', scene: '_ALARM'],
-      [button: 2, room: 'WHA', scene: '_AUTO'],
-      [button: 3, room: 'WHA', scene: '_AWAY'],
-      [button: 4, room: 'WHA', scene: '_FLASH'],
-      [button: 5, room: 'WHA', scene: '_PANIC'],
-      [button: 6, room: 'WHA', scene: '_QUIET'],
       [button: 10, room: 'PrimBath', scene: 'Chill'],
       [button: 12, room: 'PrimBath', scene: 'Clean'],
       [button: 13, room: 'PrimBath', rsvdScene: 'Day', altButton: 15],
@@ -131,14 +182,14 @@ state.hubitatIdToRepeaterData = [
       [button: 16, room: 'PrimBath', scene: 'Party'],
       [button: 17, room: 'PrimBath', scene: 'Supp'],
       [button: 18, room: 'PrimBath', scene: 'TV'],
-      [button: 21, room: 'PrimBdrm', scene: 'Chill'],
-      [button: 22, room: 'PrimBdrm', scene: 'Clean'],
-      [button: 23, room: 'PrimBdrm', rsvdScene: 'Day', altButton: 25],
-      [button: 24, room: 'PrimBdrm', rsvdScene: 'Night', altButton: 25],
-      [button: 25, room: 'PrimBdrm', scene: 'Off'],
-      [button: 26, room: 'PrimBdrm', scene: 'Party'],
-      [button: 27, room: 'PrimBdrm', scene: 'Supp'],
-      [button: 28, room: 'PrimBdrm', scene: 'TV'],
+      [button: 21, room: 'Primary', scene: 'Chill'],
+      [button: 22, room: 'Primary', scene: 'Clean'],
+      [button: 23, room: 'Primary', rsvdScene: 'Day', altButton: 25],
+      [button: 24, room: 'Primary', rsvdScene: 'Night', altButton: 25],
+      [button: 25, room: 'Primary', scene: 'Off'],
+      [button: 26, room: 'Primary', scene: 'Party'],
+      [button: 27, room: 'Primary', scene: 'Supp'],
+      [button: 28, room: 'Primary', scene: 'TV'],
       [button: 41, room: 'LhsBdrm', scene: 'Chill'],
       [button: 42, room: 'LhsBdrm', scene: 'Clean'],
       [button: 43, room: 'LhsBdrm', rsvdScene: 'Day', altButton: 45],
@@ -171,7 +222,13 @@ state.hubitatIdToRepeaterData = [
       [button: 76, room: 'Lanai', scene: 'Party'],
       [button: 77, room: 'Lanai', scene: 'Supp'],
       [button: 78, room: 'Lanai', scene: 'TV'],
-      [button: 79, room: 'Lanai', scene: '_Games']
+      [button: 79, room: 'Lanai', scene: '_Games'],
+      [button: 91, room: 'WHA', scene: '_ALARM'],
+      [button: 92, room: 'WHA', scene: '_AUTO'],
+      [button: 93, room: 'WHA', scene: '_AWAY'],
+      [button: 94, room: 'WHA', scene: '_FLASH'],
+      [button: 95, room: 'WHA', scene: '_PANIC'],
+      [button: 96, room: 'WHA', scene: '_QUIET']
     ],
   ],
   '9129': [
@@ -179,13 +236,20 @@ state.hubitatIdToRepeaterData = [
     nativeId: '1',
     buttons: [
       [button: 1, room: 'Lanai', scene: 'Chill'],
-      [button: 2, room: 'Lanai', scene: 'Cleaning'],
+      [button: 2, room: 'Lanai', scene: 'Clean'],
       [button: 3, room: 'Lanai', scene: 'Day'],
       [button: 4, room: 'Lanai', scene: 'Games'],
       [button: 5, room: 'Lanai', scene: 'Night'],
       [button: 6, room: 'Lanai', scene: 'Party'],
-      [button: 7, room: 'Lanai', scene: 'Supplement'],
-      [button: 8, room: 'Lanai', scene: 'TV']
+      [button: 7, room: 'Lanai', scene: 'Supp'],
+      [button: 8, room: 'Lanai', scene: 'TV'],
+      [button: 9, room: 'RhsBdrm', scene: 'Chill'],
+      [button: 10, room: 'RhsBdrm', scene: 'Clean'],
+      [button: 11, room: 'RhsBdrm', scene: 'Day'],
+      [button: 12, room: 'RhsBdrm', scene: 'Night'],
+      [button: 13, room: 'RhsBdrm', scene: 'Off'],
+      [button: 14, room: 'RhsBdrm', scene: 'Party'],
+      [button: 15, room: 'RhsBdrm', scene: 'TV']
     ]
   ]
 ]
@@ -240,34 +304,31 @@ void refreshRepButtonToRS() {
   }
 }
 
-void buttonOnCallback (String mode) {
+void pbsgButtonOnCallback(String mode) {
   // - The WHA MPbsg instance calls this method to reflect a state change.
   // - WHA sets the Hubitat Mode on certain RA2 Repeater button presses.
   // - WHA ignores Mode change events, allowing the Room Scenes to react.
-  logTrace('buttonOnCallback', "WHA ignoring new mode: ${b(mode)}")
+  logTrace('pbsgButtonOnCallback (WHA)', "WHA ignoring reported Hubitat mode: ${b(mode)}")
 }
 
-/*
-void pressButtonsForRoomScene (String room, String scene) {
-  state.rsToRepButton."${room}"?."${scene}"?.each{ repHubId, buttonList ->
-    buttonList.each{ button ->
-      settings.ra2Repeaters{ rep ->
-        //if (rep.label)
-      }
-      // Filter for the repeater instance (from settings)
-    }
+void activateScene(String room, String scene) {
+  // PURPOSE
+  //   Designed for invocation by a child Room Scene
+  // CONTEXT
+  //   [room: [scene: [repHubId: [unique buttons]]]]
+  logError('activateScene', 'N O T   I M P L E M E N T E D')
+  /*
+  Map repTargetButtons = state.rsToRepButton."${room}"?."${scene}"
+  settings.ra2Repeaters.each{ rep ->
+    if (rep.label)
+    repPTargetButtons."${rep.deviceId}"
   }
-  Map repButtonsMap = state.rsToRepButton.collectEntries{ k1, map1 ->
-    if (k1 == room) {
-      map1.each{ k2, map2 ->
-        if (k2 = scene) {
-          [map2.repHub]
-        }
-      }
-    }
+  settings.pro2Repeaters.each{ rep ->
   }
+  each{ repHubId, buttonList ->
+  }
+  */
 }
-*/
 
 void refreshRStoRepButton() {
   // GOAL: [room: [scene: [repHubId: [unique buttons]]]]
@@ -312,35 +373,55 @@ void refreshRStoRepButton() {
 
 //---- CORE METHODS (Internal)
 
-InstAppW getOrCreateMPbsg () {
-  // Mpbsg depends on Hubitat Mode properties AND NOT local data.
-  InstAppW pbsgApp = app.getChildAppByLabel(state.MPBSG_LABEL)
-  if (!pbsgApp) {
-    logWarn('getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
-    pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
-    ArrayList<String> modeNames = getLocation().getModes().collect{ it.name }
-    String currModeName = getLocation().currentMode.name
-    pbsgApp.pbsgConfigure(
-      modeNames,     // Create a PBSG button per Hubitat Mode name
-      'Day',         // 'Day' is the default Mode/Button
-      currModeName,  // Activate the Button for the current Mode
-      settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                       // 'DEBUG' to walk key PBSG methods
-                                       // 'TRACE' to include PBSG and VSW state
-    )
-  }
-  return pbsgApp
+InstAppW createModePbsg() {
+  // --------------------------------------------------------------------
+  // W A R N I N G
+  //   - As of Q1'24, the 'properties' (4th) parameter of addChildApp()
+  //     is still not implemented.
+  //   - As an alternative, call the 'MPbsg' method pbsgConfigure() just
+  //     after Mpbsg instance creation to provide initial data.
+  // --------------------------------------------------------------------
+  InstAppW mPbsg = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
+  ArrayList<String> modeNames = getLocation().getModes().collect{ it.name }
+  String currModeName = getLocation().currentMode.name
+  mPbsg.pbsgConfigure(
+    modeNames,     // Create a PBSG button per Hubitat Mode name
+    'Day',         // 'Day' is the default Mode/Button
+    currModeName,  // Activate the Button for the current Mode
+    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+                                     // 'DEBUG' to walk key PBSG methods
+                                     // 'TRACE' to include PBSG and VSW state
+  )
+  return mPbsg
 }
 
-void _writeMPbsgHref () {
-  InstAppW pbsgApp = getOrCreateMPbsg()
-  if (pbsgApp) {
+InstAppW getModePbsg() {
+  // Mpbsg depends on Hubitat Mode properties AND NOT local data.
+  Boolean createdNewInstance = false
+  InstAppW modePbsg = app.getChildAppByLabel(state.MPBSG_LABEL)
+  if (! modePbsg) {
+    modePbsg = createModePbsg()
+    createNewInstance = true
+  }
+  logInfo('getModePbsg', [
+    '',
+    "Created New Instance: ${createdNewInstance}",
+    "Id: ${modePbsg.getId()}",
+    "Label: ${modePbsg.getLabel()}",
+    "Install State: ${modePbsg.getInstallationState()}<"
+  ])
+  return modePbsg
+}
+
+void writeMPbsgHref() {
+  InstAppW mPbsg = getModePbsg()
+  if (mPbsg) {
     href(
-      name: appInfo(pbsgApp),
+      name: appInfo(mPbsg),
       width: 2,
-      url: "/installedapp/configure/${pbsgApp.id}/MPbsgPage",
+      url: "/installedapp/configure/${mPbsg.id}/MPbsgPage",
       style: 'internal',
-      title: "Review ${appInfo(pbsgApp)}",
+      title: "Review ${appInfo(mPbsg)}",
       state: null
     )
   } else {
@@ -350,18 +431,7 @@ void _writeMPbsgHref () {
 
 //---- EVENT HANDLERS
 
-String extractDeviceIdFromLabel(String deviceLabel) {
-  //->x = (deviceLabel =~ /\((.*)\)/)
-  //->logDebug('extractDeviceIdFromLabel', [
-  //->  "deviceLabel: ${deviceLabel}",
-  //->  "x: ${x}",
-  //->  "x[0]: ${x[0]}",
-  //->  "x[0]: ${x[0][1]}",
-  //->])
-  return (deviceLabel =~ /\((.*)\)/)[0][1]
-}
-
-void pro2RepHandler(Event e) {
+void pro2RepHandler (Event e) {
   // CASETA EXAMPLE
   //   descriptionText  Caséta Repeater (pro2-1) button 4 was pushed
   //   displayName  Caséta Repeater (pro2-1)
@@ -375,7 +445,7 @@ void pro2RepHandler(Event e) {
   //   - Detection of 'scene off' requires device monitoring.
   if (e.name == 'pushed') {
     String eventButton = e.value
-    String repDeviceId = extractDeviceIdFromLabel(e.displayName)
+    String repDeviceId = extractNativeIdFromLabel(e.displayName)
     Map repMap = getRoomSceneMapForRep(e.deviceId)
     Map rsMap = repMap."${eventButton}"
     rsMap.each{ room, scene ->
@@ -387,10 +457,7 @@ void pro2RepHandler(Event e) {
   }
 }
 
-
-
-
-void ra2RepHandler(Event e) {
+void ra2RepHandler (Event e) {
   // Example Event
   //   descriptionText  RA2 Repeater 2 (ra2-83) button 73 was pushed
   //   displayName  RA2 Repeater 2 (ra2-83)
@@ -400,7 +467,7 @@ void ra2RepHandler(Event e) {
   //   isStateChange  true
   if (e.name.startsWith('buttonLed-')) {
     String eventButton = e.name.substring(10)
-    String repDeviceId = extractDeviceIdFromLabel(e.displayName)
+    String repDeviceId = extractNativeIdFromLabel(e.displayName)
     Map repMap = getRoomSceneMapForRep(e.deviceId)
     Map rsMap = repMap."${eventButton}"
     rsMap.each{ room, scene ->
@@ -424,18 +491,19 @@ void ra2RepHandler(Event e) {
           case 'TV':
             if (e.value == 'on') {
               // Activation sets mode. Deactivation does nothing.
+              // Room's react to mode when in their AUTO mode.
               logInfo('ra2RepHandler', "Activating mode ${scene} (via PBSG)")
-              getOrCreateMPbsg().pbsgActivateButton(scene)
+              getModePbsg()?.pbsgActivateButton(scene)
             }
             break;
           case '_AUTO':
             if (e.value == 'on') {
               // Force room Pbsg's into AUTO (to follow the Hubitat mode)
               settings.rooms.each{ roomName ->
-                logInfo('ra2RepHandler', "Force ${roomName} to AUTOMATIC")
+                logInfo('ra2RepHandler', "Force ${roomName} to AUTO")
                 app.getChildAppByLabel(roomName)
-                   .getOrCreateRSPbsg()
-                   .pbsgActivateButton('AUTOMATIC')
+                   .getRSPbsg()
+                   .pbsgActivateButton('AUTO')
               }
             }
             break
@@ -500,7 +568,7 @@ void initialize () {
 
 //---- GUI / PAGE RENDERING
 
-void _idRa2Repeaters () {
+void idRa2Repeaters () {
   input(
     name: 'ra2Repeaters',
     title: heading2('Identify Lutron RA2 Repeater(s)'),
@@ -511,7 +579,7 @@ void _idRa2Repeaters () {
   )
 }
 
-void _idPro2Repeaters () {
+void idPro2Repeaters () {
   input(
     name: 'pro2Repeaters',
     title: heading2('Identify Lutron Caseta (Pro2) Repeater(s)'),
@@ -522,32 +590,25 @@ void _idPro2Repeaters () {
   )
 }
 
-void _idParticipatingRooms () {
-  roomPicklist = app.getRooms().collect{it.name.replace(' ', '_')}.sort()
-  input(
-    name: 'rooms',
-    type: 'enum',
-    title: heading2('Identify Participating Rooms'),
-    options: roomPicklist,
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void _displayInstantiatedRoomHrefs () {
+void displayInstantiatedRoomHrefs () {
   paragraph heading1('Room Scene Configuration')
-  settings.rooms.each{ roomName ->
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
+  //x--> settings.rooms.each{ roomName ->
+  getRoomNames().each{ room ->
+    InstAppW roomApp = app.getChildAppByLabel(room)
     if (!roomApp) {
-      logWarn(
-        'addRoomAppsIfMissing',
-        "Adding room ${roomName}"
-      )
-      roomApp = addChildApp('wesmc', 'RoomScenes', roomName)
+      logWarn('displayInstantiatedRoomHrefs', "Adding room ${room}")
+      // --------------------------------------------------------------------
+      // W A R N I N G
+      //   - As of Q1'24, the 'properties' (4th) parameter of addChildApp()
+      //     is still not implemented.
+      //   - As an alternative, call the 'RoomScenes' method rsConfigure()
+      //     just after RoomScenes instance creation to provide initial data.
+      // --------------------------------------------------------------------
+      roomApp = addChildApp('wesmc', 'RoomScenes', room)
+      roomApp.rsConfigure(getSceneNames(room))
     }
     href (
-      name: roomName,
+      name: room,
       width: 2,
       url: "/installedapp/configure/${roomApp?.id}",
       style: 'internal',
@@ -555,6 +616,24 @@ void _displayInstantiatedRoomHrefs () {
       state: null, //'complete'
     )
   }
+}
+
+void stateAndSessionCleanup () {
+  settingsRemoveAndLog('rooms')
+  settingsRemoveAndLog('hubitatQueryString')
+  settingsRemoveAndLog('mainRepeaters')
+  settingsRemoveAndLog('modeButton_Chill')
+  settingsRemoveAndLog('modeButton_Cleaning')
+  settingsRemoveAndLog('modeButton_Day')
+  settingsRemoveAndLog('modeButton_Night')
+  settingsRemoveAndLog('modeButton_Party')
+  settingsRemoveAndLog('modeButton_TV')
+  stateRemoveAndLog('kpadButtonDniToSpecialtyFn')
+  stateRemoveAndLog('kpadButtonDniToTargetMode')
+  stateRemoveAndLog('MODE_PBSG_LABEL')
+  stateRemoveAndLog('modeButtonMap')
+  stateRemoveAndLog('specialFnButtonMap')
+  stateRemoveAndLog('SPECIALTY_BUTTONS')
 }
 
 Map WhaPage () {
@@ -574,35 +653,28 @@ Map WhaPage () {
     //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
     //-> Prefer stateRemoveAndLog() over state.remove('..')
     //---------------------------------------------------------------------------------
+    stateAndSessionCleanup()
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
     getGlobalVar('defaultMode').value
-    state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
-      'FLASH', 'PANIC', 'QUIET']
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-      _idRa2Repeaters()
-      _idPro2Repeaters()
-      //x--> _idSpecialFnButtons()
-      //x--> _idKpadsWithModeButtons()
-      //x--> _wireSpecialFnButtons()
-      //x--> _idKpadModeButtons()
-      //x--> _wireModeButtons()
-      _idParticipatingRooms()
-      _writeMPbsgHref()
-      if (!settings.rooms) {
-        // Don't be too aggressive deleting child apps and their config data.
-        paragraph('Management of child apps is pending selection of Room Names.')
-      } else {
-        //TBD-> pruneAppDups(
-        //TBD->   [*settings.rooms, state.MPBSG_LABEL],
-        //TBD->   app      // The object (parent) pruning dup children
-        //TBD-> )
-        _displayInstantiatedRoomHrefs()
-      }
+      idRa2Repeaters()
+      idPro2Repeaters()
+      writeMPbsgHref()
+      // if (!settings.rooms) {
+      //   // Don't be too aggressive deleting child apps and their config data.
+      //   paragraph('Management of child apps is pending selection of Room Names.')
+      // } else {
+      //   pruneAppDups(
+      //     [*settings.rooms, state.MPBSG_LABEL],
+      //     app      // The object (parent) pruning dup children
+      //   )
+      // }
+      displayInstantiatedRoomHrefs()
       paragraph([
         heading1('Debug<br/>'),
         *appStateAsBullets(true),

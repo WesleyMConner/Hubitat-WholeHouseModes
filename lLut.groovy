@@ -23,8 +23,19 @@ library(
   category: 'general purpose'
 )
 
+String extractNativeIdFromLabel(String deviceLabel) {
+  //->x = (deviceLabel =~ /\((.*)\)/)
+  //->logDebug('extractNativeIdFromLabel', [
+  //->  "deviceLabel: ${deviceLabel}",
+  //->  "x: ${x}",
+  //->  "x[0]: ${x[0]}",
+  //->  "x[0]: ${x[0][1]}",
+  //->])
+  return (deviceLabel =~ /\((.*)\)/)[0][1]
+}
+
 void identifyLedButtonsForListItems(
-  List<String> list,
+  ArrayList<String> list,
   List<DevW> ledDevices,
   String prefix
   ) {

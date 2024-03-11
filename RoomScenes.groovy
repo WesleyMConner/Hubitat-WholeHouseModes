@@ -40,164 +40,21 @@ preferences {
   page(name: 'RoomScenesPage')
 }
 
-//---- Repeater Integration Buttons
-
-/*
-Map repButtons = [
-  'RA2 Repeater 1 (ra2-1)': [
-    'All Chill': 11,
-    'All Clean': 12,
-    'All Day': 13,
-    'All Night': 14,
-    'All Off': 15,
-    'All Party': 16,
-    'All Supp': 17,
-    'All TV': 18,
-    'DenLamp Chill': 11,
-    'DenLamp Clean': 12,
-    'DenLamp Day': 13,
-    'DenLamp Night': 14,
-    'DenLamp Off': 15,
-    'DenLamp Party': 16,
-    'DenLamp Supp': 17,
-    'DenLamp TV': 18,
-    'Kitchen Chill': 21,
-    'Kitchen Clean': 22,
-    'Kitchen Day': 23,
-    'Kitchen Night': 24,
-    'Kitchen Off': 25,
-    'Kitchen Party': 26,
-    'Kitchen Supp': 27,
-    'Kitchen TV': 28,
-    'Kitchen Cook': 29,
-    'Den Chill': 41,
-    'Den Clean': 42,
-    'Den Day': 43,
-    'Den Night': 44,
-    'Den Off': 45,
-    'Den Party': 46,
-    'Den Supp': 47,
-    'Den TV': 48,
-    'Guest Chill': 51,
-    'Guest Clean': 52,
-    'Guest Day': 53,
-    'Guest Night': 54,
-    'Guest Off': 55,
-    'Guest Party': 56,
-    'Guest Supp': 57,
-    'Guest TV': 58,
-    'LhsBath Chill': 61,
-    'LhsBath Clean': 62,
-    'LhsBath Day': 63,
-    'LhsBath Night': 64,
-    'LhsBath Off': 65,
-    'LhsBath Party': 66,
-    'LhsBath Supp': 67,
-    'LhsBath TV': 68,
-    'RhsBath Chill': 71,
-    'RhsBath Clean': 72,
-    'RhsBath Day': 73,
-    'RhsBath Night': 74,
-    'RhsBath Off': 75,
-    'RhsBath Party': 76,
-    'RhsBath Supp': 77,
-    'RhsBath TV': 78,
-    'Main Chill': 81,
-    'Main Clean': 82,
-    'Main Day': 83,
-    'Main Night': 84,
-    'Main Off': 85,
-    'Main Party': 86,
-    'Main Supp': 87,
-    'Main TV': 88
-    'Main Play': 89
-  ],
-  'RA2 Repeater 2 (ra2-83)': [
-    'ALARM': 1,
-    'AUTO': 2,
-    'AWAY': 3,
-    'FLASH': 4,
-    'PANIC': 5,
-    'QUIET': 6,
-    'PrimBath Chill': 11,
-    'PrimBath Clean': 12,
-    'PrimBath Day': 13,
-    'PrimBath Night': 14,
-    'PrimBath Off': 15,
-    'PrimBath Party': 16,
-    'PrimBath Supp': 17,
-    'PrimBath TV': 18,
-    'PrimBdrm Chill': 21,
-    'PrimBdrm Clean': 22,
-    'PrimBdrm Day': 23,
-    'PrimBdrm Night': 24,
-    'PrimBdrm Off': 25,
-    'PrimBdrm Party': 26,
-    'PrimBdrm Supp': 27,
-    'PrimBdrm TV': 28,
-    'LhsBdrm Chill': 51,
-    'LhsBdrm Clean': 52,
-    'LhsBdrm Day': 53,
-    'LhsBdrm Night': 54,
-    'LhsBdrm Off': 55,
-    'LhsBdrm Party': 56,
-    'LhsBdrm Supp': 57,
-    'LhsBdrm TV': 58,
-    'Office Chill': 51,
-    'Office Clean': 52,
-    'Office Day': 53,
-    'Office Night': 54,
-    'Office Off': 55,
-    'Office Party': 56,
-    'Office Supp': 57,
-    'Office TV': 58,
-    'Yard High': 61,
-    'Yard Low': 62,
-    'Yard Off': 63,
-    'Lanai Chill': 71,
-    'Lanai Clean': 72,
-    'Lanai Day': 73,
-    'Lanai Night': 74,
-    'Lanai Off': 75,
-    'Lanai Party': 76,
-    'Lanai Supp': 77,
-    'Lanai TV': 78,
-    'Lanai Play': 79
-  ],
-  'Caséta Repeater': [
-    'Lanai Chill' : 1,
-    'Lanai Cleaning' : 2,
-    'Lanai Day' : 3,
-    'Lanai Play' : 4,
-    'Lanai Night' : 5,
-    'Lanai Party' : 6,
-    'Lanai Supp' : 7,
-    'Lanai TV' : 8
-  ]
-]
-*/
-
-//---- MANAGE STATE SCENES
-
 //---- CORE METHODS (Internal)
 
-List<String> getScenes() {
-  return state.scenes.collect{ it.key }
-}
-
-String extractDeviceIdFromLabel(String deviceLabel) {
-  //->x = (deviceLabel =~ /\((.*)\)/)
-  //->logDebug('extractDeviceIdFromLabel', [
-  //->  "deviceLabel: ${deviceLabel}",
-  //->  "x: ${x}",
-  //->  "x[0]: ${x[0]}",
-  //->  "x[0]: ${x[0][1]}",
-  //->])
-  return (deviceLabel =~ /\((.*)\)/)[0][1]
+Boolean rsConfigure(List<String> roomScenes) {
+  // CALLED IMMEDIATELY AFTER PBSG INSTANCE CREATION TO SET INITIAL DATA
+  // https://community.hubitat.com/t/addchildapp-how-to-pass-properties-and-where-do-they-go-in-the-child/6399
+  state.scenes = roomScenes
+  state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
+  state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
+  state.scenes = getParent().getSceneNames(state.ROOM_LABEL)
+  state.brightLuxSensors = []
+  getRSPbsg()
 }
 
 String getDeviceId(DevW device) {
-  return device?.label ? extractDeviceIdFromLabel(device.label) : null
+  return device?.label ? extractNativeIdFromLabel(device.label) : null
 }
 
 void clearManualOverride() {
@@ -227,55 +84,51 @@ String expectedScene() {
     ? 'INACTIVE' : state.activeScene
 }
 
-void pushRepeaterButton (String repeaterId, Long buttonNumber) {
-  settings.repeaters.each{ repeater ->
-    if (getDeviceId(repeater) == repeaterId) {
-      repeater.push(buttonNumber)
-    }
-  }
-}
+//--> void setDeviceLevel (String deviceId, Long level) {
+//-->   settings.indDevices.each{ device ->
+//-->     if (getDeviceId(device) == deviceId) {
+//-->       if (device.hasCommand('setLevel')) {
+//-->         logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
+//-->         // Some devices DO NOT support a level of 100.
+//-->         device.setLevel(level == 100 ? 99 : level)
+//-->       }
+//-->       if (level == 0) {
+//-->         logInfo('activateScene', "Setting ${b(deviceId)} to off")
+//-->         device.off()
+//-->       } else if (level == 100) {
+//-->         logInfo('activateScene', "Setting ${b(deviceId)} to on")
+//-->         device.on()
+//-->       }
+//-->     }
+//-->   }
+//--> }
 
-void setDeviceLevel (String deviceId, Long level) {
-  settings.indDevices.each{ device ->
-    if (getDeviceId(device) == deviceId) {
-      if (device.hasCommand('setLevel')) {
-        logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
-        // Some devices DO NOT support a level of 100.
-        device.setLevel(level == 100 ? 99 : level)
-      }
-      if (level == 0) {
-        logInfo('activateScene', "Setting ${b(deviceId)} to off")
-        device.off()
-      } else if (level == 100) {
-        logInfo('activateScene', "Setting ${b(deviceId)} to on")
-        device.on()
-      }
-    }
-  }
-}
-
-void activateScene() {
-  String expectedScene = expectedScene()
-  if (state.currScene != expectedScene) {
-    logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
-    state.currScene = expectedScene
-    // Decode and process the scene's per-device actions
-    Map actions = state.scenes.get(state.currScene)
-    actions.get('Rep').each{ repeaterId, button ->
-      logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
-      pushRepeaterButton(repeaterId, button)
-    }
-    actions.get('Ind').each{ deviceId, value ->
-      setDeviceLevel(deviceId, value)
-    }
-  }
-}
+//--> =====================================================================
+//--> USE PARENT TO PUSH REPEATER BUTTONS
+//--> TREATMENT OF INDEPENDENT DEVICES IS TEMPORARILY ON HOLD
+//--> =====================================================================
+//--> void activateScene() {
+//-->   String expectedScene = expectedScene()
+//-->   if (state.currScene != expectedScene) {
+//-->     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
+//-->     state.currScene = expectedScene
+//-->     // Decode and process the scene's per-device actions
+//-->     Map actions = state.scenes.get(state.currScene)
+//-->     actions.get('Rep').each{ repeaterId, button ->
+//-->       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
+//-->       pushRepeaterButton(repeaterId, button)
+//-->     }
+//-->     actions.get('Ind').each{ deviceId, value ->
+//-->       setDeviceLevel(deviceId, value)
+//-->     }
+//-->   }
+//--> }
 
 void updateTargetScene() {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
   if (
-    (state.activeButton == 'AUTOMATIC' && !state.activeScene)
-    || (state.activeButton == 'AUTOMATIC' && !isManualOverride())
+    (state.activeButton == 'AUTO' && !state.activeScene)
+    || (state.activeButton == 'AUTO' && !isManualOverride())
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     String mode = getLocation().getMode()
@@ -285,160 +138,85 @@ void updateTargetScene() {
   }
 }
 
-void buttonOnCallback(String button) {
+void pbsgButtonOnCallback(String button) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
   if (!button) {
     logWarn(
-      'buttonOnCallback',
-      'A null argument was received, using AUTOMATIC as a default'
+      'pbsgButtonOnCallback (RS)',
+      'A null argument was received, using AUTO as a default'
     )
   }
-  state.activeButton = button ?: 'AUTOMATIC'
+  state.activeButton = button ?: 'AUTO'
   logTrace(
-    'buttonOnCallback',
+    'pbsgButtonOnCallback (RS)',
     "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
   clearManualOverride()
   updateTargetScene()
-  activateScene()
-  updateLutronKpadLeds()
-}
-
-void updateLutronKpadLeds() {  // old argument was "String currScene"
-  settings.sceneButtons.each{ d ->
-    String buttonDni = d.getDeviceNetworkId()
-    String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
-    if (state.activeScene == sceneTarget) {
-      logInfo(
-        'updateLutronKpadLeds',
-        "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
-      )
-      d.on()
-    } else {
-      logTrace(
-        'updateLutronKpadLeds',
-        "Turning off LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
-      )
-      d.off()
-    }
-  }
+  logWarn('pbsgButtonOnCallback (RS)', "ACTIVATION OF '$button' IS PENDING")
+  //getParent().activateScene()
 }
 
 Boolean isDeviceType(String devTypeCandidate) {
   return ['Rep', 'Ind'].contains(devTypeCandidate)
 }
 
-Integer expectedSceneDeviceValue(String devType, String deviceId) {
-  Integer retVal = null
-  if (isDeviceType(devType)) {
-    retVal = state.scenes?.get(state.activeScene)?.get(devType)?.get(deviceId)
-    //-> logInfo('#328', "${devType}..${deviceId} -> ${retVal}")
-  } else {
-    logError('expectedSceneDeviceValue', "devType (${devType}) not recognized")
-  }
-  return retVal
+//x--> Integer expectedSceneDeviceValue(String devType, String deviceId) {
+//x-->   Integer retVal = null
+//x-->   if (isDeviceType(devType)) {
+//x-->     retVal = state.scenes?.get(state.activeScene)?.get(devType)?.get(deviceId)
+//x-->     //-> logInfo('#328', "${devType}..${deviceId} -> ${retVal}")
+//x-->   } else {
+//x-->     logError('expectedSceneDeviceValue', "devType (${devType}) not recognized")
+//x-->   }
+//x-->   return retVal
+//x--> }
+
+InstAppW getRSPbsg() {
+  return app.getChildAppByLabel(state.RSPBSG_LABEL)
 }
 
-InstAppW getOrCreateRSPbsg() {
-  // The PBSG is created by createRSPbsgAndPageLink()
-  InstAppW pbsgApp = app.getChildAppByLabel(state.RSPBSG_LABEL)
-  if (!pbsgApp) {
-    List<String> scenes = getScenes()
-    if (scenes) {
-      logWarn('getOrCreateRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
-      pbsgApp = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
-      ArrayList<String> roomScenes = [ *scenes, 'AUTOMATIC' ]
-      roomScenes.removeAll{ it == 'INACTIVE' }
-      String dfltScene = 'AUTOMATIC'
-      String currScene = null
-      pbsgApp.pbsgConfigure(
-        roomScenes,  // Create a PBSG button per Hubitat Mode name
-        dfltScene,   // 'Day' is the default Mode/Button
-        currScene,   // Activate the Button for the current Mode
-        settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                         // 'DEBUG' to walk key PBSG methods
-                                         // 'TRACE' to include PBSG and VSW state
-      )
-    } else {
-      logWarn('getOrCreateRSPbsg', 'RSPbsg creation is pending room scenes')
-    }
+InstAppW createRSPbsg() {
+  if (! getRSPbsg()) {
+    logWarn('createRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
+    // --------------------------------------------------------------------
+    // W A R N I N G
+    //   - As of Q1'24, the 'properties' (4th) parameter of addChildApp()
+    //     is still not implemented.
+    //   - As an alternative, call the 'RSPbsg' method pbsgConfigure()
+    //     just after RSpbsg instance creation to provide initial data.
+    // --------------------------------------------------------------------
+    InstAppW rsPbsg = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
+    ArrayList<String> roomScenes = [ *state.scenes, 'AUTO' ]
+    roomScenes.removeAll{ it == 'INACTIVE' }
+    String dfltScene = 'AUTO'
+    String currScene = null
+    rsPbsg.pbsgConfigure(
+      roomScenes,  // Create a PBSG button per Hubitat Mode name
+      dfltScene,   // 'Day' is the default Mode/Button
+      currScene,   // Activate the Button for the current Mode
+      settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+                                       // 'DEBUG' to walk key PBSG methods
+                                       // 'TRACE' to include PBSG and VSW state
+    )
   }
-  return pbsgApp
+  return rsPbsg
 }
 
-void createRSPbsgAndPageLink() {
-  InstAppW pbsgApp = getOrCreateRSPbsg()
-  if (pbsgApp) {
+void createRSPageLinks() {
+  InstAppW rsPbsg = getRSPbsg()
+  if (rsPbsg) {
     href(
-      name: appInfo(pbsgApp),
+      name: appInfo(rsPbsg),
       width: 2,
-      url: "/installedapp/configure/${pbsgApp.id}/RSPbsgPage",
+      url: "/installedapp/configure/${rsPbsg.id}/RSPbsgPage",
       style: 'internal',
-      title: "Edit <b>${appInfo(pbsgApp)}</b>",
+      title: "Edit <b>${appInfo(rsPbsg)}</b>",
       state: null
     )
   } else {
     paragraph "Creation of the MPbsgHref is pending required data."
   }
-}
-
-void subscribeToIndDeviceHandlerNoDelay() {
-  settings.indDevices.each{ d ->
-    logInfo(
-      'subscribeToIndDeviceHandlerNoDelay',
-      "${state.ROOM_LABEL} subscribing to independentDevice ${deviceInfo(d)}"
-    )
-    subscribe(d, indDeviceHandler, ['filterEvents': true])
-  }
-}
-
-void subscribeIndDevToHandler(Map data) {
-  // USAGE:
-  //   runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
-  // Independent Devices (especially RA2 and Caséta) are subject to stale
-  // Hubitat state data if callbacks occur quickly (within 1/2 second)
-  // after a level change. So, briefly unsubscribe/subscribe to avoid
-  // this situation.
-  logTrace(
-    'subscribeIndDevToHandler',
-    "${state.ROOM_LABEL} subscribing ${deviceInfo(data.device)}"
-  )
-  subscribe(device, indDeviceHandler, ['filterEvents': true])
-}
-
-void unsubscribeIndDevToHandler(DevW device) {
-  // Independent Devices (especially RA2 and Caséta) are subject to stale
-  // Hubitat state data if callbacks occur quickly (within 1/2 second)
-  // after a level change. So, briefly unsubscribe/subscribe to avoid
-  // this situation.
-  logTrace(
-    '_unsubscribeToIndDeviceHandler',
-    "${state.ROOM_LABEL} unsubscribing ${deviceInfo(device)}"
-  )
-  unsubscribe(device)
-}
-
-void subscribeToKpadHandler() {
-  settings.seeTouchKpads.each{ d ->
-    logInfo(
-      'subscribeToKpadHandler',
-      "${state.ROOM_LABEL} subscribing to keypad ${deviceInfo(d)}"
-    )
-    subscribe(d, kpadHandler, ['filterEvents': true])
-  }
-}
-
-void unsubscribeRepToHandler(DevW device) {
-  // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
-  // are not particularly subject to stale Hubitat state; HOWEVER,
-  // callbacks that occur quickly (within 1/2 second) after a buton press
-  // subject Hubitat to callback overload (during WHA scene chantes).
-  // Briefly unsubscribe/subscribe to avoid this situation.
-  logTrace(
-    'unsubscribeRepToHandler',
-    "${state.ROOM_LABEL} unsubscribing ${deviceInfo(device)}"
-  )
-  unsubscribe(device)
 }
 
 void subscribeToModeHandler() {
@@ -498,64 +276,13 @@ void subscribeToPicoHandler() {
 
 //---- EVENT HANDLERS
 
-void indDeviceHandler(Event e) {
-  // Devices send various events (e.g., switch, level, pushed, released).
-  // Isolate the events that confirm|refute state.activeScene.
-  Integer reported
-  // Only select events are considered for MANUAL OVERRIDE detection.
-  if (e.name == 'level') {
-    reported = safeParseInt(e.value)
-  } else if (e.name == 'switch' && e.value == 'off') {
-    reported = 0
-  }
-  String deviceId = extractDeviceIdFromLabel(e.displayName)
-  Integer expected = expectedSceneDeviceValue('Ind', deviceId)
-  if (reported == expected) {
-    state.moDetected = state.moDetected.collect{ key, value ->
-      if (key != deviceId) { [key, value] }
-    }
-  } else {
-    state.moDetected.put(deviceId, "${reported} (${expected})")
-  }
-}
-
-void kpadHandler(Event e) {
-  // Design Note
-  //   - The field e.deviceId arrives as a number and must be cast toString().
-  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Kpad buttons are matched to state data to activate a scene.
-  //-> logTrace('kpadHandler', [
-  //->   "state.activeButton: ${state.activeButton}",
-  //->   "state.activeScene: ${state.activeScene}",
-  //->   eventDetails(e)
-  //-> ])
-  switch (e.name) {
-    case 'pushed':
-      // Toggle the corresponding scene for the keypad button.
-      String scene = state.sceneButtonMap?.getAt(e.deviceId.toString())
-                                         ?.getAt(e.value)
-      if (scene) getOrCreateRSPbsg().pbsgToggleButton(scene)
-      // The prospective PBSG callback triggers further local processing.
-      break
-    case 'held':
-    case 'released':
-      // Ignore without logging
-      break
-    default:
-      logWarn('kpadHandler', [
-        "DNI: '${b(e.deviceId)}'",
-        "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
-      ])
-  }
-}
-
 void modeHandler(Event e) {
-  if (state.activeButton == 'AUTOMATIC') {
-    // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
+  if (state.activeButton == 'AUTO') {
+    // Hubitat Mode changes only apply when the room's button is 'AUTO'.
     if (e.name == 'mode') {
-      // Let buttonOnCallback() handle activeButton == 'AUTOMATIC'!
-      logTrace('modeHandler', 'Calling buttonOnCallback("AUTOMATIC")')
-      buttonOnCallback('AUTOMATIC')
+      // Let pbsgButtonOnCallback() handle activeButton == 'AUTO'!
+      logTrace('modeHandler', 'Calling pbsgButtonOnCallback("AUTO")')
+      pbsgButtonOnCallback('AUTO')
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -624,7 +351,7 @@ void picoHandler(Event e) {
           logInfo('picoHandler', [
             "w/ ${e.deviceId.toString()}-${e.value} toggling ${scene}"
           ])
-          getOrCreateRSPbsg().pbsgToggleButton(scene)
+          getRSPbsg().pbsgToggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
           logTrace('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each{ d ->
@@ -681,24 +408,24 @@ void initialize() {
       + "Subscribing to modeHandler."
   )
   state.brightLuxSensors = []
-  populateStateScenesAssignValues()
+  //x--> populateStateScenesAssignValues()
   clearManualOverride()
   //-> subscribeToIndDeviceHandlerNoDelay()
   settings.indDevices.each{ device -> unsubscribe(device) }
-  subscribeToKpadHandler()
+  //x--> subscribeToKpadHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   subscribeToPicoHandler()
   // ACTIVATION
-  //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
+  //   - If AUTO is already active in the PBSG, pbsgButtonOnCallback()
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
-  InstAppW pbsg = getOrCreateRSPbsg()
+  InstAppW pbsg = getRSPbsg()
   if (pbsg) {
-    pbsg.pbsgActivateButton('AUTOMATIC')
-    buttonOnCallback('AUTOMATIC')
+    pbsg.pbsgActivateButton('AUTO')
+    pbsgButtonOnCallback('AUTO')
   } else {
     logWarn(
       'initialize',
@@ -752,190 +479,6 @@ void idLowLightThreshold() {
   )
 }
 
-void selectModesAsScenes() {
-  ArrayList<String> scenes = modeNames()
-  input(
-    name: 'modesAsScenes',
-    type: 'enum',
-    title: heading2('Select Mode Names to use as Scenes Names'),
-    submitOnChange: true,
-    required: false,
-    multiple: true,
-    options: scenes.sort()
-  )
-}
-
-void nameCustomScenes() {
-  String prefix = 'customScene'
-  LinkedHashMap<String, String> slots = [
-    "${prefix}1": settings["${prefix}1"],
-    "${prefix}2": settings["${prefix}2"],
-    "${prefix}3": settings["${prefix}3"],
-    "${prefix}4": settings["${prefix}4"],
-    "${prefix}5": settings["${prefix}5"],
-    "${prefix}6": settings["${prefix}6"],
-    "${prefix}7": settings["${prefix}7"],
-    "${prefix}8": settings["${prefix}8"],
-    "${prefix}9": settings["${prefix}9"]
-  ]
-  LinkedHashMap<String, String> filled = slots?.findAll{it.value}
-  // Only present 1 empty sceen "slot" at a time.
-  LinkedHashMap<String, String> firstOpen = slots?.findAll{!it.value}?.take(1)
-  LinkedHashMap<String, String> custom = \
-    firstOpen + filled.sort{ a, b -> a.value <=> b.value }
-  custom.each{ key, value ->
-    input(
-      name: key,
-      type: 'text',
-      title: heading2('Custom Scene Name (Optional)'),
-      width: 4,
-      submitOnChange: true,
-      required: false,
-      defaultValue: value
-    )
-  }
-}
-
-void adjustStateScenesKeys() {
-  ArrayList<String> assembleScenes = settings.modesAsScenes ?: []
-  assembleScenes = assembleScenes.flatten()
-  if (settings.motionSensors || settings.luxSensors) {
-    assembleScenes += 'INACTIVE'
-  }
-  String prefix = 'customScene'
-  ArrayList<String> customScenes = []
-  customScenes += settings["${prefix}1"]
-  customScenes += settings["${prefix}2"]
-  customScenes += settings["${prefix}3"]
-  customScenes += settings["${prefix}4"]
-  customScenes += settings["${prefix}5"]
-  customScenes += settings["${prefix}6"]
-  customScenes += settings["${prefix}7"]
-  customScenes += settings["${prefix}8"]
-  customScenes += settings["${prefix}9"]
-  customScenes.removeAll{it == null}
-  if (customScenes) {
-    assembleScenes << customScenes
-    assembleScenes = assembleScenes.flatten().toUnique()
-  }
-  // Keep existing scenes keys that are present in assembleScenes.
-  Map currSceneMap = state.scenes
-  assembleScenes.each{ candidate ->
-    if (! currSceneMap.getAt(candidate)) {
-      currSceneMap << [ "${candidate}" : [] ]
-    }
-  }
-  state.scenes = currSceneMap
-}
-
-void idSceneForMode() {
-  if (state.scenes) {
-    paragraph heading2('Identify a Scene for each Hubitat Mode')
-    getLocation().getModes().collect{mode -> mode.name}.sort().each{ modeName ->
-      String inputName = "modeToScene^${modeName}"
-      String defaultValue = settings[inputName]
-        ?: state.scenes.containsKey(modeName) ? modeName : null
-      input(
-        name: inputName,
-        type: 'enum',
-        title: heading3(modeName),
-        width: 2,
-        submitOnChange: true,
-        required: true,
-        multiple: false,
-        options: getScenes(),
-        defaultValue: defaultValue
-      )
-    }
-  } else {
-    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
-  }
-}
-
-void authSeeTouchKpads() {
-  input(
-    name: 'seeTouchKpads',
-    title: heading3("Identify Keypads used to Activate Room Scenes"),
-    type: 'device.LutronSeeTouchKeypad',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void idRoomSceneButtons() {
-  input(
-    name: 'sceneButtons',
-    title: heading3("Identify Keypad Buttons that Activate a Room Scene"),
-    type: 'device.LutronComponentSwitch',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void mapKpadButtonDniToScene() {
-  Map<String, String> result = [:]
-  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, targetScene ->
-      result["${kpadDni}-${buttonNumber}"] = targetScene
-    }
-  }
-  state.kpadButtonDniToTargetScene = result
-}
-
-void wireKpadButtonsToScenes() {
-  List<String> scenes = getScenes()
-  if (scenes == null || settings?.sceneButtons == null) {
-    //paragraph('No Room Scene Kpad buttons have been identified.')
-  } else {
-    identifyLedButtonsForListItems(
-      scenes,
-      settings.sceneButtons,
-      'sceneButton'
-    )
-    populateStateKpadButtons('sceneButton')
-    mapKpadButtonDniToScene()
-  }
-}
-
-Map getDeviceValues (String scene) {
-  String keyPrefix = "scene^${scene}^"
-  List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
-  List<String> allowedDeviceIds = allowedDevices.collect{ getDeviceId(it) }
-  Map results = ['Rep': [:], 'Ind': [:]]
-  settings.findAll{ k1, v1 ->
-    k1.startsWith(keyPrefix)
-  }.each { k2, v2 ->
-    ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
-    if (typeAndId[0] == 'RA2') {
-      logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
-      settingsRemoveAndLog(k2)
-    } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
-      logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
-    } else {
-      // Enforce min/max constraints on Independent (Ind) device value.
-      if (typeAndId[1] == 'Ind') {
-        if (v2 > 100) {
-          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):100])
-        } else if (v2 < 0) {
-          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):0])
-        }
-      } else {
-        results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
-      }
-    }
-  }
-  return results
-}
-
-void populateStateScenesAssignValues() {
-  state.scenes = state.scenes.collectEntries{ scene, map ->
-    Map M = getDeviceValues(scene)
-    if (M) [scene, M]
-  }
-}
-
 void authRoomScenesPicos() {
   input(
     name: 'picos',
@@ -966,9 +509,9 @@ Map<String, String> picoButtonPicklist(List<DevW> picos) {
 }
 
 void selectPicoButtonsForScene(List<DevW> picos) {
-  List<String> scenes = getScenes()
+  ArrayList<String> scenes = getParent().getSceneNames(state.ROOM_LABEL)
   if (scenes) {
-    ArrayList<String> picoScenes = ['AUTOMATIC'] << scenes
+    ArrayList<String> picoScenes = ['AUTO'] << scenes
     picoScenes.flatten().each{ sceneName ->
       input(
         name: "picoButtons_${sceneName}",
@@ -1008,130 +551,48 @@ void wirePicoButtonsToScenes() {
   }
 }
 
-//void idRa2RepeatersImplementingScenes() {
-//  input(
-//    name: 'repeaters',
-//    title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
-//    type: 'device.LutronKeypad',
-//    submitOnChange: true,
-//    required: false,
-//    multiple: true
-//  )
-//}
-
-void idIndDevices() {
-  input(
-    name: 'indDevices',
-    title: heading3("Identify the Room's Non-RA2 Devices (e.g., Lutron Caséta, Z-Wave)"),
-    type: 'capability.switch',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void configureRoomScene() {
-  // DESIGN NOTES
-  //   There are three steps to populate "state.scenes" map.
-  //   (1) adjustStateScenesKeys() creates a per-scene key and
-  //       sets the value to [].
-  //   (2) This method populates Settings keys "scene^SCENENAME^Ind|Rep^DNI".
-  //       with Integer values:
-  //         - 'light level' for Independent devices (Ind)
-  //         - 'virtual button number' for RA2 Repeaters (RA2)
-  //   (3) populateStateScenesAssignValues() harvests the settings from
-  //       Step 2 to complete the "state.scenes" map.
-  // VIRTUAL TABLE
-  //   Hubitat page display logic simulates table cells.
-  //     - Full-sized displays (computer monitors) are 12 cells wide.
-  //     - Phone-sized displays are 4 cells wide.
-  //   To ensure that each scene starts on a new row, this method adds
-  //   empty cells (modulo 12) to ensure each scene begins in column 1.
-  if (state.scenes) {
-    ArrayList<String> currSettingsKeys = []
-    state.scenes?.sort().each{ sceneName, ignoredValue ->
-      // Ignore the current componentList. Rebuilt it from scratch.
-      Integer tableCol = 3
-      paragraph("<br/><b>${sceneName} →</b>", width: 2)
-      settings.indDevices?.each{ d ->
-        String inputName = "scene^${sceneName}^Ind^${getDeviceId(d)}"
-        currSettingsKeys += inputName
-        tableCol += 3
-        input(
-          name: inputName,
-          type: 'number',
-          title: "${b(d.label)}<br/>Level 0..100",
-          width: 3,
-          submitOnChange: true,
-          required: false,
-          multiple: false,
-          defaultValue: 0
-        )
-      }
-      settings.repeaters?.each{d ->
-        String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
-        currSettingsKeys += inputName
-        tableCol += 3
-        input(
-          name: inputName,
-          type: 'number',
-          title: "${b(d.label)}<br/>Button #",
-          width: 3,
-          submitOnChange: true,
-          required: false,
-          multiple: false,
-          defaultValue: 0
-        )
-      }
-      // Pad the remainder of the table row with empty cells.
-      while (tableCol++ % 12) {
-        paragraph('', width: 1)
-      }
-    }
-  }
-}
-
-
 void stateAndSessionCleanup () {
+  /*
   stateRemoveAndLog('sufficientLight')
   stateRemoveAndLog('targetScene')
-    settingsRemoveAndLog('ra2Repeaters')
-    settingsRemoveAndLog('mainRepeaters')
-    settingsRemoveAndLog('hubitatQueryString')
-    settingsRemoveAndLog('mainRepeaters')
-    settingsRemoveAndLog('ra2Repeaters')
-    settingsRemoveAndLog('scene^Chill^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Chill^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Chill^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Cleaning^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Cleaning^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Cleaning^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Cook^Rep^ra2-1')
-    settingsRemoveAndLog('scene^Day^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Day^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Day^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Games^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Games^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Games^Rep^ra2-1')
-    settingsRemoveAndLog('scene^Games^Rep^ra2-83')
-    settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-1')
-    settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Night^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Night^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Night^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Off^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Off^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Party^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Party^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Party^RA2^ra2-83')
-    settingsRemoveAndLog('scene^Supplement^RA2^pro2-1')
-    settingsRemoveAndLog('scene^Supplement^RA2^ra2-1')
-    settingsRemoveAndLog('scene^Supplement^RA2^ra2-83')
-    settingsRemoveAndLog('scene^TV^RA2^pro2-1')
-    settingsRemoveAndLog('scene^TV^RA2^ra2-1')
-    settingsRemoveAndLog('scene^TV^RA2^ra2-83')
-    settingsRemoveAndLog('scene^TV^Rep^ra2-1')
-    settingsRemoveAndLog('scene^TV^Rep^ra2-83')
+  settingsRemoveAndLog('ra2Repeaters')
+  settingsRemoveAndLog('mainRepeaters')
+  settingsRemoveAndLog('hubitatQueryString')
+  settingsRemoveAndLog('mainRepeaters')
+  settingsRemoveAndLog('ra2Repeaters')
+  settingsRemoveAndLog('scene^Chill^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Chill^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Chill^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Cleaning^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Cleaning^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Cleaning^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Cook^Rep^ra2-1')
+  settingsRemoveAndLog('scene^Day^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Day^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Day^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Games^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Games^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Games^Rep^ra2-1')
+  settingsRemoveAndLog('scene^Games^Rep^ra2-83')
+  settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-1')
+  settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Night^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Night^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Night^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Off^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Off^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Party^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Party^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Party^RA2^ra2-83')
+  settingsRemoveAndLog('scene^Supplement^RA2^pro2-1')
+  settingsRemoveAndLog('scene^Supplement^RA2^ra2-1')
+  settingsRemoveAndLog('scene^Supplement^RA2^ra2-83')
+  settingsRemoveAndLog('scene^TV^RA2^pro2-1')
+  settingsRemoveAndLog('scene^TV^RA2^ra2-1')
+  settingsRemoveAndLog('scene^TV^RA2^ra2-83')
+  settingsRemoveAndLog('scene^TV^Rep^ra2-1')
+  settingsRemoveAndLog('scene^TV^Rep^ra2-83')
+  */
 }
 
 Map RoomScenesPage() {
@@ -1147,17 +608,14 @@ Map RoomScenesPage() {
     install: true,
     uninstall: true,
   ) {
-    // state.scenes = [ : ]
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
     //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
     //-> Prefer stateRemoveAndLog() over state.remove('..')
     //---------------------------------------------------------------------------------
-    state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
-    state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     stateAndSessionCleanup()
-    state.brightLuxSensors = []
+    //---------------------------------------------------------------------------------
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
@@ -1165,19 +623,20 @@ Map RoomScenesPage() {
       idMotionSensors()
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }
-      selectModesAsScenes()
-      nameCustomScenes()
-      adjustStateScenesKeys()
-      idSceneForMode()
-      authSeeTouchKpads()
-      idRoomSceneButtons()
-      wireKpadButtonsToScenes()
+      //x--> selectModesAsScenes()
+      //x--> nameCustomScenes()
+      //x--> adjustStateScenesKeys()
+      //x--> idSceneForMode()
+      //x--> authSeeTouchKpads()
+      //x--> idRoomSceneButtons()
+      //x--> wireKpadButtonsToScenes()
       authRoomScenesPicos()
       wirePicoButtonsToScenes()
-      //idRa2RepeatersImplementingScenes()
-      idIndDevices()
-      configureRoomScene()
-      createRSPbsgAndPageLink()
+      //x--> idRa2RepeatersImplementingScenes()
+      //x--> idIndDevices()
+      /* configureRoomScene() */
+      if (! getRSPbsg()) { createRSPbsg() }
+      createRSPageLinks()
       paragraph([
         heading1('Debug'),
         *appStateAsBullets(true),
