@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// P B S G C O R E
+// P ( U S H )   B ( U T T O N )   S ( W I T C H )   G ( R O U P )
 //
 // Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -31,11 +31,11 @@ library(
 //---- CORE METHODS (External)
 
 Boolean pbsgConfigure(
-    ArrayList<String> buttons,
-    String defaultButton,
-    String activeButton,
-    String pbsgLogLevel = 'TRACE'
-  ) {
+  ArrayList<String> buttons,
+  String defaultButton,
+  String activeButton,
+  String pbsgLogLevel = 'TRACE'
+) {
   // CALLED IMMEDIATELY AFTER PBSG INSTANCE CREATION TO SET INITIAL DATA
   // Returns true if configuration is accepted, false otherwise.
   //   - Log levels: 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
@@ -77,7 +77,7 @@ Boolean pbsgConfigure(
   }
   if (retVal) { updated() }
   return retVal
-  }
+}
 
 Boolean pbsgActivateButton(String button) {
   logTrace('pbsgActivateButton', "button: ${b(button)}")
@@ -323,7 +323,7 @@ void pbsgCoreInstalled() {
   state.activeDni = null                            // String
   state.inactiveDnis = []                           // ArrayList<String>
   state.dfltDni = null                              // String
-  logTrace('pbsgCoreInstalled', appStateAsBullets(true))
+  logTrace('pbsgCoreInstalled', appStateAsBullets(false))
 }
 
 void pbsgCoreUpdated() {

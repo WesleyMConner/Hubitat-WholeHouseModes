@@ -42,16 +42,53 @@ preferences {
 
 //---- CORE METHODS (Internal)
 
-Boolean rsConfigure(List<String> roomScenes) {
-  // CALLED IMMEDIATELY AFTER PBSG INSTANCE CREATION TO SET INITIAL DATA
-  // https://community.hubitat.com/t/addchildapp-how-to-pass-properties-and-where-do-they-go-in-the-child/6399
-  state.scenes = roomScenes
-  state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
-  state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
-  state.scenes = getParent().getSceneNames(state.ROOM_LABEL)
-  state.brightLuxSensors = []
-  getRSPbsg()
+InstAppW createRSPbsg() {
+  // --------------------------------------------------------------------
+  // W A R N I N G
+  //   - As of Q1'24, the 'properties' (4th) parameter of addChildApp()
+  //     is still not implemented.
+  //   - As an alternative, call the 'RSPbsg' method pbsgConfigure() just
+  //     after RSPbsg instance creation to provide initial data.
+  // --------------------------------------------------------------------
+  InstAppW rsPbsg = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
+  InstAPpW parent = getParent()
+  logInfo('createRSPbsg #55', "parent: ${parent}")
+  InstAPpW grandParent = parent.getParent()
+  logInfo('createRSPbsg #57', "grandParent: ${grandParent}")
+  //ArrayList<String> sceneNames = getParent().getSceneNames(state.ROOM_LABEL)
+  sceneNames << 'AUTO'
+  rsPbsg.pbsgConfigure(
+    sceneNames,     // Create a PBSG button per Room Scene
+    'AUTO',         // Default Scene
+    'AUTO',         // Current Scene
+    settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
+                                     // 'DEBUG' to walk key PBSG methods
+                                     // 'TRACE' to include PBSG and VSW state
+  )
+  return rsPbsg
 }
+
+InstAppW getRSPbsg() {
+  // Mpbsg depends on Hubitat Mode properties AND NOT local data.
+  Boolean createdNewInstance = false
+  InstAppW rsPbsg = app.getChildAppByLabel(state.RSPBSG_LABEL)
+  if (! rsPbsg) {
+    rsPbsg = createRSPbsg()
+    createdNewInstance = true
+  }
+  logInfo('getRSPbsg', [
+    '',
+    "Created New Instance: ${createdNewInstance}",
+    "Id: ${rsPbsg.getId()}",
+    "Label: ${rsPbsg.getLabel()}",
+    "Install State: ${rsPbsg.getInstallationState()}<"
+  ])
+  return rsPbsg
+}
+
+//void rsConfigure(String scenes) {
+//  state.scenes = scenes
+//}
 
 String getDeviceId(DevW device) {
   return device?.label ? extractNativeIdFromLabel(device.label) : null
@@ -172,37 +209,6 @@ Boolean isDeviceType(String devTypeCandidate) {
 //x-->   return retVal
 //x--> }
 
-InstAppW getRSPbsg() {
-  return app.getChildAppByLabel(state.RSPBSG_LABEL)
-}
-
-InstAppW createRSPbsg() {
-  if (! getRSPbsg()) {
-    logWarn('createRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
-    // --------------------------------------------------------------------
-    // W A R N I N G
-    //   - As of Q1'24, the 'properties' (4th) parameter of addChildApp()
-    //     is still not implemented.
-    //   - As an alternative, call the 'RSPbsg' method pbsgConfigure()
-    //     just after RSpbsg instance creation to provide initial data.
-    // --------------------------------------------------------------------
-    InstAppW rsPbsg = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
-    ArrayList<String> roomScenes = [ *state.scenes, 'AUTO' ]
-    roomScenes.removeAll{ it == 'INACTIVE' }
-    String dfltScene = 'AUTO'
-    String currScene = null
-    rsPbsg.pbsgConfigure(
-      roomScenes,  // Create a PBSG button per Hubitat Mode name
-      dfltScene,   // 'Day' is the default Mode/Button
-      currScene,   // Activate the Button for the current Mode
-      settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                       // 'DEBUG' to walk key PBSG methods
-                                       // 'TRACE' to include PBSG and VSW state
-    )
-  }
-  return rsPbsg
-}
-
 void createRSPageLinks() {
   InstAppW rsPbsg = getRSPbsg()
   if (rsPbsg) {
@@ -215,7 +221,7 @@ void createRSPageLinks() {
       state: null
     )
   } else {
-    paragraph "Creation of the MPbsgHref is pending required data."
+    paragraph "Creation of the RSPbsgHref is pending required data."
   }
 }
 
@@ -402,11 +408,7 @@ void uninstalled() {
 }
 
 void initialize() {
-  logInfo(
-    'initialize',
-    "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
-      + "Subscribing to modeHandler."
-  )
+  logInfo('initialize', 'At Entry')
   state.brightLuxSensors = []
   //x--> populateStateScenesAssignValues()
   clearManualOverride()
@@ -617,6 +619,16 @@ Map RoomScenesPage() {
     stateAndSessionCleanup()
     //---------------------------------------------------------------------------------
     section {
+      state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
+      state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
+      state.scenes = getParent().getSceneNames(state.ROOM_LABEL)
+logInfo('RoomScenesPage #625', [
+  "ROOM_LABEL: ${state.ROOM_LABEL}",
+  "RSPBSG_LABEL: ${state.RSPBSG_LABEL}",
+  "scenes: ${state.scenes}"
+])
+      state.brightLuxSensors = []
+      getRSPbsg()
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5

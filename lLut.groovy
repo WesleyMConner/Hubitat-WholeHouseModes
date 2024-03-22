@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// L U T R O N   E X T E N S I O N   M E T H O D S
+// L U T ( R O N )
 //
 //  Copyright (C) 2023-Present Wesley M. Conner
 //

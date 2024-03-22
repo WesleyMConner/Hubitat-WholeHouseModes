@@ -1,6 +1,6 @@
 /* groovylint-disable NglParseError */
 // ---------------------------------------------------------------------------------
-// M O D E   P B S G
+// M ( O D E )   P B S G
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //

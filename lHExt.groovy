@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// H U B I T A T   E X T E N S I O N   M E T H O D S
+// H ( U B I T A T )   E X T ( E N S I O N )
 //
 //  Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -31,7 +31,7 @@ library(
 //---- CONVENIENCE
 //----
 
-void stateRemoveAndLog (String stateKey) {
+void stateRemoveAndLog(String stateKey) {
   if (state."${stateKey}") {
     logInfo('stateRemoveAndLog', "Removing stale state key >${stateKey}")
     //state.remove(stateKey)

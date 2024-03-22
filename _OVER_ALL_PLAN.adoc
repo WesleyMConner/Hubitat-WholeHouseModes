@@ -1,0 +1,25 @@
+= OVER ALL PLAN
+
+== Extract Lutron Data
+=== Future Capability
+* Shred raw Lutron RA2 and Caseta integration reports (delivered via a Hubitat Settings?) into ready-to-use Hubitat State maps.
+* Table-like Data
+
+| Device Room	| Device Location | Device name |	Model	| ID	| Component	 Component Number	| Name
+
+| Room | Id
+
+| Zone Room	| Zone Name	| ID					
+
+| etc...
+
+=== Tactically
+* Write goal maps into State manually.
+
+=== RA2
+** RA2 repeater's hubId -> [Room, Scene, on/off]
+** activate Room & Scene -> RA2 repeater button press
+
+=== Caséta
+** Pro2 repeater's hubId -> [Room, Scene, on]
+** Pro2 repeater

@@ -1,6 +1,7 @@
 // ---------------------------------------------------------------------------------
-// F I F O   Q U E U E   M E T H O D S
-//   Creates a ArrayList<String> fifo that reads left (first) to right (last)
+// F I F O   ( Q U E U E )
+//   Use an ArrayList<String> as a first-in-first-out queue, reading from
+//   left (first) to right (last).
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //

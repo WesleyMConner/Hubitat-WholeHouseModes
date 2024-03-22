@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// U T I L S   L I B R A R Y
+// H ( U B I T A T )   U ( S E R )   I ( N T E R F A C E )
 //
 //  Copyright (C) 2023-Present Wesley M. Conner
 //
