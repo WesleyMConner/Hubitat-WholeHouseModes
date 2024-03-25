@@ -576,7 +576,6 @@ void parseRa2IntegRpt() {
   // NOTES
   //   - Rows with a subset of expected columns provide 'sticky' data.
   //   - Subsequent rows populate initial columns with the 'stick' data.
-  //==> ArrayList<String> stickyCols = []
   String hubDeviceLabel
   // Split (vs Tokenize) rows to preserve the original row number.
   settings.ra2IntegReport.split('\n').eachWithIndex{ row, i ->
@@ -613,7 +612,6 @@ void parseRa2IntegRpt() {
           Boolean hasLeadingNulls = cols.size() != noLeadingNulls.size()
           if (!hasLeadingNulls && cols.size() != expectedCols.size()) {
             // No leading nulls and fewer then expected columns indicates sticky columns
-            //==> stickyCols = cols
             //String roomAndName = ra2Cols[3] ? ra2Cols[3].find(/(\w)+.(\w)+/) : ''
             if (cols.size() >= 5) {
               String hubType = ra2ModelToCode(cols[3])
@@ -623,19 +621,17 @@ void parseRa2IntegRpt() {
               hubDeviceLabel = "${ra2Name} (ra2-${ra2Id})"
               ra2Devices[hubLabel] = [:]
               ra2IntegrationConfig << "'${hubType},${ra2Id},${hubDeviceLabel}'"
-              //-> logInfo('parseRa2IntegRpt', [
-              //->   '#621',
-              //->   "ra2IntegrationConfig: >${ra2IntegrationConfig}<",
-              //->   "hubDeviceLabel: >${hubDeviceLabel}<"
-              //-> ])
+            } else if (cols.size() == 3) {
+              logInfo('parseRa2IntegRpt', "Probable device: >${cols}<")
             } else {
-              logInfo('parseRa2IntegRpt #624', "???..${cols}")
+              logInfo('parseRa2IntegRpt', [
+                'Ignoring Row (column count < 5 after removing leading nulls)',
+                "cols: >${cols}<"
+              ])
             }
           } else {
-            //===> Integer takeSticky = expectedCols.size() - noLeadingNulls.size()
             // Prune leading nulls columns
-            //===> ArrayList<String> completeCols = [*stickyCols.take(takeSticky), *noLeadingNulls]
-            logInfo('parseRa2IntegRpt #630', "${hubDeviceLabel}==> ${noLeadingNulls}")
+            logInfo('parseRa2IntegRpt #632', "${hubDeviceLabel} ==> ${noLeadingNulls}")
             // Example Data
             //   'REP1 (ra2-1)':
             //     [Button 1, 1, All Chill]
