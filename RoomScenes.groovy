@@ -29,10 +29,6 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Manage WHA Rooms for Whole House Automation',
-  category: '',           // Not supported as of Q3'23
-  iconUrl: '',            // Not supported as of Q3'23
-  iconX2Url: '',          // Not supported as of Q3'23
-  iconX3Url: '',          // Not supported as of Q3'23
   singleInstance: false
 )
 

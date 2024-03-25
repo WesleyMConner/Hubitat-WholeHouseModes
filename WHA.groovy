@@ -30,10 +30,6 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
-  category: '',           // Not supported as of Q3'23
-  iconUrl: '',            // Not supported as of Q3'23
-  iconX2Url: '',          // Not supported as of Q3'23
-  iconX3Url: '',          // Not supported as of Q3'23
   singleInstance: true
 )
 

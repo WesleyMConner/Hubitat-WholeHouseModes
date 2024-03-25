@@ -26,10 +26,6 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Implement PBSG functions and is authoritative for pushbutton state.',
-  category: '',    // Not supported as of Q3'23
-  iconUrl: '',     // Not supported as of Q3'23
-  iconX2Url: '',   // Not supported as of Q3'23
-  iconX3Url: '',   // Not supported as of Q3'23
   singleInstance: true
 )
 

@@ -3,14 +3,14 @@ RadioRA 2 Integration Report
 Device Room, Device Location, Device name, Model, ID, Component, Component Number, Name
 
 Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
-, , , , , Button 1, 1, All Chill
-, , , , , Button 2, 2, All Clean
-, , , , , Button 3, 3, #5 All Day
-, , , , , Button 4, 4, All Night
-, , , , , Button 5, 5, All Off
-, , , , , Button 6, 6, All Party
-, , , , , Button 7, 7, All Supp
-, , , , , Button 8, 8, All TV
+, , , , , Button 1, 1, WHA Chill
+, , , , , Button 2, 2, WHA Clean
+, , , , , Button 3, 3, #5 WHA Day
+, , , , , Button 4, 4, WHA Night
+, , , , , Button 5, 5, WHA Off
+, , , , , Button 6, 6, WHA Party
+, , , , , Button 7, 7, WHA Supp
+, , , , , Button 8, 8, WHA TV
 , , , , , Button 9, 9,
 , , , , , Button 10, 10,
 , , , , , Button 11, 11, DenLamp Chill
