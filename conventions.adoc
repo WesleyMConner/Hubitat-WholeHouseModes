@@ -26,3 +26,8 @@ A non-traditional approach to the RA2 Inclusive design facilitates smoother Hubi
 `Scene Names`:: Prefer names matching `"${room}: ${scene}"` to simplify parsing.
 
 NOTE: Room Scenes must ensure (max) one Room Repeater LEDs is active.
+
+
+In the Telnet device:
+
+* Enable sending LED events !!!

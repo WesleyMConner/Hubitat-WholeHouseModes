@@ -431,6 +431,24 @@ void ra2RepInit() {
   ]
 }
 
+String ra2ModelToCode(String model) {
+  switch (model) {
+    case 'LRF2-OCR2B-P-WH':
+      return 'm'
+    case 'PJ2-3BRL-GWH-L01':
+      return 'q'
+    case 'RR-MAIN-REP-WH':
+    case 'RR-T15RL-SW':
+    case 'RR-VCRX-WH':
+      return 'k'
+    case 'RRD-H6BRL-WH':
+    case 'RRD-W7B-WH':
+      return 'w'
+    default:
+      return 'unknown'
+  }
+}
+
 //----
 //---- Convenience methods that operate on State data
 //----
@@ -501,6 +519,11 @@ Map Ra2Page() {
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       idRa2Repeaters()
       solicitRa2IntegrationReport()
+      paragraph([
+        heading1('Debug<br/>'),
+        *appStateAsBullets(true),
+        *appSettingsAsBullets(true)
+      ].join('<br/>'))
     }
   }
 }
@@ -533,7 +556,7 @@ Integer forwardButton(ArrayList<String> rawSceneData) {
       return safeParseInt(rawSceneData[0].substring(1))
       break
     default:
-      logError('#541', "Unexpected Button Count")
+      logError('#555', "Unexpected Button Count")
       return -1
   }
 }
@@ -544,16 +567,19 @@ void parseRa2IntegRpt() {
   //     "buttonLed-${componentNumber}": "${room}:'${scene}'"]
   //   ]
   // ]
-  //-> logInfo('#547', [
+  //-> logInfo('#566', [
   //->   "Alpha Beta >${forwardButton('Alpha Beta'.tokenize(' '))}<",
   //->   "#40 Alpha Gamma >${forwardButton('#40 Alpha Gamma'.tokenize(' '))}<"
   //-> ])
+  ArrayList<String> ra2IntegrationConfig = []
+  Map ra2Devices = [:]
   ArrayList<String> expectedCols = ['Device Room', 'Device Location',
     'Device name', 'Model', 'ID', 'Component', 'Component Number', 'Name']
   // NOTES
   //   - Rows with a subset of expected columns provide 'sticky' data.
   //   - Subsequent rows populate initial columns with the 'stick' data.
-  ArrayList<String> stickyCols = []
+  //==> ArrayList<String> stickyCols = []
+  String hubDeviceLabel
   // Split (vs Tokenize) rows to preserve the original row number.
   settings.ra2IntegReport.split('\n').eachWithIndex{ row, i ->
     // Cleanup Lutron's sloppy CSV
@@ -584,22 +610,188 @@ void parseRa2IntegRpt() {
           break
         default:
           // Split (vs Tokenize) cols to preserve the original col positions.
-          String[] rawCols = row.split(',')
-          String[] noLeadingNulls = rawCols.dropWhile{ it == '' }
-          Boolean hasLeadingNulls = rawCols.size() != noLeadingNulls.size()
-          if (!hasLeadingNulls && rawCols.size() != expectedCols.size()) {
+          String[] cols = row.split(',')
+          String[] noLeadingNulls = cols.dropWhile{ it == '' }
+          Boolean hasLeadingNulls = cols.size() != noLeadingNulls.size()
+          if (!hasLeadingNulls && cols.size() != expectedCols.size()) {
             // No leading nulls and fewer then expected columns indicates sticky columns
-            stickyCols = rawCols
-            logInfo('parseRa2IntegRpt #593', "=====> ${stickyCols}")
+            //==> stickyCols = cols
+            //String roomAndName = ra2Cols[3] ? ra2Cols[3].find(/(\w)+.(\w)+/) : ''
+            if (cols.size() >= 5) {
+              String hubType = ra2ModelToCode(cols[3])
+              String ra2Id = cols[4]
+              String ra2Name = cols[1]?.tokenize(' ')[0] // Drop from initial ws.
+              if (ra2Name == 'Enclosure Device 001') { ra2Name = cols[1] }
+              hubDeviceLabel = "${ra2Name} (ra2-${ra2Id})"
+              ra2Devices[hubLabel] = [:]
+              ra2IntegrationConfig << "'${hubType},${ra2Id},${hubDeviceLabel}'"
+              //-> logInfo('parseRa2IntegRpt', [
+              //->   '#621',
+              //->   "ra2IntegrationConfig: >${ra2IntegrationConfig}<",
+              //->   "hubDeviceLabel: >${hubDeviceLabel}<"
+              //-> ])
+            } else {
+              logInfo('parseRa2IntegRpt #624', "???..${cols}")
+            }
           } else {
-            Integer takeSticky = expectedCols.size() - noLeadingNulls.size()
+            //===> Integer takeSticky = expectedCols.size() - noLeadingNulls.size()
             // Prune leading nulls columns
-            ArrayList<String> completeCols = [*stickyCols.take(takeSticky), *noLeadingNulls]
-            logInfo('parseRa2IntegRpt #598', "${completeCols}")
+            //===> ArrayList<String> completeCols = [*stickyCols.take(takeSticky), *noLeadingNulls]
+            logInfo('parseRa2IntegRpt #630', "${hubDeviceLabel}==> ${noLeadingNulls}")
+            // Example Data
+            //   'REP1 (ra2-1)':
+            //     [Button 1, 1, All Chill]
+            //     [Button 40, 40]
+            //     [Button 43, 43, #45 Den Day]
+            //     [Led 1, 101]
+            //   'Entry (ra2-3)':   // Is this an RA2 PICO?
+            //     [Button 1, 2, LhsBdrm 100%]
+            //     [Button 2, 3, Toggle Auto]
+            //     [Button 3, 4, LhsBdrm 0%]
+            //     [Button 4, 5, LhsBdrm Up]
+            //     [Button 5, 6, LhsBdrm Down]
+            //   'FrontDoor (ra2-10)':  // RA2 KPAD
+            //     [Button 1, 1, FLASH]
+            //     [Button 18, 18]
+            //     [Button 19, 19]
+            //     [Button 2, 2, Main Party]
+            //     [Button 3, 3, Main Play]
+            //     [Button 4, 4, Main Chill]
+            //     [Button 5, 5, Main TV]
+            //     [Button 6, 6, Foyer]
+            //     [Led 1, 81]
+            //     [Led 2, 82]
+            //     [Led 3, 83]
+            //     [Led 4, 84]
+            //     [Led 5, 85]
+            //     [Led 6, 86]
+            //   'Desk (ra2-30)':
+            //     [Button 1, 2, Office 100%]
+            //     [Button 2, 3, Toggle Auto]
+            //     [Button 3, 4, Office 0%]
+            //     [Button 4, 5, Office Raise]
+            //     [Button 5, 6, Office Lower]
+            //   'Credenza (ra2-73)':
+            //     [Button 1, 1, ALARM]
+            //     [Button 10, 10, Yard Auto]
+            //     [Button 11, 11, PARTY]
+            //     [Button 12, 12, CHILL]
+            //     [Button 13, 13, TV]
+            //     [Button 14, 14, NIGHT]
+            //     [Button 15, 15, Floor Lamp]
+            //     [Button 16, 16, ALL OFF]
+            //     [Button 17, 17, CLEAN]
+            //     [Button 2, 2, PANIC]
+            //     [Button 24, 24]
+            //     [Button 25, 25]
+            //     [Button 3, 3, FLASH]
+            //     [Button 4, 4, QUIET]
+            //     [Button 5, 5, AWAY]
+            //     [Button 6, 6, Guest Auto]
+            //     [Button 7, 7, Den Auto]
+            //     [Button 8, 8, Main Auto]
+            //     [Button 9, 9, Lanai Auto]
+            //     [Led 1, 81]
+            //          :
+            //     [Led 16, 96]
+            //     [Led 17, 97]
+            //   'Visor (ra2-82)':
+            //     [CCI 9, 34]
+            //     [CCI 8, 33]
+            //     [CCI 7, 32]
+            //     [CCI 6, 31]
+            //     [Led 6, 86]
+            //     [Led 5, 85]
+            //     [Led 4, 84]
+            //     [Led 3, 83]
+            //     [Led 2, 82]
+            //     [Led 1, 81]
+            //     [Button 6, 6]
+            //     [Button 5, 5]
+            //     [Button 4, 4, ALARM]
+            //     [Button 3, 3, FLASH]
+            //     [Button 2, 2, AWAY]
+            //     [Button 1, 1, AUTO]
+            //   'HisCloset-MotionSensor (ra2-87)':'
+            //     [Green Button Mode, 24]
+            //     [Green Mode, 2]
+            //     [Green Mode, ID, Mode Name, Step Number]
+            //     [Green100%, 7]
+            //     [Green20%, 3]
+            //     [Green40%, 4]
+            //     [Green60%, 5]
+            //     [Green80%, 6]
+            //     [New Event 002, 1]
+            //     [Off, 1]
+            //   'SAMPLES ???':'
+            //     [Project Timeclock, 25]
+            //     [Timeclock, ID, Event, Event Index]
+            //     [Gym, NA-BackOutlet, 90]
+            //     [Control, Zone 04, 81]
+            //     [RhsBath, RhsBath-Vanity, 79]
+            //     [RhsBath, RhsBath-Shower, 78]
+            //     [Laundry, 99]
+            //     [Shop, 88]
+            //     [Office, 85]
           }
       }
     }
   }
+  logInfo('parseRa2IntegRpt', ['LUTRON INTEGRATION (RA2) CONFIG LIST',
+    ra2IntegrationConfig])
+}
+
+// state.ra2Device = [:]
+//   Id -> [name: , code: ]
+// LutronIntegrationApp
+//   - String generateConfigurationList() {
+//       // Code,Id,Name
+//     }
+
+void ra2RepHandler (Event e) {
+  logInfo('ra2RepHandler', "${eventDetails(e)}")
+// EXAMPLE 1 - Cook
+//   descriptionText  RA2 Repeater 1 (ra2-1) led 29 was turned on
+//   displayName  RA2 Repeater 1 (ra2-1)
+//   deviceId  6825
+//   name  buttonLed-29
+//   value  on
+// EXAMPLE 2a Den Chill (in lieu of Cook Off)
+//   descriptionText  RA2 Repeater 1 (ra2-1) led 29 was turned off
+//   displayName  RA2 Repeater 1 (ra2-1)
+//   deviceId  6825
+//   name  buttonLed-29
+//   value  off
+//   isStateChange  true
+// EXAMPLE 2b
+//   descriptionText  RA2 Repeater 1 (ra2-1) led 28 was turned on
+//   displayName  RA2 Repeater 1 (ra2-1)
+//   deviceId  6825
+//   name  buttonLed-28
+//   value  on
+//   isStateChange  true
+// EXAMPLE 3
+//   descriptionText  RA2 Repeater 1 (ra2-1) led 40 was turned on
+//   displayName  RA2 Repeater 1 (ra2-1)
+//   deviceId  6825
+//   name  buttonLed-40
+//   value  on
+//   isStateChange  true
+// ALARM TOGGLE (From Visor or 15-Button Controller)
+//   descriptionText  RA2 Repeater 2 (ra2-83) led 91 was turned off
+//   displayName  RA2 Repeater 2 (ra2-83)
+//   deviceId  6892
+//   name  buttonLed-91
+//   value  off
+//   isStateChange  true
+//   ----
+//   descriptionText  RA2 Repeater 2 (ra2-83) led 91 was turned on
+//   displayName  RA2 Repeater 2 (ra2-83)
+//   deviceId  6892
+//   name  buttonLed-91
+//   value  on
+//   isStateChange  true
+
 }
 
 void initialize() {
@@ -607,8 +799,9 @@ void initialize() {
   //   (e.g., mode changing buttons vs special functionalily buttons).
   logWarn('initialize', 'Entered')
   settings.ra2Repeaters.each{ device ->
-    logInfo('initialize', "subscribing ${deviceInfo(device)} to Repeater Handler is TBD")
-    //-> subscribe(device, ra2RepHandler, ['filterEvents': true])
+  logInfo('initialize', "Subscribing >${device}< to ra2RepHandler")
+    subscribe(device, ra2RepHandler, ['filterEvents': true])
   }
   parseRa2IntegRpt()
+
 }
