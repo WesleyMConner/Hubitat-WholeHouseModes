@@ -29,7 +29,9 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Manage WHA Rooms for Whole House Automation',
-  singleInstance: false
+  singleInstance: false,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {
@@ -47,9 +49,9 @@ InstAppW createRSPbsg() {
   //     after RSPbsg instance creation to provide initial data.
   // --------------------------------------------------------------------
   InstAppW rsPbsg = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
-  InstAPpW parent = getParent()
+  InstAppW parent = getParent()
   logInfo('createRSPbsg #55', "parent: ${parent}")
-  InstAPpW grandParent = parent.getParent()
+  InstAppW grandParent = parent.getParent()
   logInfo('createRSPbsg #57', "grandParent: ${grandParent}")
   //ArrayList<String> sceneNames = getParent().getSceneNames(state.ROOM_LABEL)
   sceneNames << 'AUTO'

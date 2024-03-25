@@ -30,7 +30,9 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Preview lRa2 functionality',
-  singleInstance: true
+  singleInstance: true,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {

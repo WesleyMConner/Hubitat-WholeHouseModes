@@ -34,7 +34,9 @@ definition (
   videoLink: '',          // TBD
   importUrl: '',          // TBD
   oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: true
+  singleInstance: true,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {

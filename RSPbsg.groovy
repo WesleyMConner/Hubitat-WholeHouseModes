@@ -32,7 +32,9 @@ definition (
   videoLink: '',          // TBD
   importUrl: '',          // TBD
   oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: false
+  singleInstance: false,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {
