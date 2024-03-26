@@ -35,7 +35,7 @@ String extractNativeIdFromLabel(String deviceLabel) {
 }
 
 void identifyLedButtonsForListItems(
-  ArrayList<String> list,
+  ArrayList list,
   List<DevW> ledDevices,
   String prefix
   ) {
@@ -85,7 +85,7 @@ void populateStateKpadButtons(String prefix) {
       String base = key - "${prefix}_"
       value.each { item ->
         /* groovylint-disable-next-line ImplementationAsType */
-        ArrayList<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
+        ArrayList kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
           if (state[stateKey][kpadDniAndButtons[0]] == null) {
             state[stateKey][kpadDniAndButtons[0]] = [:]

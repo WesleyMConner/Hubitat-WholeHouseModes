@@ -1,6 +1,6 @@
 // ---------------------------------------------------------------------------------
 // F I F O   ( Q U E U E )
-//   Use an ArrayList<String> as a first-in-first-out queue, reading from
+//   Use an ArrayList as a first-in-first-out queue, reading from
 //   left (first) to right (last).
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
@@ -19,16 +19,16 @@ library(
   name: 'lFifo',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'Fifo methods on a ArrayList<String>',
+  description: 'Fifo methods on a ArrayList',
   category: 'general purpose'
 )
 
-String fifoRemove(ArrayList<String> fifo, String item) {
+String fifoRemove(ArrayList fifo, String item) {
   // Remove and return item if present OR return null.
   return fifo?.removeAll { member -> member == item } ? item : null
 }
 
-Boolean fifoEnqueue(ArrayList<String> fifo, String item) {
+Boolean fifoEnqueue(ArrayList fifo, String item) {
   Boolean retval = false
   if (item) {
     fifo << (item)

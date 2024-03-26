@@ -31,7 +31,7 @@ library(
 //---- CORE METHODS (External)
 
 Boolean pbsgConfigure(
-  ArrayList<String> buttons,
+  ArrayList buttons,
   String defaultButton,
   String activeButton,
   String pbsgLogLevel = 'TRACE'
@@ -192,8 +192,8 @@ Boolean pbsgDeactivateDni(String dni) {
   return isStateChange
 }
 
-ArrayList<String> childVswStates(Boolean includeHeading = false) {
-  ArrayList<String> results = []
+ArrayList childVswStates(Boolean includeHeading = false) {
+  ArrayList results = []
   if (includeHeading) { results += heading2('VSW States') }
   getChildDevices().each { d ->
     if (switchState(d) == 'on') {
@@ -241,7 +241,7 @@ void syncChildVswsToPbsgState() {
 void unsubscribeChildVswEvents() {
   // Unsubscribing to individual devices due to some prior issues with the
   // List version of subscribe()/unsubsribe().
-  ArrayList<String> traceSummary = [
+  ArrayList traceSummary = [
     '',
     heading2('Unsubscribed these Child Devices from Events:')
   ]
@@ -255,7 +255,7 @@ void unsubscribeChildVswEvents() {
 void subscribeChildVswEvents() {
   //-> Avoid the List version of subscribe. It seems flaky.
   //-> subscribe(childDevices, vswEventHandler, ['filterEvents': true])
-  ArrayList<String> traceSummary = [heading2('Subscribing to vswEventHandler')]
+  ArrayList traceSummary = [heading2('Subscribing to vswEventHandler')]
   childDevices.each { d ->
     subscribe(d, vswEventHandler, ['filterEvents': true])
     traceSummary += bullet2(d.deviceNetworkId)
@@ -281,7 +281,7 @@ void pbsgPublishActiveButton() {
   runIn(delayInSeconds, 'subscribeChildVswEvents')
 }
 
-ArrayList<String> pbsgGetDnis() {
+ArrayList pbsgGetDnis() {
   return cleanStrings([ state.activeDni, *state.inactiveDnis ])
 }
 
@@ -302,8 +302,8 @@ Boolean pbsgMoveActiveToInactive() {
   return isStateChanged
 }
 
-ArrayList<String> pbsgListVswDevices() {
-  ArrayList<String> outputText = [ heading2('DEVICES') ]
+ArrayList pbsgListVswDevices() {
+  ArrayList outputText = [ heading2('DEVICES') ]
   List<InstAppW> devices = getChildDevices()
   devices.each { d -> outputText += bullet2(d.deviceNetworkId) }
   return outputText
@@ -321,7 +321,7 @@ void pbsgCoreInstalled() {
   // Called on instance creation - i.e., before configuration, etc.
   state.logLevel = logThreshToLogLevel('TRACE')  // Integer
   state.activeDni = null                            // String
-  state.inactiveDnis = []                           // ArrayList<String>
+  state.inactiveDnis = []                           // ArrayList
   state.dfltDni = null                              // String
   logTrace('pbsgCoreInstalled', appStateAsBullets(false))
 }
@@ -333,16 +333,16 @@ void pbsgCoreUpdated() {
   //   - settings.activeButton
   //   - settings.logLevel
   // PROCESS SETTINGS (BUTTONS) INTO TARGET VSW DNIS
-  ArrayList<String> prevDnis = pbsgGetDnis() ?: []
+  ArrayList prevDnis = pbsgGetDnis() ?: []
   updatedDnis = settings.buttons.collect { buttonObj -> buttonToDni(buttonObj) }
   updatedDfltDni = settings.dfltButton ? buttonToDni(settings.dfltButton) : null
   updatedActiveDni = settings.activeButton ? buttonToDni(settings.activeButton) : null
   // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
   state.logLevel = logThreshToLogLevel(settings.logLevel)
-  Map<String, ArrayList<String>> actions = compareLists(prevDnis, updatedDnis)
-  ArrayList<String> retainDnis = actions.retained // Used for accounting only
-  ArrayList<String> dropDnis = actions.dropped
-  ArrayList<String> addDnis = actions.added
+  Map<String, ArrayList> actions = compareLists(prevDnis, updatedDnis)
+  ArrayList retainDnis = actions.retained // Used for accounting only
+  ArrayList dropDnis = actions.dropped
+  ArrayList addDnis = actions.added
   String requested = [
     "<b>dnis:</b> ${updatedDnis}",
     "<b>dfltDni:</b> ${updatedDfltDni}",

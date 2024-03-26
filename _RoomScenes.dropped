@@ -1,9 +1,9 @@
-ArrayList<String> getScenes() {
+ArrayList getScenes() {
   return state.scenes.collect{ it.key }
 }
 
 void selectModesAsScenes() {
-  ArrayList<String> scenes = modeNames()
+  ArrayList scenes = modeNames()
   input(
     name: 'modesAsScenes',
     type: 'enum',
@@ -47,13 +47,13 @@ void nameCustomScenes() {
 }
 
 void adjustStateScenesKeys() {
-  ArrayList<String> assembleScenes = settings.modesAsScenes ?: []
+  ArrayList assembleScenes = settings.modesAsScenes ?: []
   assembleScenes = assembleScenes.flatten()
   if (settings.motionSensors || settings.luxSensors) {
     assembleScenes += 'INACTIVE'
   }
   String prefix = 'customScene'
-  ArrayList<String> customScenes = []
+  ArrayList customScenes = []
   customScenes += settings["${prefix}1"]
   customScenes += settings["${prefix}2"]
   customScenes += settings["${prefix}3"]
@@ -135,7 +135,7 @@ void mapKpadButtonDniToScene() {
 }
 
 void wireKpadButtonsToScenes() {
-  ArrayList<String> scenes = getParent().getRoomScenes()
+  ArrayList scenes = getParent().getRoomScenes()
   if (scenes == null || settings?.sceneButtons == null) {
     //paragraph('No Room Scene Kpad buttons have been identified.')
   } else {
@@ -175,7 +175,7 @@ Map getDeviceValues (String scene) {
   settings.findAll{ k1, v1 ->
     k1.startsWith(keyPrefix)
   }.each { k2, v2 ->
-    ArrayList<String> typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
+    ArrayList typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
     if (typeAndId[0] == 'RA2') {
       logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
       settingsRemoveAndLog(k2)
@@ -354,7 +354,7 @@ void configureRoomScene() {
   //   To ensure that each scene starts on a new row, this method adds
   //   empty cells (modulo 12) to ensure each scene begins in column 1.
   if (state.scenes) {
-    ArrayList<String> currSettingsKeys = []
+    ArrayList currSettingsKeys = []
     state.scenes?.sort().each{ sceneName, ignoredValue ->
       // Ignore the current componentList. Rebuilt it from scratch.
       Integer tableCol = 3

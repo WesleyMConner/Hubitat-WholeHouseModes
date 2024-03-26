@@ -30,7 +30,7 @@ library(
 
 //---- GENERAL PURPOSE
 
-ArrayList<String> cleanStrings(ArrayList<String> list) {
+ArrayList cleanStrings(ArrayList list) {
   // Prune nulls, empty strings and dups
   return list.findAll { s -> s ?: null }.unique()
 }
@@ -170,23 +170,23 @@ void logTrace(String fnName, String s) {
   }
 }
 
-void logError(String fnName, ArrayList<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void logError(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
   logError(fnName, ls.join(delim))
 }
 
-void logWarn(String fnName, ArrayList<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void logWarn(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
   logWarn(fnName, ls.join(delim))
 }
 
-void logInfo(String fnName, ArrayList<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void logInfo(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
   logInfo(fnName, ls.join(delim))
 }
 
-void logDebug(String fnName, ArrayList<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void logDebug(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
   logDebug(fnName, ls.join(delim))
 }
 
-void logTrace(String fnName, ArrayList<String> ls, String delim = '<br/>&nbsp&nbsp') {
+void logTrace(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
   logTrace(fnName, ls.join(delim))
 }
 
@@ -236,8 +236,8 @@ String eventDetails(Event e) {
   return "<table>${rows}</table>"
 }
 
-ArrayList<String> appStateAsBullets(Boolean includeHeading = false) {
-  ArrayList<String> result = []
+ArrayList appStateAsBullets(Boolean includeHeading = false) {
+  ArrayList result = []
   if (includeHeading) { result += heading2("${appInfo(app)} STATE") }
   state.sort().each { k, v ->
     result += bullet2("<b>${k}</b> → ${v}")
@@ -245,8 +245,8 @@ ArrayList<String> appStateAsBullets(Boolean includeHeading = false) {
   return result.size() == 0 ? [ heading2('NO STATE DATA AVAILABLE') ] : result
 }
 
-ArrayList<String> appSettingsAsBullets(Boolean includeHeading = false) {
-  ArrayList<String> result = []
+ArrayList appSettingsAsBullets(Boolean includeHeading = false) {
+  ArrayList result = []
   if (includeHeading) { result += heading2("${appInfo(app)} SETTINGS") }
   settings.sort().each { k, v ->
     result += bullet1("<b>${k}</b> → ${v}")

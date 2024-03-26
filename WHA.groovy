@@ -159,7 +159,7 @@ InstAppW createModePbsg() {
   //     after Mpbsg instance creation to provide initial data.
   // --------------------------------------------------------------------
   InstAppW mPbsg = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
-  ArrayList<String> modeNames = getLocation().getModes().collect{ it.name }
+  ArrayList modeNames = getLocation().getModes().collect{ it.name }
   String currModeName = getLocation().currentMode.name
   mPbsg.pbsgConfigure(
     modeNames,     // Create a PBSG button per Hubitat Mode name

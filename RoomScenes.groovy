@@ -53,7 +53,7 @@ InstAppW createRSPbsg() {
   logInfo('createRSPbsg #55', "parent: ${parent}")
   InstAppW grandParent = parent.getParent()
   logInfo('createRSPbsg #57', "grandParent: ${grandParent}")
-  //ArrayList<String> sceneNames = getParent().getSceneNames(state.ROOM_LABEL)
+  //ArrayList sceneNames = getParent().getSceneNames(state.ROOM_LABEL)
   sceneNames << 'AUTO'
   rsPbsg.pbsgConfigure(
     sceneNames,     // Create a PBSG button per Room Scene
@@ -509,9 +509,9 @@ Map<String, String> picoButtonPicklist(List<DevW> picos) {
 }
 
 void selectPicoButtonsForScene(List<DevW> picos) {
-  ArrayList<String> scenes = getParent().getSceneNames(state.ROOM_LABEL)
+  ArrayList scenes = getParent().getSceneNames(state.ROOM_LABEL)
   if (scenes) {
-    ArrayList<String> picoScenes = ['AUTO'] << scenes
+    ArrayList picoScenes = ['AUTO'] << scenes
     picoScenes.flatten().each{ sceneName ->
       input(
         name: "picoButtons_${sceneName}",
@@ -533,7 +533,7 @@ void populateStatePicoButtonToTargetScene() {
           .each{ key, value ->
             String scene = key.tokenize('_')[1]
             value.each{ idAndButton ->
-              ArrayList<String> valTok = idAndButton.tokenize('^')
+              ArrayList valTok = idAndButton.tokenize('^')
               String deviceId = valTok[0]
               String buttonNumber = valTok[1]
               if (state.picoButtonToTargetScene[deviceId] == null) {

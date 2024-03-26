@@ -459,11 +459,11 @@ Map ra2RSToRepButton(String room, String scene) {
   return settings.ra2_RSToRepButton?."${room}"?."${scene}" ?: [:]
 }
 
-ArrayList<String> ra2RepRooms() {
+ArrayList ra2RepRooms() {
   return settings.ra2_Rooms
 }
 
-ArrayList<String> ra2RepScenes(String Room) {
+ArrayList ra2RepScenes(String Room) {
   return settings.ra2_RoomToScene?."${room}" ?: [:]
 }
 
@@ -545,7 +545,7 @@ void updated() {
   initialize()
 }
 
-Integer forwardButton(ArrayList<String> rawSceneData) {
+Integer forwardButton(ArrayList rawSceneData) {
   switch(rawSceneData.size()) {
     case 2:
       return 0
@@ -570,7 +570,7 @@ void parseRa2IntegRpt() {
   //->   "Alpha Beta >${forwardButton('Alpha Beta'.tokenize(' '))}<",
   //->   "#40 Alpha Gamma >${forwardButton('#40 Alpha Gamma'.tokenize(' '))}<"
   //-> ])
-  ArrayList<String> ra2IntegrationConfig = []
+  ArrayList ra2IntegrationConfig = []
   Map ra2Repeaters = [:]
   Map ra2Rooms = [:]
   Map ra2Devices = [:]
@@ -617,7 +617,7 @@ void parseRa2IntegRpt() {
     }
   }
 
-  ArrayList<String> expectedCols = ['Device Room', 'Device Location',
+  ArrayList expectedCols = ['Device Room', 'Device Location',
     'Device name', 'Model', 'ID', 'Component', 'Component Number', 'Name']
   // NOTES
   //   - Rows with a subset of expected columns provide 'sticky' data.
@@ -626,7 +626,7 @@ void parseRa2IntegRpt() {
   // Split (vs Tokenize) rows to preserve the original row number.
   .eachWithIndex{ row, i ->
     if (row) {
-      ArrayList<String> stickyColumns
+      ArrayList stickyColumns
       switch(i) {
         case 0:
           // CONFIRM INITIAL ROW MATCHES EXPECTED

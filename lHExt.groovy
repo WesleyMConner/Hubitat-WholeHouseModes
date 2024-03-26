@@ -59,32 +59,32 @@ void removeAllChildApps() {
   }
 }
 
-Map<String, ArrayList<String>> compareLists(ArrayList<String> existing, ArrayList<String> revised) {
-  // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
-  Map<String, ArrayList<String>> map = [:]
-  if (!existing) {
-    map.added = revised.collect()
-  } else if (!revised) {
-    map.retained = existing.collect()
-  } else {
-    map.retained = existing.collect()
-    map.retained.retainAll(revised)
-    map.dropped = existing.collect()
-    map.dropped.removeAll(revised)
-    map.added = revised.collect()
-    map.added.removeAll(existing)
-  }
-  return map
-}
+//-> Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
+//->   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
+//->   Map<String, ArrayList> map = [:]
+//->   if (!existing) {
+//->     map.added = revised.collect()
+//->   } else if (!revised) {
+//->     map.retained = existing.collect()
+//->   } else {
+//->     map.retained = existing.collect()
+//->     map.retained.retainAll(revised)
+//->     map.dropped = existing.collect()
+//->     map.dropped.removeAll(revised)
+//->     map.added = revised.collect()
+//->     map.added.removeAll(existing)
+//->   }
+//->   return map
+//-> }
 
-ArrayList<String> modeNames() {
+ArrayList modeNames() {
   //return getLocation().getModes().collect { modeObj -> modeObj.name }
   return getLocation().getModes()*.name
 }
 
 String switchState(DevW d) {
   /* groovylint-disable-next-line UseCollectMany */
-  ArrayList<String> stateValues = d.collect { device -> device.currentStates.value }.flatten()
+  ArrayList stateValues = d.collect { device -> device.currentStates.value }.flatten()
   return stateValues?.contains('on')
       ? 'on'
       : stateValues?.contains('off')
@@ -125,9 +125,9 @@ void asRemoveMapKey(String stateKey, String innerKey)
 //---- APP MANAGEMENT
 //----
 
-void pruneAppDups(ArrayList<String> keepLabels, InstAppW appBase) {
+void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"
-  ArrayList<String> result = []
+  ArrayList result = []
   result += '<table>'
   result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
   appBase.getAllChildApps()
