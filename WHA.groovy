@@ -30,7 +30,9 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
-  singleInstance: true
+  singleInstance: true,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {
@@ -86,12 +88,12 @@ void pbsgButtonOnCallback(String mode) {
   logTrace('pbsgButtonOnCallback (WHA)', "WHA ignoring reported Hubitat mode: ${b(mode)}")
 }
 
-void activateScene(String room, String scene) {
+//xxxx void activateScene(String room, String scene) {
   // PURPOSE
   //   Designed for invocation by a child Room Scene
   // CONTEXT
   //   [room: [scene: [repHubId: [unique buttons]]]]
-  logError('activateScene', 'N O T   I M P L E M E N T E D')
+//xxxx   logError('activateScene', 'N O T   I M P L E M E N T E D')
   /*
   Map repTargetButtons = state.rsToRepButton."${room}"?."${scene}"
   settings.ra2Repeaters.each{ rep ->
@@ -103,7 +105,7 @@ void activateScene(String room, String scene) {
   each{ repHubId, buttonList ->
   }
   */
-}
+//xxxx }
 
 void refreshRStoRepButton() {
   // GOAL: [room: [scene: [repHubId: [unique buttons]]]]

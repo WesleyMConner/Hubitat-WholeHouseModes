@@ -99,7 +99,7 @@ Map Ra2Page() {
       paragraph([
         heading1('Debug<br/>'),
         *appStateAsBullets(true),
-        *appSettingsAsBullets(true)
+        //*appSettingsAsBullets(true)
       ].join('<br/>'))
     }
   }
@@ -141,6 +141,15 @@ String normalizeCsv(String raw) {
   raw?.trim()?.replaceAll(', ', ',')
 }
 
+Boolean kpadSupportsLedEvents(String ra2Model) {
+  return [
+    'RR-MAIN-REP-WH',
+    'RR-T15RL-SW',
+    'RRD-H6BRL-WH',
+    'RRD-W7B-WH'
+  ].findAll{ it == ra2Model } ? true : false
+}
+
 void parseRa2IntegRpt() {
   ArrayList<String> ra2IntegrationConfig = []
   Map ra2Data = [:]
@@ -176,101 +185,104 @@ void parseRa2IntegRpt() {
         case kpadCols:
           //---- Extract Keypads (repeaters, wall kpads, picos, motion sensors)
           //---- to be separated by blank lines.
-          String ra2Name = null
-          // Get next non-null data row.
-          while ({
-            rowData = rawIntegRpt[++row]
-            (row < rawIntegRpt.size() && rowData == '')
-          }()) continue
-          String[] cols = rowData.split(',')
-          String[] colsNoLeadingNulls = cols.dropWhile{ it == '' }
-          if (cols.size() == colsNoLeadingNulls.size()) {
-            // Construct a 'Hubitat Label' for the keypad.
-            String hubType = ra2ModelToCode(cols[3])
-            String ra2Id = cols[4]
-            ra2Name = cols[1]?.tokenize(' ')[0] // Drop from initial ws.
-            // Apply special handling for repeater Hubitat Labels.
-            if (ra2Name == 'Enclosure Device 001') { ra2Name = cols[1] }
-            hubDeviceLabel = "${ra2Name} (ra2-${ra2Id})"
-            // Create a Repeater entry for the Lutron Integrator instance.
-            ra2IntegrationConfig << "'${hubType},${ra2Id},${hubDeviceLabel}'"
-            // Create a Repeater entry in the Add keypad top-level data.
-            ra2Data.kpads."${hubDeviceLabel}" = [
-              'ra2Room': "${cols[0]}",
-              'ra2Location': "${cols[1]}",
-              'ra2DeviceName': "${cols[2]}",
-              'ra2Model': "${cols[3]}",
-              'ra2Id': "${cols[4]}",
-              'buttonEvents': [:]
-            ]
-          }
-          //Map hubInfo = ra2Data.kpads."${hubDeviceLabel}"
-          logInfo('KPAD-DATA (BEFORE BUTTONS)', ">${ra2Data.kpads}<")
-          // Add repeater's button data optimized for Hubitat event processing.
-          while ({
-            rowData = normalizeCsv(rawIntegRpt[++row])
-            (row < rawIntegRpt.size() && rowData != '')
-          }()) {
-            //zz--> logInfo('XXX', "Processing rowData >${rowData}<")
-            String[] buttonCols = rowData.split(',')?.dropWhile{ it == '' }
-            //--> logInfo("row: ${row}", "BUTTON DATA is >${buttonCols}<")
-            // BUTTON DATA is >[Button 1, 1, WHA Chill]<
-            if (buttonCols.size() == 3) {
-              String eventName = buttonCols[0].find(/Button/) ? "buttonLed-${buttonCols[1]}" : ''
-              String hubitatRoom
-              String scene
-              String[] sceneData = buttonCols[2].tokenize(' ')
-              if (sceneData.size() == 2) {
-                hubitatRoom = sceneData[0]
-                scene = sceneData[1]
+          Boolean kpadFound = true
+          while (kpadFound) {
+            // BEGIN EXTRACTION OF A SINGLE KEYPAD
+            String ra2Name = null
+            // Find next non-null data row.
+            while ({
+              rowData = normalizeCsv(rawIntegRpt[++row])
+              (row < rawIntegRpt.size() && rowData == '')
+            }()) continue
+            String[] cols = rowData.split(',')
+            // Proceed only if the expected number of columns exist
+            if (cols.size() != 5) {
+              kpadFound = false
+            } else {
+              String[] colsNoLeadingNulls = cols.dropWhile{ it == '' }
+              String ra2Model
+              if (cols.size() == colsNoLeadingNulls.size()) {
+                // Construct a 'Hubitat Label' for the keypad.
+                String hubType = ra2ModelToCode(cols[3])
+                String ra2Id = cols[4]
+                //xx ra2Name = cols[1]?.tokenize(' ')[0] // Drop from initial ws.
+                //xx if (ra2Name != cols[1]) {
+                //xx   logInfo('INSPECT', "cols: >${cols}<, cols[1]: >${cols[1]}<, ra2Name: >${ra2Name}<")
+                //xx }
+                ra2Name = cols[1]
+                // Apply special handling for repeater Hubitat Labels.
+                if (ra2Name == 'Enclosure Device 001') { ra2Name = cols[1] }
+                hubDeviceLabel = "${ra2Name} (ra2-${ra2Id.trim()})"
+                // Create a Repeater entry for the Lutron Integrator instance.
+                ra2IntegrationConfig << "'${hubType},${ra2Id},${hubDeviceLabel}'"
+                // Create a Repeater entry in the Add keypad top-level data.
+                ra2Model = "${cols[3]}"
+                ra2Data.kpads."${hubDeviceLabel}" = [
+                  'ra2Room': "${cols[0]}",
+                  'ra2Location': "${cols[1]}",
+                  'ra2DeviceName': "${cols[2]}",
+                  'ra2Model': ra2Model,
+                  'ra2Id': "${cols[4]}" //,
+                                        // 'buttonEvents': [:]
+                ]
               }
-              //zz--> logInfo('XXX-1', ['',
-              //zz-->   "hubDeviceLabel: ${hubDeviceLabel}",
-              //zz-->   "eventName: ${eventName}",
-              //zz-->   "hubitatRoom: ${hubitatRoom}",
-              //zz-->   "scene: ${scene}"
-              //zz--> ])
-              //!!!!! Cannot get property 'buttonEvents' on null object on line 227 (method updated)
-              ra2Data.kpads?."${hubDeviceLabel}".buttonEvents."${eventName}" = [
-                'hubitatRoom': hubitatRoom,
-                'scene': scene
-              ]
+              // Add buttonEvents w/ "buttonLed-#"" keys when:
+              //   - The keypad device supports LEDs (real or virtual).
+              //   - The keypad's button is labeled and format:
+              //     |---------+-------------------------------+-------------------|
+              //     | INCLUDE |            FORMAT             |      EXAMPLE      |
+              //     |---------+-------------------------------+-------------------|
+              //     |  YES    |       "<room> <scene>"        |  "DenLamp Chill"  |
+              //     |  NO     | "<alt-button> <room> <scene>" | "#15 DenLamp Day" |
+              //     |---------+-------------------------------+-------------------|
+              if (kpadSupportsLedEvents(ra2Model)) {
+                ra2Data.kpads."${hubDeviceLabel}".buttonEvents = [:]
+                while ({
+                  rowData = normalizeCsv(rawIntegRpt[++row])
+                  (row < rawIntegRpt.size() && rowData != '')
+                }()) {
+                  String[] buttonCols = rowData.split(',')?.dropWhile{ it == '' }
+                  if (buttonCols.size() == 3) {
+                    String eventName = buttonCols[0].find(/Button/) ? "buttonLed-${buttonCols[1]}" : ''
+                    String[] sceneData = buttonCols[2].tokenize(' ')
+                    if (sceneData.size() == 2) {
+                      String hubitatRoom = sceneData[0]
+                      String scene = sceneData[1]
+                      ra2Data.kpads?."${hubDeviceLabel}".buttonEvents."${eventName}" = [
+                        'hubitatRoom': hubitatRoom,
+                        'scene': scene
+                      ]
+                    }
+                  }
+                }
+              } else {
+                // Toss additional device rows.
+                while ({
+                  rowData = normalizeCsv(rawIntegRpt[++row])
+                  (row < rawIntegRpt.size() && rowData != '')
+                }()) {}
+              }
             }
-            //logInfo('KPAD-SECTION', [
-            //  "row: ${row}",
-            //  "buttonCols: >${buttonCols}<",
-            //  "eventName: >${eventName}<",
-            //])
-            //ra2Data.kpads."${hubDeviceLabel}". = [
-            //  'Ra2Room': "${cols[0]}",
-            //  'Ra2Location': "${cols[1]}",
-            //  'Ra2DeviceName': "${cols[2]}",
-            //  'Ra2Model': "${cols[3]}",
-            //  'Ra2Id': "${cols[4]}",
-            //  'Buttons': [:]
+            // END EXTRACTION OF A SINGLE KEYPAD
           }
-          logInfo('KPAD-DATA (AFTER BUTTONS)', ">${ra2Data.kpads}<")
+  // REVIEW EXTRACTED KPADS
+  ra2Data.kpads.each{ k, v -> logInfo('KPAD-DATA', "${k} => ${v}") }
           break
         case roomCols:
           logInfo('parseRa2IntegRpt', "At #${row}: Parsing Rooms")
-          parseRooms(expectRoomCols)
           break
         case deviceCols:
           logInfo('parseRa2IntegRpt', "At #${row}: Parsing Circuits")
-          parseCircuits(expectZoneCols)
           break
         case timeclockCols:
           logInfo('parseRa2IntegRpt', "At #${row}: Parsing Timeclocks")
-          parseTimeclocks(expectTimeclockCols)
           break
         case greenModeCols:
           logInfo('parseRa2IntegRpt', "At #${row}: Parsing Greenmodes")
-          parseGreenButtons(parseRa2IntegRpt)
           break
-        // default:
-        //   Toss row and continue
+        default:
+          logWarn('parseRa2IntegRpt', "Unclear action at #${row} for >${rowData}<")
       }
-      logInfo("${row}:", "IGNORING ==>${rowData}<==")
       ++row
     }
   }

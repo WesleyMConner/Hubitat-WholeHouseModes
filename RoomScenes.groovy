@@ -142,22 +142,22 @@ String expectedScene() {
 //--> USE PARENT TO PUSH REPEATER BUTTONS
 //--> TREATMENT OF INDEPENDENT DEVICES IS TEMPORARILY ON HOLD
 //--> =====================================================================
-//--> void activateScene() {
-//-->   String expectedScene = expectedScene()
-//-->   if (state.currScene != expectedScene) {
-//-->     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
-//-->     state.currScene = expectedScene
-//-->     // Decode and process the scene's per-device actions
-//-->     Map actions = state.scenes.get(state.currScene)
-//-->     actions.get('Rep').each{ repeaterId, button ->
-//-->       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
-//-->       pushRepeaterButton(repeaterId, button)
-//-->     }
-//-->     actions.get('Ind').each{ deviceId, value ->
-//-->       setDeviceLevel(deviceId, value)
-//-->     }
-//-->   }
-//--> }
+void activateScene() {
+  String expectedScene = expectedScene()
+  if (state.currScene != expectedScene) {
+    logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
+    state.currScene = expectedScene
+    // Decode and process the scene's per-device actions
+    Map actions = state.scenes.get(state.currScene)
+    actions.get('Rep').each{ repeaterId, button ->
+      logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
+      pushRepeaterButton(repeaterId, button)
+    }
+    actions.get('Ind').each{ deviceId, value ->
+      setDeviceLevel(deviceId, value)
+    }
+  }
+}
 
 void updateTargetScene() {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
