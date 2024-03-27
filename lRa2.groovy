@@ -39,7 +39,6 @@ String ra2ModelToHubitatCode(String model) {
   }
 }
 
-/*
 String normalizeRowCsv(String raw) {
   return raw?.trim()?.replaceAll(', ', ',')
 }
@@ -51,9 +50,18 @@ void ra2IR_Ingest(String rawData) {
 
 Map ra2IR() {
   if (!state.ra2IR) {
-    logError('ra2IR', 'Cannot find state.ra2IR. Missing ra2IR_Ingest(...)?')
+    logError('ra2IR', [
+      '',
+      'Cannot find state.ra2IR.',
+      'Ensure ra2IR_Ingest() is called.'
+    ])
   }
   return state.ra2IR
+}
+
+Boolean ra2IR_unprocessedRows() {
+  Map rpt = ra2IR()
+  return (rpt.row + 1 < rpt.rows.size())
 }
 
 String ra2IR_currRow() {
@@ -62,11 +70,45 @@ String ra2IR_currRow() {
 }
 
 String ra2IR_nextRow() {
-  Map rpt = ra2IR()
-  rpt.row = ++rpt.row
-  state.ra2IR = [ 'rows': rpt.rows, 'row': rpt.row ]
-  return normalizeRowCsv(rpt.rows[rpt.row])
+  String result
+  if (ra2IR_unprocessedRows()) {
+    Map rpt = ra2IR()
+    rpt.row = ++rpt.row
+    state.ra2IR = [ 'rows': rpt.rows, 'row': rpt.row ]
+    result = normalizeRowCsv(rpt.rows[rpt.row])
+  } else {
+    result = 'EOF'
+  }
+  return result
 }
+
+String ra2IR_nextNonEmptyRow() {
+  String result
+  Boolean emptyRow = true
+  while (emptyRow) {
+    result = ra2IR_nextRow()
+    emptyRow = (result == '')
+  }
+  return result
+}
+
+/*
+void ra2IR_nextEmptyRow() {
+  // Skip to next empty line.
+  Boolean nonEmptyRow = true
+  while (nonEmptyRow) {
+    result = ra2IR_nextRow()
+    switch (result) {
+      case '':
+      case 'EOF':
+        nonEmptyRow = false
+        break
+      default:
+        logInfo('parseRa2IntegRpt', "Tossing >${result}<")
+    }
+  }
+}
+*/
 
 String[] ra2IR_currRowAsCols() {
   // Use split (vs tokenize) to preserve empty rows.
@@ -78,9 +120,7 @@ String[] ra2IR_nextRowAsCols() {
   return ra2IR_nextRow().split(',')
 }
 
-void skipEmptyRows() {
-  Map rpt = ra2IR()
-  while (rpt.rows[rpt.row] == '') { rpt.row = ++rpt.row }
-  state.ra2IR = [ 'rows': rpt.rows, 'row': rpt.row ]
+String[] ra2IR_nextNonEmptyRowAsCols() {
+  // Use split (vs tokenize) to preserve empty rows.
+  return ra2IR_nextNonEmptyRow().split(',')
 }
-*/

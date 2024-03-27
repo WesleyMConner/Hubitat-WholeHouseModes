@@ -14,8 +14,11 @@
 // ---------------------------------------------------------------------------------
 
 import com.hubitat.hub.domain.Event as Event
+
+// The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
+#include wesmc.lRa2
 
 definition (
   name: 'Test-lRa2',
@@ -29,24 +32,6 @@ definition (
 
 preferences {
   page(name: 'Ra2Page')
-}
-
-String ra2ModelToCode(String model) {
-  switch (model) {
-    case 'LRF2-OCR2B-P-WH':
-      return 'm'
-    case 'PJ2-3BRL-GWH-L01':
-      return 'q'
-    case 'RR-MAIN-REP-WH':
-    case 'RR-T15RL-SW':
-    case 'RR-VCRX-WH':
-      return 'k'
-    case 'RRD-H6BRL-WH':
-    case 'RRD-W7B-WH':
-      return 'w'
-    default:
-      return 'unknown'
-  }
 }
 
 //----
@@ -88,11 +73,11 @@ Map Ra2Page() {
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       //-> idRa2Repeaters()
       solicitRa2IntegrationReport()
-      paragraph([
-        heading1('Debug<br/>'),
-        *appStateAsBullets(true),
-        //*appSettingsAsBullets(true)
-      ].join('<br/>'))
+      //paragraph([
+      //  heading1('Debug<br/>'),
+      //  *appStateAsBullets(true),
+      //  *appSettingsAsBullets(true)
+      //].join('<br/>'))
     }
   }
 }
@@ -122,6 +107,7 @@ void initialize() {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
   logWarn('initialize', 'Entered')
+
   settings.ra2Repeaters.each{ device ->
   logInfo('initialize', "Subscribing >${device}< to ra2RepHandler")
     subscribe(device, ra2RepHandler, ['filterEvents': true])
@@ -150,19 +136,15 @@ void parseRa2IntegRpt() {
   ra2Data.circuits = [:]
   ra2Data.timeclock = [:]
   ra2Data.green = []
-  // Create an array of report rows, perserving empty rows.
-  String[] rawIntegRpt = settings.ra2IntegReport.split('\n')
-  //ArrayList rawIntegRpt = settings.ra2IntegReport.split('\n').toList()
+  ra2IR_Ingest(settings.ra2IntegReport)
   // Confirm that the expected Integration Report header is present.
-  Integer row = 0
-  String expectHeader = 'RadioRA 2 Integration Report'
-  String rowData = rawIntegRpt[row++]
-logInfo(">A<", "row: ${row}, rowData: >${rowData}<")
-  if (expectHeader.equals(actualHeader)) {
+  String headerRow = ra2IR_currRow()
+  String expectedHeader = 'RadioRA 2 Integration Report'
+  if (headerRow != expectedHeader) {
     logError('parseRa2IntegRpt', [
-      'At initial row ...',
-      ">${expectHeader}<, Expected Header",
-      ">${rowData}<, Actual Header"
+      '',
+      "expected header: ${expectedHeader}",
+      "actual header: ${headerRow}"
     ])
   } else {
     // The Outerloop Identifies the Extraction Mode
@@ -171,24 +153,19 @@ logInfo(">A<", "row: ${row}, rowData: >${rowData}<")
     String deviceCols = 'Zone Room,Zone Name,ID'
     String timeclockCols = 'Timeclock,ID,Event,Event Index'
     String greenModeCols = 'Green Mode,ID,Mode Name,Step Number'
-    while (row < rawIntegRpt.size()) {
-      rowData = normalizeCsv(rawIntegRpt[row++])
-logInfo(">B<", "row: ${row}, rowData: >${rowData}<")
+    rowData = ra2IR_nextNonEmptyRow()
+    while (rowData != 'EOF') {
+      logInfo('parseRa2IntegRpt', "Processing >${rowData}<")
       switch(rowData) {
         case kpadCols:
           //---- Extract Keypads (repeaters, wall kpads, picos, motion sensors)
-          //---- to be separated by blank lines.
+          //---- which are separated by blank lines.
+          logInfo('parseRa2IntegRpt', 'Parsing Keypads')
           Boolean kpadFound = true
           while (kpadFound) {
             // BEGIN EXTRACTION OF A SINGLE KEYPAD
             String ra2Name = null
-            // Consume leading empty rows.
-            while ({
-              rowData = normalizeCsv(rawIntegRpt[++row])
-logInfo(">C<", "row: ${row}, rowData: >${rowData}<")
-              (row < rawIntegRpt.size() && rowData == '')
-            }()) continue
-            String[] cols = rowData.split(',')
+            String[] cols = ra2IR_nextNonEmptyRowAsCols()
             // Proceed only if the expected number of columns exist
             if (cols.size() != 5) {
               kpadFound = false
@@ -197,7 +174,7 @@ logInfo(">C<", "row: ${row}, rowData: >${rowData}<")
               String ra2Model
               if (cols.size() == colsNoLeadingNulls.size()) {
                 // Construct a 'Hubitat Label' for the keypad.
-                String hubType = ra2ModelToCode(cols[3])
+                String hubType = ra2ModelToHubitatCode(cols[3])
                 String ra2Id = cols[4]
                 ra2Name = cols[1]
                 // Apply special handling for repeater Hubitat Labels.
@@ -226,11 +203,7 @@ logInfo(">C<", "row: ${row}, rowData: >${rowData}<")
               //     |---------+-------------------------------+-------------------|
               if (kpadSupportsLedEvents(ra2Model)) {
                 ra2Data.kpads."${hubDeviceLabel}".buttonEvents = [:]
-                while ({
-                  rowData = normalizeCsv(rawIntegRpt[++row])
-logInfo(">D<", "row: ${row}, rowData: >${rowData}<")
-                  (row < rawIntegRpt.size() && rowData != '')
-                }()) {
+                while (rowData = ra2IR_nextRow()) {
                   String[] buttonCols = rowData.split(',')?.dropWhile{ it == '' }
                   if (buttonCols.size() == 3) {
                     String eventName = buttonCols[0].find(/Button/) ? "buttonLed-${buttonCols[1]}" : ''
@@ -246,50 +219,35 @@ logInfo(">D<", "row: ${row}, rowData: >${rowData}<")
                   }
                 }
               } else {
-                // Toss additional device rows.
-                while ({
-                  rowData = normalizeCsv(rawIntegRpt[++row])
-logInfo(">E<", "row: ${row}, rowData: >${rowData}<")
-                  (row < rawIntegRpt.size() && rowData != '')
-                }()) {}
+                while (rowData = ra2IR_nextRow()) {
+                  // Tossing an unused device row.
+                  logInfo('parseRa2IntegRpt', "Tossing >${rowData}<")
+                }
               }
             }
             // END EXTRACTION OF A SINGLE KEYPAD
           }
           break
         case roomCols:
-          logInfo('parseRa2IntegRpt', "At #${row}: Parsing Rooms")
+          logInfo('parseRa2IntegRpt', 'Parsing Rooms')
           Boolean roomFound = true
           while (roomFound) {
-            // Consume leading empty rows.
-            while ({
-              rowData = normalizeCsv(rawIntegRpt[++row])
-logInfo(">F<", "row: ${row}, rowData: >${rowData}<")
-              (row < rawIntegRpt.size() && rowData == '')
-            }()) continue
             // BEGIN EXTRACTION OF ROOM DATA
-            String[] cols = rowData.split(',')      // RhsBath, 2
+            String[] cols = ra2IR_nextNonEmptyRowAsCols()  // RhsBath, 2
             // Proceed only if the expected number of columns exist
-            if (cols.size() != 2) {
-              logInfo('BAILING ROOM DATA', "row: ${row} cols: >${cols}<")
-              roomFound = false
-            } else {
+            if (cols.size() == 2) {
               logInfo('parseRa2IntegRpt', "At #${row}, Id: ${cols[1]} Room: ${cols[0]}")
               ra2Data.rooms."${cols[1]}" = cols[0]  // ID -> ROOM
+            } else {
+              logInfo('BAILING ROOM DATA', "row: ${row} cols: >${cols}<")
+              roomFound = false
             }
             // END EXTRACTION OF ROOM DATA
           }
           break
-
         case deviceCols:
-          logInfo('parseRa2IntegRpt', "At #${row}: Parsing Circuits")
-          // Find next non-null data row.
-          while ({
-            rowData = normalizeCsv(rawIntegRpt[++row])
-logInfo(">G<", "row: ${row}, rowData: >${rowData}<")
-            (row < rawIntegRpt.size() && rowData == '')
-          }()) continue
-          String[] cols = rowData.split(',')      // Den, Kitchen-Soffit, 4
+          logInfo('parseRa2IntegRpt', 'Parsing Circuits')
+          String[] cols = ra2IR_nextNonEmptyRowAsCols()  // Den, Kitchen-Soffit, 4
           if (cols.size() == 3) {
             ArrayList zoneData = cols[1].tokenize('-')
             if(zoneData.size() == 2) {
@@ -300,30 +258,30 @@ logInfo(">G<", "row: ${row}, rowData: >${rowData}<")
             } else {
               logWarn('parseRa2IntegRpt', "Expected <room>-<scene>, got >${cols[1]}<")
             }
-            ra2Data.rooms."${cols[1]}" = cols[0]  // ID -> ROOM
           }
           break
         case timeclockCols:
-          logInfo('parseRa2IntegRpt', "At #${row}: Parsing Timeclocks")
+          logInfo('parseRa2IntegRpt', 'Parsing Timeclocks')
+          /*
           // String timeclockCols = 'Timeclock,ID,Event,Event Index'
           // Project Timeclock, 25
           // , , New Event 002,1
+          */
           break
         case greenModeCols:
-          logInfo('parseRa2IntegRpt', "At #${row}: Parsing Greenmodes")
+          logInfo('parseRa2IntegRpt', 'Parsing Greenmodes')
+          /*
           // String greenModeCols = 'Green Mode,ID,Mode Name,Step Number'
           // , , Off, 1
           // , , Green Mode, 2
+          */
           break
         default:
-          if (rowData) {
-            logWarn('parseRa2IntegRpt', "No action at #${row} for >${rowData}<")
-          } else {
-            logWarn('parseRa2IntegRpt', "Nothing at #${row}")
-          }
+          logWarn('parseRa2IntegRpt', "At Default, ignoring ${rowData}")
+          rowData = ra2IR_nextNonEmptyRow()
       }
-      rowData = normalizeCsv(rawIntegRpt[++row])
-logInfo(">H<", "row: ${row}, rowData: >${rowData}<")
+      logInfo('parseRa2IntegRpt', "At end of while >${ra2IR_currRow()}<")
+      // O L D -> rowData = normalizeCsv(rawIntegRpt[++row])
     }
     // REVIEW EXTRACTED KPADS
     ra2Data.kpads.each{ k, v -> logInfo('KPAD-DATA', "${k} => ${v}") }

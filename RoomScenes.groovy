@@ -119,24 +119,24 @@ String expectedScene() {
     ? 'INACTIVE' : state.activeScene
 }
 
-//--> void setDeviceLevel (String deviceId, Long level) {
-//-->   settings.indDevices.each{ device ->
-//-->     if (getDeviceId(device) == deviceId) {
-//-->       if (device.hasCommand('setLevel')) {
-//-->         logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
-//-->         // Some devices DO NOT support a level of 100.
-//-->         device.setLevel(level == 100 ? 99 : level)
-//-->       }
-//-->       if (level == 0) {
-//-->         logInfo('activateScene', "Setting ${b(deviceId)} to off")
-//-->         device.off()
-//-->       } else if (level == 100) {
-//-->         logInfo('activateScene', "Setting ${b(deviceId)} to on")
-//-->         device.on()
-//-->       }
-//-->     }
-//-->   }
-//--> }
+void setDeviceLevel (String deviceId, Long level) {
+  settings.indDevices.each{ device ->
+    if (getDeviceId(device) == deviceId) {
+      if (device.hasCommand('setLevel')) {
+        logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
+        // Some devices DO NOT support a level of 100.
+        device.setLevel(level == 100 ? 99 : level)
+      }
+      if (level == 0) {
+        logInfo('activateScene', "Setting ${b(deviceId)} to off")
+        device.off()
+      } else if (level == 100) {
+        logInfo('activateScene', "Setting ${b(deviceId)} to on")
+        device.on()
+      }
+    }
+  }
+}
 
 //--> =====================================================================
 //--> USE PARENT TO PUSH REPEATER BUTTONS
