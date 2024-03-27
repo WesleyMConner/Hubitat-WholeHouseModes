@@ -551,50 +551,6 @@ void wirePicoButtonsToScenes() {
   }
 }
 
-void stateAndSessionCleanup () {
-  /*
-  stateRemoveAndLog('sufficientLight')
-  stateRemoveAndLog('targetScene')
-  settingsRemoveAndLog('ra2Repeaters')
-  settingsRemoveAndLog('mainRepeaters')
-  settingsRemoveAndLog('hubitatQueryString')
-  settingsRemoveAndLog('mainRepeaters')
-  settingsRemoveAndLog('ra2Repeaters')
-  settingsRemoveAndLog('scene^Chill^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Chill^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Chill^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Cleaning^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Cleaning^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Cleaning^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Cook^Rep^ra2-1')
-  settingsRemoveAndLog('scene^Day^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Day^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Day^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Games^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Games^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Games^Rep^ra2-1')
-  settingsRemoveAndLog('scene^Games^Rep^ra2-83')
-  settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-1')
-  settingsRemoveAndLog('scene^INACTIVE^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Night^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Night^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Night^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Off^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Off^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Party^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Party^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Party^RA2^ra2-83')
-  settingsRemoveAndLog('scene^Supplement^RA2^pro2-1')
-  settingsRemoveAndLog('scene^Supplement^RA2^ra2-1')
-  settingsRemoveAndLog('scene^Supplement^RA2^ra2-83')
-  settingsRemoveAndLog('scene^TV^RA2^pro2-1')
-  settingsRemoveAndLog('scene^TV^RA2^ra2-1')
-  settingsRemoveAndLog('scene^TV^RA2^ra2-83')
-  settingsRemoveAndLog('scene^TV^Rep^ra2-1')
-  settingsRemoveAndLog('scene^TV^Rep^ra2-83')
-  */
-}
-
 Map RoomScenesPage() {
   // The parent application (Whole House Automation) assigns a unique label
   // to each WHA Rooms instance. Capture app.label as state.ROOM_LABEL.
@@ -611,10 +567,9 @@ Map RoomScenesPage() {
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
-    //-> Prefer stateRemoveAndLog() over state.remove('..')
+    //-> app.removeSetting('..')
+    //-> state.remove('..')
     //---------------------------------------------------------------------------------
-    stateAndSessionCleanup()
     //---------------------------------------------------------------------------------
     section {
       state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name

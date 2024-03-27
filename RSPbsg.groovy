@@ -28,11 +28,6 @@ definition (
   author: 'Wesley M. Conner',
   description: 'A pbsgLibrary instance rooted in a Room Scenes instance',
   installOnOpen: false,
-  documentationLink: '',  // TBD
-  videoLink: '',          // TBD
-  importUrl: '',          // TBD
-  oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: false,
   iconUrl: '',
   iconX2Url: ''
 )
@@ -40,8 +35,6 @@ definition (
 preferences {
   page(name: 'RSPbsgPage')
 }
-
-//---- SYSTEM CALLBACKS
 
 void installed () {
   pbsgCoreInstalled()
@@ -54,8 +47,6 @@ void updated () {
 void uninstalled () {
   pbsgCoreUninstalled()
 }
-
-//---- RENDERING AND DISPLAY
 
 Map RSPbsgPage () {
   return dynamicPage(

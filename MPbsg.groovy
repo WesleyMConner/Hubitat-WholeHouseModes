@@ -30,20 +30,15 @@ definition (
   author: 'Wesley M. Conner',
   description: 'A pbsgLibrary instance rooted in WHA instance',
   installOnOpen: false,
-  documentationLink: '',  // TBD
-  videoLink: '',          // TBD
-  importUrl: '',          // TBD
-  oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: true,
-  iconUrl: '',
-  iconX2Url: ''
+  iconUrl: '',            // Not supported as of Q3'23
+  iconX2Url: '',          // Not supported as of Q3'23
+  iconX3Url: '',          // Not supported as of Q3'23
+  singleInstance: false
 )
 
 preferences {
   page(name: 'MPbsgPage')
 }
-
-//---- SYSTEM CALLBACKS
 
 void installed () {
   pbsgCoreInstalled()
@@ -56,8 +51,6 @@ void updated () {
 void uninstalled () {
   pbsgCoreUninstalled()
 }
-
-//---- RENDERING AND DISPLAY
 
 Map MPbsgPage () {
   return dynamicPage(

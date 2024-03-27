@@ -507,10 +507,9 @@ Map Ra2Page() {
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
-    //-> Prefer stateRemoveAndLog() over state.remove('..')
+    //-> app.removeSetting('..')
+    //-> state.remove('..')
     //---------------------------------------------------------------------------------
-    //-> stateAndSessionCleanup()
     app.updateLabel('Ra2TestPage')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'

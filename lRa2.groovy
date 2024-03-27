@@ -92,24 +92,6 @@ String ra2IR_nextNonEmptyRow() {
   return result
 }
 
-/*
-void ra2IR_nextEmptyRow() {
-  // Skip to next empty line.
-  Boolean nonEmptyRow = true
-  while (nonEmptyRow) {
-    result = ra2IR_nextRow()
-    switch (result) {
-      case '':
-      case 'EOF':
-        nonEmptyRow = false
-        break
-      default:
-        logInfo('parseRa2IntegRpt', "Tossing >${result}<")
-    }
-  }
-}
-*/
-
 String[] ra2IR_currRowAsCols() {
   // Use split (vs tokenize) to preserve empty rows.
   return ra2IR_currRow().split(',')

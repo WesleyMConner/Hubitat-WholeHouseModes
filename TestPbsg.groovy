@@ -35,8 +35,6 @@ preferences {
   page(name: 'TestPbsgPage')
 }
 
-//---- SYSTEM CALLBACKS
-
 void installed () {
   app.pbsgCoreInstalled()
   TEST_pbsgCoreFunctionality()
@@ -49,8 +47,6 @@ void updated () {
 void uninstalled () {s
   pbsgCoreUninstalled()
 }
-
-//---- RENDERING AND DISPLAY
 
 Map TestPbsgPage () {
   return dynamicPage(
@@ -65,8 +61,6 @@ Map TestPbsgPage () {
   }
 }
 
-//---- TEST SUPPORT
-
 void TEST_pbsgConfigure (
     Integer n,
     ArrayList list,
@@ -80,8 +74,6 @@ void TEST_pbsgConfigure (
   logMsg += "dnis=${b(list)}, dfltButton=${b(dflt)}, activeDni=${b(on)}"
   logMsg += (forcedError ? redBar() : greenBar())
   logInfo("TEST ${n} CONFIG", logMsg)
-  // Simulate a Page update (GUI settings) via the System updated() callback.
-  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE' .. 'TRACE' for HEAVY DEBUG
   pbsgConfigure(list, dflt, on, 'INFO')
 }
 

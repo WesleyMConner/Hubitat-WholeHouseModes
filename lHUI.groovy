@@ -28,15 +28,10 @@ library(
  importUrl: 'TBD'
 )
 
-//---- GENERAL PURPOSE
-
 ArrayList cleanStrings(ArrayList list) {
   // Prune nulls, empty strings and dups
   return list.findAll { s -> s ?: null }.unique()
 }
-
-//---- HTML FORMATTING
-//----   -- Focused on Hubitat contexts
 
 String blackBar() { return '<hr style="border: 5px solid black;"/>' }
 String greenBar() { return '<hr style="border: 5px solid green;"/>' }
@@ -78,9 +73,6 @@ String i(def val) {
   return val ? "'<i>${val}</i>'" : '<i>null</i>'
 }
 
-//---- HTML TABLES
-//----   -- Focused on Hubitat contexts
-
 String tdLft(def x) {
   return "<td style='text-align: left; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
@@ -92,9 +84,6 @@ String tdCtr(def x, String css = null) {
 String tdRght(def x) {
   return "<td style='text-align: right; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
-
-//---- LOGGING
-//----   - Adjust log levels to reduce noise and improve performance
 
 void solicitLogThreshold(String settingsKey, String dfltThresh) {
   // By passing in the settings key, clients can:
@@ -189,9 +178,6 @@ void logDebug(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
 void logTrace(String fnName, ArrayList ls, String delim = '<br/>&nbsp&nbsp') {
   logTrace(fnName, ls.join(delim))
 }
-
-//---- Convenience
-//----   - Simplify debugging
 
 String appInfo(InstAppW app) {
   return "${app?.label ?: 'MISSING_LABEL'} (${app?.id ?: 'MISSING_ID'})"

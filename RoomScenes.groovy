@@ -40,124 +40,6 @@ preferences {
   page(name: 'RoomScenesPage')
 }
 
-//---- Repeater Integration Buttons
-
-/*
-Map repButtons = [
-  'RA2 Repeater 1 (ra2-1)': [
-    'DenLamp Chill': 11,
-    'DenLamp Clean': 12,
-    'DenLamp Day': 13,
-    'DenLamp Night': 14,
-    'DenLamp Off': 15,
-    'DenLamp Party': 16,
-    'DenLamp Supp': 17,
-    'DenLamp TV': 18,
-    'Kitchen Chill': 21,
-    'Kitchen Clean': 22,
-    'Kitchen Day': 23,
-    'Kitchen Night': 24,
-    'Kitchen Off': 25,
-    'Kitchen Party': 26,
-    'Kitchen Supp': 27,
-    'Kitchen TV': 28,
-    'Kitchen _Cook': 29,
-    'Den Chill': 41,
-    'Den Clean': 42,
-    'Den Day': 43,
-    'Den Night': 44,
-    'Den Off': 45,
-    'Den Party': 46,
-    'Den Supp': 47,
-    'Den TV': 48,
-    'Guest Chill': 51,
-    'Guest Clean': 52,
-    'Guest Day': 53,
-    'Guest Night': 54,
-    'Guest Off': 55,
-    'Guest Party': 56,
-    'Guest Supp': 57,
-    'Guest TV': 58,
-    'BathLHS Chill': 61,
-    'BathLHS Clean': 62,
-    'BathLHS Day': 63,
-    'BathLHS Night': 64,
-    'BathLHS Off': 65,
-    'BathLHS Party': 66,
-    'BathLHS Supp': 67,
-    'BathLHS TV': 68,
-    'BathRHS Chill': 71,
-    'BathRHS Clean': 72,
-    'BathRHS Day': 73,
-    'BathRHS Night': 74,
-    'BathRHS Off': 75,
-    'BathRHS Party': 76,
-    'BathRHS Supp': 77,
-    'BathRHS TV': 78,
-    'Main Chill': 81,
-    'Main Clean': 82,
-    'Main Day': 83,
-    'Main Night': 84,
-    'Main Off': 85,
-    'Main Party': 86,
-    'Main Supp': 87,
-    'Main TV': 88
-  ],
-  'RA2 Repeater 2 (ra2-83)': [
-    'PrimBath Chill': 11,
-    'PrimBath Clean': 12,
-    'PrimBath Day': 13,
-    'PrimBath Night': 14,
-    'PrimBath Off': 15,
-    'PrimBath Party': 16,
-    'PrimBath Supp': 17,
-    'PrimBath TV': 18,
-    'Primary Chill': 21,
-    'Primary Clean': 22,
-    'Primary Day': 23,
-    'Primary Night': 24,
-    'Primary Off': 25,
-    'Primary Party': 26,
-    'Primary Supp': 27,
-    'Primary TV': 28,
-    'Office Chill': 51,
-    'Office Clean': 52,
-    'Office Day': 53,
-    'Office Night': 54,
-    'Office Off': 55,
-    'Office Party': 56,
-    'Office Supp': 57,
-    'Office TV': 58,
-    'Yard High': 61,
-    'Yard Low': 62,
-    'Yard Off': 63,
-    'Lanai Chill': 71,
-    'Lanai Clean': 72,
-    'Lanai Day': 73,
-    'Lanai Night': 74,
-    'Lanai Off': 75,
-    'Lanai Party': 76,
-    'Lanai Supp': 77,
-    'Lanai TV': 78,
-    'Lanai _Games': 79
-  ],
-  'Caséta Repeater': [
-    'Lanai Chill' : 1,
-    'Lanai Cleaning' : 2,
-    'Lanai Day' : 3,
-    'Lanai Games' : 4,
-    'Lanai Night' : 5,
-    'Lanai Party' : 6,
-    'Lanai Supp' : 7,
-    'Lanai TV' : 8
-  ]
-]
-*/
-
-//---- MANAGE STATE SCENES
-
-//---- CORE METHODS (Internal)
-
 List<String> getScenes() {
   return state.scenes.collect{ it.key == 'INACTIVE' ? 'OFF' : it.key }
 }
@@ -489,20 +371,6 @@ void subscribeToLuxSensorHandler() {
   }
 }
 
-/*
-void subscribeToPicoHandler() {
-  settings.picos.each{ d ->
-    logInfo(
-      'initialize',
-      "${state.ROOM_LABEL} subscribing to Pico ${deviceInfo(d)}"
-    )
-    subscribe(d, picoHandler, ['filterEvents': true])
-  }
-}
-*/
-
-//---- EVENT HANDLERS
-
 void indDeviceHandler(Event e) {
   // Devices send various events (e.g., switch, level, pushed, released).
   // Isolate the events that confirm|refute state.activeScene.
@@ -693,8 +561,6 @@ void picoHandler(Event e) {
   }
 }
 
-//---- SYSTEM CALLBACKS
-
 void installed() {
   logTrace('installed', 'At Entry')
   initialize()
@@ -719,14 +585,11 @@ void initialize() {
   state.brightLuxSensors = []
   populateStateScenesAssignValues()
   clearManualOverride()
-  //-> subscribeToIndDeviceHandlerNoDelay()
   settings.indDevices.each{ device -> unsubscribe(device) }
-  //subscribeToKpadHandler()
   subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
-  //subscribeToPicoHandler()
   // ACTIVATION
   //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
   //     will not be called.
@@ -743,8 +606,6 @@ void initialize() {
     )
   }
 }
-
-//---- GUI / PAGE RENDERING
 
 void idMotionSensors() {
   input(
@@ -789,19 +650,6 @@ void idLowLightThreshold() {
   )
 }
 
-//void selectModesAsScenes() {
-//  ArrayList scenes = modeNames()
-//  input(
-//    name: 'modesAsScenes',
-//    type: 'enum',
-//    title: heading2('Select Mode Names to use as Scenes Names'),
-//    submitOnChange: true,
-//    required: false,
-//    multiple: true,
-//    options: scenes.sort()
-//  )
-//}
-
 void nameCustomScene() {
   input(
     name: customScene,
@@ -814,101 +662,15 @@ void nameCustomScene() {
 }
 
 void adjustStateScenesKeys() {
-  ArrayList assembleScenes = modeNames() //settings.modesAsScenes ?: []
+  ArrayList assembleScenes = modeNames()
   if (settings.customScene) {
     assembleScenes << settings.customScene
   }
   if (settings.motionSensors || settings.luxSensors) {
     assembleScenes << 'OFF'
   }
-  // Keep existing scenes keys that are present in assembleScenes.
-  //state.scenes = state.scenes?.collectEntries{ key, value ->
-  //  if (assembleScenes.contains(key)) {
-  //    [key, value]
-  //  } else {
-  //    []
-  //  }
-  //} ?: [:]
-  // Add any new scene keys from assembleScenes.
-  //logInfo('### 833', "assembleScenes: ${assembleScenes}")
-  //??assembleScenes.removeAll{ scene -> getScenes() }
   state.scenes << assembleScenes?.collectEntries{ [(it): []] }
-  //logInfo('### 836', "assembleScenes: ${assembleScenes}, state.scenes: ${state.scenes}")
-  //-> logInfo('#871', "state.scenes: ${state.scenes}")
 }
-
-//void idSceneForMode() {
-//  if (state.scenes) {
-//    paragraph heading2('Identify a Scene for each Hubitat Mode')
-//    getLocation().getModes().collect{mode -> mode.name}.sort().each{ modeName ->
-//      String inputName = "modeToScene^${modeName}"
-//      String defaultValue = settings[inputName]
-//        ?: state.scenes.containsKey(modeName) ? modeName : null
-//      input(
-//        name: inputName,
-//        type: 'enum',
-//        title: heading3(modeName),
-//        width: 2,
-//        submitOnChange: true,
-//        required: true,
-//        multiple: false,
-//        options: getScenes(),
-//        defaultValue: defaultValue
-//      )
-//    }
-//  } else {
-//    paragraph 'Mode-to-Scene selection will proceed once scene names exist.'
-//  }
-//}
-
-/*
-void authSeeTouchKpads() {
-  input(
-    name: 'seeTouchKpads',
-    title: heading3("Identify Keypads used to Activate Room Scenes"),
-    type: 'device.LutronSeeTouchKeypad',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void idRoomSceneButtons() {
-  input(
-    name: 'sceneButtons',
-    title: heading3("Identify Keypad Buttons that Activate a Room Scene"),
-    type: 'device.LutronComponentSwitch',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void mapKpadButtonDniToScene() {
-  Map<String, String> result = [:]
-  state.sceneButtonMap.collect{ kpadDni, buttonMap ->
-    buttonMap.each{ buttonNumber, targetScene ->
-      result["${kpadDni}-${buttonNumber}"] = targetScene
-    }
-  }
-  state.kpadButtonDniToTargetScene = result
-}
-
-void wireKpadButtonsToScenes() {
-  List<String> scenes = getScenes()
-  if (scenes == null || settings?.sceneButtons == null) {
-    //paragraph('No Room Scene Kpad buttons have been identified.')
-  } else {
-    identifyLedButtonsForListItems(
-      scenes,
-      settings.sceneButtons,
-      'sceneButton'
-    )
-    populateStateKpadButtons('sceneButton')
-    mapKpadButtonDniToScene()
-  }
-}
-*/
 
 Map getDeviceValues (String scene) {
   String keyPrefix = "scene^${scene}^"
@@ -919,7 +681,6 @@ Map getDeviceValues (String scene) {
     k1.startsWith(keyPrefix)
   }.each { k2, v2 ->
     ArrayList typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
-    //--xx-> logInfo('getDeviceValues', "typeAndId: ${typeAndId}")
     if (typeAndId[0] == 'RA2') {
       logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
       app.removeSetting(k2)
@@ -938,13 +699,11 @@ Map getDeviceValues (String scene) {
       }
     }
   }
-  //logInfo('getDeviceValues', "results: >${results}<")
   return results
 }
 
 void populateStateScenesAssignValues() {
   state.scenes = state.scenes.collectEntries{ scene, map ->
-  //--xx-> logInfo('populateStateScenesAssignValues', "scene: ${scene}, map: >${map}<")
     if (scene == 'INACTIVE') {
       Map M = getDeviceValues(scene)
       if (M) ['OFF', M]
@@ -954,80 +713,6 @@ void populateStateScenesAssignValues() {
     }
   }
 }
-
-/*
-void authRoomScenesPicos() {
-  input(
-    name: 'picos',
-    title: heading3("Identify Picos that Trigger or Adjust Room Scenes"),
-    type: 'device.LutronFastPico',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-Map<String,String> namePicoButtons(DevW pico) {
-  String label = pico.label
-  String id = pico.id
-  return [
-    "${id}^1": "${label}^1",
-    "${id}^2": "${label}^2",
-    "${id}^3": "${label}^3",
-    "${id}^4": "${label}^4",
-    "${id}^5": "${label}^5"
-  ]
-}
-
-Map<String, String> picoButtonPicklist(List<DevW> picos) {
-  Map<String, String> results = [:]
-  picos.each{ pico -> results << namePicoButtons(pico) }
-  return results
-}
-
-void selectPicoButtonsForScene(List<DevW> picos) {
-  List<String> scenes = getScenes()
-  if (scenes) {
-    ArrayList picoScenes = ['AUTOMATIC'] << scenes
-    picoScenes.flatten().each{ sceneName ->
-      input(
-        name: "picoButtons_${sceneName}",
-        type: 'enum',
-        title: heading2("Pico Buttons -> ${b(sceneName)}"),
-        width: 4,
-        submitOnChange: true,
-        required: false,
-        multiple: true,
-        options: picoButtonPicklist(picos)
-      )
-    }
-  }
-}
-
-void populateStatePicoButtonToTargetScene() {
-  state.picoButtonToTargetScene = [:]
-  settings.findAll{ key, value -> key.contains('picoButtons_') }
-          .each{ key, value ->
-            String scene = key.tokenize('_')[1]
-            value.each{ idAndButton ->
-              ArrayList valTok = idAndButton.tokenize('^')
-              String deviceId = valTok[0]
-              String buttonNumber = valTok[1]
-              if (state.picoButtonToTargetScene[deviceId] == null) {
-                state.picoButtonToTargetScene[deviceId] = [:]
-              }
-              state.picoButtonToTargetScene[deviceId][buttonNumber] = scene
-            }
-          }
-}
-
-void wirePicoButtonsToScenes() {
-  if (settings.picos) {
-    selectPicoButtonsForScene(settings.picos)
-    populateStatePicoButtonToTargetScene()
-  }
-}
-*/
 
 void idRa2RepeatersImplementingScenes() {
   input(
@@ -1126,7 +811,6 @@ Map RoomScenesPage() {
     install: true,
     uninstall: true,
   ) {
-    //-> state.scenes = [ : ]
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
@@ -1156,28 +840,12 @@ Map RoomScenesPage() {
       idMotionSensors()
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }
-      //selectModesAsScenes()
       nameCustomScene()
       adjustStateScenesKeys()
-      //idSceneForMode()
-      //authSeeTouchKpads()
-      //idRoomSceneButtons()
-      //wireKpadButtonsToScenes()
-      //authRoomScenesPicos()
-      //wirePicoButtonsToScenes()
       idRa2RepeatersImplementingScenes()
       idIndDevices()
       configureRoomScene()
       createRSPbsgAndPageLink()
-      //--misleading-> ==============================================
-      //--misleading-> THE VALUES OF THE SCENE MAP DO NOT APPEAR WHEN
-      //--misleading-> THE PAGE IS RENDERED
-      //--misleading-> ==============================================
-      //--misleading-> paragraph([
-      //--misleading->   heading1('Debug'),
-      //--misleading->   *appStateAsBullets(true),
-      //--misleading->   *appSettingsAsBullets(true)
-      //--misleading-> ].join('<br/>'))
     }
   }
 }

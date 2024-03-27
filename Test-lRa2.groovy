@@ -34,10 +34,6 @@ preferences {
   page(name: 'Ra2Page')
 }
 
-//----
-//---- USER INTERFACE SUPPORT
-//----
-
 void solicitRa2IntegrationReport() {
   input(
     name: 'ra2IntegReport',
@@ -63,28 +59,17 @@ Map Ra2Page() {
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
-    //-> Prefer stateRemoveAndLog() over state.remove('..')
+    //-> app.removeSetting('..')
+    //-> state.remove('..')
     //---------------------------------------------------------------------------------
-    //-> stateAndSessionCleanup()
     app.updateLabel('Ra2TestPage')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-      //-> idRa2Repeaters()
       solicitRa2IntegrationReport()
-      //paragraph([
-      //  heading1('Debug<br/>'),
-      //  *appStateAsBullets(true),
-      //  *appSettingsAsBullets(true)
-      //].join('<br/>'))
     }
   }
 }
-
-//----
-//---- SYSTEM CALLBACKS
-//----
 
 void installed() {
   logWarn('installed', 'Entered')

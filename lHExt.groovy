@@ -27,21 +27,9 @@ library(
  importUrl: 'https://github.com/WesleyMConner/Hubitat-lHExt.git'
 )
 
-//----
-//---- CONVENIENCE
-//----
-
-void stateRemoveAndLog(String stateKey) {
-  if (state."${stateKey}") {
-    logInfo('stateRemoveAndLog', "Removing stale state key >${stateKey}")
-    //state.remove(stateKey)
-  }
-}
-
 void settingsRemoveAndLog(String settingKey) {
   if (settings."${settingKey}") {
     logInfo('settingsRemoveAndLog', "Removing stale setting >${settingKey}")
-    //app.removeSetting(settingKey)
   }
 }
 
@@ -97,33 +85,6 @@ String showSwitchAndState(String name, String state) {
   String emphasizedState = state == 'on' ? "${b(adjustedState)}" : "<i>${adjustedState}</i>"
   return "→ ${emphasizedState} - ${name}"
 }
-
-//----
-//---- NESTED STATE MAP OPERATIONS
-//----   Extend and mimic the following built-in method.
-//----     state.updateMapValue(stateKey, innerKey, value)
-//----       stateKey - isolates the User Map inside State
-//----       innerKey - isolates an Entry in that User Map
-//----       value is - the new value to associate with that key
-//----     asUpdateMapValue() - Local shorthand wrapper
-//----
-
-/*
-void asUpdateMapValue(String stateKey, String innerKey, def value) {
-  state.updateMapValue(stateKey, innerKey, value)
-}
-
-void asGetMapValue(String stateKey, String innerKey) {
-  state.stateKey.
-}
-
-void asRemoveMapKey(String stateKey, String innerKey)
-  state.updateMapValue(stateKey, innerKey, value)
-*/
-
-//----
-//---- APP MANAGEMENT
-//----
 
 void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"

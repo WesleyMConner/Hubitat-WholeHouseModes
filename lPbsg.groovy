@@ -28,8 +28,6 @@ library(
   category: 'general purpose'
 )
 
-//---- CORE METHODS (External)
-
 Boolean pbsgConfigure(
   ArrayList buttons,
   String defaultButton,
@@ -102,8 +100,6 @@ Boolean pbsgActivatePrior() {
   logTrace('pbsgActivatePrior', "predecessor: ${predecessor}")
   return pbsgActivateDni(predecessor)
 }
-
-//---- CORE METHODS (Internal)
 
 String buttonToDni(String button) {
   String dni = "${app.label}_${button}"
@@ -309,14 +305,6 @@ ArrayList pbsgListVswDevices() {
   return outputText
 }
 
-//---- SYSTEM CALLBACKS
-//----   The downstream instantiations of this library should include
-//----   the System callbacks - installed(), updated(), uninstalled().
-//----   Those downstream methods should call the following methods,
-//----     pbsgCoreInstalled(app)
-//----     pbsgCoreUpdated(app)
-//----     pbsgCoreUninstalled(app)
-
 void pbsgCoreInstalled() {
   // Called on instance creation - i.e., before configuration, etc.
   state.logLevel = logThreshToLogLevel('TRACE')  // Integer
@@ -387,8 +375,6 @@ void pbsgCoreUpdated() {
 void pbsgCoreUninstalled() {
   logTrace('pbsgCoreUninstalled', 'No action')
 }
-
-//---- EVENT HANDLERS
 
 void vswEventHandler(Event e) {
   // Design Notes

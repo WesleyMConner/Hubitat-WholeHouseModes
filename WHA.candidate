@@ -398,24 +398,6 @@ logInfo('#611', "roomApp: ${roomApp}")
   }
 }
 
-void stateAndSessionCleanup () {
-  settingsRemoveAndLog('rooms')
-  settingsRemoveAndLog('hubitatQueryString')
-  settingsRemoveAndLog('mainRepeaters')
-  settingsRemoveAndLog('modeButton_Chill')
-  settingsRemoveAndLog('modeButton_Cleaning')
-  settingsRemoveAndLog('modeButton_Day')
-  settingsRemoveAndLog('modeButton_Night')
-  settingsRemoveAndLog('modeButton_Party')
-  settingsRemoveAndLog('modeButton_TV')
-  stateRemoveAndLog('kpadButtonDniToSpecialtyFn')
-  stateRemoveAndLog('kpadButtonDniToTargetMode')
-  stateRemoveAndLog('MODE_PBSG_LABEL')
-  stateRemoveAndLog('modeButtonMap')
-  stateRemoveAndLog('specialFnButtonMap')
-  stateRemoveAndLog('SPECIALTY_BUTTONS')
-}
-
 Map WhaPage () {
   return dynamicPage(
     name: 'WhaPage',
@@ -430,10 +412,9 @@ Map WhaPage () {
     //---------------------------------------------------------------------------------
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> Prefer settingsRemoveAndLog() over app.removeSetting('..')
-    //-> Prefer stateRemoveAndLog() over state.remove('..')
+    //-> app.removeSetting('..')
+    //-> state.remove('..')
     //---------------------------------------------------------------------------------
-    stateAndSessionCleanup()
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
