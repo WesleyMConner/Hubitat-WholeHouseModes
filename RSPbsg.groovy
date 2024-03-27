@@ -15,7 +15,7 @@
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 
-// The Groovy Linter generates false positives on Hubitat #include !!!
+// The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -27,16 +27,14 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A pbsgLibrary instance rooted in a Room Scenes instance',
-  category: '',           // Not supported as of Q3'23
-  iconUrl: '',            // Not supported as of Q3'23
-  iconX2Url: '',          // Not supported as of Q3'23
-  iconX3Url: '',          // Not supported as of Q3'23
   installOnOpen: false,
   documentationLink: '',  // TBD
   videoLink: '',          // TBD
   importUrl: '',          // TBD
   oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: false
+  singleInstance: false,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {

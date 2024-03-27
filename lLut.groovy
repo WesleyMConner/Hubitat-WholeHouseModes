@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// L U T R O N   E X T E N S I O N   M E T H O D S
+// L U T ( R O N )
 //
 //  Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -23,8 +23,19 @@ library(
   category: 'general purpose'
 )
 
+String extractNativeIdFromLabel(String deviceLabel) {
+  //->x = (deviceLabel =~ /\((.*)\)/)
+  //->logDebug('extractNativeIdFromLabel', [
+  //->  "deviceLabel: ${deviceLabel}",
+  //->  "x: ${x}",
+  //->  "x[0]: ${x[0]}",
+  //->  "x[0]: ${x[0][1]}",
+  //->])
+  return (deviceLabel =~ /\((.*)\)/)[0][1]
+}
+
 void identifyLedButtonsForListItems(
-  List<String> list,
+  ArrayList list,
   List<DevW> ledDevices,
   String prefix
   ) {
@@ -74,7 +85,7 @@ void populateStateKpadButtons(String prefix) {
       String base = key - "${prefix}_"
       value.each { item ->
         /* groovylint-disable-next-line ImplementationAsType */
-        ArrayList<String> kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
+        ArrayList kpadDniAndButtons = item?.tokenize(' ')?.last()?.tokenize('-')
         if (kpadDniAndButtons.size() == 2 && base) {
           if (state[stateKey][kpadDniAndButtons[0]] == null) {
             state[stateKey][kpadDniAndButtons[0]] = [:]

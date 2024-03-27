@@ -20,6 +20,10 @@
       // Literal strings in Hubitat (class None) trigger this issue
       "enabled": false
     },
+    "ImplementationAsType": {
+      // The Hubitat sandbox prevents this best practice
+      "enabled": false
+    },
     "MethodCount": {
       // With Hubitat, class None has a high method count
       "enabled": false
@@ -48,3 +52,5 @@
     }
   }
 }
+
+/* groovylint-disable-next-line ImplementationAsType */

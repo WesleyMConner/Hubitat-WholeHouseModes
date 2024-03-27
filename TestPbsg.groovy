@@ -15,7 +15,7 @@
 import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 
-// The Groovy Linter generates false positives on Hubitat #include !!!
+// The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -26,11 +26,9 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Implement PBSG functions and is authoritative for pushbutton state.',
-  category: '',    // Not supported as of Q3'23
-  iconUrl: '',     // Not supported as of Q3'23
-  iconX2Url: '',   // Not supported as of Q3'23
-  iconX3Url: '',   // Not supported as of Q3'23
-  singleInstance: true
+  singleInstance: true,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {
@@ -71,13 +69,13 @@ Map TestPbsgPage () {
 
 void TEST_pbsgConfigure (
     Integer n,
-    ArrayList<String> list,
+    ArrayList list,
     String dflt,
     String on,
     String forcedError = null
   ) {
   // Logs display newest to oldest; so, write logs backwards
-  ArrayList<String> logMsg = []
+  ArrayList logMsg = []
   if (forcedError) logMsg += forcedError
   logMsg += "dnis=${b(list)}, dfltButton=${b(dflt)}, activeDni=${b(on)}"
   logMsg += (forcedError ? redBar() : greenBar())
@@ -93,7 +91,7 @@ void TEST_PbsgActivation (
     String forcedError = null
   ){
   // Logs display newest to oldest; so, write logs backwards
-  ArrayList<String> logMsg = []
+  ArrayList logMsg = []
   logMsg += description
   if (forcedError) { logMsg += forcedError }
   logMsg += (forcedError ? redBar() : greenBar())
@@ -103,16 +101,16 @@ void TEST_PbsgActivation (
 void TEST_pbsgHasExpectedState (
     Integer n,
     String activeButton,
-    ArrayList<String> inactiveButtons,
+    ArrayList inactiveButtons,
     String dfltButton
   ) {
   String activeDni = activeButton ? buttonToDni(activeButton) : null
-  ArrayList<String> inactiveDnis = inactiveButtons ? inactiveButtons.collect{ buttonToDni(it) } : null
+  ArrayList inactiveDnis = inactiveButtons ? inactiveButtons.collect{ buttonToDni(it) } : null
   String dfltDni = dfltButton ? buttonToDni(dfltButton) : null
   Boolean result = true
   Integer actualInactiveDnisSize = state.inactiveDnis?.size() ?: 0
   Integer expectedInactiveDnisSize = inactiveDnis?.size() ?: 0
-  ArrayList<String> testLog = []
+  ArrayList testLog = []
   testLog += heading2('PBSG State Checks')
   if (state.dfltDni != dfltDni) {
     result = false
@@ -149,7 +147,7 @@ void TEST_pbsgHasExpectedState (
     testLog += bullet2("<i>dfltDni: ${state.dfltDni}</i> => <b>expected: ${dfltDni}</b>")
   }
   testLog += heading2('Button (VSW) State Checks')
-  ArrayList<String> buttonState = []
+  ArrayList buttonState = []
   if (activeButton) {
     String state = switchState(getChildDevice(buttonToDni(activeButton)))
     Boolean isExpected = (state == 'on')

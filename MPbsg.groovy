@@ -1,6 +1,6 @@
 /* groovylint-disable NglParseError */
 // ---------------------------------------------------------------------------------
-// M O D E   P B S G
+// M ( O D E )   P B S G
 //
 //   Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -17,7 +17,7 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 
-// The Groovy Linter generates false positives on Hubitat #include !!!
+// The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -29,16 +29,14 @@ definition (
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'A pbsgLibrary instance rooted in WHA instance',
-  category: '',           // Not supported as of Q3'23
-  iconUrl: '',            // Not supported as of Q3'23
-  iconX2Url: '',          // Not supported as of Q3'23
-  iconX3Url: '',          // Not supported as of Q3'23
   installOnOpen: false,
   documentationLink: '',  // TBD
   videoLink: '',          // TBD
   importUrl: '',          // TBD
   oauth: false,           // Even if used, must be manually enabled.
-  singleInstance: true
+  singleInstance: true,
+  iconUrl: '',
+  iconX2Url: ''
 )
 
 preferences {

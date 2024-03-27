@@ -51,7 +51,7 @@ InstAppW _getOrCreateMPbsg () {
   if (!pbsgApp) {
     logWarn('_getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
     pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
-    ArrayList<String> modeNames = getLocation().getModes().collect{ it.name }
+    ArrayList modeNames = getLocation().getModes().collect{ it.name }
     String currModeName = getLocation().currentMode.name
     pbsgApp.pbsgConfigure(
       modeNames,     // Create a PBSG button per Hubitat Mode name
@@ -101,7 +101,7 @@ void updateLutronKpadLeds (String currMode) {
   }
 }
 
-void buttonOnCallback (String mode) {
+void pbsgButtonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
   logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
   getLocation().setMode(mode)

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// H U B I T A T   E X T E N S I O N   M E T H O D S
+// H ( U B I T A T )   E X T ( E N S I O N )
 //
 //  Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -31,6 +31,20 @@ library(
 //---- CONVENIENCE
 //----
 
+void stateRemoveAndLog(String stateKey) {
+  if (state."${stateKey}") {
+    logInfo('stateRemoveAndLog', "Removing stale state key >${stateKey}")
+    //state.remove(stateKey)
+  }
+}
+
+void settingsRemoveAndLog(String settingKey) {
+  if (settings."${settingKey}") {
+    logInfo('settingsRemoveAndLog', "Removing stale setting >${settingKey}")
+    //app.removeSetting(settingKey)
+  }
+}
+
 Integer safeParseInt(String s) {
   return (s == '0') ? 0 : s.toInteger()
 }
@@ -45,9 +59,9 @@ void removeAllChildApps() {
   }
 }
 
-Map<String, ArrayList<String>> compareLists(ArrayList<String> existing, ArrayList<String> revised) {
+Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
-  Map<String, ArrayList<String>> map = [:]
+  Map<String, ArrayList> map = [:]
   if (!existing) {
     map.added = revised.collect()
   } else if (!revised) {
@@ -63,14 +77,14 @@ Map<String, ArrayList<String>> compareLists(ArrayList<String> existing, ArrayLis
   return map
 }
 
-ArrayList<String> modeNames() {
+ArrayList modeNames() {
   //return getLocation().getModes().collect { modeObj -> modeObj.name }
   return getLocation().getModes()*.name
 }
 
 String switchState(DevW d) {
   /* groovylint-disable-next-line UseCollectMany */
-  ArrayList<String> stateValues = d.collect { device -> device.currentStates.value }.flatten()
+  ArrayList stateValues = d.collect { device -> device.currentStates.value }.flatten()
   return stateValues?.contains('on')
       ? 'on'
       : stateValues?.contains('off')
@@ -111,9 +125,9 @@ void asRemoveMapKey(String stateKey, String innerKey)
 //---- APP MANAGEMENT
 //----
 
-void pruneAppDups(ArrayList<String> keepLabels, InstAppW appBase) {
+void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"
-  ArrayList<String> result = []
+  ArrayList result = []
   result += '<table>'
   result += '<tr><th><u>LABEL</u></th><th><u>ID</u></th><th><u>DEVICES</u></th><th><u>ACTION</u></th></tr>'
   appBase.getAllChildApps()

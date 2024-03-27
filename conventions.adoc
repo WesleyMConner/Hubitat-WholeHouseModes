@@ -1,0 +1,33 @@
+= Conventions
+
+== Radio RA2 Inclusive
+
+=== A Traditional Equipment Installation Focus
+
+By default, the RA2 Inclusive software optimizes the physical installation of devices - i.e., the size of wall boxes and faceplates to order, their physical placement in the house.
+
+`Main Repeater`:: A subset of a house managed by a Lutron main repeater.
+`Room`:: The physical room/area with the Main Repeater's domain where a component device will be installed.
+`Device Location`:: A specific location (wall box) within the room.
+`Device Name`:: The physical device (within the wall box) that controls a circuit (which may exist in some other physical room of the house).
+
+=== An Alternative Installation Focus
+
+A non-traditional approach to the RA2 Inclusive design facilitates smoother Hubitat integration.
+
+* Multiple Main Repeaters may exist to segregate Motion Sensors from the devices they control to improve response times.
+* Hubitat Rooms typically group logical circuits within a room, irrespective of where wall boxes are physically located.
+* Repeater "Integration Buttons" can facilitate RA2-Hubitat coordination if the Integration Button scenes are sufficiently mutual exclusive.
+
+`Main Repeater`:: May segregate devices that operate on a single logical room for performance reasons.
+`Room`:: Group devices by the circuits they control. To overcome the limitation wherein two Main Repeaters cannot share a room name, add the suffix 'Overlay' to a room name in Ra2 and strip it off in Hubitat - i.e., 'Den' and 'DenOverlay' both refer to 'Den' downstream in Hubitat.
+`Device Location` and `Device Name`:: Use the same name (and maintain a 1-to-1 relationship) for `Device Location` and `Device Name`. All names should reflect the physical circuit the device controls. Prefer device names `"${room}-${circuit}"`
+`Integration Button`:: Create mutually-exclusive shared scenes per room. Use the special room `WHA` (whole house automation) to note a whole-house shared scene. WHA scenes (like any single room) must be mutually-exclusive.
+`Scene Names`:: Prefer names matching `"${room}: ${scene}"` to simplify parsing.
+
+NOTE: Room Scenes must ensure (max) one Room Repeater LEDs is active.
+
+
+In the Telnet device:
+
+* Enable sending LED events !!!
