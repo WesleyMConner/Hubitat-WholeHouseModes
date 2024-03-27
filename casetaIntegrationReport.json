@@ -20,7 +20,7 @@
             "Number": 3
           },
           {
-            "Name": "Lanai Games",
+            "Name": "Lanai Play",
             "Number": 4
           },
           {
@@ -40,31 +40,31 @@
             "Number": 8
           },
           {
-            "Name": "Button 9",
+            "Name": "RhsBdrm Chill",
             "Number": 9
           },
           {
-            "Name": "Button 10",
+            "Name": "RhsBdrm Clean",
             "Number": 10
           },
           {
-            "Name": "Button 11",
+            "Name": "RhsBdrm Day",
             "Number": 11
           },
           {
-            "Name": "Button 12",
+            "Name": "RhsBdrm Night",
             "Number": 12
           },
           {
-            "Name": "Button 13",
+            "Name": "RhsBdrm Off",
             "Number": 13
           },
           {
-            "Name": "Button 14",
+            "Name": "RhsBdrm Party",
             "Number": 14
           },
           {
-            "Name": "Button 15",
+            "Name": "RhsBdrm TV",
             "Number": 15
           },
           {
@@ -432,6 +432,54 @@
             "Number": 6
           }
         ]
+      },
+      {
+        "ID": 9,
+        "Area": {
+          "Name": "RhsBdrm"
+        },
+        "Name": "Entry Pico",
+        "Buttons": [
+          {
+            "Number": 2
+          },
+          {
+            "Number": 3
+          },
+          {
+            "Number": 4
+          },
+          {
+            "Number": 5
+          },
+          {
+            "Number": 6
+          }
+        ]
+      },
+      {
+        "ID": 10,
+        "Area": {
+          "Name": "RhsBdrm"
+        },
+        "Name": "Table Pico",
+        "Buttons": [
+          {
+            "Number": 2
+          },
+          {
+            "Number": 3
+          },
+          {
+            "Number": 4
+          },
+          {
+            "Number": 5
+          },
+          {
+            "Number": 6
+          }
+        ]
       }
     ],
     "Zones": [
@@ -439,14 +487,14 @@
         "ID": 2,
         "Name": "Table Lamps",
         "Area": {
-          "Name": "RHS Bedrm"
+          "Name": "RhsBdrm"
         }
       },
       {
         "ID": 3,
         "Name": "Floor Lamp",
         "Area": {
-          "Name": "LHS Bedrm"
+          "Name": "RhsBdrm"
         }
       },
       {

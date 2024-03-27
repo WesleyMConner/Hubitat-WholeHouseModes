@@ -204,15 +204,15 @@ String expectedScene() {
     ? 'INACTIVE' : state.activeScene
 }
 
-void pushRepeaterButton (String repeaterId, Long buttonNumber) {
+void pushRepeaterButton(String repeaterId, Long buttonNumber) {
   settings.repeaters.each{ repeater ->
-    if (getDeviceId(repeater) == repeaterId) {
+    if(getDeviceId(repeater) == repeaterId) {
       repeater.push(buttonNumber)
     }
   }
 }
 
-void setDeviceLevel (String deviceId, Long level) {
+void setDeviceLevel(String deviceId, Long level) {
   settings.indDevices.each{ device ->
     if (getDeviceId(device) == deviceId) {
       if (device.hasCommand('setLevel')) {
@@ -237,6 +237,7 @@ void activateScene() {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
     state.currScene = expectedScene
     // Decode and process the scene's per-device actions
+    //--DEBUG-> logInfo(activateScene(), "state.scenes: ${state.scenes}, state.currScene: ${state.currScene}")
     Map actions = state.scenes.get(state.currScene)
     actions.get('Rep').each{ repeaterId, button ->
       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
@@ -488,6 +489,7 @@ void subscribeToLuxSensorHandler() {
   }
 }
 
+/*
 void subscribeToPicoHandler() {
   settings.picos.each{ d ->
     logInfo(
@@ -497,6 +499,7 @@ void subscribeToPicoHandler() {
     subscribe(d, picoHandler, ['filterEvents': true])
   }
 }
+*/
 
 //---- EVENT HANDLERS
 
@@ -718,12 +721,12 @@ void initialize() {
   clearManualOverride()
   //-> subscribeToIndDeviceHandlerNoDelay()
   settings.indDevices.each{ device -> unsubscribe(device) }
-  subscribeToKpadHandler()
+  //subscribeToKpadHandler()
   subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
-  subscribeToPicoHandler()
+  //subscribeToPicoHandler()
   // ACTIVATION
   //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
   //     will not be called.
@@ -853,16 +856,18 @@ void adjustStateScenesKeys() {
     assembleScenes = assembleScenes.flatten().toUnique()
   }
   // Keep existing scenes keys that are present in assembleScenes.
-  state.scenes = state.scenes.collectEntries{ key, value ->
+  state.scenes = state.scenes?.collectEntries{ key, value ->
     if (assembleScenes.contains(key)) {
       [key, value]
     } else {
       []
     }
-  }
+  } ?: [:]
   // Add any new scene keys from assembleScenes.
-  assembleScenes.removeAll{ scene -> getScenes() }
+  logInfo('### 866', "assembleScenes: ${assembleScenes}")
+  //??assembleScenes.removeAll{ scene -> getScenes() }
   state.scenes << assembleScenes?.collectEntries{ [(it): []] }
+  logInfo('### 869', "assembleScenes: ${assembleScenes}, state.scenes: ${state.scenes}")
   //-> logInfo('#871', "state.scenes: ${state.scenes}")
 }
 
@@ -890,6 +895,7 @@ void idSceneForMode() {
   }
 }
 
+/*
 void authSeeTouchKpads() {
   input(
     name: 'seeTouchKpads',
@@ -936,6 +942,7 @@ void wireKpadButtonsToScenes() {
     mapKpadButtonDniToScene()
   }
 }
+*/
 
 Map getDeviceValues (String scene) {
   String keyPrefix = "scene^${scene}^"
@@ -974,6 +981,7 @@ void populateStateScenesAssignValues() {
   }
 }
 
+/*
 void authRoomScenesPicos() {
   input(
     name: 'picos',
@@ -1045,6 +1053,7 @@ void wirePicoButtonsToScenes() {
     populateStatePicoButtonToTargetScene()
   }
 }
+*/
 
 void idRa2RepeatersImplementingScenes() {
   input(
@@ -1087,7 +1096,7 @@ void configureRoomScene() {
   //   empty cells (modulo 12) to ensure each scene begins in column 1.
   if (state.scenes) {
     ArrayList<String> currSettingsKeys = []
-    state.scenes?.each{ sceneName, ignoredValue ->
+    state.scenes?.sort().each{ sceneName, ignoredValue ->
       // Ignore the current componentList. Rebuilt it from scratch.
       Integer tableCol = 3
       paragraph("<br/><b>${sceneName} →</b>", width: 2)
@@ -1204,11 +1213,11 @@ Map RoomScenesPage() {
       nameCustomScenes()
       adjustStateScenesKeys()
       idSceneForMode()
-      authSeeTouchKpads()
-      idRoomSceneButtons()
-      wireKpadButtonsToScenes()
-      authRoomScenesPicos()
-      wirePicoButtonsToScenes()
+      //authSeeTouchKpads()
+      //idRoomSceneButtons()
+      //wireKpadButtonsToScenes()
+      //authRoomScenesPicos()
+      //wirePicoButtonsToScenes()
       idRa2RepeatersImplementingScenes()
       idIndDevices()
       configureRoomScene()

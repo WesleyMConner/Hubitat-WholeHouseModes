@@ -110,6 +110,7 @@ void buttonOnCallback (String mode) {
 
 //---- EVENT HANDLERS
 
+/*
 void seeTouchSpecialFnButtonHandler (Event e) {
   switch (e.name) {
     case 'pushed':
@@ -179,6 +180,7 @@ void seeTouchModeButtonHandler (Event e) {
       )
   }
 }
+*/
 
 //---- SYSTEM CALLBACKS
 
@@ -212,6 +214,7 @@ void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
   //   (e.g., mode changing buttons vs special functionalily buttons).
   logTrace('initialize', 'Entered')
+  /*
   settings.seeTouchKpads.each{ d ->
     DevW device = d
     logInfo('initialize', "subscribing ${deviceInfo(device)} to mode handler."
@@ -223,10 +226,12 @@ void initialize () {
     logInfo('initialize', "subscribing ${deviceInfo(device)}")
     subscribe(device, seeTouchSpecialFnButtonHandler, ['filterEvents': true])
   }
+  */
 }
 
 //---- GUI / PAGE RENDERING
 
+/*
 void _idSpecialFnMainRepeater () {
   input(
     name: 'specialtyFnMainRepeater',
@@ -327,6 +332,7 @@ void _wireModeButtons () {
     _populateStateKpadButtonDniToTargetMode()
   }
 }
+*/
 
 void _idParticipatingRooms () {
   roomPicklist = app.getRooms().collect{it.name.replace(' ', '_')}.sort()
@@ -383,12 +389,12 @@ Map WhaPage () {
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      _idSpecialFnMainRepeater()
-      _idSpecialFnButtons()
-      _idKpadsWithModeButtons()
-      _wireSpecialFnButtons()
-      _idKpadModeButtons()
-      _wireModeButtons()
+      //_idSpecialFnMainRepeater()
+      //_idSpecialFnButtons()
+      //_idKpadsWithModeButtons()
+      //_wireSpecialFnButtons()
+      //_idKpadModeButtons()
+      //_wireModeButtons()
       _idParticipatingRooms()
       _writeMPbsgHref()
       if (!settings.rooms) {
