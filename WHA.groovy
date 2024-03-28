@@ -188,6 +188,7 @@ Map WhaPage () {
     state.remove('specialFnButtonMap')
     state.remove('SPECIALTY_BUTTONS')
     state.remove('MODE_PBSG_LABEL')
+    state.remove('modeButtonMap')
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
