@@ -669,7 +669,10 @@ void adjustStateScenesKeys() {
   if (settings.motionSensors || settings.luxSensors) {
     assembleScenes << 'OFF'
   }
-  state.scenes << assembleScenes?.collectEntries{ [(it): []] }
+  // The following is a work around after issues with map.retainAll{}
+  state.scenes = state.scenes?.collectEntries{ k, v ->
+    assembleScenes.contains(k) ? [k, v] : [:]
+  }
 }
 
 Map getDeviceValues (String scene) {

@@ -320,7 +320,7 @@ void updated () {
 
 void initialize () {
   // - The same keypad may be associated with two different, specialized handlers
-  //   (e.g., mode changing buttons vs special functionalily buttons).
+  //   (e.g., mode changing buttons vs special functionality buttons).
   logTrace('initialize', 'Entered')
   refreshRepButtonToRS()
   refreshRStoRepButton()

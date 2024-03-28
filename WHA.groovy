@@ -85,22 +85,10 @@ void AllAuto () {
   }
 }
 
-void updateLutronKpadLeds (String currMode) {
-  settings.lutronModeButtons.each{ ledObj ->
-    String modeTarget = state.kpadButtonDniToTargetMode[ledObj.getDeviceNetworkId()]
-    if (currMode == modeTarget) {
-      ledObj.on()
-    } else {
-      ledObj.off()
-    }
-  }
-}
-
 void pbsgButtonOnCallback (String mode) {
   // - The MPbsg instance calls this method to reflect a state change.
   logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
   getLocation().setMode(mode)
-  updateLutronKpadLeds(mode)
 }
 
 void installed () {
@@ -165,7 +153,7 @@ void _displayInstantiatedRoomHrefs () {
       url: "/installedapp/configure/${roomApp?.id}",
       style: 'internal',
       title: "${appInfo(roomApp)} Scenes",
-      state: null, //'complete'
+      state: null
     )
   }
 }
@@ -181,12 +169,29 @@ Map WhaPage () {
     install: true,
     uninstall: true
   ) {
+    //---------------------------------------------------------------------------------
+    // REMOVE NO LONGER USED SETTINGS AND STATE
+    //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
+    //-> app.removeSetting('..')
+    //-> state.remove('..')
+    //---------------------------------------------------------------------------------
+    app.removeSetting('hubitatQueryString')
+    app.removeSetting('modeButton_Chill')
+    app.removeSetting('modeButton_Cleaning')
+    app.removeSetting('modeButton_Day')
+    app.removeSetting('modeButton_Night')
+    app.removeSetting('modeButton_Party')
+    app.removeSetting('modeButton_TV')
+    app.removeSetting('specialFnButton_ALL_OFF')
+    state.remove('kpadButtonDniToSpecialtyFn')
+    state.remove('kpadButtonDniToTargetMode')
+    state.remove('specialFnButtonMap')
+    state.remove('SPECIALTY_BUTTONS')
+    state.remove('MODE_PBSG_LABEL')
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect{ it.name }
     getGlobalVar('defaultMode').value
-    state.SPECIALTY_BUTTONS = ['ALARM', 'ALL_AUTO', 'ALL_OFF', 'AWAY',
-      'FLASH', 'PANIC', 'QUIET']
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
