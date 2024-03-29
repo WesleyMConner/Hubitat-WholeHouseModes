@@ -138,6 +138,25 @@ Map TestPbsgPage() {
           if (values.activeButton) {
             pbsg."${name}".activeDni = "${name}_${values.activeButton}"
           }
+          ArrayList dnis = []
+          ArrayList devices = []
+          values.buttons.each{ button ->
+            String buttonDni = "${name}_${button}"
+            DevW device = getChildDevice(buttonDni)
+            if (!device) {
+              logWarn('TestPbsgPage', "Adding child device '${buttonDni}'")
+              device = addChildDevice(
+                'hubitat',          // namespace
+                'Virtual Switch',   // typeName
+                buttonDni,          // device's unique DNI
+                [isComponent: true, name: buttonDni]
+    )
+            }
+            dnis << buttonDni
+            devices << device
+          }
+          pbsg."${name}".dnis = dnis
+          pbsg."${name}".devices = devices
         }
         pbsgs << pbsg
       }
