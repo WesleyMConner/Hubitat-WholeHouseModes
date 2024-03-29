@@ -36,31 +36,31 @@ preferences {
 void solicitPbsgName(String pbsgName) {
   input(
     name: pbsgName,
-    title: 'PBSG:',
+    title: '<b>PBSG NAME</b>',
     type: 'text',
     submitOnChange: true,
-    required: true,
+    required: false,
     multiple: false,
     width: 2
   )
 }
 
-void solicitButtons(String pbsgButtons) {
+void solicitPbsgButtons(String pbsgButtons) {
   input(
     name: pbsgButtons,
-    title: 'BUTTONS (space delimited)',
+    title: '<b>PBSG BUTTONS</b> (space delimited)',
     type: 'text',
     submitOnChange: true,
-    required: true,
+    required: false,
     multiple: false,
     width: 6
   )
 }
 
-void solicitDefault(String pbsgDefault, ArrayList plist) {
+void solicitDefaultButton(String pbsgDefault, ArrayList plist) {
   input(
     name: pbsgDefault,
-    title: 'Default (optional)',
+    title: '<b>DEFAULT BUTTON</b>',
     type: 'enum',
     submitOnChange: true,
     required: false,
@@ -70,10 +70,10 @@ void solicitDefault(String pbsgDefault, ArrayList plist) {
   )
 }
 
-void solicitActive(String pbsgActive, ArrayList plist) {
+void solicitActiveButton(String pbsgActive, ArrayList plist) {
   input(
     name: pbsgActive,
-    title: 'Active',
+    title: '<b>ACTIVE BUTTON</b>',
     type: 'enum',
     submitOnChange: true,
     required: false,
@@ -83,40 +83,29 @@ void solicitActive(String pbsgActive, ArrayList plist) {
   )
 }
 
-// (1) Use the following function to adjust one PBSG map.
-// (2) Increment the Integer argument for multiple PBSG maps.
-// (3) Collect these PBSG maps in a map of PBSGs (state.pbsgs).
-// (4) Present the state.pbsgs Map for edits + one extra empty row.
-// (5) If a PBSG key is dropped, make sure it is not added to state.pbsgs.
-
-// settings.pbsgButtons?.tokenize(' '),
-Map solicitPbsgData(Integer i) {
-  result = [:]
+Map solicitPbsgInitData(Integer i) {
+  pbsg = [:]
   String nameKey = "pbsgName^${i}"
   solicitPbsgName(nameKey)
   String nameValue = settings."${nameKey}"
   if (nameValue) {
-    result."${nameValue}" = [:]
-    //-> logInfo('#93', "nameKey: ${nameKey} -> ${nameValue}")
     String buttonsKey = "pbsgButtons^${i}"
-    solicitButtons(buttonsKey)
+    String defaultKey = "pbsgDefault^${i}"
+    String activeKey = "pbsgActive^${i}"
+    solicitPbsgButtons(buttonsKey)
     String buttonsValue = settings."${buttonsKey}"
     ArrayList buttonList = buttonsValue?.tokenize(' ')
-    result."${nameValue}".buttons = buttonList
-    //-> logInfo('#100', "buttonList: ${buttonList}")
-    String defaultKey = "pbsgDefault^${i}"
-    solicitDefault(defaultKey, buttonList)
-    String defaultValue = settings."${defaultKey}"
-    result."${nameValue}".default = defaultValue
-    //-> logInfo('#105', "defaultKey: ${defaultKey} -> ${defaultValue}")
-    String activeKey = "pbsgActive^${i}"
-    solicitActive(activeKey, buttonList)
-    String activeValue = settings."${activeKey}"
-    result."${nameValue}".active = activeValue
-    //-> logInfo('#110', "activeKey: ${activeKey} -> ${activeValue}")
+    solicitDefaultButton(defaultKey, buttonList)
+    solicitActiveButton(activeKey, buttonList)
+    pbsg."${nameValue}" = [
+      buttons: buttonList,
+      defaultButton: settings."${defaultKey}",
+      activeButton: settings."${activeKey}"
+    ]
+  } else {
+     paragraph('', width: 10)  // Filler for a 12 cell row
   }
-  //--> logInfo('#112', "result: ${result}")
-  return result
+  return pbsg
 }
 
 Map TestPbsgPage() {
@@ -139,47 +128,27 @@ Map TestPbsgPage() {
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-      state.pbsgs = solicitPbsgData(0)
-      Map m = state.pbsgs
-      m << solicitPbsgData(1)
-      state.pbsg = m
-  logInfo('#139', "state.pbsg: ${state.pbsg}")
-      //state.pbsgs = m
-      /*
-      pbsgs.eachWithIndex{ name, map, i ->
-        logInfo('TestPbsgPage (108)', "name: ${name}, map: >${map}<, i: ${i}")
-        String pbsgName = "pbsgName^${i}"
-        solicitPbsgName(pbsgName)
-        if (settings."pbsgName^${i}") {
-          solicitButtons("pbsgButtons^${i}")
-          solicitDefault("pbsgDefault^${i}")
-          solicitActive("pbsgActive^${i}")
-          settings."pbsgButtons^${i}" = [
-            buttons: settings."pbsgButtons^${i}"?.tokenize(/\s+/),
-            dflt: settings."pbsgDefault^${i}",
-            active: settings."pbsgActive^${i}"
-          ]
+      Map pbsgs = [:]
+      for (i in [0, 1, 2, 3]) {
+        Map pbsg = solicitPbsgInitData(i)
+        pbsg.each{ name, values ->
+          if (values.defaultButton) {
+            pbsg."${name}".defaultDni = "${name}_${values.defaultButton}"
+          }
+          if (values.activeButton) {
+            pbsg."${name}".activeDni = "${name}_${values.activeButton}"
+          }
         }
+        pbsgs << pbsg
       }
-      Boolean keepGoing = true
-      while (keepGoing) {
-        solicitPbsgName('pbsgName')
-        if (settings.pbsgName) {
-          solicitButtons('pbsgButtons')
-          solicitDefault('pbsgDefault')
-          solicitActive('pbsgActive')
-          pbsgs."${settings.pbsgName}" = [
-            buttons: settings.pbsgButtons?.tokenize(/\s+/),
-            dflt: settings.pbsgDefault,
-            active: settings.pbsgActive
-          ]
-        }
-        keepGoing = false
-      }
-      */
+      paragraph("<b>pbsgs</b>: ${pbsgs}")
     }
   }
 }
+
+// def list = ['a', 'b', 'c']
+// def map = list.collectEntries { el -> [(el): { println el }] }
+// map.b()
 
 Map pbsgs() {
   if (!state.pbsgs) {
@@ -191,7 +160,6 @@ Map pbsgs() {
 
 void initialize() {
 }
-
 
 Map Ra2Page() {
   return dynamicPage(
