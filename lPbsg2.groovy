@@ -16,180 +16,121 @@
 //   - import com.hubitat.app.DeviceWrapper as DevW
 //   - import com.hubitat.app.InstalledAppWrapper as InstAppW
 //   - import com.hubitat.hub.domain.Event as Event
-//   - #include wesmc.lFifo
 //   - #include wesmc.lHExt
 //   - #include wesmc.lHUI
 
 library(
-  name: 'lPbsg2',
+  name: 'lPbsgv2',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Push Button Switch Group (PBSG) Implementation',
   category: 'general purpose'
 )
 
-Map pbsgs() {
-  if (!state.pbsgs) {
-    logWarn('pbsgs', 'Creating null state.pbsgs map.')
-    state.pbsgs = [:]
+String fifoRemove(ArrayList fifo, String item) {
+  // Remove and return item if present OR return null.
+  return fifo?.removeAll { member -> member == item } ? item : null
+}
+
+Boolean fifoEnqueue(ArrayList fifo, String item) {
+  Boolean retval = false
+  if (item) {
+    fifo << (item)
+    retval = true
   }
-  return state.pbsgs
+  return retval
 }
 
-Map getPbsg(String pbsgLabel) {
-  return pbsgs()?."${pbsgLabel}"
-}
 
-String pbsgs_buttonToDni(String pbsgLabel, String button) {
-  return "${pbsgLabel}_${button}"
-}
-
-String pbsgs_dniToButton(String pbsgLabel, String dni) {
-  return dni.substring("${pbsgLabel}_".length())
-}
-
-Map getPbsg(String pbsgLabel) {
-  return pbsgs()?."${pbsgLabel}"
-}
-
-String pbsgs_buttonToDni(String pbsgLabel, String button) {
-  return "${pbsgLabel}_${button}"
-}
-
-String pbsgs_dniToButton(String pbsgLabel, String dni) {
-  return dni.substring("${pbsgLabel}_".length())
-}
-
-Boolean pbsgs_add(String pbsgLabel, ArrayList buttons, String dflt, String active) {
+Boolean pbsgConfigure(
+  ArrayList buttons,
+  String defaultButton,
+  String activeButton,
+  String pbsgLogLevel = 'TRACE'
+) {
+  // CALLED IMMEDIATELY AFTER PBSG INSTANCE CREATION TO SET INITIAL DATA
+  // Returns true if configuration is accepted, false otherwise.
+  //   - Log levels: 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
   Boolean retVal = true
-  ArrayList cleanButtons = cleanStrings(buttons)
+  settings.buttons = cleanStrings(buttons)
+  if (settings.buttons != buttons) {
+    logTrace('pbsgConfigure', "buttons: (${buttons}) -> (${settings.buttons})")
+  }
+  settings.dfltButton = defaultButton ?: null
+  if (settings.dfltButton != defaultButton) {
+    logTrace('pbsgConfigure', "defaultButton: (${defaultButton}) -> (${settings.dfltButton})")
+  }
+  settings.activeButton = activeButton ?: null
+  if (settings.activeButton != activeButton) {
+    logTrace('pbsgConfigure', "activeButton: (${activeButton}) -> (${settings.activeButton})")
+  }
+  settings.logLevel = ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'].contains(pbsgLogLevel)
+    ? pbsgLogLevel : 'TRACE'
+  if (settings.logLevel != pbsgLogLevel) {
+    logTrace('pbsgConfigure', "pbsgLogLevel: (${pbsgLogLevel}) -> (${settings.logLevel})")
+  }
+  Integer buttonCount = settings.buttons?.size() ?: 0
   if (buttonCount < 2) {
     retVal = false
-    logError('pbsgs_add', [
-      "Got ${buttonCount} buttons, expected two or more unique buttons",
-      "Unique buttons: >${cleanButtons}<"
-    ])
+    logError('pbsgConfigure', "Button count (${buttonCount}) must be two or more")
   }
-  if (dflt && cleanButtons?.contains(dflt) == false) {
+  if (settings.dfltButton && settings.buttons?.contains(settings.dfltButton) == false) {
     retVal = false
-    logError('pbsgs_add',
-      "default ${b(dflt)} is not found among buttons (${cleanButtons})"
+    logError(
+      'pbsgConfigure',
+      "defaultButton ${b(settings.dfltButton)} is not found among buttons (${settings.buttons})"
     )
   }
-  if (active && cleanButtons?.contains(active) == false) {
+  if (settings.activeButton && settings.buttons?.contains(settings.activeButton) == false) {
     retVal = false
-    logError('pbsgs_add',
-      "activeDni ${b(active)} is not found among buttons (${cleanButtons})")
+    logError(
+      'pbsgConfigure',
+      "activeDni ${b(settings.activeButton)} is not found among buttons (${settings.buttons})")
   }
-  if (retVal) {
-    pbsgs."${pbsgLabel}" = [
-      dnis: cleanButtons.collect{ b -> pbsgs_buttonToDni(b) },
-      dfltDni: pbsg.dflt ? pbsgs_buttonToDni(pbsg.dflt) : null,
-      activeDni: pbsg.active ? pbsgs_buttonToDni(pbsg.active) : null,
-    ]
-  }
+  if (retVal) { updated() }
   return retVal
 }
 
-Boolean pbsgs_activateDni(String pbsgLabel, String dni) {
-  // Return TRUE on a configuration change, FALSE otherwise.
-  // Publish an event ONLY IF/WHEN a new dni is activated.
-  //logTrace('pbsgs_activateDni (Entry)', pbsgs_stateWithVswState())
-  Boolean isStateChanged = false
-  Map pbsg = getPbsg(pbsgLabel)
-  if (pbsg.activeDni == dni) {
-    logTrace('pbsgs_activateDni', "No action, ${dni} is already active")
-  } else if (dni && !pbsgs_getDnis()?.contains(dni)) {
-    logError(
-      'pbsgs_activateDni',
-      "DNI >${dni}< does not exist (${pbsgs_getDnis()})"
-    )
-  } else {
-    isStateChanged = true
-    logInfo('pbsgs_activateDni', "Moving active (${pbsg.activeDni}) to inactive")
-    pbsgs_moveActiveToInactive()
-    fifoRemove(pbsg.inactiveDnis, dni)
-    // Adjust the activeDni and Vsw together
-    logTrace('pbsgs_activateDni', "Activating ${dni}")
-    pbsg.activeDni = dni
-    pbsgPublishactive()
-  //logTrace('pbsgs_activateDni (Adjusted)', pbsgs_stateWithVswState())
-  }
-  return isStateChanged
+Boolean pbsgActivateButton(String button) {
+  logTrace('pbsgActivateButton', "button: ${b(button)}")
+  return pbsgActivateDni(buttonToDni(button))
 }
 
-Boolean pbsgs_deactivateDni(String pbsgLabel, String dni) {
-  // Return TRUE on a configuration change, FALSE otherwise.
-  //logTrace('pbsgs_deactivateDni', pbsgs_stateWithVswState())
-  logTrace('pbsgs_deactivateDni', "DNI: ${b(dni)}")
-  Boolean isStateChange = false
-  Map pbsg = getPbsg(pbsgLabel)
-  if (pbsg.inactiveDnis.contains(dni)) {
-    // Nothing to do, dni is already inactive
-    logTrace('pbsgs_deactivateDni', "Nothing to do for dni: ${b(dni)}")
-  } else if (pbsg.activeDni == state.dfltDni) {
-    // It is likely that the default DNI has been manually turned off.
-    // Update the PBSG state to reflect this likely fact.
-    logInfo('pbsgs_deactivateDni', "Moving active (${pbsg.activeDni}) to inactive")
-    pbsgs_moveActiveToInactive()
-    // Force re-enable the default DNI.
-    isStateChange = pbsgs_activateDni(state.dfltDni)
-  } else {
-    logInfo(
-      'pbsgs_deactivateDni',
-      "Activating default ${b(state.dfltDni)}, which deacivates dni: ${b(dni)}"
-    )
-    isStateChange = pbsgs_activateDni(state.dfltDni)
-  }
-  return isStateChange
+Boolean pbsgDeactivateButton(String button) {
+  logTrace('pbsgDeactivateButton', "button: ${b(button)}")
+  return pbsgDeactivateDni(buttonToDni(button))
 }
 
-
-
-
-
-Boolean pbsgs_activateButton(String pbsgLabel, String button) {
-  logTrace('pbsgs_activateButton', "pbsgLabel: ${pbsgLabel}, button: ${b(button)}")
-  return pbsgs_activateDni(pbsgs_buttonToDni(pbsgLabel, button))
+Boolean pbsgToggleButton(String button) {
+  logTrace('pbsgToggleButton', "button: ${b(button)}")
+  return (state.activeDni == buttonToDni(button))
+     ? pbsgDeactivateButton(button)
+     : pbsgActivateButton(button)
 }
 
-Boolean pbsgs_deactivateButton(String pbsgLabel, String button) {
-  logTrace('pbsgs_deactivateButton', "pbsgLabel: ${pbsgLabel}, button: ${b(button)}")
-  return pbsgs_deactivateDni(pbsgs_buttonToDni(pbsgLabel, button))
+Boolean pbsgActivatePrior() {
+  logTrace('pbsgActivatePrior', pbsgAndVswStateAsString())
+  String predecessor = state.inactiveDnis.first()
+  logTrace('pbsgActivatePrior', "predecessor: ${predecessor}")
+  return pbsgActivateDni(predecessor)
 }
 
-Boolean pbsgs_toggleButton(String pbsgLabel, String button) {
-  logTrace('pbsgs_toggleButton', "pbsgLabel: ${pbsgLabel}, button: ${b(button)}")
-  Map pbsg = getPbsg(pbsgLabel)
-  return (pbsg.activeDni == pbsgs_buttonToDni(pbsgLabel, button))
-     ? pbsgs_deactivateButton(pbsgLabel, button)
-     : pbsgs_activateButton(pbsgLabel, button)
+String buttonToDni(String button) {
+  String dni = "${app.label}_${button}"
+  return dni
 }
 
-Boolean pbsgs_activatePrior(String pbsgLabel) {
-  //logTrace('pbsgs_activatePrior', pbsgs_stateWithVswState(pbsgLabel))
-  Map pbsg = getPbsg(pbsgLabel)
-  String predecessor = pbsg.inactiveDnis.first()
-  logTrace('pbsgs_activatePrior', "predecessor: ${predecessor}")
-  return pbsgs_activateDni(pbsgLabel, predecessor)
+String dniToButton(String dni) {
+  String button = dni ? dni.substring("${app.label}_".length()) : null
+  return button
 }
 
-ArrayList pbsgs_listVsws(String pbsgLabel) {
-  ArrayList outputText = [ heading2('DEVICES') ]
-  List<InstAppW> devices = getChildDevices()
-  devices.each { d -> outputText += bullet2(d.deviceNetworkId) }
-  return outputText
-}
-
-
-/*
-void addVsw(String pbsgLabel, String dni) {
+void addDni(String dni) {
   // All adds are appended to the inactive Fifo.
   if (dni) {
-    Map pbsg = getPbsg(pbsgLabel)
-    pbsg.inactiveDnis = pbsg.inactiveDnis ?: []
-    fifoEnqueue(pbsg.inactiveDnis, dni)
-    logWarn('addVsw', "Adding child device (${dni})")
+    state.inactiveDnis = state.inactiveDnis ?: []
+    fifoEnqueue(state.inactiveDnis, dni)
+    logWarn('addDni', "Adding child device (${dni})")
     addChildDevice(
       'hubitat',          // namespace
       'Virtual Switch',   // typeName
@@ -198,70 +139,116 @@ void addVsw(String pbsgLabel, String dni) {
     )
   }
 }
-*/
 
-/*
-void pbsgs_dropDni(String pbsgLabel, String dni) {
+void dropDni(String dni) {
   // Drop without enforcing Default DNI.
-  Map pbsg = getPbsg(pbsgLabel)
-  if (pbsg.activeDni == dni) {
-    pbsg.activeDni = null
+  if (state.activeDni == dni) {
+    state.activeDni = null
   } else {
-    fifoRemove(pbsg.inactiveDnis, dni)
+    fifoRemove(state.inactiveDnis, dni)
   }
-  logWarn('pbsgs_dropDni', "Dropping child device (${dni})")
+  logWarn('dropDni', "Dropping child device (${dni})")
   deleteChildDevice(dni)
 }
-*/
 
-ArrayList pbsgs_childVswState(String pbsgLabel, Boolean includeHeading = false) {
+Boolean pbsgActivateDni(String dni) {
+  // Return TRUE on a configuration change, FALSE otherwise.
+  // Publish an event ONLY IF/WHEN a new dni is activated.
+  logTrace('pbsgActivateDni (Entry)', pbsgAndVswStateAsString())
+  Boolean isStateChanged = false
+  if (state.activeDni == dni) {
+    logTrace('pbsgActivateDni', "No action, ${dni} is already active")
+  } else if (dni && !pbsgGetDnis()?.contains(dni)) {
+    logError(
+      'pbsgActivateDni',
+      "DNI >${dni}< does not exist (${pbsgGetDnis()})"
+    )
+  } else {
+    isStateChanged = true
+    logInfo('pbsgActivateDni', "Moving active (${state.activeDni}) to inactive")
+    pbsgMoveActiveToInactive()
+    fifoRemove(state.inactiveDnis, dni)
+    // Adjust the activeDni and Vsw together
+    logTrace('pbsgActivateDni', "Activating ${dni}")
+    state.activeDni = dni
+    pbsgPublishActiveButton()
+    logTrace('pbsgActivateDni (Adjusted)', pbsgAndVswStateAsString())
+  }
+  return isStateChanged
+}
+
+Boolean pbsgDeactivateDni(String dni) {
+  // Return TRUE on a configuration change, FALSE otherwise.
+  logTrace('pbsgDeactivateDni', pbsgAndVswStateAsString())
+  logTrace('pbsgDeactivateDni', "DNI: ${b(dni)}")
+  Boolean isStateChange = false
+  if (state.inactiveDnis.contains(dni)) {
+    // Nothing to do, dni is already inactive
+    logTrace('pbsgDeactivateDni', "Nothing to do for dni: ${b(dni)}")
+  } else if (state.activeDni == state.dfltDni) {
+    // It is likely that the default DNI has been manually turned off.
+    // Update the PBSG state to reflect this likely fact.
+    logInfo('pbsgDeactivateDni', "Moving active (${state.activeDni}) to inactive")
+    pbsgMoveActiveToInactive()
+    // Force re-enable the default DNI.
+    isStateChange = pbsgActivateDni(state.dfltDni)
+  } else {
+    logInfo(
+      'pbsgDeactivateDni',
+      "Activating default ${b(state.dfltDni)}, which deacivates dni: ${b(dni)}"
+    )
+    isStateChange = pbsgActivateDni(state.dfltDni)
+  }
+  return isStateChange
+}
+
+ArrayList childVswStates(Boolean includeHeading = false) {
   ArrayList results = []
   if (includeHeading) { results += heading2('VSW States') }
-  getChildDevices().retainAll { d -> d.name.find(pbsgLabel) }.each { d ->
+  getChildDevices().each { d ->
     if (switchState(d) == 'on') {
       results += bullet2("<b>${d.deviceNetworkId}: on</b>")
     } else {
       results += bullet2("<i>${d.deviceNetworkId}: off</i>")
     }
-}
+  }
   return results
 }
 
-//String pbsgs_stateWithVswState(String pbsgLabel) {
-//  return [
-//    "<table style='border-spacing: 0px;' rules='all'><tr>",
-//    "<th style='width:49%'>STATE</th>",
-//    '<th/>',
-//    "<th style='width:49%'>VSW STATUS</th>",
-//    '</tr><tr>',
-//    "<td>${appStateAsBullets().join('<br/>')}</td>",
-//    '<td/>',
-//    "<td>${pbsgs_childVswState().join('<br/>')}</td>",
-//    '</tr></table'
-//  ].join()
-//}
+String pbsgAndVswStateAsString() {
+  return [
+    "<table style='border-spacing: 0px;' rules='all'><tr>",
+    "<th style='width:49%'>STATE</th>",
+    '<th/>',
+    "<th style='width:49%'>VSW STATUS</th>",
+    '</tr><tr>',
+    "<td>${appStateAsBullets().join('<br/>')}</td>",
+    '<td/>',
+    "<td>${childVswStates().join('<br/>')}</td>",
+    '</tr></table'
+  ].join()
+}
 
-void syncChildVswsToPbsgState(String pbsgLabel) {
+void syncChildVswsToPbsgState() {
   // W A R N I N G
   //   - WHEN UPDATING CHILD DEVICES WITH ACTIVE SUBSCRIPTIONS ...
   //   - HUBITAT MAY PROVIDE DEVICE HANDLERS WITH A STALE STATE MAP
   //   - TEMPORARILY SUSPENDING SUBSCRIPTIONS FOR DEVICE CHANGES
-  //logTrace('syncChildVswsToPbsgState (Entry)', pbsgs_stateWithVswState())
-  Map pbsg = getPbsg(pbsgLabel)
-  if (pbsg.activeDni) {
+  logTrace('syncChildVswsToPbsgState (Entry)', pbsgAndVswStateAsString())
+  if (state.activeDni) {
     // Make sure the correct VSW is on
-    DevW onDevice = getChildDevice(pbsg.activeDni)
+    DevW onDevice = getChildDevice(state.activeDni)
     if (switchState(onDevice) != 'on') { onDevice.on() }
   }
   // Make sure other VSWs are off
-  pbsg.inactiveDnis.each { offDni ->
+  state.inactiveDnis.each { offDni ->
     DevW offDevice = getChildDevice(offDni)
     if (switchState(offDevice) != 'off') { offDevice.off() }
   }
-//logTrace('syncChildVswsToPbsgState (Adjusted)', pbsgs_stateWithVswState())
+  logTrace('syncChildVswsToPbsgState (Adjusted)', pbsgAndVswStateAsString())
 }
 
-void unsubscribeChildVswEvents(String pbsgLabel) {
+void unsubscribeChildVswEvents() {
   // Unsubscribing to individual devices due to some prior issues with the
   // List version of subscribe()/unsubsribe().
   ArrayList traceSummary = [
@@ -275,7 +262,7 @@ void unsubscribeChildVswEvents(String pbsgLabel) {
   logTrace('unsubscribeChildVswEvents', traceSummary)
 }
 
-void subscribeChildVswEvents(String pbsgLabel) {
+void subscribeChildVswEvents() {
   //-> Avoid the List version of subscribe. It seems flaky.
   //-> subscribe(childDevices, vswEventHandler, ['filterEvents': true])
   ArrayList traceSummary = [heading2('Subscribing to vswEventHandler')]
@@ -286,127 +273,122 @@ void subscribeChildVswEvents(String pbsgLabel) {
   logTrace('subscribeChildVswEvents', traceSummary)
 }
 
-void pbsgPublishactive(String pbsgLabel) {
-  //logTrace('pbsgPublishactive', pbsgs_stateWithVswState())
-  Map pbsg = getPbsg(pbsgLabel)
-  String active = pbsgs_dniToButton(pbsg.activeDni)
-  logInfo('pbsgPublishactive', "Processing button ${active}")
+void pbsgPublishActiveButton() {
+  logTrace('pbsgPublishActiveButton', pbsgAndVswStateAsString())
+  String activeButton = dniToButton(state.activeDni)
+  logInfo('pbsgPublishActiveButton', "Processing button ${activeButton}")
   //-----------------------------------------------------------------------
   // Box event subscriptions to reduce stale STATE data in Handlers
   unsubscribeChildVswEvents()
   syncChildVswsToPbsgState()
   //-----------------------------------------------------------------------
-  parent.pbsgButtonOnCallback(pbsgLabel, active)
+  parent.pbsgButtonOnCallback(activeButton)
   Integer delayInSeconds = 1
-  //logTrace(
-  //  'pbsgPublishactive',
-  //  "Event subscription delayed for ${delayInSeconds} second(s)."
-  //)
+  logTrace(
+    'pbsgPublishActiveButton',
+    "Event subscription delayed for ${delayInSeconds} second(s)."
+  )
   runIn(delayInSeconds, 'subscribeChildVswEvents')
 }
 
-ArrayList pbsgs_getDnis(String pbsgLabel) {
-  Map pbsg = getPbsg(pbsgLabel)
-  return cleanStrings([ pbsg.activeDni, *pbsg.inactiveDnis ])
+ArrayList pbsgGetDnis() {
+  return cleanStrings([ state.activeDni, *state.inactiveDnis ])
 }
 
-Boolean pbsgs_moveActiveToInactive(String pbsgLabel) {
+Boolean pbsgMoveActiveToInactive() {
   // Return TRUE on a configuration change, FALSE otherwise.
   // This method DOES NOT (1) activate a dfltDni OR (2) publish an event change
   Boolean isStateChanged = false
-  Map pbsg = getPbsg(pbsgLabel)
-  if (pbsg.activeDni) {
+  if (state.activeDni) {
     logTrace(
-      'pbsgs_moveActiveToInactive',
-      "Pushing ${b(pbsg.activeDni)} onto inactiveDnis (${pbsg.inactiveDnis})"
+      'pbsgMoveActiveToInactive',
+      "Pushing ${b(state.activeDni)} onto inactiveDnis (${state.inactiveDnis})"
     )
     isStateChanged = true
-    pbsg.inactiveDnis = [pbsg.activeDni, *pbsg.inactiveDnis]
-    pbsg.activeDni = null
-  //logTrace('pbsgs_moveActiveToInactive', pbsgs_stateWithVswState())
+    state.inactiveDnis = [state.activeDni, *state.inactiveDnis]
+    state.activeDni = null
+    logTrace('pbsgMoveActiveToInactive', pbsgAndVswStateAsString())
   }
   return isStateChanged
 }
 
-//void pbsgs_Installed(String pbsgLabel) {
-//  // Called on instance creation - i.e., before configuration, etc.
-//  pbsgs().each { pbsgLabel, map ->
-//    map.activeDni = null                            // String
-//    map.inactiveDnis = []                           // ArrayList
-//    state.dfltDni = null                              // String
-//    logTrace('pbsgs_Installed', appStateAsBullets(false))
-//  }
-//}
-//
- //     buttons: cleanStrings(buttons),
- //     default: default ?: null,
- //     active: active ?: null
-
-void addRemoveChildDevices() {
-
+ArrayList pbsgListVswDevices() {
+  ArrayList outputText = [ heading2('DEVICES') ]
+  List<InstAppW> devices = getChildDevices()
+  devices.each { d -> outputText += bullet2(d.deviceNetworkId) }
+  return outputText
 }
-pbsgs_updated() {
-  // Called by the enclosing application's updated() method.
-  Map pbsgs = pbsgs().each{ pbsgLabel, pbsg ->
-    ArrayList buttons,
-    String dflt,
-    String active
-    ArrayList prevDnis = pbsgs_getDnis()
-//    updatedDnis = pbsg.buttons.collect { buttonObj -> pbsgs_buttonToDni(buttonObj) }
-//    updatedDfltDni = pbsg.default ? pbsgs_buttonToDni(pbsg.default) : null
-    updatedActiveDni = pbsg.active ? pbsgs_buttonToDni(pbsg.active) : null
-    // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
-    Map<String, ArrayList> actions = compareLists(prevDnis, updatedDnis)
-    ArrayList retainDnis = actions.retained // Used for accounting only
-    ArrayList pbsgsDropDnis = actions.dropped
-    ArrayList addDnis = actions.added
-    String requested = [
-      "<b>dnis:</b> ${updatedDnis}",
-      "<b>dfltDni:</b> ${updatedDfltDni}",
-      "<b>activeDni:</b> ${updatedActiveDni}"
-    ].join('<br/>')
-    String analysis = [
-      "<b>prevDnis:</b> ${prevDnis}",
-      "<b>retainDnis:</b> ${retainDnis}",
-      "<b>pbsgs_dropDnis:</b> ${pbsgsDropDnis}",
-      "<b>addDnis:</b> ${addDnis}"
-    ].join('<br/>')
-    logInfo('pbsgs_updated', [
-      [
-        '<table style="border-spacing: 0px;" rules="all"><tr>',
-        '<th style="width:32%">ENTRY STATE</th><th style="width:2%"/>',
-        '<th style="width:32%">CONFIGURATION PARAMETERS</th><th style="width:2%"/>',
-        '<th>REQUIRED ACTIONS</th>',
-        '</tr><tr>'
-      ].join(),
-      "<td>${appStateAsBullets(true).join('<br/>')}</td><td/>",
-      "<td>${requested}</td><td/>",
-      "<td>${analysis}</td></tr></table>"
-    ])
-    // Suspend ALL events, irrespective of type. This can be problematic since
-    // it also takes out Mode change event subscriptions, et al.
-    unsubscribeChildVswEvents()
-    state.dfltDni = updatedDfltDni
-    pbsgs_dropDnis.each { dni -> pbsgs_dropDni(dni) }
-    addDnis.each { dni -> addVsw(dni) }
-    // Leverage activation/deactivation methods for initial dni activation.
-    if (updatedActiveDni) {
-      logTrace('pbsgs_updated', "activating activeDni ${updatedActiveDni}")
-      pbsgs_activateDni(updatedActiveDni)
-    } else if (pbsg.activeDni == null && state.dfltDni) {
-      logTrace('pbsgs_updated', "activating dfltDni ${state.dfltDni}")
-      pbsgs_activateDni(state.dfltDni)
-    }
-      logTrace('pbsgs_updated', pbsgs_listVsws())
-      pbsgPublishactive()
+
+void pbsgCoreInstalled() {
+  // Called on instance creation - i.e., before configuration, etc.
+  state.logLevel = logThreshToLogLevel('TRACE')  // Integer
+  state.activeDni = null                            // String
+  state.inactiveDnis = []                           // ArrayList
+  state.dfltDni = null                              // String
+  logTrace('pbsgCoreInstalled', appStateAsBullets(false))
+}
+
+void pbsgCoreUpdated() {
+  // Values are provided via these settings:
+  //   - settings.buttons
+  //   - settings.dfltButton
+  //   - settings.activeButton
+  //   - settings.logLevel
+  // PROCESS SETTINGS (BUTTONS) INTO TARGET VSW DNIS
+  ArrayList prevDnis = pbsgGetDnis() ?: []
+  updatedDnis = settings.buttons.collect { buttonObj -> buttonToDni(buttonObj) }
+  updatedDfltDni = settings.dfltButton ? buttonToDni(settings.dfltButton) : null
+  updatedActiveDni = settings.activeButton ? buttonToDni(settings.activeButton) : null
+  // DETERMINE REQUIRED ADJUSTMENTS BY TYPE
+  state.logLevel = logThreshToLogLevel(settings.logLevel)
+  Map<String, ArrayList> actions = compareLists(prevDnis, updatedDnis)
+  ArrayList retainDnis = actions.retained // Used for accounting only
+  ArrayList dropDnis = actions.dropped
+  ArrayList addDnis = actions.added
+  String requested = [
+    "<b>dnis:</b> ${updatedDnis}",
+    "<b>dfltDni:</b> ${updatedDfltDni}",
+    "<b>activeDni:</b> ${updatedActiveDni}"
+  ].join('<br/>')
+  String analysis = [
+    "<b>prevDnis:</b> ${prevDnis}",
+    "<b>retainDnis:</b> ${retainDnis}",
+    "<b>dropDnis:</b> ${dropDnis}",
+    "<b>addDnis:</b> ${addDnis}"
+  ].join('<br/>')
+  logInfo('pbsgCoreUpdated', [
+    [
+      '<table style="border-spacing: 0px;" rules="all"><tr>',
+      '<th style="width:32%">ENTRY STATE</th><th style="width:2%"/>',
+      '<th style="width:32%">CONFIGURATION PARAMETERS</th><th style="width:2%"/>',
+      '<th>REQUIRED ACTIONS</th>',
+      '</tr><tr>'
+    ].join(),
+    "<td>${appStateAsBullets(true).join('<br/>')}</td><td/>",
+    "<td>${requested}</td><td/>",
+    "<td>${analysis}</td></tr></table>"
+  ])
+  // Suspend ALL events, irrespective of type. This can be problematic since
+  // it also takes out Mode change event subscriptions, et al.
+  unsubscribeChildVswEvents()
+  state.dfltDni = updatedDfltDni
+  dropDnis.each { dni -> dropDni(dni) }
+  addDnis.each { dni -> addDni(dni) }
+  // Leverage activation/deactivation methods for initial dni activation.
+  if (updatedActiveDni) {
+    logTrace('pbsgCoreUpdated', "activating activeDni ${updatedActiveDni}")
+    pbsgActivateDni(updatedActiveDni)
+  } else if (state.activeDni == null && state.dfltDni) {
+    logTrace('pbsgCoreUpdated', "activating dfltDni ${state.dfltDni}")
+    pbsgActivateDni(state.dfltDni)
   }
+  logTrace('pbsgCoreUpdated', pbsgListVswDevices())
+  pbsgPublishActiveButton()
 }
 
-/*
-void pbsgs_uninstalled(String pbsgLabel) {
-  logTrace('pbsgs_uninstalled', 'No action')
+void pbsgCoreUninstalled() {
+  logTrace('pbsgCoreUninstalled', 'No action')
 }
-*/
 
 void vswEventHandler(Event e) {
   // Design Notes
@@ -417,14 +399,14 @@ void vswEventHandler(Event e) {
   //   - Let downstream functions discard redundant state information
   // W A R N I N G
   //   As of 2023-11-30 Handler continues to receive STALE state values!!!
-  //logTrace('vswEventHandler (ENTRY)', pbsgs_stateWithVswState())
+  logTrace('vswEventHandler (ENTRY)', pbsgAndVswStateAsString())
   logTrace('vswEventHandler', e.descriptionText)
   if (e.isStateChange) {
     String dni = e.displayName
     if (e.value == 'on') {
-      pbsgs_activateDni(dni)
+      pbsgActivateDni(dni)
     } else if (e.value == 'off') {
-      pbsgs_deactivateDni(dni)
+      pbsgDeactivateDni(dni)
     } else {
       logWarn(
         'vswEventHandler',
