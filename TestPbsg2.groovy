@@ -161,37 +161,85 @@ Map pbsg_CreateInstance(Map config) {
   return pbsg
 }
 
-void pbsg_DniTurnedOn () {
+void pbsg_DniTurnedOnEvent(Map pbsg, String deviceDNI) {
   // Process a 'VSW turned on' event
+  if (pbsg.activeDevice.deviceNetworkId == deviceDNI) {
+    // Nothing to do, VSW is already active
+  } else if (pbsg.activeDevice != null) {
+    // Move the active VSW out of the active position
+    pbsg.fifo.push(pbsg.activeDevice)
+  }
+  // Move the target VSW from the fifo to the (empty) active position.
+  pbsg.activeDevice = pbsg_GetAndRemoveDevice(pbsg.deviceFifo, deviceDNI)
 }
 
-void pbsg_DniTurnedOff () {
-  // Process a 'VSW turned off' event
+void pbsg_DniTurnedOffEvent(Map pbsg, String deviceDNI, Integer pauseMS = 1000) {
+  // When RA2 transitions scenes by turning off one scene THEN turning on
+  // another scene. Pause executon. If a new scene has been turned on, it
+  // should occupy the active position. If there's no new scene, then a
+  // Manual Override is occurring.
+  // https://docs2.hubitat.com/developer/common-methods-object
+  if (pauseMS) { pauseExecution(pauseMS) }
+  if (pbsg.activeDevice.deviceNetworkId != deviceDNI) {
+    pbsg.fifo.push(pbsg.activeDevice)
+    pbsg.activeDevice = null
+  }
 }
 
-void pbsg_TurnOnDni () {
-  // Caused a DNI to be turned on (typically due to a RA2 scene LED
-  // activation or a PRO2 scene button press)
+void pbsg_TurnOnDni(Map pbsg, String deviceDNI) {
+  // For now, adjust the PBSG THEN turn on the device.
+  // [The alternative is to turn on the device and wait for a device event
+  // to impact the FIFO.]
+  pbsg_DniTurnedOnEvent(pbsg, deviceDNI)
+  deviceDNI.on()
 }
 
-void pbsg_TurnOffDni () {
-  // Caused a DNI to be turned off (typically due to a RA2 scene LED
-  // deactivation. When changing scenes, RA2 typically communicates one
-  // scene turning off before another is turned on; so, it may be
-  // necessary to defer action since a competing turn on event may
-  // cause the dni to be off already.
+void pbsg_TurnOffDni(Map pbsg, String deviceDNI) {
+  // See discusion in pbsg_TurnOnDni().
+  pbsg_DniTurnedOffEvent(pbsg, deviceDNI, 0)
+  deviceDNI.off()
 }
 
-void pbsg_ToggleOnDni () {
-  // Caused a DNI to be toggled by leveraging the TurnOn/IffDni methods
-  // above.
+void pbsg_ToggleDni(Map pbsg, String deviceDNI) {
+  // Caused the target device to be toggled on->off or off->on.
+  DevW device = pbsg_GetDevice(pbsg.deviceFifo, deviceDNI) {
+  if (switchState(device) == 'on') {
+    pbsg_TurnOffDni(pbsg, deviceDNI)
+  } else {
+    pbsg_TurnOnDni(pbsg, deviceDNI)
+  }
 }
 
-void pbsg_ActivatePrior () {
+void pbsg_ActivatePrior(Map pbsg) {
   // Swap the currently active DNI with the DNI at the front of the FIFO.
+  DevW temp = null
+  if (pbsg.activeDevice) { temp = pbsg.activeDevice }
+  pbsg.activeDevice = pbsg.fifo.pop()
+  if (temp) { pbsg.fifo.push(temp) }
 }
 
-ArrayList pbsg_SummarizeState () {
+String buttonNameWithState(DevW device, trimPbsgName = true) {
+  String summary = trimPbsgName
+    ? device.deviceNetworkId.tokenize('_')[1]
+    : device.name
+  summary += " ${switchState(device)}"
+}
+
+String summarizeVswState(Map pbsg, DevW device) {
+  String result = "${pbsg.name}: "
+  result += "${buttonNameWithState(pbsg.activeDevice)} ["
+  pbsg.deviceFifo.each{ d ->
+
+      NEED TO CONVERT EACH ITEM IN FIFO TO BUTTON WITH STATE
+      AND JOIN WITH COMMA DIVIDES
+
+  }
+  result += "]"
+
+!!!!!!!!!!  Y O U   A R E   H E R E !!!!!!!!!!
+}
+
+ArrayList pbsg_SummarizeActualState () {
   // Provide a visual summary of FIFO and underlying DNI state.
   //   Active: <active> Fifo: [...]
   // Note any discrepancies between the PBSG and underlying VSWs.
