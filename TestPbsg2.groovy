@@ -140,7 +140,7 @@ ArrayList pbsg_PopulateFifo(Map config) {
 
 Map pbsg_CreateInstance(Map config) {
   // Use provided pbsgConfig to create VSWs and initialize FIFO et al.
-  Map pbsg = [:]
+  Map pbsg = [ 'name': config.name ]
   pbsg.deviceFifo = pbsg_PopulateFifo(config)
   if (config.defaultButton) {
     String defaultDNI = "${config.name}_${config.defaultButton}"
@@ -157,7 +157,7 @@ Map pbsg_CreateInstance(Map config) {
   } else {
     pbsg.activeDevice = null
   }
-  logInfo('pbsg_CreateInstance', "pbsg: ${pbsg}")
+  logInfo('pbsg_CreateInstance', pbsg_State(pbsg))
   return pbsg
 }
 
@@ -203,10 +203,11 @@ void pbsg_TurnOffDni(Map pbsg, String deviceDNI) {
 void pbsg_ToggleDni(Map pbsg, String deviceDNI) {
   // Caused the target device to be toggled on->off or off->on.
   DevW device = pbsg_GetDevice(pbsg.deviceFifo, deviceDNI) {
-  if (switchState(device) == 'on') {
-    pbsg_TurnOffDni(pbsg, deviceDNI)
-  } else {
-    pbsg_TurnOnDni(pbsg, deviceDNI)
+    if (switchState(device) == 'on') {
+      pbsg_TurnOffDni(pbsg, deviceDNI)
+    } else {
+      pbsg_TurnOnDni(pbsg, deviceDNI)
+    }
   }
 }
 
@@ -218,25 +219,24 @@ void pbsg_ActivatePrior(Map pbsg) {
   if (temp) { pbsg.fifo.push(temp) }
 }
 
-String buttonNameWithState(DevW device, trimPbsgName = true) {
-  String summary = trimPbsgName
-    ? device.deviceNetworkId.tokenize('_')[1]
-    : device.name
-  summary += " ${switchState(device)}"
+String buttonName(DevW device) {
+  return device.deviceNetworkId.tokenize('_')[1]
 }
 
-String summarizeVswState(Map pbsg, DevW device) {
-  String result = "${pbsg.name}: "
+String buttonNameWithState(DevW device, trimPbsgName = true) {
+  String summary = trimPbsgName
+    ? "<b>${buttonName(device)}</b>"
+    : "<b>${device.name}</b>"
+  String swState = switchState(device)
+  summary += (swState == 'on') ? "(<b>${swState}</b>)" : "(<em>${swState}</em>)"
+}
+
+String pbsg_State(Map pbsg) {
+  String result = "<b>${pbsg.name}</b> PBSG: "
   result += "${buttonNameWithState(pbsg.activeDevice)} ["
-  pbsg.deviceFifo.each{ d ->
-
-      NEED TO CONVERT EACH ITEM IN FIFO TO BUTTON WITH STATE
-      AND JOIN WITH COMMA DIVIDES
-
-  }
-  result += "]"
-
-!!!!!!!!!!  Y O U   A R E   H E R E !!!!!!!!!!
+  result += pbsg.deviceFifo.collect{ d -> "${buttonNameWithState(d)}" }.join(', ')
+  result += "], default: <b>${buttonName(pbsg.defaultDevice)}</b>"
+  return result
 }
 
 ArrayList pbsg_SummarizeActualState () {
