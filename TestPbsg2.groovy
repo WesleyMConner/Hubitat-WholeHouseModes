@@ -105,7 +105,7 @@ DevW pbsg_GetDevice(ArrayList deviceFifo, String dni) {
   return result
 }
 
-DevW pbsg_GetAndRemoveDevice(ArrayList deviceFifo, String dni) {
+DevW pbsg_ExtractDevice(ArrayList deviceFifo, String dni) {
   DevW foundIndex = null
   deviceFifo.eachWithIndex{ d, i ->
     if (d.deviceNetworkId == dni) { foundIndex = i }
@@ -121,7 +121,7 @@ void pbsg_RemoveDevice(ArrayList deviceFifo, DevW device) {
   if (foundIndex != null) { deviceFifo.removeAt(foundIndex) }
 }
 
-ArrayList pbsg_PopulateFifo(Map config) {
+void pbsg_PopulateFifo(Map pbsg, Map config) {
   ArrayList deviceFifo = []
   config.buttons.each{ button ->
     String vswDNI = "${config.name}_${button}"
@@ -135,29 +135,42 @@ ArrayList pbsg_PopulateFifo(Map config) {
     }
     deviceFifo << device
   }
-  return deviceFifo
+  pbsg.deviceFifo = deviceFifo
 }
 
-Map pbsg_CreateInstance(Map config) {
-  // Use provided pbsgConfig to create VSWs and initialize FIFO et al.
-  Map pbsg = [ 'name': config.name ]
-  pbsg.deviceFifo = pbsg_PopulateFifo(config)
+void pbsg_PopulateDefault(Map pbsg, Map config) {
   if (config.defaultButton) {
     String defaultDNI = "${config.name}_${config.defaultButton}"
     pbsg.defaultDevice = pbsg_GetDevice(pbsg.deviceFifo, defaultDNI)
   } else {
     pbsg.defaultDevice = null
   }
+}
+
+void pbsg_PopulateActive(Map pbsg, Map config) {
   if (config.activeButton) {
     String activeDNI = "${config.name}_${config.activeButton}"
-    pbsg.activeDevice = pbsg_GetAndRemoveDevice(pbsg.deviceFifo, activeDNI)
+    pbsg.activeDevice = pbsg_ExtractDevice(pbsg.deviceFifo, activeDNI)
   } else if (pbsg.defaultDevice) {
     pbsg.activeDevice = pbsg.defaultDevice
     pbsg_RemoveDevice(pbsg.deviceFifo, pbsg.activeDevice)
   } else {
     pbsg.activeDevice = null
   }
-  logInfo('pbsg_CreateInstance', pbsg_State(pbsg))
+}
+
+Map pbsg_RefreshVSWs(Map pbsg) {
+  logError('pbsg_RefreshVSWs', 'IMPLEMENT ME !!!')
+}
+
+Map pbsg_CreateInstance(Map config) {
+  // Use provided pbsgConfig to create VSWs and initialize FIFO et al.
+  Map pbsg = [ 'name': config.name ]
+  pbsg_PopulateFifo(pbsg, config)
+  pbsg_PopulateDefault(pbsg, config)
+  pbsg_PopulateActive(pbsg, config)
+  pbsg_RefreshVSWs(pbsg)
+  logInfo('pbsg_CreateInstance', pbsg_SummarizeState(pbsg))
   return pbsg
 }
 
@@ -166,13 +179,12 @@ void pbsg_DniTurnedOnEvent(Map pbsg, String deviceDNI) {
   if (pbsg.activeDevice.deviceNetworkId == deviceDNI) {
     // Nothing to do, VSW is already active
   } else if (pbsg.activeDevice != null) {
-    // Move the active VSW out of the active position
     pbsg.fifo.push(pbsg.activeDevice)
   }
-  // Move the target VSW from the fifo to the (empty) active position.
-  pbsg.activeDevice = pbsg_GetAndRemoveDevice(pbsg.deviceFifo, deviceDNI)
+  pbsg.activeDevice = pbsg_ExtractDevice(pbsg.deviceFifo, deviceDNI)
 }
 
+/* FIX ME ->
 void pbsg_DniTurnedOffEvent(Map pbsg, String deviceDNI, Integer pauseMS = 1000) {
   // When RA2 transitions scenes by turning off one scene THEN turning on
   // another scene. Pause executon. If a new scene has been turned on, it
@@ -185,6 +197,7 @@ void pbsg_DniTurnedOffEvent(Map pbsg, String deviceDNI, Integer pauseMS = 1000) 
     pbsg.activeDevice = null
   }
 }
+*/
 
 void pbsg_TurnOnDni(Map pbsg, String deviceDNI) {
   // For now, adjust the PBSG THEN turn on the device.
@@ -231,7 +244,7 @@ String buttonNameWithState(DevW device, trimPbsgName = true) {
   summary += (swState == 'on') ? "(<b>${swState}</b>)" : "(<em>${swState}</em>)"
 }
 
-String pbsg_State(Map pbsg) {
+String pbsg_SummarizeState(Map pbsg) {
   String result = "<b>${pbsg.name}</b> PBSG: "
   result += "${buttonNameWithState(pbsg.activeDevice)} ["
   result += pbsg.deviceFifo.collect{ d -> "${buttonNameWithState(d)}" }.join(', ')
