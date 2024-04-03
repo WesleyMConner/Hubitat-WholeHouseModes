@@ -16,6 +16,7 @@
 //   - import com.hubitat.app.DeviceWrapper as DevW
 //   - import com.hubitat.app.InstalledAppWrapper as InstAppW
 //   - import com.hubitat.hub.domain.Event as Event
+//   - #include wesmc.lFifo
 //   - #include wesmc.lHExt
 //   - #include wesmc.lHUI
 
@@ -26,20 +27,6 @@ library(
   description: 'Push Button Switch Group (PBSG) Implementation',
   category: 'general purpose'
 )
-
-String fifoRemove(ArrayList fifo, String item) {
-  // Remove and return item if present OR return null.
-  return fifo?.removeAll { member -> member == item } ? item : null
-}
-
-Boolean fifoEnqueue(ArrayList fifo, String item) {
-  Boolean retval = false
-  if (item) {
-    fifo << (item)
-    retval = true
-  }
-  return retval
-}
 
 
 Boolean pbsgConfigure(

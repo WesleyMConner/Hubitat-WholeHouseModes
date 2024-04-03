@@ -75,40 +75,55 @@ void updated() {
 
 void initialize() {
   ArrayList data = ['a', 'b', 'c', 'd']
+
   Map fifo = [
-      Push: { list, item -> list.push(item) },
-       Pop: { list -> list.pop() },
-      Find: { list, target ->
+      Save: { name, list ->
+              state."${name}" = list
+            },
+       Get: { name ->
+              state."${name}" as ArrayList
+            }
+     Push: { item ->
+               ArrayList list = state."${name}"
+             data.push(item)
+          },
+       Pop: { fifo."x5".pop() },
+      Find: { target ->
               String found = null
-              list.eachWithIndex{ e, i ->
-                if (e == target) { found = list.getAt(i) }
+              fifo."x5".eachWithIndex{ e, i ->
+                if (e == target) {
+                  found = fifo."x5".getAt(i)
+                }
               }
               return found
             },
-  Contains: { list, target -> list.contains(target) },
-    Remove: { list, target ->
+    Remove: { target ->
               Integer foundIndex = null
+              ArrayList list = fifo."x5"
               list.eachWithIndex{ e, i ->
                 if (e == target) { foundIndex = i }
               }
-              return (foundIndex != null) ? list.removeAt(foundIndex) : null
-            }
+              String result = (foundIndex != null) ? fifo."x5".removeAt(foundIndex) : null
+              fifo.
+            },
   ]
-  logInfo('A', "data: ${data}")
+  logInfo('#103', "data: ${data}")
 
-  String s1 = fifo.Pop(data)
+  fifo.Save('x5', data)
+  logInfo('#106', "state.x5: ${state.x5}")
+
+  d = fifo.Get('x5')
+  logInfo('#109', "d: ${d}")
+
+  String s1 = fifo.Pop()
   logInfo('B', "data: ${data}, s1: ${s1}")
 
-  fifo.Push(data, 'q')
+  fifo.Push('q')
   logInfo('C', "data: ${data}")
 
-  logInfo('C1', "${fifo.Contains(data, 'q')}")
-
-  String s2 = fifo.Find(data, 'c')
+  String s2 = fifo.Find('c')
   logInfo('D', "data: ${data}, s2: ${s2}")
 
-  String s3 = fifo.Remove(data, 'b')
+  String s3 = fifo.Remove('b')
   logInfo('E', "data: ${data}, s3: ${s3}")
-
-  logInfo('F', fifo.Reflect())
 }

@@ -73,42 +73,79 @@ void updated() {
   initialize()
 }
 
-void initialize() {
-  ArrayList data = ['a', 'b', 'c', 'd']
-  Map fifo = [
-      Push: { list, item -> list.push(item) },
-       Pop: { list -> list.pop() },
-      Find: { list, target ->
+void initializeX() {
+  ArrayList fifo = ['a', 'b', 'c', 'd'].tap{
+     Push = { item -> fifo.push(item) }
+       Pop = { fifo.pop() }
+      Find = { target ->
               String found = null
-              list.eachWithIndex{ e, i ->
-                if (e == target) { found = list.getAt(i) }
+              fifo.eachWithIndex{ e, i ->
+                if (e == target) { found = fifo.getAt(i) }
+              }
+              return found
+            }
+    Remove = { target ->
+              Integer foundIndex = null
+              fifo.eachWithIndex{ e, i ->
+                if (e == target) { foundIndex = i }
+              }
+              return (foundIndex != null) ? fifo.removeAt(foundIndex) : null
+            }
+  }
+}
+
+void fifo_Push(ArrayList fifo, String item) {
+  fifo.push(item)
+}
+
+String fifo_Pop(ArrayList fifo) {
+  fifo.pop()
+}
+
+Boolean fifo_Contains(ArrayList fifo, String item) {
+  fifo.contains(item)
+}
+
+String fifo_Remove(ArrayList fifo, String item) {
+  Integer foundIndex = null
+  it.list.eachWithIndex{ e, i ->
+    if (e == item) { foundIndex = i }
+  }
+  return (foundIndex != null) ? it.list.removeAt(foundIndex) : null
+}
+
+void initialize(ArrayList data) {
+  Map fifo = [
+      Push: { null -> it.list.push(item) },
+       Pop: { it -> it.list.pop() },
+      Find: { it, item ->
+              String found = null
+              it.list.eachWithIndex{ e, i ->
+                if (e == item) { found = it.list.getAt(i) }
               }
               return found
             },
-  Contains: { list, target -> list.contains(target) },
-    Remove: { list, target ->
+    Remove: { it, item ->
               Integer foundIndex = null
-              list.eachWithIndex{ e, i ->
-                if (e == target) { foundIndex = i }
+              it.list.eachWithIndex{ e, i ->
+                if (e == item) { foundIndex = i }
               }
-              return (foundIndex != null) ? list.removeAt(foundIndex) : null
-            }
+              return (foundIndex != null) ? it.list.removeAt(foundIndex) : null
+            },
+      list: ['a', 'b', 'c', 'd']
   ]
-  logInfo('A', "data: ${data}")
+
+  logInfo('A', "fifo: ${fifo.list}")
 
   String s1 = fifo.Pop(data)
-  logInfo('B', "data: ${data}, s1: ${s1}")
+  logInfo('B', "fifo: ${fifo.list}, s1: ${s1}")
 
   fifo.Push(data, 'q')
-  logInfo('C', "data: ${data}")
-
-  logInfo('C1', "${fifo.Contains(data, 'q')}")
+  logInfo('C', "fifo: ${fifo.list}")
 
   String s2 = fifo.Find(data, 'c')
-  logInfo('D', "data: ${data}, s2: ${s2}")
+  logInfo('D', "fifo: ${fifo.list}, s2: ${s2}")
 
   String s3 = fifo.Remove(data, 'b')
-  logInfo('E', "data: ${data}, s3: ${s3}")
-
-  logInfo('F', fifo.Reflect())
+  logInfo('E', "fifo: ${fifo.list}, s3: ${s3}")
 }
