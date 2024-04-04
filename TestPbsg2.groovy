@@ -134,8 +134,17 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
     }
   } else {
     if (pbsg.activeButton != null) {
-      // Move the currently active button out of the way.
-      pbsg_DeactivateButton(pbsg, pbsg.activeButton)
+      // IMPORTANT: Move the currently active button out of the way, but
+      //            DO NOT leverage pbsg_DeactivateButton() which will
+      //            populate an empty activeButton with defaultButton.
+      //--xx-> pbsg_DeactivateButton(pbsg, pbsg.activeButton)
+      DevW priorActive = pbsg_GetOrFindMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
+      unsubscribe(priorActive)
+      priorActive.off()
+      pauseExecution(100)  // Take a breath to let device update
+      pbsg.buttonsLIFO.push(pbsg.activeButton)
+      pbsg.activeButton = null
+      subscribe(priorActive, pbsg_VswEventHandler, ['filterEvents': true])
     }
     // Relocate the newly activated button (from the LIFO) and turn it 'on'.
     Integer indexInLIFO = null
