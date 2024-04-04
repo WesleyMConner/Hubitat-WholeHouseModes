@@ -121,16 +121,15 @@ DevW pbsg_GetOrFindMissingDevice(DevW device, String deviceDNI) {
 }
 
 void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
-  //-> if (button == null) { logError('pbsg_ActivateButton', 'button arg is NULL') }
   DevW d = pbsg_GetOrFindMissingDevice(device, "${pbsg.name}_${button}")
   String dState = switchState(d)
-  //-> logInfo('pbsg_ActivateButton', "button: ${button} ('${dState}')")
   if (pbsg.activeButton == button) {
     // The button is already active. Ensure its VSW is 'on'.
     if (dState != 'on') {
       logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
       unsubscribe(d)
       d.on()
+      pauseExecution(100)  // Take a breath to let device update
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
   } else {
@@ -153,37 +152,29 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
     unsubscribe(d)
     pbsg.activeButton = button
     d.on()
+    pauseExecution(100)  // Take a breath to let device update
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
 }
 
 void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
-  //-> logError('pbsg_DeactivateButton', ['E N T R Y',
-  //->   "pbsg: ${pbsg}",
-  //->   "button: ${button}",
-  //->   "device: ${null}"
-  //-> ])
   DevW d = pbsg_GetOrFindMissingDevice(device, "${pbsg.name}_${button}")
   String dState = switchState(d)
-  //-> logInfo('pbsg_DeactivateButton', ['',
-  //->   pbsg_State(pbsg),
-  //->   "button: ${button}, ${pbsg.name}_${button}",
-  //->   "d: ${d}",
-  //->   "dState: ${dState}"
-  //-> ])
-  //-> logInfo('pbsg_DeactivateButton', "button: ${button} ('${dState}')")
   if (pbsg.activeButton == button) {
     unsubscribe(d)
     d.off()
+    pauseExecution(100)  // Take a breath to let device update
     pbsg.buttonsLIFO.push(pbsg.activeButton)
     pbsg.activeButton = null
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
+    pbsg_EnforceDefault(pbsg)
   } else if (pbsg.buttonsLIFO.contains(button)) {
     // Nothing to do
   } else {
-    logWarn('pbsg_DeactivateButton', "Adding ${button} to ${pbsg.name} LIFO.")
+    logWarn('pbsg_DeactivateButton', "${button} → ${pbsg.name} ${pbsg.buttonsLIFO}")
     unsubscribe(d)
     d.off()
+    pauseExecution(100)  // Take a breath to let device update
     pbsg.buttonsLIFO.push(button)
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
@@ -224,17 +215,21 @@ Map pbsg_Initialize(Map config) {
         pbsg_DeactivateButton(pbsg, button)
     }
   }
-  if (!pbsg.activeButton && config.initialActiveButton) {
-    logInfo(
-      'pbsg_Initialize',
-      "initialActiveButton (${config.initialActiveButton}) → active"
-    )
-    pbsg_ActivateButton(pbsg, config.initialActiveButton)
+  if (!pbsg.activeButton) {
+    // During INIT: Use initialActiveButton in lieu of defaultButton
+    if (config.initialActiveButton) {
+      logInfo(
+        'pbsg_Initialize',
+        "initialActiveButton (${config.initialActiveButton}) → active"
+      )
+      pbsg_ActivateButton(pbsg, config.initialActiveButton)
+      pbsg.defaultButton = config.defaultButton
+    } else {
+      pbsg.defaultButton = config.defaultButton
+      pbsg_EnforceDefault(pbsg)
+    }
   }
-  // No immediate action when setting the pbsg.defaultButton
-  pbsg.defaultButton = config.defaultButton
-  // The defaultButton is used to populate an empty activeButton
-  pbsg_EnforceDefault(pbsg)
+  // Post INIT: Use defaultButton to populate an empty activeButton
   logInfo('pbsg_Initialize', "Initial PBSG: ${pbsg_State(pbsg)}")
   pbsgStore_Save(pbsg)
   return pbsg
@@ -256,7 +251,7 @@ void pbsg_VswEventHandler(Event e) {
   //
   // RA2 turns off one scene BEFORE turning on the replacement scene.
   // PRO2 turns on scenes without turning off predecessors.
-  logInfo('pbsg_VswEventHandler', e.descriptionText)
+  logInfo('pbsg_VswEventHandler', "${e.displayName} → ${e.value}")
   ArrayList parsedDNI = e.displayName.tokenize('_')
   String pbsgName = parsedDNI[0]
   String button = parsedDNI[1]
