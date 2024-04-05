@@ -241,25 +241,30 @@ Map pbsg_Initialize(Map config) {
   // Post INIT: Use defaultButton to populate an empty activeButton
   logInfo('pbsg_Initialize', "Initial PBSG: ${pbsg_State(pbsg)}")
   pbsgStore_Save(pbsg)
+  // Delete Child Devices with DNIs prefixed with this PBSG instance name
+  // and with buttons names that no longer exist.
+  getChildDevices().each{ device ->
+    String dni = device.deviceNetworkId
+    ArrayList nameAndButton = dni.tokenize('_')
+    String pbsgName = nameAndButton[0]
+    String buttonName = nameAndButton[1]
+    if (pbsgName == pbsg.name && !config.allButtons.contains(buttonName)) {
+      logWarn('pbsg_Initialize', "Deleting orphaned VSW '${dni}'")
+      deleteChildDevice(dni)
+    }
+  }
   return pbsg
 }
 
-//----------> Integer pauseMS = 500
-//----------> if (pauseMS) { pauseExecution(pauseMS) }
-
 void pbsg_VswEventHandler(Event e) {
-  // VSW events are suppressed when this application adjusts a VSW
-  // (e.g., in response to Lutron RA2 and Pro2 events). The events here
-  // should indicate a manual action (e.g., via the Hubitat GUI, Alexa).
-  // VSW events leverage pbsg_ActivateButton() and pbsg_DeactivateButton()
-  // to cause the PBSGs to match the VSW event.
-  //
-  // CIRCULAR LOOPS OCCUR IF EVENT SUBCRIPTIONS ARE NOT CORRECTLY PAUSED.
-  //
-  // The DNIs is of the form '${pbsgInstName}-${buttonName}'.
+  // VSW subscriptions are suppressed when this application adjusts VSWs
+  // (e.g., in response to Lutron RA2 and Pro2 events). This handler
+  // processes events from external actions (e.g., Hubitat GUI, Alexa).
   //
   // RA2 turns off one scene BEFORE turning on the replacement scene.
   // PRO2 turns on scenes without turning off predecessors.
+  //
+  // The displayName is the VSW DNIs ('${pbsgInstName}-${buttonName}').
   logInfo('pbsg_VswEventHandler', "${e.displayName} → ${e.value}")
   ArrayList parsedDNI = e.displayName.tokenize('_')
   String pbsgName = parsedDNI[0]
@@ -310,7 +315,6 @@ String pbsg_State(Map pbsg) {
 Map pbsgStore_Retrieve(String pbsgName) {
   // Retrieve a "pbsg" psuedo-class instance.
   Map store = state.pbsgStore ?: [:]
-  //-> logInfo('pbsgStore_Retrieve', "Stored PBSG count: ${store.size()}")
   return store."${pbsgName}"
 }
 
@@ -318,7 +322,6 @@ void pbsgStore_Save(Map pbsg) {
   // Add/update a "pbsg" psuedo-class instance.
   Map store = state.pbsgStore ?: [:]
   store."${pbsg.name}" = pbsg
-  //-> logInfo('pbsgStore_Save', "Stored PBSG count: ${store.size()}")
   state.pbsgStore = store
 }
 
@@ -342,15 +345,16 @@ Map TestPbsgPage() {
     //---------------------------------------------------------------------------------
     app.updateLabel('TestPbsgPage')
     state.remove('childVsws')
-    // Map mapOfPbsgs = [:]
-    Map pbsgInst = [:]
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-      // NOTE: state.pbsgs is ALWAYS rebuilt from settings and child VSW discovery.
+      // NOTE: state.pbsgs are ALWAYS rebuilt from settings and child VSW discovery.
       for (i in [0]) {
         Map config = config_SolicitInstance(1)
         if (config && config.name && config.allButtons) {
+          // The PBSG is created and initialized as the Config is adjusted.
+          // Normally, PBSG configs will be provided as a Map by the
+          // application - i.e., NOT require user input via settings.
           Map pbsg = pbsg_Initialize(config)
           paragraph "${pbsg_State(pbsg)}"
         } else {
@@ -366,14 +370,7 @@ Map TestPbsgPage() {
   }
 }
 
-/*
-void deleteOrphanedDevices() {
-  ArrayList dnis = getChildDevices().collect{ d -> d.deviceNetworkId }
-}
-*/
-
 void initialize() {
-  // Drop unclaimed child devices
 }
 
 void installed() {
