@@ -41,7 +41,7 @@ preferences {
 }
 
 List<String> getScenes() {
-  return state.scenes.collect{ it.key == 'INACTIVE' ? 'OFF' : it.key }
+  return state.scenes.collect { it.key == 'INACTIVE' ? 'OFF' : it.key }
 }
 
 String extractDeviceIdFromLabel(String deviceLabel) {
@@ -87,7 +87,7 @@ String expectedScene() {
 }
 
 void pushRepeaterButton(String repeaterId, Long buttonNumber) {
-  settings.repeaters.each{ repeater ->
+  settings.repeaters.each { repeater ->
     if(getDeviceId(repeater) == repeaterId) {
       repeater.push(buttonNumber)
     }
@@ -95,7 +95,7 @@ void pushRepeaterButton(String repeaterId, Long buttonNumber) {
 }
 
 void setDeviceLevel(String deviceId, Long level) {
-  settings.indDevices.each{ device ->
+  settings.indDevices.each { device ->
     if (getDeviceId(device) == deviceId) {
       if (device.hasCommand('setLevel')) {
         logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
@@ -121,11 +121,11 @@ void activateScene() {
     // Decode and process the scene's per-device actions
     //--xx-> logInfo('activateScene', "state.scenes: ${state.scenes}, state.currScene: ${state.currScene}")
     Map actions = state.scenes.get(state.currScene)
-    actions.get('Rep').each{ repeaterId, button ->
+    actions.get('Rep').each { repeaterId, button ->
       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
       pushRepeaterButton(repeaterId, button)
     }
-    actions.get('Ind').each{ deviceId, value ->
+    actions.get('Ind').each { deviceId, value ->
       setDeviceLevel(deviceId, value)
     }
   }
@@ -165,7 +165,7 @@ void buttonOnCallback(String button) {
 }
 
 void updateLutronKpadLeds() {  // old argument was "String currScene"
-  settings.sceneButtons.each{ d ->
+  settings.sceneButtons.each { d ->
     String buttonDni = d.getDeviceNetworkId()
     String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
     if (state.activeScene == sceneTarget) {
@@ -208,7 +208,7 @@ InstAppW getOrCreateRSPbsg() {
       logWarn('getOrCreateRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
       pbsgApp = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
       ArrayList roomScenes = [ *scenes, 'AUTOMATIC' ]
-      roomScenes.removeAll{ it == 'OFF' }
+      roomScenes.removeAll { it == 'OFF' }
       String dfltScene = 'AUTOMATIC'
       String currScene = null
       pbsgApp.pbsgConfigure(
@@ -243,7 +243,7 @@ void createRSPbsgAndPageLink() {
 }
 
 void subscribeToIndDeviceHandlerNoDelay() {
-  settings.indDevices.each{ d ->
+  settings.indDevices.each { d ->
     logInfo(
       'subscribeToIndDeviceHandlerNoDelay',
       "${state.ROOM_LABEL} subscribing to independentDevice ${deviceInfo(d)}"
@@ -279,7 +279,7 @@ void unsubscribeIndDevToHandler(DevW device) {
 }
 
 void subscribeToKpadHandler() {
-  settings.seeTouchKpads.each{ d ->
+  settings.seeTouchKpads.each { d ->
     logInfo(
       'subscribeToKpadHandler',
       "${state.ROOM_LABEL} subscribing to keypad ${deviceInfo(d)}"
@@ -289,7 +289,7 @@ void subscribeToKpadHandler() {
 }
 
 void subscribeToRepHandler() {
-  settings.repeaters.each{ d ->
+  settings.repeaters.each { d ->
     logInfo(
       'subscribeToRepHandler',
       "${state.ROOM_LABEL} subscribing to Repeater ${deviceInfo(d)}"
@@ -337,7 +337,7 @@ void subscribeToModeHandler() {
 void subscribeToMotionSensorHandler() {
   if (settings.motionSensors) {
     state.activeMotionSensors = []
-    settings.motionSensors.each{ d ->
+    settings.motionSensors.each { d ->
       logInfo(
         'initialize',
         "${state.ROOM_LABEL} subscribing to Motion Sensor ${deviceInfo(d)}"
@@ -347,7 +347,7 @@ void subscribeToMotionSensorHandler() {
         state.activeMotionSensors = cleanStrings([*state.activeMotionSensors, displayName])
         activateScene()
       } else {
-        state.activeMotionSensors?.removeAll{ it == displayName }
+        state.activeMotionSensors?.removeAll { it == displayName }
         activateScene()
       }
     }
@@ -359,7 +359,7 @@ void subscribeToMotionSensorHandler() {
 void subscribeToLuxSensorHandler() {
   if (settings.luxSensors) {
     state.brightLuxSensors = []
-    settings.luxSensors.each{ d ->
+    settings.luxSensors.each { d ->
       logInfo(
         'initialize',
         "${state.ROOM_LABEL} subscribing to Lux Sensor ${deviceInfo(d)}"
@@ -384,7 +384,7 @@ void indDeviceHandler(Event e) {
   String deviceId = extractDeviceIdFromLabel(e.displayName)
   Integer expected = expectedSceneDeviceValue('Ind', deviceId)
   if (reported == expected) {
-    state.moDetected = state.moDetected.collect{ key, value ->
+    state.moDetected = state.moDetected.collect { key, value ->
       if (key != deviceId) { [key, value] }
     }
   } else {
@@ -484,7 +484,7 @@ void motionSensorHandler(Event e) {
       activateScene()
     } else if (e.value == 'inactive') {
       logInfo('motionSensorHandler', "${e.displayName} is inactive")
-      state.activeMotionSensors?.removeAll{ it == e.displayName }
+      state.activeMotionSensors?.removeAll { it == e.displayName }
       activateScene()
     } else {
       logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
@@ -504,7 +504,7 @@ void luxSensorHandler(Event e) {
       state.brightLuxSensors = cleanStrings([*state.brightLuxSensors, e.displayName])
     } else {
       // Remove sensor from list of sensors with sufficient light.
-      state.brightLuxSensors?.removeAll{ it == e.displayName }
+      state.brightLuxSensors?.removeAll { it == e.displayName }
     }
     logTrace('luxSensorHandler', [
       "sensor name: ${e.displayName}",
@@ -531,7 +531,7 @@ void picoHandler(Event e) {
           getOrCreateRSPbsg().pbsgToggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
           logTrace('picoHandler', "Raising ${settings.indDevices}")
-          settings.indDevices.each{ d ->
+          settings.indDevices.each { d ->
             if (switchState(d) == 'off') {
               d.setLevel(5)
               //d.on()
@@ -544,7 +544,7 @@ void picoHandler(Event e) {
           }
         } else if (e.value == '4') {  // Default "Lower" behavior
           logTrace('picoHandler', "Lowering ${settings.indDevices}")
-          settings.indDevices.each{ d ->
+          settings.indDevices.each { d ->
             d.setLevel(Math.max(
               (d.currentValue('level') as Integer) - changePercentage,
               0
@@ -585,7 +585,7 @@ void initialize() {
   state.brightLuxSensors = []
   populateStateScenesAssignValues()
   clearManualOverride()
-  settings.indDevices.each{ device -> unsubscribe(device) }
+  settings.indDevices.each { device -> unsubscribe(device) }
   subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
@@ -669,8 +669,8 @@ void adjustStateScenesKeys() {
   if (settings.motionSensors || settings.luxSensors) {
     assembleScenes << 'OFF'
   }
-  // The following is a work around after issues with map.retainAll{}
-  state.scenes = state.scenes?.collectEntries{ k, v ->
+  // The following is a work around after issues with map.retainAll {}
+  state.scenes = state.scenes?.collectEntries { k, v ->
     assembleScenes.contains(k) ? [k, v] : [:]
   }
 }
@@ -678,9 +678,9 @@ void adjustStateScenesKeys() {
 Map getDeviceValues (String scene) {
   String keyPrefix = "scene^${scene}^"
   List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
-  List<String> allowedDeviceIds = allowedDevices.collect{ getDeviceId(it) }
+  List<String> allowedDeviceIds = allowedDevices.collect { getDeviceId(it) }
   Map results = ['Rep': [:], 'Ind': [:]]
-  settings.findAll{ k1, v1 ->
+  settings.findAll { k1, v1 ->
     k1.startsWith(keyPrefix)
   }.each { k2, v2 ->
     ArrayList typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
@@ -706,7 +706,7 @@ Map getDeviceValues (String scene) {
 }
 
 void populateStateScenesAssignValues() {
-  state.scenes = state.scenes.collectEntries{ scene, map ->
+  state.scenes = state.scenes.collectEntries { scene, map ->
     if (scene == 'INACTIVE') {
       Map M = getDeviceValues(scene)
       if (M) ['OFF', M]
@@ -758,12 +758,12 @@ void configureRoomScene() {
   //   empty cells (modulo 12) to ensure each scene begins in column 1.
   if (state.scenes) {
     ArrayList currSettingsKeys = []
-    state.scenes?.sort().each{ sceneName, ignoredValue ->
+    state.scenes?.sort().each { sceneName, ignoredValue ->
       if (sceneName == 'INACTIVE') { sceneName = 'OFF' }
       // Ignore the current componentList. Rebuilt it from scratch.
       Integer tableCol = 3
       paragraph("<br/><b>${sceneName} →</b>", width: 2)
-      settings.indDevices?.each{ d ->
+      settings.indDevices?.each { d ->
         String inputName = "scene^${sceneName}^Ind^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3
@@ -778,7 +778,7 @@ void configureRoomScene() {
           defaultValue: 0
         )
       }
-      settings.repeaters?.each{d ->
+      settings.repeaters?.each {d ->
         String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3

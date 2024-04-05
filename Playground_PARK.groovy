@@ -90,7 +90,7 @@ void initialize() {
        Pop: { fifo."x5".pop() },
       Find: { target ->
               String found = null
-              fifo."x5".eachWithIndex{ e, i ->
+              fifo."x5".eachWithIndex { e, i ->
                 if (e == target) {
                   found = fifo."x5".getAt(i)
                 }
@@ -100,7 +100,7 @@ void initialize() {
     Remove: { target ->
               Integer foundIndex = null
               ArrayList list = fifo."x5"
-              list.eachWithIndex{ e, i ->
+              list.eachWithIndex { e, i ->
                 if (e == target) { foundIndex = i }
               }
               String result = (foundIndex != null) ? fifo."x5".removeAt(foundIndex) : null

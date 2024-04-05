@@ -19,11 +19,10 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
 #include wesmc.lLut
-#include wesmc.lPbsg
+#include wesmc.lPbsgv2
 
 definition (
   name: 'WHA',
@@ -40,46 +39,10 @@ preferences {
   page(name: 'WhaPage')
 }
 
-InstAppW _getOrCreateMPbsg () {
-  // Mpbsg depends on Hubitat Mode properties AND NOT local data.
-  InstAppW pbsgApp = app.getChildAppByLabel(state.MPBSG_LABEL)
-  if (!pbsgApp) {
-    logWarn('_getOrCreateMPbsg', "Adding Mode PBSG ${state.MPBSG_LABEL}")
-    pbsgApp = addChildApp('wesmc', 'MPbsg', state.MPBSG_LABEL)
-    ArrayList modeNames = getLocation().getModes().collect{ it.name }
-    String currModeName = getLocation().currentMode.name
-    pbsgApp.pbsgConfigure(
-      modeNames,     // Create a PBSG button per Hubitat Mode name
-      'Day',         // 'Day' is the default Mode/Button
-      currModeName,  // Activate the Button for the current Mode
-      settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                       // 'DEBUG' to walk key PBSG methods
-                                       // 'TRACE' to include PBSG and VSW state
-    )
-  }
-  return pbsgApp
-}
-
-void _writeMPbsgHref () {
-  InstAppW pbsgApp = _getOrCreateMPbsg()
-  if (pbsgApp) {
-    href(
-      name: appInfo(pbsgApp),
-      width: 2,
-      url: "/installedapp/configure/${pbsgApp.id}/MPbsgPage",
-      style: 'internal',
-      title: "Review ${appInfo(pbsgApp)}",
-      state: null
-    )
-  } else {
-    paragraph "Creation of the MPbsgHref is pending required data."
-  }
-}
-
 void AllAuto () {
-  settings.rooms.each{ roomName ->
+  settings.rooms.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDNI = "pbsg_${roomApp.label}_AUTOMATIC"
+    String manualOverrideSwitchDNI = "${roomApp.label}_AUTOMATIC"
     logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
     roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
@@ -124,7 +87,7 @@ void initialize () {
 }
 
 void _idParticipatingRooms () {
-  roomPicklist = app.getRooms().collect{it.name.replace(' ', '_')}.sort()
+  roomPicklist = app.getRooms().collect {it.name.replace(' ', '_')}.sort()
   input(
     name: 'rooms',
     type: 'enum',
@@ -138,7 +101,7 @@ void _idParticipatingRooms () {
 
 void _displayInstantiatedRoomHrefs () {
   paragraph heading1('Room Scene Configuration')
-  settings.rooms.each{ roomName ->
+  settings.rooms.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
       logWarn(
@@ -191,21 +154,20 @@ Map WhaPage () {
     state.remove('modeButtonMap')
     app.updateLabel('WHA')
     state.MPBSG_LABEL = '_MPbsg'
-    state.MODES = getLocation().getModes().collect{ it.name }
+    state.MODES = getLocation().getModes().collect { it.name }
     getGlobalVar('defaultMode').value
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       _idParticipatingRooms()
-      _writeMPbsgHref()
-      if (!settings.rooms) {
-        // Don't be too aggressive deleting child apps and their config data.
-        paragraph('Management of child apps is pending selection of Room Names.')
-      } else {
-        //TBD-> pruneAppDups(
-        //TBD->   [*settings.rooms, state.MPBSG_LABEL],
-        //TBD->   app      // The object (parent) pruning dup children
-        //TBD-> )
+      Map modePbsgConfig = [
+        'name': 'mode',
+        'allButtons': getLocation().getModes().collect { it.name },
+        'defaultButton': getLocation().currentMode.name,
+        'initialActiveButton': null
+      ]
+      Map modePbsg = pbsg_Initialize(modePbsgConfig)
+      if (settings.rooms) {
         _displayInstantiatedRoomHrefs()
       }
     }

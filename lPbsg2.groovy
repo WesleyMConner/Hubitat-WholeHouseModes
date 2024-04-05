@@ -83,7 +83,7 @@ Map config_SolicitInstance(Integer settingsKeySuffix) {
       'initialActiveButton': initialActiveButton
     ]
   } else {
-     paragraph('', width: 10)  // Filler for a 12 cell row
+    paragraph('', width: 10)  // Filler for a 12 cell row
   }
   return config
 }
@@ -91,29 +91,30 @@ Map config_SolicitInstance(Integer settingsKeySuffix) {
 // The psuedo-class "pbsg" is built to a psuedo-class "config" instance,
 // creating and managing per-button VSWs.
 
-DevW pbsg_GetOrFindMissingDevice(DevW device, String deviceDNI) {
+DevW pbsg_GetOrCreateMissingDevice(DevW device, String deviceDNI) {
   if (device && device.deviceNetworkId != deviceDNI) {
     logError(
-      'pbsg_GetOrFindMissingDevice',
+      'pbsg_GetOrCreateMissingDevice',
       "Provided device DNI (${device.deviceNetworkId}) != deviceDNI (${deviceDNI})"
     )
   }
+  Map addChildArgs = [
+    isComponent: true,
+    name: deviceDNI.replaceAll('_', ' ')
+  ]
   DevW d = device
-  if (!d) { d = getChildDevice(deviceDNI) }
-  if (!d) {
-    logWarn('pbsg_GetOrFindMissingDevice', "Creating child device ${deviceDNI}")
-    d = addChildDevice(
-      'hubitat',          // namespace
-      'Virtual Switch',   // typeName
-      deviceDNI,          // device's unique DNI
-      [isComponent: true, name: deviceDNI]
-    )
-  }
+  ?: getChildDevice(deviceDNI)
+  ?: addChildDevice(
+    'hubitat',          // namespace
+    'Virtual Switch',   // typeName
+    deviceDNI,          // device's unique DNI (with '_' delimiter)
+    addChildArgs
+  )
   return d
 }
 
 void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
-  DevW d = pbsg_GetOrFindMissingDevice(device, "${pbsg.name}_${button}")
+  DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsg.name}_${button}")
   String dState = switchState(d)
   if (pbsg.activeButton == button) {
     // The button is already active. Ensure its VSW is 'on'.
@@ -130,7 +131,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       // IMPORTANT: Move the currently active button out of the way, but
       //            DO NOT leverage pbsg_DeactivateButton() which will
       //            populate an empty activeButton with defaultButton.
-      DevW priorActive = pbsg_GetOrFindMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
+      DevW priorActive = pbsg_GetOrCreateMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
       unsubscribe(priorActive)
       priorActive.off()
       pauseExecution(100)  // Take a breath to let device update
@@ -140,7 +141,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
     }
     // Relocate the newly activated button (from the LIFO) and turn it 'on'.
     Integer indexInLIFO = null
-    pbsg.buttonsLIFO.eachWithIndex{ b, i ->
+    pbsg.buttonsLIFO.eachWithIndex { b, i ->
       if (b == button) { indexInLIFO = i }
     }
     if (indexInLIFO == null) {
@@ -160,7 +161,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
 }
 
 void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
-  DevW d = pbsg_GetOrFindMissingDevice(device, "${pbsg.name}_${button}")
+  DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsg.name}_${button}")
   if (pbsg.activeButton == button) {
     unsubscribe(d)
     d.off()
@@ -189,7 +190,7 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
 //}
 
 void pbsg_EnforceDefault(Map pbsg) {
-  if (!pbsg.activeButton && pbsg.defaultButton) {
+  if (pbsg && (!pbsg.activeButton && pbsg.defaultButton)) {
     logInfo('pbsg_EnforceDefault', "${pbsg.defaultButton} → active")
     pbsg_ActivateButton(pbsg, pbsg.defaultButton)
   }
@@ -206,11 +207,11 @@ Map pbsg_Initialize(Map config) {
   // Process buttons into order leveraging their current state for treatment
   // as 'active' or 'inactive'. If a single button is active, it should be
   // preserved.
-  config?.allButtons.each{ button ->
+  config?.allButtons.each { button ->
     switch (switchState(device)) {
       case 'on':
         pbsg_ActivateButton(pbsg, button)
-        break;
+        break
       default:
         pbsg_DeactivateButton(pbsg, button)
     }
@@ -234,7 +235,7 @@ Map pbsg_Initialize(Map config) {
   pbsgStore_Save(pbsg)
   // Delete Child Devices with DNIs prefixed with this PBSG instance name
   // and with buttons names that no longer exist.
-  getChildDevices().each{ device ->
+  getChildDevices().each { device ->
     String dni = device.deviceNetworkId
     ArrayList nameAndButton = dni.tokenize('_')
     String pbsgName = nameAndButton[0]
@@ -248,16 +249,20 @@ Map pbsg_Initialize(Map config) {
 }
 
 void pbsg_VswEventHandler(Event e) {
-  // VSW subscriptions are suppressed when this application adjusts VSWs
-  // (e.g., in response to Lutron RA2 and Pro2 events). This handler
-  // processes events from external actions (e.g., Hubitat GUI, Alexa).
+  // VERY IMPORTANT
+  //   - VSW event subscriptions are suppressed when this application is
+  //     adjusts VSWs (e.g., in response to Lutron RA2 and Pro2 events).\
+  //   - This handler processes events that arise from external actions
+  //     (e.g., Hubitat GUI, Alexa).
+  //   - An event's displayName is the "name" of the VSW, not the DNI.
+  //       Format of name: '${pbsgInstName} ${buttonName}'
+  //       Format of DNI:  '${pbsgInstName}_${buttonName}'
+  //     So, care must be taken when tokenizing e.displayName.
+  //   - RA2 turns off one scene BEFORE turning on the replacement scene.
+  //   - PRO2 turns on scenes without turning off predecessors.
   //
-  // RA2 turns off one scene BEFORE turning on the replacement scene.
-  // PRO2 turns on scenes without turning off predecessors.
-  //
-  // The displayName is the VSW DNIs ('${pbsgInstName}-${buttonName}').
   logInfo('pbsg_VswEventHandler', "${e.displayName} → ${e.value}")
-  ArrayList parsedDNI = e.displayName.tokenize('_')
+  ArrayList parsedDNI = e.displayName.tokenize(' ')
   String pbsgName = parsedDNI[0]
   String button = parsedDNI[1]
   Map pbsg = pbsgStore_Retrieve(pbsgName)
@@ -287,10 +292,10 @@ String pbsg_State(Map pbsg) {
   if (pbsg) {
     result = "PBSG \"<b>${pbsg.name}</b>\" "
     result += '['
-    result += pbsg.buttonsLIFO.collect{ button ->
+    result += pbsg.buttonsLIFO.collect { button ->
       buttonState(pbsg, button)
     }.join(', ')
-    result += "]"
+    result += ']'
     if (pbsg.activeButton) {
       result += " → ${buttonState(pbsg, pbsg.activeButton)}"
     }

@@ -80,7 +80,7 @@ void initialize() {
        Pop: { list -> list.pop() },
       Find: { list, target ->
               String found = null
-              list.eachWithIndex{ e, i ->
+              list.eachWithIndex { e, i ->
                 if (e == target) { found = list.getAt(i) }
               }
               return found
@@ -88,7 +88,7 @@ void initialize() {
   Contains: { list, target -> list.contains(target) },
     Remove: { list, target ->
               Integer foundIndex = null
-              list.eachWithIndex{ e, i ->
+              list.eachWithIndex { e, i ->
                 if (e == target) { foundIndex = i }
               }
               return (foundIndex != null) ? list.removeAt(foundIndex) : null
