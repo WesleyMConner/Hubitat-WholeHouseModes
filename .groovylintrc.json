@@ -16,6 +16,10 @@
       // Literal numbers in Hubitat (class None) trigger this issue
       "enabled": false
     },
+    "DuplicateMapLiteral": {
+      // Event subscriptions include '[filterEvents: true]'
+      "enabled": false
+    },
     "DuplicateStringLiteral": {
       // Literal strings in Hubitat (class None) trigger this issue
       "enabled": false
@@ -52,5 +56,3 @@
     }
   }
 }
-
-/* groovylint-disable-next-line ImplementationAsType */

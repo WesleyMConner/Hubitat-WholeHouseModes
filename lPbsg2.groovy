@@ -121,6 +121,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
       unsubscribe(d)
       d.on()
+      pbsgButtonOnCallback(button)
       pauseExecution(100)  // Take a breath to let device update
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
@@ -129,7 +130,6 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       // IMPORTANT: Move the currently active button out of the way, but
       //            DO NOT leverage pbsg_DeactivateButton() which will
       //            populate an empty activeButton with defaultButton.
-      //--xx-> pbsg_DeactivateButton(pbsg, pbsg.activeButton)
       DevW priorActive = pbsg_GetOrFindMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
       unsubscribe(priorActive)
       priorActive.off()
@@ -153,6 +153,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
     unsubscribe(d)
     pbsg.activeButton = button
     d.on()
+    pbsgButtonOnCallback(button)
     pauseExecution(100)  // Take a breath to let device update
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
@@ -160,7 +161,6 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
 
 void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
   DevW d = pbsg_GetOrFindMissingDevice(device, "${pbsg.name}_${button}")
-  String dState = switchState(d)
   if (pbsg.activeButton == button) {
     unsubscribe(d)
     d.off()
@@ -169,9 +169,7 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
     pbsg.activeButton = null
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     pbsg_EnforceDefault(pbsg)
-  } else if (pbsg.buttonsLIFO.contains(button)) {
-    // Nothing to do
-  } else {
+  } else if (!pbsg.buttonsLIFO.contains(button)) {
     logWarn('pbsg_DeactivateButton', "${button} → ${pbsg.name} ${pbsg.buttonsLIFO}")
     unsubscribe(d)
     d.off()
@@ -179,6 +177,7 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
     pbsg.buttonsLIFO.push(button)
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
+  // else -> Nothing to do, button is already deactivated
 }
 
 //void pbsg_ActivatePrior(Map pbsg) {

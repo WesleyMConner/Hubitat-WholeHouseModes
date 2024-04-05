@@ -36,6 +36,10 @@ preferences {
   page(name: 'TestPbsgPage')
 }
 
+void pbsgButtonOnCallback(String button) {
+  logInfo('pbsgButtonOnCallback()', "Received button: ${button}")
+}
+
 // GUI
 
 Map TestPbsgPage() {
