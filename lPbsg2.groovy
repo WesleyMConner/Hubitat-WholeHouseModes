@@ -208,6 +208,7 @@ Map pbsg_Initialize(Map config) {
   // as 'active' or 'inactive'. If a single button is active, it should be
   // preserved.
   config?.allButtons.each { button ->
+    DevW device = getChildDevice("${config.name}_${button}")
     switch (switchState(device)) {
       case 'on':
         pbsg_ActivateButton(pbsg, button)
@@ -218,7 +219,7 @@ Map pbsg_Initialize(Map config) {
   }
   if (!pbsg.activeButton) {
     // During INIT: Use initialActiveButton in lieu of defaultButton
-    if (config.initialActiveButton) {
+    if (config?.initialActiveButton) {
       logInfo(
         'pbsg_Initialize',
         "initialActiveButton (${config.initialActiveButton}) → active"

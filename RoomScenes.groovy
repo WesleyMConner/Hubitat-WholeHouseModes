@@ -17,11 +17,10 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lFifo
 #include wesmc.lHExt
 #include wesmc.lHUI
 #include wesmc.lLut
-#include wesmc.lPbsg
+#include wesmc.lPbsgv2
 
 definition (
   parent: 'wesmc:WHA',
@@ -38,10 +37,6 @@ definition (
 
 preferences {
   page(name: 'RoomScenesPage')
-}
-
-List<String> getScenes() {
-  return state.scenes.collect { it.key == 'INACTIVE' ? 'OFF' : it.key }
 }
 
 String extractDeviceIdFromLabel(String deviceLabel) {
@@ -145,44 +140,44 @@ void updateTargetScene() {
   }
 }
 
-void buttonOnCallback(String button) {
+void pbsgButtonOnCallback(String button) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
   if (!button) {
     logWarn(
-      'buttonOnCallback',
+      'pbsgButtonOnCallback',
       'A null argument was received, using AUTOMATIC as a default'
     )
   }
   state.activeButton = button ?: 'AUTOMATIC'
-  logTrace(
-    'buttonOnCallback',
+  logInfo(
+    'pbsgButtonOnCallback',
     "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
   clearManualOverride()
   updateTargetScene()
   activateScene()
-  updateLutronKpadLeds()
+  //-RA2-HANDLES-THIS-> updateLutronKpadLeds()
 }
 
-void updateLutronKpadLeds() {  // old argument was "String currScene"
-  settings.sceneButtons.each { d ->
-    String buttonDni = d.getDeviceNetworkId()
-    String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
-    if (state.activeScene == sceneTarget) {
-      logInfo(
-        'updateLutronKpadLeds',
-        "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
-      )
-      d.on()
-    } else {
-      logTrace(
-        'updateLutronKpadLeds',
-        "Turning off LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
-      )
-      d.off()
-    }
-  }
-}
+//-RA2-HANDLES-THIS-> void updateLutronKpadLeds() {  // old argument was "String currScene"
+//-RA2-HANDLES-THIS->   settings.sceneButtons.each { d ->
+//-RA2-HANDLES-THIS->     String buttonDni = d.getDeviceNetworkId()
+//-RA2-HANDLES-THIS->     String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
+//-RA2-HANDLES-THIS->     if (state.activeScene == sceneTarget) {
+//-RA2-HANDLES-THIS->       logInfo(
+//-RA2-HANDLES-THIS->         'updateLutronKpadLeds',
+//-RA2-HANDLES-THIS->         "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
+//-RA2-HANDLES-THIS->       )
+//-RA2-HANDLES-THIS->       d.on()
+//-RA2-HANDLES-THIS->     } else {
+//-RA2-HANDLES-THIS->       logTrace(
+//-RA2-HANDLES-THIS->         'updateLutronKpadLeds',
+//-RA2-HANDLES-THIS->         "Turning off LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
+//-RA2-HANDLES-THIS->       )
+//-RA2-HANDLES-THIS->       d.off()
+//-RA2-HANDLES-THIS->     }
+//-RA2-HANDLES-THIS->   }
+//-RA2-HANDLES-THIS-> }
 
 Boolean isDeviceType(String devTypeCandidate) {
   return ['Rep', 'Ind'].contains(devTypeCandidate)
@@ -199,48 +194,6 @@ Integer expectedSceneDeviceValue(String devType, String deviceId) {
   return retVal
 }
 
-InstAppW getOrCreateRSPbsg() {
-  // The PBSG is created by createRSPbsgAndPageLink()
-  InstAppW pbsgApp = app.getChildAppByLabel(state.RSPBSG_LABEL)
-  if (!pbsgApp) {
-    List<String> scenes = getScenes()
-    if (scenes) {
-      logWarn('getOrCreateRSPbsg', "Adding RSPbsg ${state.RSPBSG_LABEL}")
-      pbsgApp = addChildApp('wesmc', 'RSPbsg', state.RSPBSG_LABEL)
-      ArrayList roomScenes = [ *scenes, 'AUTOMATIC' ]
-      roomScenes.removeAll { it == 'OFF' }
-      String dfltScene = 'AUTOMATIC'
-      String currScene = null
-      pbsgApp.pbsgConfigure(
-        roomScenes,  // Create a PBSG button per Hubitat Mode name
-        dfltScene,   // 'Day' is the default Mode/Button
-        currScene,   // Activate the Button for the current Mode
-        settings.pbsgLogThresh ?: 'INFO' // 'INFO' for normal operations
-                                         // 'DEBUG' to walk key PBSG methods
-                                         // 'TRACE' to include PBSG and VSW state
-      )
-    } else {
-      logWarn('getOrCreateRSPbsg', 'RSPbsg creation is pending room scenes')
-    }
-  }
-  return pbsgApp
-}
-
-void createRSPbsgAndPageLink() {
-  InstAppW pbsgApp = getOrCreateRSPbsg()
-  if (pbsgApp) {
-    href(
-      name: appInfo(pbsgApp),
-      width: 2,
-      url: "/installedapp/configure/${pbsgApp.id}/RSPbsgPage",
-      style: 'internal',
-      title: "Edit <b>${appInfo(pbsgApp)}</b>",
-      state: null
-    )
-  } else {
-    paragraph "Creation of the MPbsgHref is pending required data."
-  }
-}
 
 void subscribeToIndDeviceHandlerNoDelay() {
   settings.indDevices.each { d ->
@@ -278,15 +231,15 @@ void unsubscribeIndDevToHandler(DevW device) {
   unsubscribe(device)
 }
 
-void subscribeToKpadHandler() {
-  settings.seeTouchKpads.each { d ->
-    logInfo(
-      'subscribeToKpadHandler',
-      "${state.ROOM_LABEL} subscribing to keypad ${deviceInfo(d)}"
-    )
-    subscribe(d, kpadHandler, ['filterEvents': true])
-  }
-}
+//-RA2-HANDLES-THIS-> void subscribeToKpadHandler() {
+//-RA2-HANDLES-THIS->   settings.seeTouchKpads.each { d ->
+//-RA2-HANDLES-THIS->     logInfo(
+//-RA2-HANDLES-THIS->       'subscribeToKpadHandler',
+//-RA2-HANDLES-THIS->       "${state.ROOM_LABEL} subscribing to keypad ${deviceInfo(d)}"
+//-RA2-HANDLES-THIS->     )
+//-RA2-HANDLES-THIS->     subscribe(d, kpadHandler, ['filterEvents': true])
+//-RA2-HANDLES-THIS->   }
+//-RA2-HANDLES-THIS-> }
 
 void subscribeToRepHandler() {
   settings.repeaters.each { d ->
@@ -361,7 +314,7 @@ void subscribeToLuxSensorHandler() {
     state.brightLuxSensors = []
     settings.luxSensors.each { d ->
       logInfo(
-        'initialize',
+        'subscribeToLuxSensorHandler',
         "${state.ROOM_LABEL} subscribing to Lux Sensor ${deviceInfo(d)}"
       )
       subscribe(d, luxSensorHandler, ['filterEvents': true])
@@ -392,6 +345,18 @@ void indDeviceHandler(Event e) {
   }
 }
 
+void toggleButton(String button) {
+  // Toggle the button's device and let activate and deactivate react.
+  // This will result in delivery of the scene change via a callback.
+  String dni = "${state.ROOM_LABEL}_${button}"
+  DevW device = getChildDevice(dni)
+  if (switchState(device) == 'on') {
+    device.off()
+  } else {
+    devive.on()
+  }
+}
+
 void kpadHandler(Event e) {
   // Design Note
   //   - The field e.deviceId arrives as a number and must be cast toString().
@@ -407,8 +372,7 @@ void kpadHandler(Event e) {
       // Toggle the corresponding scene for the keypad button.
       String scene = state.sceneButtonMap?.getAt(e.deviceId.toString())
                                          ?.getAt(e.value)
-      if (scene) getOrCreateRSPbsg().pbsgToggleButton(scene)
-      // The prospective PBSG callback triggers further local processing.
+      toggleButton(scene)
       break
     case 'held':
     case 'released':
@@ -425,6 +389,10 @@ void kpadHandler(Event e) {
 void repeaterHandler(Event e) {
   // Main Repeaters send various events (e.g., pushed, buttonLed-##).
   // Isolate the buttonLed-## events which confirm|refute state.activeScene.
+  /*
+    CURRENTLY INFO ONLY
+
+    logInfo('repeaterHandler', e.descriptionText)
   if (e.name.startsWith('buttonLed-')) {
     Integer eventButton = safeParseInt(e.name.substring(10))
     String deviceId = extractDeviceIdFromLabel(e.displayName)
@@ -451,15 +419,16 @@ void repeaterHandler(Event e) {
       }
     }
   }
+  */
 }
 
 void modeHandler(Event e) {
   if (state.activeButton == 'AUTOMATIC') {
     // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
     if (e.name == 'mode') {
-      // Let buttonOnCallback() handle activeButton == 'AUTOMATIC'!
-      logTrace('modeHandler', 'Calling buttonOnCallback("AUTOMATIC")')
-      buttonOnCallback('AUTOMATIC')
+      // Let pbsgButtonOnCallback() handle activeButton == 'AUTOMATIC'!
+      logTrace('modeHandler', 'Calling pbsgButtonOnCallback("AUTOMATIC")')
+      pbsgButtonOnCallback('AUTOMATIC')
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -525,10 +494,11 @@ void picoHandler(Event e) {
         String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value.toString())
         if (scene) {
-          logInfo('picoHandler', [
+          logInfo(
+            'picoHandler',
             "w/ ${e.deviceId.toString()}-${e.value} toggling ${scene}"
-          ])
-          getOrCreateRSPbsg().pbsgToggleButton(scene)
+          )
+          toggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
           logTrace('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each { d ->
@@ -591,14 +561,14 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If AUTOMATIC is already active in the PBSG, buttonOnCallback()
+  //   - If AUTOMATIC is already active in the PBSG, pbsgButtonOnCallback()
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
-  InstAppW pbsg = getOrCreateRSPbsg()
+  Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
   if (pbsg) {
-    pbsg.pbsgActivateButton('AUTOMATIC')
-    buttonOnCallback('AUTOMATIC')
+    pbsg_ActivateButton(pbsg, 'AUTOMATIC')
+    pbsgButtonOnCallback('AUTOMATIC')
   } else {
     logWarn(
       'initialize',
@@ -821,7 +791,7 @@ Map RoomScenesPage() {
     //-> state.remove('..')
     //---------------------------------------------------------------------------------
     state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
-    state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
+    //state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
     state.remove('sufficientLight')
     state.remove('targetScene')
@@ -839,16 +809,28 @@ Map RoomScenesPage() {
     app.removeSetting('customScene1')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       idMotionSensors()
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }
       nameCustomScene()
       adjustStateScenesKeys()
+      //*********************************************************************
+      if (state.scenes) {
+        ArrayList scenes = state.scenes.collect{ k, v -> return k }
+        Map rsPbsgConfig = [
+          'name': state.ROOM_LABEL,
+          'allButtons': [ *scenes, 'AUTOMATIC' ].minus([ 'INACTIVE', 'OFF' ]),
+          'defaultButton': 'AUTOMATIC',
+          'initialActiveButton': null
+        ]
+        Map rsPbsg = pbsg_Initialize(rsPbsgConfig)
+      } else {
+        paragraph "Creation of the room's PBSG is pending identification of room scenes"
+      }
+      //*********************************************************************
       idRa2RepeatersImplementingScenes()
       idIndDevices()
       configureRoomScene()
-      createRSPbsgAndPageLink()
     }
   }
 }
