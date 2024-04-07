@@ -15,7 +15,7 @@
 // Referenced types below
 //   - import com.hubitat.app.DeviceWrapper as DevW
 //   - import com.hubitat.hub.domain.Event as Event
-// The following are required when instantiating a PbsgCore application.
+// The following are required when using this library.
 //   - #include wesmc.lHExt
 //   - #include wesmc.lHUI
 

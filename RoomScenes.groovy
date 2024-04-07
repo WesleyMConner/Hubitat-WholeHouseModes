@@ -156,28 +156,7 @@ void pbsgButtonOnCallback(String button) {
   clearManualOverride()
   updateTargetScene()
   activateScene()
-  //-RA2-HANDLES-THIS-> updateLutronKpadLeds()
 }
-
-//-RA2-HANDLES-THIS-> void updateLutronKpadLeds() {  // old argument was "String currScene"
-//-RA2-HANDLES-THIS->   settings.sceneButtons.each { d ->
-//-RA2-HANDLES-THIS->     String buttonDni = d.getDeviceNetworkId()
-//-RA2-HANDLES-THIS->     String sceneTarget = state.kpadButtonDniToTargetScene[buttonDni]
-//-RA2-HANDLES-THIS->     if (state.activeScene == sceneTarget) {
-//-RA2-HANDLES-THIS->       logInfo(
-//-RA2-HANDLES-THIS->         'updateLutronKpadLeds',
-//-RA2-HANDLES-THIS->         "Turning on LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
-//-RA2-HANDLES-THIS->       )
-//-RA2-HANDLES-THIS->       d.on()
-//-RA2-HANDLES-THIS->     } else {
-//-RA2-HANDLES-THIS->       logTrace(
-//-RA2-HANDLES-THIS->         'updateLutronKpadLeds',
-//-RA2-HANDLES-THIS->         "Turning off LED ${buttonDni} for ${state.ROOM_LABEL} scene ${sceneTarget}"
-//-RA2-HANDLES-THIS->       )
-//-RA2-HANDLES-THIS->       d.off()
-//-RA2-HANDLES-THIS->     }
-//-RA2-HANDLES-THIS->   }
-//-RA2-HANDLES-THIS-> }
 
 Boolean isDeviceType(String devTypeCandidate) {
   return ['Rep', 'Ind'].contains(devTypeCandidate)
@@ -193,7 +172,6 @@ Integer expectedSceneDeviceValue(String devType, String deviceId) {
   }
   return retVal
 }
-
 
 void subscribeToIndDeviceHandlerNoDelay() {
   settings.indDevices.each { d ->
@@ -230,16 +208,6 @@ void unsubscribeIndDevToHandler(DevW device) {
   )
   unsubscribe(device)
 }
-
-//-RA2-HANDLES-THIS-> void subscribeToKpadHandler() {
-//-RA2-HANDLES-THIS->   settings.seeTouchKpads.each { d ->
-//-RA2-HANDLES-THIS->     logInfo(
-//-RA2-HANDLES-THIS->       'subscribeToKpadHandler',
-//-RA2-HANDLES-THIS->       "${state.ROOM_LABEL} subscribing to keypad ${deviceInfo(d)}"
-//-RA2-HANDLES-THIS->     )
-//-RA2-HANDLES-THIS->     subscribe(d, kpadHandler, ['filterEvents': true])
-//-RA2-HANDLES-THIS->   }
-//-RA2-HANDLES-THIS-> }
 
 void subscribeToRepHandler() {
   settings.repeaters.each { d ->
@@ -354,35 +322,6 @@ void toggleButton(String button) {
     device.off()
   } else {
     devive.on()
-  }
-}
-
-void kpadHandler(Event e) {
-  // Design Note
-  //   - The field e.deviceId arrives as a number and must be cast toString().
-  //   - Hubitat runs Groovy 2.4. Groovy 3 constructs - x?[]?[] - are not available.
-  //   - Kpad buttons are matched to state data to activate a scene.
-  logTrace('kpadHandler', [
-    "state.activeButton: ${state.activeButton}",
-    "state.activeScene: ${state.activeScene}",
-    eventDetails(e)
-  ])
-  switch (e.name) {
-    case 'pushed':
-      // Toggle the corresponding scene for the keypad button.
-      String scene = state.sceneButtonMap?.getAt(e.deviceId.toString())
-                                         ?.getAt(e.value)
-      toggleButton(scene)
-      break
-    case 'held':
-    case 'released':
-      // Ignore without logging
-      break
-    default:
-      logWarn('kpadHandler', [
-        "DNI: '${b(e.deviceId)}'",
-        "For '${state.ROOM_LABEL}' unexpected event name ${b(e.name)}"
-      ])
   }
 }
 
@@ -791,11 +730,11 @@ Map RoomScenesPage() {
     //-> state.remove('..')
     //---------------------------------------------------------------------------------
     state.ROOM_LABEL = app.label  // WHA creates App w/ Label == Room Name
-    //state.RSPBSG_LABEL = "${state.ROOM_LABEL}Pbsg"
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
     state.remove('sufficientLight')
     state.remove('targetScene')
     state.brightLuxSensors = []
+    state.remove('RSPBSG_LABEL')
     app.removeSetting('modeToScene^Chill')
     app.removeSetting('modeToScene^Cleaning')
     app.removeSetting('modeToScene^Day')
