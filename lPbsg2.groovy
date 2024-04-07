@@ -122,7 +122,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
       unsubscribe(d)
       d.on()
-      pbsgButtonOnCallback(button)
+      pbsgButtonOnCallback(pbsg, button)
       pauseExecution(100)  // Take a breath to let device update
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
@@ -205,8 +205,8 @@ Map pbsg_Initialize(Map config) {
     activeButton: null
   ]
   // Process buttons into order leveraging their current state for treatment
-  // as 'active' or 'inactive'. If a single button is active, it should be
-  // preserved.
+  // as 'active' or 'inactive' (in the fifo). If a single button is active,
+  // it should be preserved.
   config?.allButtons.each { button ->
     DevW device = getChildDevice("${config.name}_${button}")
     switch (switchState(device)) {

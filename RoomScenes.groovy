@@ -114,7 +114,6 @@ void activateScene() {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
     state.currScene = expectedScene
     // Decode and process the scene's per-device actions
-    //--xx-> logInfo('activateScene', "state.scenes: ${state.scenes}, state.currScene: ${state.currScene}")
     Map actions = state.scenes.get(state.currScene)
     actions.get('Rep').each { repeaterId, button ->
       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")

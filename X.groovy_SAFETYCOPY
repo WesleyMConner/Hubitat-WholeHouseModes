@@ -1,0 +1,349 @@
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+void room_initAllRooms() {
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Den',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 48 ], 'Ind': [ '02': 100 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 46 ], 'Ind': [ '02': 100 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 45 ], 'Ind': [ '02': 100 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 41 ], 'Ind': [ '02': 100 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 47 ], 'Ind': [ '02': 0 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 42 ], 'Ind': [ '02': 0 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 45 ], 'Ind': [ '02': 0 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ 'true' ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'DenLamp',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 15 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 16 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 15 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 11 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 17 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 12 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 15 ]
+      ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Guest',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 58 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 56 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 55 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 51 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 57 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 52 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 55 ]
+      ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'OFF',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Hers',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 91 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 94 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 91 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
+      'OFF': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 95 ]
+      ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'OFF',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'His',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 31 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 34 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 31 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
+      'OFF': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 35 ]
+      ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Kitchen',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 28 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 26 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 25 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 21 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 27 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 22 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 25 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Lanai',
+    'scenes': [
+      'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 8, 'RA2 Repeater 2 (ra2-83)': 78 ] ],
+      'Party': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 6, 'RA2 Repeater 2 (ra2-83)': 76 ] ],
+      'Night': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 74 ] ],
+      'Chill': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'RA2 Repeater 2 (ra2-83)': 71 ] ],
+      'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 7, 'RA2 Repeater 2 (ra2-83)': 77 ] ],
+      'Cleaning': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 2, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
+      'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 3, 'RA2 Repeater 2 (ra2-83)': 75 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'OFF',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Laundry',
+    'roomOccupied': [],
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 38 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 34 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 31 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
+      'OFF': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 35 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [
+      'LHS Bath - Sensor (ra2-72)'
+    ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'LhsBath',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 68 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 66 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 64 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 61 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 67 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 62 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 63 ] ],
+      'OFF': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 65 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'LhsBdrm',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 48 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 46 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 45 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 41 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 41 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 42 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 45 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Main',
+    'roomOccupied': [ true ],
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 88 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 86 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 84 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 81 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 87 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 82 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 85 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'picoButtonToTargetScene': [
+      '6846': [ '1': 'Party', '3': 'AUTOMATIC', '5': 'Off'
+      ]
+    ],
+    'name': 'Office',
+    'roomOccupied': [ true ],
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 58 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 56 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 55 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 51 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 57 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 52 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 55 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Primary',
+    'roomOccupied': [ true ],
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 28 ], 'Ind': [ '0B': 0 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 26 ], 'Ind': [ '0B': 50 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 25 ], 'Ind': [ '0B': 0 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 21 ], 'Ind': [ '0B': 20 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 27 ], 'Ind': [ '0B': 100 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 22 ], 'Ind': [ '0B': 100 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 25 ], 'Ind': [ '0B': 0 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'PrimBath',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 18 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 16 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 15 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 11 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 17 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 12 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 15 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'OFF',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'RhsBath',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 78 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 76 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 74 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 71 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 77 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 72 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 73 ] ],
+      'OFF': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 75 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [],
+    'currScene': 'Day',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'RhsBdrm',
+    'scenes': [
+      'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 15 ] ],
+      'Party': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 14 ] ],
+      'Night': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 12 ] ],
+      'Chill': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 9 ] ],
+      'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 9 ] ],
+      'Cleaning': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 10 ] ],
+      'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 11 ] ]
+    ]
+  ])
+  roomStore_Save([
+    'activeButton': 'AUTOMATIC',
+    'activeMotionSensors': [ true ],
+    'activeScene': 'Day',
+    'brightLuxSensors': [
+      'Control - Rear MultiSensor',
+      'Control - Front MultiSensor'
+    ],
+    'currScene': 'OFF',
+    'logLevel': 3,
+    'moDetected': [],
+    'name': 'Yard',
+    'scenes': [
+      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 64 ], 'Ind': [ 'Front': 100, 'Primary': 100, 'Guest': 100 ] ],
+      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 61 ], 'Ind': [ 'Front': 100, 'Primary': 100, 'Guest': 100 ] ],
+      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 64 ], 'Ind': [ 'Front': 100, 'Primary': 100, 'Guest': 100 ] ],
+      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 61 ], 'Ind': [ 'Front': 100, 'Guest': 100, 'Primary': 100 ] ],
+      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ], 'Ind': [ 'Front': 0, 'Guest': 0, 'Primary': 0 ] ],
+      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ], 'Ind': [ 'Front': 0, 'Guest': 0, 'Primary': 0 ] ],
+      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ], 'Ind': [ 'Front': 0, 'Primary': 0, 'Guest': 0 ] ],
+      'OFF': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ], 'Ind': [ 'Front': 0, 'Guest': 0, 'Primary': 0 ] ]
+    ]
+  ])
+}
