@@ -72,15 +72,12 @@ Map config_SolicitInstance(Integer settingsKeySuffix) {
   if (name) {
     String buttonsKey = "pbsgButtons^${settingsKeySuffix}"
     String defaultKey = "pbsgDefault^${settingsKeySuffix}"
-    String activeKey = "pbsgActive^${settingsKeySuffix}"
     ArrayList allButtons = config_SolicitButtons(buttonsKey)
     String defaultButton = config_SolicitDefault(defaultKey, allButtons)
-    //--DROP-FEATURE-> String initialActiveButton = config_SolicitInitialActive(activeKey, allButtons)
     config = [
       'name': name,
       'allButtons': allButtons,
       'defaultButton': defaultButton
-      //--DROP-FEATURE-> 'initialActiveButton': initialActiveButton
     ]
   } else {
     paragraph('', width: 10)  // Filler for a 12 cell row
@@ -122,7 +119,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
       unsubscribe(d)
       d.on()
-      pbsgButtonOnCallback(pbsg)
+      pbsg_ButtonOnCallback(pbsg)
       pauseExecution(100)  // Take a breath to let device update
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
@@ -154,7 +151,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
     unsubscribe(d)
     pbsg.activeButton = button
     d.on()
-    pbsgButtonOnCallback(pbsg)
+    pbsg_ButtonOnCallback(pbsg)
     pauseExecution(100)  // Take a breath to let device update
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
@@ -218,18 +215,8 @@ Map pbsg_Initialize(Map config) {
     }
   }
   if (!pbsg.activeButton) {
-    // During INIT: Use initialActiveButton in lieu of defaultButton
-    //--DROP-FEATURE-> if (config?.initialActiveButton) {
-    //--DROP-FEATURE->   logInfo(
-    //--DROP-FEATURE->     'pbsg_Initialize',
-    //--DROP-FEATURE->     "initialActiveButton (${config.initialActiveButton}) → active"
-    //--DROP-FEATURE->   )
-    //--DROP-FEATURE->   pbsg_ActivateButton(pbsg, config.initialActiveButton)
-    //--DROP-FEATURE->   pbsg.defaultButton = config.defaultButton
-    //--DROP-FEATURE-> } else {
-      pbsg.defaultButton = config.defaultButton
-      pbsg_EnforceDefault(pbsg)
-    //--DROP-FEATURE-> }
+    pbsg.defaultButton = config.defaultButton
+    pbsg_EnforceDefault(pbsg)
   }
   // Post INIT: Use defaultButton to populate an empty activeButton
   logInfo('pbsg_Initialize', "Initial PBSG: ${pbsg_State(pbsg)}")

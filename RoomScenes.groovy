@@ -139,18 +139,18 @@ void updateTargetScene() {
   }
 }
 
-void pbsgButtonOnCallback(Map pbsg) {
+void pbsg_ButtonOnCallback(Map pbsg) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
   if (!pbsg) {
     logError(
-      'pbsgButtonOnCallback',
+      'pbsg_ButtonOnCallback',
       'A null pbsg argument was received, assuming pbsg.activeButton is "Automatic"'
     )
   }
   state.activeButton = pbsg?.activeButton ?: 'Automatic'
   logInfo(
-    'pbsgButtonOnCallback',
+    'pbsg_ButtonOnCallback',
     "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
   clearManualOverride()
   updateTargetScene()
@@ -366,8 +366,8 @@ void modeHandler(Event e) {
     if (e.name == 'mode') {
       Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
       pbsg.activeButton = 'Automatic'
-      logTrace('modeHandler', 'Calling pbsgButtonOnCallback()')
-      pbsgButtonOnCallback(pbsg)
+      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+      pbsg_ButtonOnCallback(pbsg)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -500,14 +500,14 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If Automatic is already active in the PBSG, pbsgButtonOnCallback()
+  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback()
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
   Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
   if (pbsg) {
     pbsg_ActivateButton(pbsg, 'Automatic')
-    pbsgButtonOnCallback(pbsg)
+    pbsg_ButtonOnCallback(pbsg)
   } else {
     logWarn(
       'initialize',
@@ -760,7 +760,6 @@ Map RoomScenesPage() {
           'name': state.ROOM_LABEL,
           'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
           'defaultButton': 'Automatic'
-          //--DROP-FEATURE-> 'initialActiveButton': null
         ]
         Map rsPbsg = pbsg_Initialize(rsPbsgConfig)
       } else {

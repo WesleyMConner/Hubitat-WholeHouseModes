@@ -19,6 +19,33 @@
 //   - #include wesmc.lHExt
 //   - #include wesmc.lHUI
 
+// = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
+//-> import com.hubitat.app.DeviceWrapper as DevW
+//-> import com.hubitat.app.InstalledAppWrapper as InstAppW
+//-> import com.hubitat.hub.domain.Event as Event
+//-> import com.hubitat.hub.domain.Location as Loc
+//->  The Groovy Linter generates false positives on Hubitat #include !!!
+//-> #include wesmc.lHExt
+//-> #include wesmc.lHUI
+//-> #include wesmc.lLut
+//-> #include wesmc.lPbsgv2
+
+//-> String extractDeviceIdFromLabel(String deviceLabel) {
+//->   //->x = (deviceLabel =~ /\((.*)\)/)
+//->   //->logDebug('extractDeviceIdFromLabel', [
+//->   //->  "deviceLabel: ${deviceLabel}",
+//->   //->  "x: ${x}",
+//->   //->  "x[0]: ${x[0]}",
+//->   //->  "x[0]: ${x[0][1]}",
+//->   //->])
+//->   return (deviceLabel =~ /\((.*)\)/)[0][1]
+//-> }
+
+//-> String getDeviceId(DevW device) {
+//->   return device?.label ? extractDeviceIdFromLabel(device.label) : null
+//-> }
+
 library(
   name: 'lRoom',
   namespace: 'wesmc',
@@ -43,32 +70,10 @@ void roomStore_Save(Map room) {
   state.roomStore = roomStore
 }
 
-// = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-
-//import com.hubitat.app.DeviceWrapper as DevW
-//import com.hubitat.app.InstalledAppWrapper as InstAppW
-//import com.hubitat.hub.domain.Event as Event
-//import com.hubitat.hub.domain.Location as Loc
-// The Groovy Linter generates false positives on Hubitat #include !!!
-//#include wesmc.lHExt
-//#include wesmc.lHUI
-//#include wesmc.lLut
-//#include wesmc.lPbsgv2
-
-//-> String extractDeviceIdFromLabel(String deviceLabel) {
-//->   //->x = (deviceLabel =~ /\((.*)\)/)
-//->   //->logDebug('extractDeviceIdFromLabel', [
-//->   //->  "deviceLabel: ${deviceLabel}",
-//->   //->  "x: ${x}",
-//->   //->  "x[0]: ${x[0]}",
-//->   //->  "x[0]: ${x[0][1]}",
-//->   //->])
-//->   return (deviceLabel =~ /\((.*)\)/)[0][1]
-//-> }
-
-//-> String getDeviceId(DevW device) {
-//->   return device?.label ? extractDeviceIdFromLabel(device.label) : null
-//-> }
+// The psuedo-class "roomStore" facilitates concurrent storage of multiple
+// "room" psuedo-class instances. A "room" psuedo-class instance (its Map)
+// extends a "pbsg" psuedo-class instance (its Map). Thus, a "room" Map
+// can be supplied where a "pbsg" Map is expected (but, not the converse).
 
 void room_ActivateScene(Map room) {
   String expectedScene = (
@@ -89,18 +94,18 @@ void room_ActivateScene(Map room) {
   }
 }
 
-void pbsgButtonOnCallback(Map pbsg) {
+void pbsg_ButtonOnCallback(Map room) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
   if (!button) {
     logWarn(
-      'pbsgButtonOnCallback',
+      'pbsg_ButtonOnCallback',
       'A null argument was received, using Automatic as a default'
     )
   }
   room.activeButton = button ?: 'Automatic'
   logInfo(
-    'pbsgButtonOnCallback',
+    'pbsg_ButtonOnCallback',
     "Button ${b(button)} -> room.activeButton: ${b(room.activeButton)}")
   room.moDetected = [:] // clears Manual Override
   // UPDATE THE TARGET SCENE
@@ -269,12 +274,12 @@ void modeHandler(Event e) {
   if (room.activeButton == 'Automatic') {
     // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
-      // Let pbsgButtonOnCallback() handle activeButton == 'Automatic'!
-      logTrace('modeHandler', 'Calling pbsgButtonOnCallback()')
+      // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
+      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
 
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
-      pbsgButtonOnCallback(pbsg)
+      pbsg_ButtonOnCallback(pbsg)
 
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
@@ -408,7 +413,7 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If Automatic is already active in the PBSG, pbsgButtonOnCallback()
+  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback()
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
@@ -418,7 +423,7 @@ void initialize() {
 
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
-      pbsgButtonOnCallback(pbsg)
+      pbsg_ButtonOnCallback(pbsg)
 
   } else {
     logWarn(
@@ -627,7 +632,6 @@ Map roomScenesPage() {
           'name': room.name,
           'allButtons': [ *scenes, 'Automatic' ] - [ 'OFF' ],
           'defaultButton': 'Automatic'
-          //--DROP-FEATURE-> 'initialActiveButton': null
         ]
         pbsg_Initialize(rsPbsgConfig)
       } else {
