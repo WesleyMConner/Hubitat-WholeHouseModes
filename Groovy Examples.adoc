@@ -1,0 +1,12 @@
+''''
+String extractNativeIdFromLabel(String deviceLabel) {
+  //->x = (deviceLabel =~ /\((.*)\)/)
+  //->logDebug('extractNativeIdFromLabel', [
+  //->  "deviceLabel: ${deviceLabel}",
+  //->  "x: ${x}",
+  //->  "x[0]: ${x[0]}",
+  //->  "x[0]: ${x[0][1]}",
+  //->])
+  return (deviceLabel =~ /\((.*)\)/)[0][1]
+}
+''''

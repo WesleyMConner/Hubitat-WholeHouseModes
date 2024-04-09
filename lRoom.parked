@@ -19,6 +19,33 @@
 //   - #include wesmc.lHExt
 //   - #include wesmc.lHUI
 
+// = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
+//-> import com.hubitat.app.DeviceWrapper as DevW
+//-> import com.hubitat.app.InstalledAppWrapper as InstAppW
+//-> import com.hubitat.hub.domain.Event as Event
+//-> import com.hubitat.hub.domain.Location as Loc
+//->  The Groovy Linter generates false positives on Hubitat #include !!!
+//-> #include wesmc.lHExt
+//-> #include wesmc.lHUI
+//-> #include wesmc.lLut
+//-> #include wesmc.lPbsgv2
+
+//-> String extractDeviceIdFromLabel(String deviceLabel) {
+//->   //->x = (deviceLabel =~ /\((.*)\)/)
+//->   //->logDebug('extractDeviceIdFromLabel', [
+//->   //->  "deviceLabel: ${deviceLabel}",
+//->   //->  "x: ${x}",
+//->   //->  "x[0]: ${x[0]}",
+//->   //->  "x[0]: ${x[0][1]}",
+//->   //->])
+//->   return (deviceLabel =~ /\((.*)\)/)[0][1]
+//-> }
+
+//-> String getDeviceId(DevW device) {
+//->   return device?.label ? extractDeviceIdFromLabel(device.label) : null
+//-> }
+
 library(
   name: 'lRoom',
   namespace: 'wesmc',
@@ -100,9 +127,38 @@ Boolean isDeviceType(String devTypeCandidate) {
   return ['Rep', 'Ind'].contains(devTypeCandidate)
 }
 
-// =====
-// ===== MODE HANDLER
-// =====
+//??tbd Integer scene_GetDeviceValue(Map )
+
+//-> Integer expectedSceneDeviceValue(Map room, String devType, String deviceLabel) {
+//->   Integer retVal = null
+//->   if (isDeviceType(devType)) {
+//->     // 'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+//->     retVal = room.scenes?."${room.activeScene}"?."${devType}"?."${deviceLabel}"
+//->   } else {
+//->     logError('expectedSceneDeviceValue', "devType (${devType}) not recognized")
+//->   }
+//->   return retVal
+//-> }
+
+//-> void subscribeToIndDeviceHandlerNoDelay() {
+//->   settings.zWaveDevices.each { d ->
+//->     logInfo(
+//->       'subscribeToIndDeviceHandlerNoDelay',
+//->       "${room.name} subscribing to independentDevice ${deviceInfo(d)}"
+//->     )
+//->     subscribe(d, indDeviceHandler, ['filterEvents': true])
+//->   }
+//-> }
+
+//-> void subscribeToRepHandler() {
+//->   settings.ra2Repeaters.each { d ->
+//->     logInfo(
+//->       'subscribeToRepHandler',
+//->       "${room.name} subscribing to Repeater ${deviceInfo(d)}"
+//->     )
+//->     subscribe(d, repeaterHandler, ['filterEvents': true])
+//->   }
+//-> }
 
 void subscribeToModeHandler() { // MOVE TO WHA SCOPE
   logInfo(
@@ -110,48 +166,6 @@ void subscribeToModeHandler() { // MOVE TO WHA SCOPE
     "${room.name} subscribing to location 'mode'"
   )
   subscribe(location, 'mode', modeHandler)
-}
-
-void modeHandler(Event e) {
-  if (room.activeButton == 'Automatic') {
-    // Hubitat Mode changes only apply when the room's button is 'Automatic'.
-    if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
-      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
-      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-      pbsg.activeButton = 'Automatic'
-      pbsg_ButtonOnCallback(pbsg)
-    } else {
-      logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
-    }
-  } else {
-    logTrace(
-      'modeHandler', [
-        'Ignored: Mode Change',
-        "room.activeButton: ${b(room.activeButton)}",
-        "room.activeScene: ${b(room.activeScene)}"
-      ]
-    )
-  }
-}
-
-// =====
-// ===== MOTION SENSOR HANDLER
-// =====
-
-void idMotionSensors() {
-  input(
-    name: 'motionSensors',
-    title: [
-      heading3('Identify Room Motion Sensors'),
-      bullet2('The special scene OFF is Automatically added'),
-      bullet2('OFF is invoked when the room is unoccupied')
-    ].join('<br/>'),
-    type: 'device.LutronMotionSensor',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
 }
 
 void subscribeToMotionSensorHandler() { // RETAIN AT ROOM SCOPE
@@ -176,6 +190,111 @@ void subscribeToMotionSensorHandler() { // RETAIN AT ROOM SCOPE
   }
 }
 
+void subscribeToLuxSensorHandler() {
+  if (settings.luxSensors) {
+    room.brightLuxSensors = []
+    settings.luxSensors.each { d ->
+      logInfo(
+        'subscribeToLuxSensorHandler',
+        "${room.name} subscribing to Lux Sensor ${deviceInfo(d)}"
+      )
+      subscribe(d, luxSensorHandler, ['filterEvents': true])
+    }
+  } else {
+    room.brightLuxSensors = [ ]
+  }
+}
+
+void indDeviceHandler(Event e) {
+  // Devices send various events (e.g., switch, level, pushed, released).
+  // Isolate the events that confirm|refute room.activeScene.
+  Integer reported
+  // Only select events are considered for MANUAL OVERRIDE detection.
+  if (e.name == 'level') {
+    reported = safeParseInt(e.value)
+  } else if (e.name == 'switch' && e.value == 'off') {
+    reported = 0
+  }
+  String deviceLabel = e.displayName
+  Integer expected = room.scenes?."${room.activeScene}"?."${devType}"?."${deviceLabel}"
+  if (reported == expected) {
+    room.moDetected = room.moDetected.collect { key, value ->
+      if (key != deviceLabel) { [key, value] }
+    }
+  } else {
+    room.moDetected.put(deviceLabel, "${reported} (${expected})")
+  }
+}
+
+void toggleButton(String button) {
+  // Toggle the button's device and let activate and deactivate react.
+  // This will result in delivery of the scene change via a callback.
+  String dni = "${room.name}_${button}"
+  DevW device = getChildDevice(dni)
+  if (switchState(device) == 'on') {
+    device.off()
+  } else {
+    devive.on()
+  }
+}
+
+//-> void repeaterHandler(Event e) {
+//->   // Main Repeaters send various events (e.g., pushed, buttonLed-##).
+//->   // Isolate the buttonLed-## events which confirm|refute room.activeScene.
+//->     logInfo('repeaterHandler', e.descriptionText)
+//->   if (e.name.startsWith('buttonLed-')) {
+//->     Integer eventButton = safeParseInt(e.name.substring(10))
+//->     String deviceId = extractDeviceIdFromLabel(e.displayName)
+//->     // Is there an expected sceneButton for the deviceId?
+//->     Integer sceneButton = expectedSceneDeviceValue('Rep', deviceId)
+//->     // And if so, does it match the eventButton?
+//->     if (sceneButton && sceneButton == eventButton) {
+//->       // This event can be used to confirm or refute the target scene.
+//->       if (e.value == 'on') {
+//->         // Scene compliance confirmed
+//->         logTrace('repeaterHandler', "${deviceId} complies with scene")
+//->         room.moDetected.remove(deviceId)
+//->       } else if (e.value == 'off') {
+//->         // Scene compliance refuted (i.e., Manual Override)
+//->         String summary = "${deviceId} button ${eventButton} off, expected on"
+//->         logInfo('repeaterHandler', [ 'MANUAL OVERRIDE', summary ])
+//->         room.moDetected[deviceId] = summary
+//->       } else {
+//->         // Error condition
+//->         logWarn(
+//->           'repeaterHandler',
+//->           "Main Repeater (${deviceId}) with unexpected value (${e.value}"
+//->         )
+//->       }
+//->     }
+//->   }
+//-> }
+
+void modeHandler(Event e) {
+  if (room.activeButton == 'Automatic') {
+    // Hubitat Mode changes only apply when the room's button is 'Automatic'.
+    if (e.name == 'mode') {
+      // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
+      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+      pbsg.activeButton = 'Automatic'
+      pbsg_ButtonOnCallback(pbsg)
+
+    } else {
+      logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
+    }
+  } else {
+    logTrace(
+      'modeHandler', [
+        'Ignored: Mode Change',
+        "room.activeButton: ${b(room.activeButton)}",
+        "room.activeScene: ${b(room.activeScene)}"
+      ]
+    )
+  }
+}
+
 void motionSensorHandler(Event e) {
   // It IS POSSIBLE to have multiple motion sensors per room.
   logDebug('motionSensorHandler', eventDetails(e))
@@ -191,40 +310,6 @@ void motionSensorHandler(Event e) {
     } else {
       logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
     }
-  }
-}
-
-// =====
-// ===== LUX SENSOR HANDLER
-// =====
-
-void idLuxSensors() {
-  input(
-    name: 'luxSensors',
-    title: [
-      heading3('Identify Room Lux Sensors'),
-      bullet2('The special scene OFF is Automatically added'),
-      bullet2('OFF is invoked when no Lux Sensor is above threshold')
-    ].join('<br/>'),
-    type: 'capability.illuminanceMeasurement',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void subscribeToLuxSensorHandler() {
-  if (settings.luxSensors) {
-    room.brightLuxSensors = []
-    settings.luxSensors.each { d ->
-      logInfo(
-        'subscribeToLuxSensorHandler',
-        "${room.name} subscribing to Lux Sensor ${deviceInfo(d)}"
-      )
-      subscribe(d, luxSensorHandler, ['filterEvents': true])
-    }
-  } else {
-    room.brightLuxSensors = [ ]
   }
 }
 
@@ -249,60 +334,6 @@ void luxSensorHandler(Event e) {
       "sufficient light: ${room.brightLuxSensors}"
     ])
     room_ActivateScene(room)
-  }
-}
-
-void idLowLightThreshold() {
-  input(
-    name: 'lowLuxThreshold',
-    title: [
-      heading3('Identify Low-Light Lux Threshold')
-    ].join('<br/>'),
-    type: 'number',
-    submitOnChange: true,
-    required: false,
-    multiple: false
-  )
-}
-
-// =====
-// ===== INDEPENDENT DEVICE HANDLER
-// =====
-
-void indDeviceHandler(Event e) {
-  // Devices send various events (e.g., switch, level, pushed, released).
-  // Isolate the events that confirm|refute room.activeScene.
-  Integer reported
-  // Only select events are considered for MANUAL OVERRIDE detection.
-  if (e.name == 'level') {
-    reported = safeParseInt(e.value)
-  } else if (e.name == 'switch' && e.value == 'off') {
-    reported = 0
-  }
-  String deviceLabel = e.displayName
-  Integer expected = room.scenes?."${room.activeScene}"?."${devType}"?."${deviceLabel}"
-  if (reported == expected) {
-    room.moDetected = room.moDetected.collect { key, value ->
-      if (key != deviceLabel) { [key, value] }
-    }
-  } else {
-    room.moDetected.put(deviceLabel, "${reported} (${expected})")
-  }
-}
-
-// =====
-// ===== PICO BUTTON HANDLER
-// =====
-
-void toggleButton(String button) {
-  // Toggle the button's device and let activate and deactivate react.
-  // This will result in delivery of the scene change via a callback.
-  String dni = "${room.name}_${button}"
-  DevW device = getChildDevice(dni)
-  if (switchState(device) == 'on') {
-    device.off()
-  } else {
-    devive.on()
   }
 }
 
@@ -352,6 +383,21 @@ void picoHandler(Event e) {
   }
 }
 
+void installed() {
+  logTrace('installed', 'At Entry')
+  initialize()
+}
+
+void updated() {
+  logTrace('updated', 'At Entry')
+  unsubscribe()  // Suspend all events (e.g., child devices, mode changes).
+  initialize()
+}
+
+void uninstalled() {
+  logWarn('uninstalled', 'At Entry')
+}
+
 void initialize() {
   logInfo(
     'initialize',
@@ -362,6 +408,7 @@ void initialize() {
   populateStateScenesAssignValues()
   room.moDetected = [:] // clears Manual Override
   settings.zWaveDevices.each { device -> unsubscribe(device) }
+  //-> subscribeToRepHandler()
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
@@ -373,15 +420,60 @@ void initialize() {
   Map pbsg = pbsgStore_Retrieve(room.name)
   if (pbsg) {
     pbsg_ActivateButton(pbsg, 'Automatic')
-    logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-    pbsg.activeButton = 'Automatic'
-    pbsg_ButtonOnCallback(pbsg)
+
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+      pbsg.activeButton = 'Automatic'
+      pbsg_ButtonOnCallback(pbsg)
+
   } else {
     logWarn(
       'initialize',
       'The RSPbsg is pending additional configuration data.'
     )
   }
+}
+
+void idMotionSensors() {
+  input(
+    name: 'motionSensors',
+    title: [
+      heading3('Identify Room Motion Sensors'),
+      bullet2('The special scene OFF is Automatically added'),
+      bullet2('OFF is invoked when the room is unoccupied')
+    ].join('<br/>'),
+    type: 'device.LutronMotionSensor',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void idLuxSensors() {
+  input(
+    name: 'luxSensors',
+    title: [
+      heading3('Identify Room Lux Sensors'),
+      bullet2('The special scene OFF is Automatically added'),
+      bullet2('OFF is invoked when no Lux Sensor is above threshold')
+    ].join('<br/>'),
+    type: 'capability.illuminanceMeasurement',
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
+}
+
+void idLowLightThreshold() {
+  input(
+    name: 'lowLuxThreshold',
+    title: [
+      heading3('Identify Low-Light Lux Threshold')
+    ].join('<br/>'),
+    type: 'number',
+    submitOnChange: true,
+    required: false,
+    multiple: false
+  )
 }
 
 void nameCustomScene() {
@@ -408,6 +500,104 @@ void adjustStateScenesKeys() {
     assembleScenes.contains(k) ? [k, v] : [:]
   }
 }
+
+//-> Map getDeviceValues(String scene) {
+//->   String keyPrefix = "scene^${scene}^"
+//->   List<DevW> allowedDevices = allowedDevices = [ *settings.get('zWaveDevices'), *settings.get('repeaters')]
+//->   List<String> allowedDeviceIds = allowedDevices.collect { device -> getDeviceId(device) }
+//->   Map results = ['Rep': [:], 'Ind': [:]]
+//->   settings.findAll { k1, v1 ->
+//->     k1.startsWith(keyPrefix)
+//->   }.each { k2, v2 ->
+//->     ArrayList typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
+//->     if (typeAndId[0] == 'RA2') {
+//->       logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
+//->       app.removeSetting(k2)
+//->     } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
+//->       logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
+//->     } else {
+//->       // Enforce min/max constraints on Independent (Ind) device value.
+//->       if (typeAndId[1] == 'Ind') {
+//->         if (v2 > 100) {
+//->           results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):100])
+//->         } else if (v2 < 0) {
+//->           results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):0])
+//->         }
+//->       } else {
+//->         results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
+//->       }
+//->     }
+//->   }
+//->   return results
+//-> }
+
+//-> void populateStateScenesAssignValues() {
+//->   room.scenes = room.scenes.collectEntries { scene, map ->
+//->     Map m = getDeviceValues(scene)
+//->     if (m) { [scene, m] }
+//->   }
+//-> }
+
+//-> void configureRoomScene() {
+//->   // DESIGN NOTES
+//->   //   There are three steps to populate "room.scenes" map.
+//->   //   (1) adjustStateScenesKeys() creates a per-scene key and
+//->   //       sets the value to [].
+//->   //   (2) This method populates Settings keys "scene^SCENENAME^Ind|Rep^DNI".
+//->   //       with Integer values:
+//->   //         - 'light level' for Independent devices (Ind)
+//->   //         - 'virtual button number' for RA2 Repeaters (RA2)
+//->   //   (3) populateStateScenesAssignValues() harvests the settings from
+//->   //       Step 2 to complete the "room.scenes" map.
+//->   // VIRTUAL TABLE
+//->   //   Hubitat page display logic simulates table cells.
+//->   //     - Full-sized displays (computer monitors) are 12 cells wide.
+//->   //     - Phone-sized displays are 4 cells wide.
+//->   //   To ensure that each scene starts on a new row, this method adds
+//->   //   empty cells (modulo 12) to ensure each scene begins in column 1.
+//->   if (room.scenes) {
+//->     ArrayList currSettingsKeys = []
+//->     room.scenes?.sort().each { sceneName, ignoredValue ->
+//->       // Ignore the current componentList. Rebuilt it from scratch.
+//->       Integer tableCol = 3
+//->       paragraph("<br/><b>${sceneName} →</b>", width: 2)
+//->       settings.zWaveDevices?.each { d ->
+//->         String inputName = "scene^${sceneName}^Ind^${getDeviceId(d)}"
+//->         currSettingsKeys += inputName
+//->         tableCol += 3
+//->         input(
+//->           name: inputName,
+//->           type: 'number',
+//->           title: "${b(d.label)}<br/>Level 0..100",
+//->           width: 3,
+//->           submitOnChange: true,
+//->           required: false,
+//->           multiple: false,
+//->           defaultValue: 0
+//->         )
+//->       }
+//->       settings.ra2Repeaters?.each { d ->
+//->         String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
+//->         currSettingsKeys += inputName
+//->         tableCol += 3
+//->         input(
+//->           name: inputName,
+//->           type: 'number',
+//->           title: "${b(d.label)}<br/>Button #",
+//->           width: 3,
+//->           submitOnChange: true,
+//->           required: false,
+//->           multiple: false,
+//->           defaultValue: 0
+//->         )
+//->       }
+//->       // Pad the remainder of the table row with empty cells.
+//->       while (tableCol++ % 12) {
+//->         paragraph('', width: 1)
+//->       }
+//->     }
+//->   }
+//-> }
 
 Map roomScenesPage() {
   // The parent application (Whole House Automation) assigns a unique label
@@ -449,9 +639,12 @@ Map roomScenesPage() {
       }
       //*********************************************************************
       adjustStateScenesKeys()
+//->      configureRoomScene()
     }
   }
 }
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 /* groovylint-disable-next-line MethodSize */
 void room_initAllRooms() {
