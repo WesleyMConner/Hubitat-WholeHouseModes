@@ -48,10 +48,11 @@ void AllAuto () {
   }
 }
 
-void pbsgButtonOnCallback (String mode) {
+void pbsgButtonOnCallback (Map pbsg) {
   // - The MPbsg instance calls this method to reflect a state change.
-  logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
-  getLocation().setMode(mode)
+  String newMode = pbsg.activeButton
+  logInfo('pbsgButtonOnCallback', "Received mode: ${b(newMode)}")
+  getLocation().setMode(newMode)
 }
 
 void installed () {
@@ -207,7 +208,7 @@ void unsubscribeRa2RepToHandler(DevW device) {
 
 void setDeviceLevel(String deviceLabel, Long level) {
   settings.zWaveDevices.each { device ->
-    if (device.label) == deviceLabel) {
+    if (device.label == deviceLabel) {
       if (device.hasCommand('setLevel')) {
         logInfo('activateScene', "Setting ${b(deviceLabel)} to level ${b(level)}")
         // Some devices DO NOT support a level of 100.
@@ -268,8 +269,8 @@ Map WhaPage () {
       Map modePbsgConfig = [
         'name': 'mode',
         'allButtons': getLocation().getModes().collect { it.name },
-        'defaultButton': getLocation().currentMode.name,
-        'initialActiveButton': null
+        'defaultButton': getLocation().currentMode.name
+        //--DROP-FEATURE-> 'initialActiveButton': null
       ]
       Map modePbsg = pbsg_Initialize(modePbsgConfig)
       if (settings.rooms) {

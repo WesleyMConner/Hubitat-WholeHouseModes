@@ -48,10 +48,11 @@ void AllAuto () {
   }
 }
 
-void pbsgButtonOnCallback (String mode) {
+void pbsgButtonOnCallback (Map pbsg) {
   // - The MPbsg instance calls this method to reflect a state change.
-  logInfo('buttonOnCallback', "Received mode: ${b(mode)}")
-  getLocation().setMode(mode)
+  String newMode = pbsg.activeButton
+  logInfo('pbsgButtonOnCallback', "Received mode: ${b(newMode)}")
+  getLocation().setMode(newMode)
 }
 
 void installed () {
@@ -163,8 +164,8 @@ Map WhaPage () {
       Map modePbsgConfig = [
         'name': 'mode',
         'allButtons': getLocation().getModes().collect { it.name },
-        'defaultButton': getLocation().currentMode.name,
-        'initialActiveButton': null
+        'defaultButton': getLocation().currentMode.name
+        //--DROP-FEATURE-> 'initialActiveButton': null
       ]
       Map modePbsg = pbsg_Initialize(modePbsgConfig)
       if (settings.rooms) {

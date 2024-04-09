@@ -139,16 +139,16 @@ void updateTargetScene() {
   }
 }
 
-void pbsgButtonOnCallback(String button) {
+void pbsgButtonOnCallback(Map pbsg) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
-  if (!button) {
-    logWarn(
+  if (!pbsg) {
+    logError(
       'pbsgButtonOnCallback',
-      'A null argument was received, using AUTOMATIC as a default'
+      'A null pbsg argument was received, assuming pbsg.activeButton is "AUTOMATIC"'
     )
   }
-  state.activeButton = button ?: 'AUTOMATIC'
+  state.activeButton = pbsg?.activeButton ?: 'AUTOMATIC'
   logInfo(
     'pbsgButtonOnCallback',
     "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
@@ -364,9 +364,10 @@ void modeHandler(Event e) {
   if (state.activeButton == 'AUTOMATIC') {
     // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
     if (e.name == 'mode') {
-      // Let pbsgButtonOnCallback() handle activeButton == 'AUTOMATIC'!
-      logTrace('modeHandler', 'Calling pbsgButtonOnCallback("AUTOMATIC")')
-      pbsgButtonOnCallback('AUTOMATIC')
+      Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
+      pbsg.activeButton = 'AUTOMATIC'
+      logTrace('modeHandler', 'Calling pbsgButtonOnCallback()')
+      pbsgButtonOnCallback(pbsg)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -506,7 +507,7 @@ void initialize() {
   Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
   if (pbsg) {
     pbsg_ActivateButton(pbsg, 'AUTOMATIC')
-    pbsgButtonOnCallback('AUTOMATIC')
+    pbsgButtonOnCallback(pbsg)
   } else {
     logWarn(
       'initialize',
@@ -758,8 +759,8 @@ Map RoomScenesPage() {
         Map rsPbsgConfig = [
           'name': state.ROOM_LABEL,
           'allButtons': [ *scenes, 'AUTOMATIC' ].minus([ 'INACTIVE', 'OFF' ]),
-          'defaultButton': 'AUTOMATIC',
-          'initialActiveButton': null
+          'defaultButton': 'AUTOMATIC'
+          //--DROP-FEATURE-> 'initialActiveButton': null
         ]
         Map rsPbsg = pbsg_Initialize(rsPbsgConfig)
       } else {

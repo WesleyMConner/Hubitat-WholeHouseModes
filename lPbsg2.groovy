@@ -75,12 +75,12 @@ Map config_SolicitInstance(Integer settingsKeySuffix) {
     String activeKey = "pbsgActive^${settingsKeySuffix}"
     ArrayList allButtons = config_SolicitButtons(buttonsKey)
     String defaultButton = config_SolicitDefault(defaultKey, allButtons)
-    String initialActiveButton = config_SolicitInitialActive(activeKey, allButtons)
+    //--DROP-FEATURE-> String initialActiveButton = config_SolicitInitialActive(activeKey, allButtons)
     config = [
       'name': name,
       'allButtons': allButtons,
-      'defaultButton': defaultButton,
-      'initialActiveButton': initialActiveButton
+      'defaultButton': defaultButton
+      //--DROP-FEATURE-> 'initialActiveButton': initialActiveButton
     ]
   } else {
     paragraph('', width: 10)  // Filler for a 12 cell row
@@ -122,7 +122,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
       unsubscribe(d)
       d.on()
-      pbsgButtonOnCallback(pbsg, button)
+      pbsgButtonOnCallback(pbsg)
       pauseExecution(100)  // Take a breath to let device update
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
@@ -154,7 +154,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
     unsubscribe(d)
     pbsg.activeButton = button
     d.on()
-    pbsgButtonOnCallback(button)
+    pbsgButtonOnCallback(pbsg)
     pauseExecution(100)  // Take a breath to let device update
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
@@ -171,7 +171,7 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     pbsg_EnforceDefault(pbsg)
   } else if (!pbsg.buttonsLIFO.contains(button)) {
-    logWarn('pbsg_DeactivateButton', "${button} → ${pbsg.name} ${pbsg.buttonsLIFO}")
+    logWarn('pbsg_DeactivateButton', "Adding button '${button}' → ${pbsg.name} ${pbsg.buttonsLIFO}")
     unsubscribe(d)
     d.off()
     pauseExecution(100)  // Take a breath to let device update
@@ -219,17 +219,17 @@ Map pbsg_Initialize(Map config) {
   }
   if (!pbsg.activeButton) {
     // During INIT: Use initialActiveButton in lieu of defaultButton
-    if (config?.initialActiveButton) {
-      logInfo(
-        'pbsg_Initialize',
-        "initialActiveButton (${config.initialActiveButton}) → active"
-      )
-      pbsg_ActivateButton(pbsg, config.initialActiveButton)
-      pbsg.defaultButton = config.defaultButton
-    } else {
+    //--DROP-FEATURE-> if (config?.initialActiveButton) {
+    //--DROP-FEATURE->   logInfo(
+    //--DROP-FEATURE->     'pbsg_Initialize',
+    //--DROP-FEATURE->     "initialActiveButton (${config.initialActiveButton}) → active"
+    //--DROP-FEATURE->   )
+    //--DROP-FEATURE->   pbsg_ActivateButton(pbsg, config.initialActiveButton)
+    //--DROP-FEATURE->   pbsg.defaultButton = config.defaultButton
+    //--DROP-FEATURE-> } else {
       pbsg.defaultButton = config.defaultButton
       pbsg_EnforceDefault(pbsg)
-    }
+    //--DROP-FEATURE-> }
   }
   // Post INIT: Use defaultButton to populate an empty activeButton
   logInfo('pbsg_Initialize', "Initial PBSG: ${pbsg_State(pbsg)}")

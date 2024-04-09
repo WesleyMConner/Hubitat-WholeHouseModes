@@ -89,7 +89,7 @@ void room_ActivateScene(Map room) {
   }
 }
 
-void pbsgButtonOnCallback(String button) {
+void pbsgButtonOnCallback(Map pbsg) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
   if (!button) {
@@ -270,8 +270,12 @@ void modeHandler(Event e) {
     // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
     if (e.name == 'mode') {
       // Let pbsgButtonOnCallback() handle activeButton == 'AUTOMATIC'!
-      logTrace('modeHandler', 'Calling pbsgButtonOnCallback("AUTOMATIC")')
-      pbsgButtonOnCallback('AUTOMATIC')
+      logTrace('modeHandler', 'Calling pbsgButtonOnCallback()')
+
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "AUTOMATIC"')
+      pbsg.activeButton = 'AUTOMATIC'
+      pbsgButtonOnCallback(pbsg)
+
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -411,7 +415,11 @@ void initialize() {
   Map pbsg = pbsgStore_Retrieve(room.name)
   if (pbsg) {
     pbsg_ActivateButton(pbsg, 'AUTOMATIC')
-    pbsgButtonOnCallback('AUTOMATIC')
+
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "AUTOMATIC"')
+      pbsg.activeButton = 'AUTOMATIC'
+      pbsgButtonOnCallback(pbsg)
+
   } else {
     logWarn(
       'initialize',
@@ -618,8 +626,8 @@ Map roomScenesPage() {
         Map rsPbsgConfig = [
           'name': room.name,
           'allButtons': [ *scenes, 'AUTOMATIC' ] - [ 'OFF' ],
-          'defaultButton': 'AUTOMATIC',
-          'initialActiveButton': null
+          'defaultButton': 'AUTOMATIC'
+          //--DROP-FEATURE-> 'initialActiveButton': null
         ]
         pbsg_Initialize(rsPbsgConfig)
       } else {
