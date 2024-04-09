@@ -178,33 +178,35 @@ void unsubscribeIndDevToHandler(DevW device) {
   unsubscribe(device)
 }
 
-void subscribeRa2RepToHandler(Map data) {
+/*
+void subscribeToRa2RepEvents(Map data) {
   // USAGE:
-  //   runIn(1, 'subscribeRa2RepToHandler', [data: [device: d]])
+  //   runIn(1, 'subscribeToRa2RepEvents', [data: [device: d]])
   // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
   // callbacks that occur quickly (within 1/2 second) after a buton press
   // subject Hubitat to callback overload (during WHA scene chantes).
   // Briefly unsubscribe/subscribe to avoid this situation.
   logTrace(
-    'subscribeRa2RepToHandler',
+    'subscribeToRa2RepEvents',
     "${room.name} subscribing ${deviceInfo(data.device)}"
   )
   subscribe(device, repeaterHandler, ['filterEvents': true])
 }
 
-void unsubscribeRa2RepToHandler(DevW device) {
+void unsubscribeToRa2RepEvents(DevW device) {
   // Unlike some Independent Devices (RA2 and Caséta) RA2 Repeaters
   // are not particularly subject to stale Hubitat state; HOWEVER,
   // callbacks that occur quickly (within 1/2 second) after a buton press
   // subject Hubitat to callback overload (during WHA scene chantes).
   // Briefly unsubscribe/subscribe to avoid this situation.
   logTrace(
-    'unsubscribeRa2RepToHandler',
+    'unsubscribeToRa2RepEvents',
     "${room.name} unsubscribing ${deviceInfo(device)}"
   )
   unsubscribe(device)
 }
+*/
 
 void setDeviceLevel(String deviceLabel, Long level) {
   settings.zWaveDevices.each { device ->

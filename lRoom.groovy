@@ -104,7 +104,7 @@ Boolean isDeviceType(String devTypeCandidate) {
 // ===== MODE HANDLER
 // =====
 
-void subscribeToModeHandler() { // MOVE TO WHA SCOPE
+void subscribeToModeHandler() {
   logInfo(
     'subscribeToModeHandler',
     "${room.name} subscribing to location 'mode'"
@@ -123,7 +123,6 @@ void modeHandler(Event e) {
 
 
     if (room.activeButton != 'Automatic') { room.activeButton = e.value }
-//xxx    room_ModeChange(room)
     logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
     logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
     pbsg.activeButton = 'Automatic'

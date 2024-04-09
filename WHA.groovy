@@ -21,7 +21,6 @@ import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-//-> #include wesmc.lLut
 #include wesmc.lPbsgv2
 
 definition (
