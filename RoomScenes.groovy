@@ -128,8 +128,8 @@ void activateScene() {
 void updateTargetScene() {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
   if (
-    (state.activeButton == 'AUTOMATIC' && !state.activeScene)
-    || (state.activeButton == 'AUTOMATIC' && !isManualOverride())
+    (state.activeButton == 'Automatic' && !state.activeScene)
+    || (state.activeButton == 'Automatic' && !isManualOverride())
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     //String mode = getLocation().getMode()
@@ -145,10 +145,10 @@ void pbsgButtonOnCallback(Map pbsg) {
   if (!pbsg) {
     logError(
       'pbsgButtonOnCallback',
-      'A null pbsg argument was received, assuming pbsg.activeButton is "AUTOMATIC"'
+      'A null pbsg argument was received, assuming pbsg.activeButton is "Automatic"'
     )
   }
-  state.activeButton = pbsg?.activeButton ?: 'AUTOMATIC'
+  state.activeButton = pbsg?.activeButton ?: 'Automatic'
   logInfo(
     'pbsgButtonOnCallback',
     "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
@@ -361,11 +361,11 @@ void repeaterHandler(Event e) {
 }
 
 void modeHandler(Event e) {
-  if (state.activeButton == 'AUTOMATIC') {
-    // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
+  if (state.activeButton == 'Automatic') {
+    // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
       Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
-      pbsg.activeButton = 'AUTOMATIC'
+      pbsg.activeButton = 'Automatic'
       logTrace('modeHandler', 'Calling pbsgButtonOnCallback()')
       pbsgButtonOnCallback(pbsg)
     } else {
@@ -500,13 +500,13 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If AUTOMATIC is already active in the PBSG, pbsgButtonOnCallback()
+  //   - If Automatic is already active in the PBSG, pbsgButtonOnCallback()
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
   Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
   if (pbsg) {
-    pbsg_ActivateButton(pbsg, 'AUTOMATIC')
+    pbsg_ActivateButton(pbsg, 'Automatic')
     pbsgButtonOnCallback(pbsg)
   } else {
     logWarn(
@@ -521,7 +521,7 @@ void idMotionSensors() {
     name: 'motionSensors',
     title: [
       heading3('Identify Room Motion Sensors'),
-      bullet2('The special scene OFF is automatically added'),
+      bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when the room is unoccupied')
     ].join('<br/>'),
     type: 'device.LutronMotionSensor',
@@ -536,7 +536,7 @@ void idLuxSensors() {
     name: 'luxSensors',
     title: [
       heading3('Identify Room Lux Sensors'),
-      bullet2('The special scene OFF is automatically added'),
+      bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when no Lux Sensor is above threshold')
     ].join('<br/>'),
     type: 'capability.illuminanceMeasurement',
@@ -758,8 +758,8 @@ Map RoomScenesPage() {
         ArrayList scenes = state.scenes.collect{ k, v -> return k }
         Map rsPbsgConfig = [
           'name': state.ROOM_LABEL,
-          'allButtons': [ *scenes, 'AUTOMATIC' ].minus([ 'INACTIVE', 'OFF' ]),
-          'defaultButton': 'AUTOMATIC'
+          'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
+          'defaultButton': 'Automatic'
           //--DROP-FEATURE-> 'initialActiveButton': null
         ]
         Map rsPbsg = pbsg_Initialize(rsPbsgConfig)

@@ -95,10 +95,10 @@ void pbsgButtonOnCallback(Map pbsg) {
   if (!button) {
     logWarn(
       'pbsgButtonOnCallback',
-      'A null argument was received, using AUTOMATIC as a default'
+      'A null argument was received, using Automatic as a default'
     )
   }
-  room.activeButton = button ?: 'AUTOMATIC'
+  room.activeButton = button ?: 'Automatic'
   logInfo(
     'pbsgButtonOnCallback',
     "Button ${b(button)} -> room.activeButton: ${b(room.activeButton)}")
@@ -106,8 +106,8 @@ void pbsgButtonOnCallback(Map pbsg) {
   // UPDATE THE TARGET SCENE
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
   if (
-    (room.activeButton == 'AUTOMATIC' && !room.activeScene)
-    || (room.activeButton == 'AUTOMATIC' && !room.moDetected)
+    (room.activeButton == 'Automatic' && !room.activeScene)
+    || (room.activeButton == 'Automatic' && !room.moDetected)
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     /* groovylint-disable-next-line UnnecessaryGetter */
@@ -266,14 +266,14 @@ void toggleButton(String button) {
 //-> }
 
 void modeHandler(Event e) {
-  if (room.activeButton == 'AUTOMATIC') {
-    // Hubitat Mode changes only apply when the room's button is 'AUTOMATIC'.
+  if (room.activeButton == 'Automatic') {
+    // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
-      // Let pbsgButtonOnCallback() handle activeButton == 'AUTOMATIC'!
+      // Let pbsgButtonOnCallback() handle activeButton == 'Automatic'!
       logTrace('modeHandler', 'Calling pbsgButtonOnCallback()')
 
-      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "AUTOMATIC"')
-      pbsg.activeButton = 'AUTOMATIC'
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+      pbsg.activeButton = 'Automatic'
       pbsgButtonOnCallback(pbsg)
 
     } else {
@@ -408,16 +408,16 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If AUTOMATIC is already active in the PBSG, pbsgButtonOnCallback()
+  //   - If Automatic is already active in the PBSG, pbsgButtonOnCallback()
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
   Map pbsg = pbsgStore_Retrieve(room.name)
   if (pbsg) {
-    pbsg_ActivateButton(pbsg, 'AUTOMATIC')
+    pbsg_ActivateButton(pbsg, 'Automatic')
 
-      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "AUTOMATIC"')
-      pbsg.activeButton = 'AUTOMATIC'
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+      pbsg.activeButton = 'Automatic'
       pbsgButtonOnCallback(pbsg)
 
   } else {
@@ -433,7 +433,7 @@ void idMotionSensors() {
     name: 'motionSensors',
     title: [
       heading3('Identify Room Motion Sensors'),
-      bullet2('The special scene OFF is automatically added'),
+      bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when the room is unoccupied')
     ].join('<br/>'),
     type: 'device.LutronMotionSensor',
@@ -448,7 +448,7 @@ void idLuxSensors() {
     name: 'luxSensors',
     title: [
       heading3('Identify Room Lux Sensors'),
-      bullet2('The special scene OFF is automatically added'),
+      bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when no Lux Sensor is above threshold')
     ].join('<br/>'),
     type: 'capability.illuminanceMeasurement',
@@ -625,8 +625,8 @@ Map roomScenesPage() {
         ArrayList scenes = room.scenes.collect { k, v -> return k }
         Map rsPbsgConfig = [
           'name': room.name,
-          'allButtons': [ *scenes, 'AUTOMATIC' ] - [ 'OFF' ],
-          'defaultButton': 'AUTOMATIC'
+          'allButtons': [ *scenes, 'Automatic' ] - [ 'OFF' ],
+          'defaultButton': 'Automatic'
           //--DROP-FEATURE-> 'initialActiveButton': null
         ]
         pbsg_Initialize(rsPbsgConfig)
@@ -645,7 +645,7 @@ Map roomScenesPage() {
 /* groovylint-disable-next-line MethodSize */
 void room_initAllRooms() {
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -663,7 +663,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ 'true' ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -682,7 +682,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -701,7 +701,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -721,7 +721,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -741,7 +741,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -759,7 +759,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -777,7 +777,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -797,7 +797,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [
       'LHS Bath - Sensor (ra2-72)'
     ],
@@ -818,7 +818,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -836,7 +836,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -855,14 +855,14 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
     'currScene': 'Day',
     'moDetected': [],
     'picoButtonToTargetScene': [
-      '6846': [ '1': 'Party', '3': 'AUTOMATIC', '5': 'Off'
+      '6846': [ '1': 'Party', '3': 'Automatic', '5': 'Off'
       ]
     ],
     'name': 'Office',
@@ -878,7 +878,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -897,7 +897,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -915,7 +915,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -934,7 +934,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -952,7 +952,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [

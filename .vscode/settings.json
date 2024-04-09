@@ -39,7 +39,6 @@
     ],
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
-  "asciidoc.antora.enableAntoraSupport": true,
   "asciidoc.extensions.enableKroki": true,
   "editor.fontLigatures": true,
   "editor.fontSize": 14,
@@ -70,5 +69,6 @@
   "workbench.editor.highlightModifiedTabs": true,
   "workbench.editor.labelFormat": "default",
   "workbench.editor.showIcons": false,
-  "workbench.editor.wrapTabs": true
+  "workbench.editor.wrapTabs": true,
+  "asciidoc.antora.enableAntoraSupport": true
 }

@@ -1,7 +1,7 @@
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 void room_initAllRooms() {
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -20,7 +20,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ 'true' ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -40,7 +40,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -60,7 +60,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -81,7 +81,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -102,7 +102,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -121,7 +121,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -140,7 +140,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -161,7 +161,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [
       'LHS Bath - Sensor (ra2-72)'
     ],
@@ -183,7 +183,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -202,7 +202,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -222,7 +222,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -230,7 +230,7 @@ void room_initAllRooms() {
     'logLevel': 3,
     'moDetected': [],
     'picoButtonToTargetScene': [
-      '6846': [ '1': 'Party', '3': 'AUTOMATIC', '5': 'Off'
+      '6846': [ '1': 'Party', '3': 'Automatic', '5': 'Off'
       ]
     ],
     'name': 'Office',
@@ -246,7 +246,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -266,7 +266,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -285,7 +285,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -305,7 +305,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [],
@@ -324,7 +324,7 @@ void room_initAllRooms() {
     ]
   ])
   roomStore_Save([
-    'activeButton': 'AUTOMATIC',
+    'activeButton': 'Automatic',
     'activeMotionSensors': [ true ],
     'activeScene': 'Day',
     'brightLuxSensors': [

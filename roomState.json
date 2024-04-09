@@ -1,6 +1,6 @@
 {
   "Den": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -19,7 +19,7 @@
     }
   },
   "DenLamp": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ "true" ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -39,7 +39,7 @@
     }
   },
   "Guest": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -59,7 +59,7 @@
     }
   },
   "Hers": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -80,7 +80,7 @@
     }
   },
   "His": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -101,7 +101,7 @@
     }
   },
   "Kitchen": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -120,7 +120,7 @@
     }
   },
   "Lanai": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -139,7 +139,7 @@
     }
   },
   "Laundry": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -160,7 +160,7 @@
     }
   },
   "LhsBath": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [
       "LHS Bath - Sensor (ra2-72)"
     ],
@@ -182,7 +182,7 @@
     }
   },
   "LhsBdrm": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -201,7 +201,7 @@
     }
   },
   "Main": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -221,7 +221,7 @@
     }
   },
   "Office": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -229,7 +229,7 @@
     "logLevel": 3,
     "moDetected": {},
     "picoButtonToTargetScene": {
-      "6846": { "1": "Party", "3": "AUTOMATIC", "5": "Off"
+      "6846": { "1": "Party", "3": "Automatic", "5": "Off"
       }
     },
     "ROOM_LABEL": "Office",
@@ -245,7 +245,7 @@
     }
   },
   "Primary": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -265,7 +265,7 @@
     }
   },
   "PrimBath": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -284,7 +284,7 @@
     }
   },
   "RhsBath": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -304,7 +304,7 @@
     }
   },
   "RhsBdrm": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [],
@@ -323,7 +323,7 @@
     }
   },
   "Yard": {
-    "activeButton": "AUTOMATIC",
+    "activeButton": "Automatic",
     "activeMotionSensors": [ true ],
     "activeScene": "Day",
     "brightLuxSensors": [

@@ -42,7 +42,7 @@ preferences {
 void AllAuto () {
   settings.rooms.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDNI = "${roomApp.label}_AUTOMATIC"
+    String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
     logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
     roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
   }
