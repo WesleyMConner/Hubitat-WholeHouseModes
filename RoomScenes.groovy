@@ -19,7 +19,7 @@ import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lLut
+//-> #include wesmc.lLut
 #include wesmc.lPbsgv2
 
 definition (
@@ -109,6 +109,7 @@ void setDeviceLevel(String deviceId, Long level) {
 }
 
 void activateScene() {
+  // expectedScene considers room occupancy and lux constraints
   String expectedScene = expectedScene()
   if (state.currScene != expectedScene) {
     logInfo('activateScene', "${state.currScene} -> ${expectedScene}")
@@ -132,7 +133,6 @@ void updateTargetScene() {
     || (state.activeButton == 'Automatic' && !isManualOverride())
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
-    //String mode = getLocation().getMode()
     state.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
   } else {
     state.activeScene = state.activeButton
@@ -246,13 +246,13 @@ void unsubscribeRepToHandler(DevW device) {
   unsubscribe(device)
 }
 
-void subscribeToModeHandler() {
-  logInfo(
-    'subscribeToModeHandler',
-    "${state.ROOM_LABEL} subscribing to location 'mode'"
-  )
-  subscribe(location, "mode", modeHandler)
-}
+//-> void subscribeToModeHandler() {
+//->   logInfo(
+//->     'subscribeToModeHandler',
+//->     "${state.ROOM_LABEL} subscribing to location 'mode'"
+//->   )
+//->   subscribe(location, "mode", modeHandler)
+//-> }
 
 void subscribeToMotionSensorHandler() {
   if (settings.motionSensors) {
@@ -360,21 +360,18 @@ void repeaterHandler(Event e) {
   */
 }
 
-void modeHandler(Event e) {
+void room_ModeChange(String newMode) {
+  // If the PBSG activeButton is 'Automatic', adjust the state.activeScene
+  // per the newMode.
   if (state.activeButton == 'Automatic') {
-    // Hubitat Mode changes only apply when the room's button is 'Automatic'.
-    if (e.name == 'mode') {
-      Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
-      pbsg.activeButton = 'Automatic'
-      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
-      pbsg_ButtonOnCallback(pbsg)
-    } else {
-      logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
-    }
+    logInfo('room_ModeChange', "Adjusting activeScene to '${newMode}'")
+    state.activeScene = newMode
+    activateScene()
   } else {
-    logTrace(
-      'modeHandler', [
+    logInfo(
+      'room_ModeChange', [
         'Ignored: Mode Change',
+        "newMode: ${newMode}",
         "state.activeButton: ${b(state.activeButton)}",
         "state.activeScene: ${b(state.activeScene)}"
       ]
@@ -489,14 +486,14 @@ void initialize() {
   logInfo(
     'initialize',
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
-      + "Subscribing to modeHandler."
+      //+ "Subscribing to modeHandler."
   )
   state.brightLuxSensors = []
   populateStateScenesAssignValues()
   clearManualOverride()
   settings.indDevices.each { device -> unsubscribe(device) }
   subscribeToRepHandler()
-  subscribeToModeHandler()
+  //subscribeToModeHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION

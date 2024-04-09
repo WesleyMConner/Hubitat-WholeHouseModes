@@ -21,7 +21,7 @@ import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lLut
+//-> #include wesmc.lLut
 #include wesmc.lPbsgv2
 
 definition (
@@ -53,6 +53,13 @@ void pbsg_ButtonOnCallback (Map pbsg) {
   String newMode = pbsg.activeButton
   logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
   getLocation().setMode(newMode)
+  // Pass new mode to rooms to alleviate their need to handle modes.
+  ArrayList roomNames = settings.rooms
+  roomNames.each{ roomName ->
+    InstAppW roomObj = app.getChildAppByLabel(roomName)
+    logInfo('pbsg_ButtonOnCallback', "roomName: ${roomName}, newMode: ${newMode}")
+    roomObj.room_ModeChange(newMode)
+  }
 }
 
 void installed () {
@@ -88,7 +95,7 @@ void initialize () {
 }
 
 void _idParticipatingRooms () {
-  roomPicklist = app.getRooms().collect {it.name.replace(' ', '_')}.sort()
+  roomPicklist = app.getRooms().sort()
   input(
     name: 'rooms',
     type: 'enum',
@@ -149,12 +156,12 @@ Map WhaPage () {
     app.removeSetting('specialFnButton_ALL_OFF')
     state.remove('kpadButtonDniToSpecialtyFn')
     state.remove('kpadButtonDniToTargetMode')
-    state.remove('specialFnButtonMap')
-    state.remove('SPECIALTY_BUTTONS')
     state.remove('MODE_PBSG_LABEL')
     state.remove('modeButtonMap')
+    state.remove('MPBSG_LABEL')
+    state.remove('specialFnButtonMap')
+    state.remove('SPECIALTY_BUTTONS')
     app.updateLabel('WHA')
-    state.MPBSG_LABEL = '_MPbsg'
     state.MODES = getLocation().getModes().collect { it.name }
     getGlobalVar('defaultMode').value
     section {

@@ -113,6 +113,27 @@ void subscribeToModeHandler() { // MOVE TO WHA SCOPE
 }
 
 void modeHandler(Event e) {
+  // Relay Hubitat mode changes to rooms.
+  if (e.name == 'mode') {
+    // FOR EACH ROOM --->
+
+
+
+
+
+
+    if (room.activeButton != 'Automatic') { room.activeButton = e.value }
+//xxx    room_ModeChange(room)
+    logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+    logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+    pbsg.activeButton = 'Automatic'
+    pbsg_ButtonOnCallback(pbsg)
+  } else {
+    logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
+  }
+
+
+
   if (room.activeButton == 'Automatic') {
     // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
@@ -121,6 +142,33 @@ void modeHandler(Event e) {
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
       pbsg_ButtonOnCallback(pbsg)
+    } else {
+      logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
+    }
+  } else {
+    logTrace(
+      'modeHandler', [
+        'Ignored: Mode Change',
+        "room.activeButton: ${b(room.activeButton)}",
+        "room.activeScene: ${b(room.activeScene)}"
+      ]
+    )
+  }
+}
+
+void room_ModeChange(Map room, String newMode) {
+  // Hubitat Mode changes only when the scene is 'Automatic'.
+  if (room.activeButton == 'Automatic') {
+    pbsg_ActivateButton(Map room, String newMode, DevW device = null)
+
+
+
+    if (e.name == 'mode') {
+      // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
+      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+      pbsg.activeButton = 'Automatic'
+      pbsg_ButtonOnCallback(room)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
