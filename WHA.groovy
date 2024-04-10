@@ -22,6 +22,7 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.lHExt
 #include wesmc.lHUI
 #include wesmc.lPbsgv2
+#include wesmc.lRoom
 
 definition (
   name: 'WHA',
@@ -39,7 +40,7 @@ preferences {
 }
 
 void AllAuto () {
-  settings.rooms.each { roomName ->
+  settings.roomNames.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
     logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
@@ -49,15 +50,17 @@ void AllAuto () {
 
 void pbsg_ButtonOnCallback (Map pbsg) {
   // - The MPbsg instance calls this method to reflect a state change.
-  String newMode = pbsg.activeButton
-  logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
-  getLocation().setMode(newMode)
-  // Pass new mode to rooms to alleviate their need to handle modes.
-  ArrayList roomNames = settings.rooms
-  roomNames.each{ roomName ->
-    InstAppW roomObj = app.getChildAppByLabel(roomName)
-    logInfo('pbsg_ButtonOnCallback', "roomName: ${roomName}, newMode: ${newMode}")
-    roomObj.room_ModeChange(newMode)
+  String newMode = pbsg?.activeButton
+  if (newMode != null) {
+    logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
+    getLocation().setMode(newMode)
+    // Pass new mode to rooms to alleviate their need to handle modes.
+    ArrayList roomNames = settings.roomNames
+    roomNames.each{ roomName ->
+      InstAppW roomObj = app.getChildAppByLabel(roomName)
+      logInfo('pbsg_ButtonOnCallback', "roomName: ${roomName}, newMode: ${newMode}")
+      roomObj.room_ModeChange(newMode)
+    }
   }
 }
 
@@ -94,13 +97,12 @@ void initialize () {
 }
 
 void _idParticipatingRooms () {
-  roomPicklist = getRooms().name.sort()
-  paragraph "_idParticipating Rooms with >${roomPickList}<"
+  roomNamePicklist = getRooms().name.sort()
   input(
-    name: 'rooms',
+    name: 'roomNames',
     type: 'enum',
     title: heading2('Identify Participating Rooms'),
-    options: roomPicklist,
+    options: roomNamePicklist,
     submitOnChange: true,
     required: false,
     multiple: true
@@ -109,7 +111,7 @@ void _idParticipatingRooms () {
 
 void _displayInstantiatedRoomHrefs () {
   paragraph heading1('Room Scene Configuration')
-  settings.rooms.each { roomName ->
+  settings.roomNames.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
       logWarn(
@@ -153,6 +155,7 @@ Map WhaPage () {
     app.removeSetting('modeButton_Night')
     app.removeSetting('modeButton_Party')
     app.removeSetting('modeButton_TV')
+    app.removeSetting('rooms')
     app.removeSetting('specialFnButton_ALL_OFF')
     state.remove('kpadButtonDniToSpecialtyFn')
     state.remove('kpadButtonDniToTargetMode')
@@ -165,6 +168,8 @@ Map WhaPage () {
     state.MODES = getLocation().getModes().collect { it.name }
     getGlobalVar('defaultMode').value
     section {
+      Map allRooms = room_initAllRooms()
+      paragraph "All Rooms >${ roomStore_ListRooms() }<"
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       _idParticipatingRooms()
@@ -173,8 +178,11 @@ Map WhaPage () {
         'allButtons': getLocation().getModes().collect { it.name },
         'defaultButton': getLocation().currentMode.name
       ]
+      //-> settings.roomNames = ["Den","DenLamp","Guest","Hers","His","Kitchen",
+      //->   "Lanai","Laundry","LhsBath","LhsBdrm","Main","Office","PrimBath",
+      //->   "Primary","RhsBath","RhsBdrm","Yard"]
       Map modePbsg = pbsg_Initialize(modePbsgConfig)
-      if (settings.rooms) {
+      if (settings.roomNames) {
         _displayInstantiatedRoomHrefs()
       }
     }

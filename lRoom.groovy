@@ -43,6 +43,12 @@ void roomStore_Save(Map room) {
   state.roomStore = roomStore
 }
 
+ArrayList roomStore_ListRooms() {
+  Map roomStore = state.roomStore ?: [:]
+  ArrayList roomNames2 =  roomStore.collect{ k, v -> k }.sort()
+  return roomNames2
+}
+
 /*
 // The psuedo-class "roomStore" facilitates concurrent storage of multiple
 // "room" psuedo-class instances. A "room" psuedo-class instance (its Map)
@@ -503,8 +509,8 @@ Map roomScenesPage() {
 */
 
 // groovylint-disable-next-line MethodSize
-void room_initAllRooms() {
-  roomStore_Save([
+Map room_initAllRooms() {
+  roomStore_Save([   // Den
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -522,7 +528,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // DenLamp
     'activeButton': 'Automatic',
     'activeMotionSensors': [ 'true' ],
     'activeScene': 'Day',
@@ -541,14 +547,14 @@ void room_initAllRooms() {
       ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Guest
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
     'currScene': 'Day',
     'moDetected': [],
-    'name': 'Uplighting (Guest)',
+    'name': 'Guest',
     'scenes': [
       'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 58 ] ],
       'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 56 ] ],
@@ -560,7 +566,7 @@ void room_initAllRooms() {
       ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Hers
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -580,7 +586,7 @@ void room_initAllRooms() {
       ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // His
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -600,7 +606,7 @@ void room_initAllRooms() {
       ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Kitchen
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -618,7 +624,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 25 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Lanai
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -636,7 +642,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 3, 'RA2 Repeater 2 (ra2-83)': 75 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Laundry
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -656,7 +662,7 @@ void room_initAllRooms() {
       'OFF': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 35 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // LhsBath
     'activeButton': 'Automatic',
     'activeMotionSensors': [
       'LHS Bath - Sensor (ra2-72)'
@@ -677,7 +683,7 @@ void room_initAllRooms() {
       'OFF': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 65 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // LhsBdrm
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -695,7 +701,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 45 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Main
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -714,7 +720,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 85 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Office
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -737,14 +743,14 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 55 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Primary
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'brightLuxSensors': [],
     'currScene': 'Day',
     'moDetected': [],
-    'name': 'Uplighting (Primary)',
+    'name': 'Primary',
     'roomOccupied': true,
     'scenes': [
       'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 28 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ],
@@ -756,7 +762,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 25 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // PrimBath
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -774,7 +780,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 15 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // RhsBath
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -793,7 +799,7 @@ void room_initAllRooms() {
       'OFF': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 75 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // RhsBdrm
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -811,7 +817,7 @@ void room_initAllRooms() {
       'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 11 ] ]
     ]
   ])
-  roomStore_Save([
+  roomStore_Save([   // Yard
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -858,4 +864,5 @@ void room_initAllRooms() {
       ]
     ]
   ])
+  return state.roomStore as Map
 }
