@@ -601,6 +601,7 @@ void configureRoomScene() {
         )
       }
       settings.repeaters?.each {d ->
+  //-> logInfo('configureRoomScene', "-->${d.getCapabilities()}<--")
         String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3

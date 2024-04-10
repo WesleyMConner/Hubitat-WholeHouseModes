@@ -94,7 +94,8 @@ void initialize () {
 }
 
 void _idParticipatingRooms () {
-  roomPicklist = app.getRooms().sort()
+  roomPicklist = getRooms().name.sort()
+  paragraph "_idParticipating Rooms with >${roomPickList}<"
   input(
     name: 'rooms',
     type: 'enum',
@@ -157,7 +158,7 @@ Map WhaPage () {
     state.remove('kpadButtonDniToTargetMode')
     state.remove('MODE_PBSG_LABEL')
     state.remove('modeButtonMap')
-    state.remove('MPBSG_LABEL')
+    //state.remove('MPBSG_LABEL')
     state.remove('specialFnButtonMap')
     state.remove('SPECIALTY_BUTTONS')
     app.updateLabel('WHA')

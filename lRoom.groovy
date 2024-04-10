@@ -43,6 +43,7 @@ void roomStore_Save(Map room) {
   state.roomStore = roomStore
 }
 
+/*
 // The psuedo-class "roomStore" facilitates concurrent storage of multiple
 // "room" psuedo-class instances. A "room" psuedo-class instance (its Map)
 // extends a "pbsg" psuedo-class instance (its Map). Thus, a "room" Map
@@ -88,7 +89,7 @@ void pbsg_ButtonOnCallback(Map room) {
     || (room.activeButton == 'Automatic' && !room.moDetected)
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
-    /* groovylint-disable-next-line UnnecessaryGetter */
+    // groovylint-disable-next-line UnnecessaryGetter
     room.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
   } else {
     room.activeScene = room.activeButton
@@ -499,8 +500,9 @@ Map roomScenesPage() {
     }
   }
 }
+*/
 
-/* groovylint-disable-next-line MethodSize */
+// groovylint-disable-next-line MethodSize
 void room_initAllRooms() {
   roomStore_Save([
     'activeButton': 'Automatic',
@@ -813,6 +815,7 @@ void room_initAllRooms() {
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
+    'luxThreshold': 40,
     'brightLuxSensors': [
       'Control - Rear MultiSensor',
       'Control - Front MultiSensor'
