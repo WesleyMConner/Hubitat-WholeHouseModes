@@ -34,7 +34,7 @@
       "filepath": "/Users/wes/Hubitat-WholeHouseAutomation/lRoom.groovy",
       "codeType": "library",
       "id": 26,
-      "version": 16
+      "version": 18
     },
     {
       "filepath": "/Users/wes/Hubitat-WholeHouseAutomation/RoomScenes.groovy",
@@ -58,7 +58,7 @@
       "filepath": "/Users/wes/Hubitat-WholeHouseAutomation/WHA.groovy",
       "id": 350,
       "codeType": "app",
-      "version": 82
+      "version": 83
     }
   ]
 }

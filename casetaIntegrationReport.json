@@ -1,5 +1,6 @@
 // Use the Lutron Caséta App (on iPhone NOT a Mac) to email THIS report.
 // 'Settings' -> 'Advanced' -> 'Integration' -> 'Send Integration Report'
+// Generated 2024-04-10-1606
 {
   "LIPIdList": {
     "Devices": [
@@ -12,11 +13,11 @@
             "Number": 1
           },
           {
-            "Name": "Lanai Cleaning",
+            "Name": "WHA TV",
             "Number": 2
           },
           {
-            "Name": "Lanai Day",
+            "Name": "WHA Party",
             "Number": 3
           },
           {
@@ -24,7 +25,7 @@
             "Number": 4
           },
           {
-            "Name": "Lanai Night",
+            "Name": "Lanai Off",
             "Number": 5
           },
           {
@@ -32,7 +33,7 @@
             "Number": 6
           },
           {
-            "Name": "Lanai Supplement",
+            "Name": "WHA Night",
             "Number": 7
           },
           {
@@ -48,11 +49,11 @@
             "Number": 10
           },
           {
-            "Name": "RhsBdrm Day",
+            "Name": "WHA Chill",
             "Number": 11
           },
           {
-            "Name": "RhsBdrm Night",
+            "Name": "WHA Supplement",
             "Number": 12
           },
           {
@@ -68,15 +69,15 @@
             "Number": 15
           },
           {
-            "Name": "Button 16",
+            "Name": "WHA Clean",
             "Number": 16
           },
           {
-            "Name": "Button 17",
+            "Name": "WHA Off",
             "Number": 17
           },
           {
-            "Name": "Button 18",
+            "Name": "RhsBdrm Supplement",
             "Number": 18
           },
           {

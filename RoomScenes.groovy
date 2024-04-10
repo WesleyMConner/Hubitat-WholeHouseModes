@@ -71,13 +71,13 @@ Boolean isRoomOccupied() {
 Boolean isSufficientLight() {
   // If any Lux sensor for a room has sufficient light (i.e., appears in the
   // following state variable array), then the room has sufficient light.
-  // In the absence of a sensor, state.brightLuxSensors = [ ]
-  return state.brightLuxSensors
+  // In the absence of a sensor, state.luxSensors = [ ]
+  return state.luxSensors
 }
 
 String expectedScene() {
   return (isRoomOccupied() == false || isSufficientLight() == true)
-    ? 'OFF' : state.activeScene
+    ? 'Off' : state.activeScene
 }
 
 void pushRepeaterButton(String repeaterId, Long buttonNumber) {
@@ -231,7 +231,7 @@ void subscribeToMotionSensorHandler() {
 
 void subscribeToLuxSensorHandler() {
   if (settings.luxSensors) {
-    state.brightLuxSensors = []
+    state.luxSensors = []
     settings.luxSensors.each { d ->
       logInfo(
         'subscribeToLuxSensorHandler',
@@ -240,7 +240,7 @@ void subscribeToLuxSensorHandler() {
       subscribe(d, luxSensorHandler, ['filterEvents': true])
     }
   } else {
-    state.brightLuxSensors = [ ]
+    state.luxSensors = [ ]
   }
 }
 
@@ -323,16 +323,16 @@ void luxSensorHandler(Event e) {
   if (e.name == 'illuminance') {
     if (e.value.toInteger() >= settings.lowLuxThreshold) {
       // Add sensor to list of sensors with sufficient light.
-      state.brightLuxSensors = cleanStrings([*state.brightLuxSensors, e.displayName])
+      state.luxSensors = cleanStrings([*state.luxSensors, e.displayName])
     } else {
       // Remove sensor from list of sensors with sufficient light.
-      state.brightLuxSensors?.removeAll { it == e.displayName }
+      state.luxSensors?.removeAll { it == e.displayName }
     }
     logTrace('luxSensorHandler', [
       "sensor name: ${e.displayName}",
       "illuminance level: ${e.value}",
       "sufficient light threshold: ${settings.lowLuxThreshold}",
-      "sufficient light: ${state.brightLuxSensors}"
+      "sufficient light: ${state.luxSensors}"
     ])
     activateScene()
   }
@@ -405,7 +405,7 @@ void initialize() {
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       //+ "Subscribing to modeHandler."
   )
-  state.brightLuxSensors = []
+  state.luxSensors = []
   populateStateScenesAssignValues()
   clearManualOverride()
   settings.indDevices.each { device -> unsubscribe(device) }
@@ -489,7 +489,7 @@ void adjustStateScenesKeys() {
     assembleScenes << settings.customScene
   }
   if (settings.motionSensors || settings.luxSensors) {
-    assembleScenes << 'OFF'
+    assembleScenes << 'Off'
   }
   // The following is a work around after issues with map.retainAll {}
   state.scenes = state.scenes?.collectEntries { k, v ->
@@ -531,7 +531,7 @@ void populateStateScenesAssignValues() {
   state.scenes = state.scenes.collectEntries { scene, map ->
     if (scene == 'INACTIVE') {
       Map M = getDeviceValues(scene)
-      if (M) ['OFF', M]
+      if (M) ['Off', M]
     } else {
       Map M = getDeviceValues(scene)
       if (M) [scene, M]
@@ -581,7 +581,7 @@ void configureRoomScene() {
   if (state.scenes) {
     ArrayList currSettingsKeys = []
     state.scenes?.sort().each { sceneName, ignoredValue ->
-      if (sceneName == 'INACTIVE') { sceneName = 'OFF' }
+      if (sceneName == 'INACTIVE') { sceneName = 'Off' }
       // Ignore the current componentList. Rebuilt it from scratch.
       Integer tableCol = 3
       paragraph("<br/><b>${sceneName} →</b>", width: 2)
@@ -647,7 +647,7 @@ Map RoomScenesPage() {
     state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
     state.remove('sufficientLight')
     state.remove('targetScene')
-    state.brightLuxSensors = []
+    state.luxSensors = []
     state.remove('RSPBSG_LABEL')
     app.removeSetting('modeToScene^Chill')
     app.removeSetting('modeToScene^Cleaning')
@@ -672,7 +672,7 @@ Map RoomScenesPage() {
         ArrayList scenes = state.scenes.collect{ k, v -> return k }
         Map rsPbsgConfig = [
           'name': state.ROOM_LABEL,
-          'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
+          'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'Off' ]),
           'defaultButton': 'Automatic'
         ]
         Map rsPbsg = pbsg_Initialize(rsPbsgConfig)
