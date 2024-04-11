@@ -52,26 +52,6 @@ void AllAuto () {
   }
 }
 
-void pbsg_ButtonOnCallback (Map pbsg) {
-  logWarn('pbsg_ButtonOnCallback', 'WHA Implementation is pending')
-  /*
-  // - The MPbsg instance calls this method to reflect a state change.
-  String newMode = pbsg?.activeButton
-  if (newMode != null) {
-    logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
-    getLocation().setMode(newMode)
-    // Pass new mode to rooms to alleviate their need to handle modes.
-//->    ArrayList roomNames = settings.roomNames
-    ArrayList roomNames = roomStore_ListRooms()
-    roomNames.each{ roomName ->
-      InstAppW roomObj = app.getChildAppByLabel(roomName)
-      logInfo('pbsg_ButtonOnCallback', "roomName: ${roomName}, newMode: ${newMode}")
-      roomObj?.room_ModeChange(newMode)
-    }
-  }
-  */
-}
-
 //====
 //==== REPEATER METHODS
 //====
@@ -187,18 +167,40 @@ void idLuxSensors() {
 void luxSensorHandler(Event e) {
   if (e.name == 'illuminance') {
     Integer luxLevel = e.value.toInteger()
-    // Per-Room Behavior:
-    //   If above threshold:
-    //     - Add sensor to list of sensors with sufficient light.
-    //     - roomMap.luxSensors = cleanStrings([*roomMap.luxSensors, e.displayName])
-    //   Else below threshold:
-    //     - Remove sensor from list of sensors with sufficient light.
-    //     - roomMap.luxSensors?.removeAll { it == e.displayName }
-    logTrace('luxSensorHandler', "${e.displayName} at ${luxLevel}")
-    //  "illuminance level: ${e.value}",
-    //  "sufficient light threshold: ${settings.lowLuxThreshold}",
-    //  "sufficient light: ${roomMap.luxSensors}"
-    //room_ActivateScene()
+    Map roomStore = state.roomStore ?: [:]
+    roomStore.each{ roomName, roomMap ->
+      if (roomMap) {
+        roomMap?.lux?.sensors.each{ deviceLabel, luxThreshold ->
+          if (deviceLabel == e.displayName) {
+  //logInfo(
+  //  'luxSensorHandler',
+  //  "${e.displayName} (${luxLevel}), ---> ${roomName} (${luxThreshold})"
+  //)
+            if (luxLevel < luxThreshold && roomMap.lux.lowCounter < roomMap.lux.lowMax) {
+              // Only increment lux.lowCounter to a maximum value of lux.lowMax
+              if (++roomMap.lux.lowCounter == roomMap.lux.lowMax) {
+                logInfo(
+                  'luxSensorHandler',
+                  "${e.displayName} (${luxLevel}), ACTIVATE ${roomName} (${luxThreshold})"
+                )
+                room_ActivateScene(roomMap)
+              }
+            } else if (luxLevel >= luxThreshold && roomMap.lux.lowCounter > roomMap.lux.lowMin) {
+              // Only decrement lux.lowCounter to a minimum value of lux.lowMin
+              if (--roomMap.lux.lowCounter == roomMap.lux.lowMin) {
+                logInfo(
+                  'luxSensorHandler',
+                  "${e.displayName} (${luxLevel}), DEACTIVATE ${roomName} (${luxThreshold})"
+                )
+                room_ActivateScene(roomMap)
+              }
+            }
+          }
+        }
+      } else {
+        logError('luxSensorHandler', "No room instance roomMap for '${roomName}'")
+      }
+    }
   }
 }
 
@@ -369,11 +371,11 @@ void initialize () {
   logInfo('initialize', "Room names: ${roomNames}")
   // INITIALIZE MODE PBSG
   logInfo('initialize', 'Initializing the modePbsg')
-  Map modePbsg = pbsg_Initialize([
+  Map modePbsg = pbsg_CreateInstance([
     'name': 'mode',
     'allButtons': getLocation().getModes().collect { it.name },
     'defaultButton': getLocation().currentMode.name
-  ])
+  ], 'modePbsg')
   pbsgStore_Save(modePbsg)
   // BEGIN PROCESSING LUX SENSORS
   settings?.luxSensors.each{ device ->

@@ -193,9 +193,10 @@ void pbsg_EnforceDefault(Map pbsg) {
   }
 }
 
-Map pbsg_Initialize(Map config) {
+Map pbsg_CreateInstance(Map config, String instType) {
   // (Re-)Build the PBSG from config. [Ignore 'state.pbsgStore'.]
   Map pbsg = [
+    instType: instType,
     name: config?.name,
     buttonsLIFO: [],
     defaultButton: null,
@@ -219,7 +220,7 @@ Map pbsg_Initialize(Map config) {
     pbsg_EnforceDefault(pbsg)
   }
   // Post INIT: Use defaultButton to populate an empty activeButton
-  logInfo('pbsg_Initialize', "Initial PBSG: ${pbsg_State(pbsg)}")
+  logInfo('pbsg_CreateInstance', "Initial PBSG: ${pbsg_State(pbsg)}")
   pbsgStore_Save(pbsg)
   // Delete Child Devices with DNIs prefixed with this PBSG instance name
   // and with buttons names that no longer exist.
@@ -229,7 +230,7 @@ Map pbsg_Initialize(Map config) {
     String pbsgName = nameAndButton[0]
     String buttonName = nameAndButton[1]
     if (pbsgName == pbsg.name && !config.allButtons.contains(buttonName)) {
-      logWarn('pbsg_Initialize', "Deleting orphaned VSW '${dni}'")
+      logWarn('pbsg_CreateInstance', "Deleting orphaned VSW '${dni}'")
       deleteChildDevice(dni)
     }
   }

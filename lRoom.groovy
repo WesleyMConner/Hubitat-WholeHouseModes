@@ -39,7 +39,7 @@ Map roomStore_Retrieve(String roomName) {
 void roomStore_Save(Map roomMap) {
   // Add/update a "room" psuedo-class instance.
   Map roomStore = state.roomStore ?: [:]
-  roomStore."${roomMap.name}" = room
+  roomStore."${roomMap.name}" = roomMap
   state.roomStore = roomStore
 }
 
@@ -56,7 +56,7 @@ ArrayList roomStore_ListRooms() {
 
 void room_ActivateScene(Map roomMap) {
   String expectedScene = (
-    roomMap.activeMotionSensors == false || roomMap.luxSensors == true
+    roomMap.activeMotionSensors == false || roomMap.lux.lowCounter < roomMap.lux.lowMax
   ) ? 'Off' : roomMap.activeScene
   if (roomMap.currScene != expectedScene) {
     logInfo('activateScene', "${roomMap.currScene} -> ${expectedScene}")
@@ -74,32 +74,40 @@ void room_ActivateScene(Map roomMap) {
 }
 
 void pbsg_ButtonOnCallback(Map pbsg) {
-  // Pbsg/Dashboard/Alexa actions override Manual Overrides.
-  // Scene activation enforces room occupancy.
-  if (!pbsg) {
-    logError(
-      'pbsg_ButtonOnCallback',
-      'A null pbsg argument was received, assuming pbsg.activeButton is "Automatic"'
-    )
+  logInfo('pbsg_ButtonOnCallback#77', "pbsg.instType: >${pbsg.instType}<")
+  switch(pbsg.instType) {
+    case 'roomScene':
+      // Pbsg/Dashboard/Alexa actions override Manual Overrides.
+      // Scene activation enforces room occupancy.
+      roomMap.activeButton = pbsg?.activeButton ?: 'Automatic'
+      logInfo(
+        'pbsg_ButtonOnCallback',
+        "Button ${b(button)} -> roomMap.activeButton: ${b(roomMap.activeButton)}"
+      )
+      roomMap.moDetected = [:] // clears Manual Override
+      // UPDATE THE TARGET SCENE
+      // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
+      if (
+        (roomMap.activeButton == 'Automatic' && !roomMap.activeScene)
+        || (roomMap.activeButton == 'Automatic' && !roomMap.moDetected)
+      ) {
+        // Ensure that targetScene is per the latest Hubitat mode.
+        // groovylint-disable-next-line UnnecessaryGetter
+        roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
+      } else {
+        roomMap.activeScene = roomMap.activeButton
+      }
+      room_ActivateScene(room)
+      break
+    case 'modePbsg':
+      logWarn('pbsg_ButtonOnCallback', 'MODE PBSG - IMPLEMENTATION IS PENDING')
+      break
+    case 'testPbsg':
+      logError('pbsg_ButtonOnCallback', 'Unexpected pbsg instType "testPbsg"')
+      break
+    default:
+      logError('pbsg_ButtonOnCallback', "Unknown pbsg instType '${pbsg.instType}'")
   }
-  roomMap.activeButton = pbsg?.activeButton ?: 'Automatic'
-  logInfo(
-    'pbsg_ButtonOnCallback',
-    "Button ${b(button)} -> roomMap.activeButton: ${b(roomMap.activeButton)}")
-  roomMap.moDetected = [:] // clears Manual Override
-  // UPDATE THE TARGET SCENE
-  // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
-  if (
-    (roomMap.activeButton == 'Automatic' && !roomMap.activeScene)
-    || (roomMap.activeButton == 'Automatic' && !roomMap.moDetected)
-  ) {
-    // Ensure that targetScene is per the latest Hubitat mode.
-    // groovylint-disable-next-line UnnecessaryGetter
-    roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
-  } else {
-    roomMap.activeScene = roomMap.activeButton
-  }
-  room_ActivateScene(room)
 }
 
 Boolean isDeviceType(String devTypeCandidate) {
@@ -123,7 +131,7 @@ void modeHandler(Event e) {
   if (e.name == 'mode') {
     // FOR EACH ROOM --->
     if (roomMap.activeButton != 'Automatic') { roomMap.activeButton = e.value }
-    logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+    logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
     logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
     pbsg.activeButton = 'Automatic'
     pbsg_ButtonOnCallback(pbsg)
@@ -133,8 +141,8 @@ void modeHandler(Event e) {
   if (roomMap.activeButton == 'Automatic') {
     // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
-      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+      // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
+      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
       pbsg_ButtonOnCallback(pbsg)
@@ -152,13 +160,13 @@ void modeHandler(Event e) {
   }
 }
 
-void room_ModeChange(Map roomMap, String newMode) {
+void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
   // Hubitat Mode changes only when the scene is 'Automatic'.
   if (roomMap.activeButton == 'Automatic') {
-    pbsg_ActivateButton(Map roomMap, String newMode, DevW device = null)
+    pbsg_ActivateButton(roomMap, newMode, device)
     if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
-      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
+      // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
+      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
       pbsg_ButtonOnCallback(room)
@@ -180,21 +188,7 @@ void room_ModeChange(Map roomMap, String newMode) {
 // ===== MOTION SENSOR HANDLER
 // =====
 
-void idMotionSensors() {
-  input(
-    name: 'motionSensors',
-    title: [
-      heading3('Identify Room Motion Sensors'),
-      bullet2('The special scene OFF is Automatically added'),
-      bullet2('OFF is invoked when the room is unoccupied')
-    ].join('<br/>'),
-    type: 'device.LutronMotionSensor',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
+/*
 void subscribeToMotionSensorHandler() { // RETAIN AT ROOM SCOPE
   if (settings.motionSensors) {
     roomMap.activeMotionSensors = []
@@ -234,82 +228,12 @@ void motionSensorHandler(Event e) {
     }
   }
 }
-
-// =====
-// ===== LUX SENSOR HANDLER
-// =====
-
-void idLuxSensors() {
-  input(
-    name: 'luxSensors',
-    title: [
-      heading3('Identify Room Lux Sensors'),
-      bullet2('The special scene OFF is Automatically added'),
-      bullet2('OFF is invoked when no Lux Sensor is above threshold')
-    ].join('<br/>'),
-    type: 'capability.illuminanceMeasurement',
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
-
-void subscribeToLuxSensorHandler() {
-  if (settings.luxSensors) {
-    roomMap.luxSensors = []
-    settings.luxSensors.each { d ->
-      logInfo(
-        'subscribeToLuxSensorHandler',
-        "${roomMap.name} subscribing to Lux Sensor ${deviceInfo(d)}"
-      )
-      subscribe(d, luxSensorHandler, ['filterEvents': true])
-    }
-  } else {
-    roomMap.luxSensors = [ ]
-  }
-}
-
-void luxSensorHandler(Event e) {
-  // It IS POSSIBLE to have multiple lux sensors impacting a roomMap. The lux
-  // sensor(s) change values frequently. The activateScene() method is only
-  // invoked if the aggregate light level changes materially (i.e., from
-  // no sensor detecting sufficient light to one or more sensors detecting
-  // sufficient light).
-  if (e.name == 'illuminance') {
-    if (e.value.toInteger() >= settings.lowLuxThreshold) {
-      // Add sensor to list of sensors with sufficient light.
-      roomMap.luxSensors = cleanStrings([*roomMap.luxSensors, e.displayName])
-    } else {
-      // Remove sensor from list of sensors with sufficient light.
-      roomMap.luxSensors?.removeAll { brightSensor -> brightSensor == e.displayName }
-    }
-    logTrace('luxSensorHandler', [
-      "sensor name: ${e.displayName}",
-      "illuminance level: ${e.value}",
-      "sufficient light threshold: ${settings.lowLuxThreshold}",
-      "sufficient light: ${roomMap.luxSensors}"
-    ])
-    room_ActivateScene(room)
-  }
-}
-
-void idLowLightThreshold() {
-  input(
-    name: 'lowLuxThreshold',
-    title: [
-      heading3('Identify Low-Light Lux Threshold')
-    ].join('<br/>'),
-    type: 'number',
-    submitOnChange: true,
-    required: false,
-    multiple: false
-  )
-}
+*/
 
 // =====
 // ===== INDEPENDENT DEVICE HANDLER
 // =====
-
+/*
 void indDeviceHandler(Event e) {
   // Devices send various events (e.g., switch, level, pushed, released).
   // Isolate the events that confirm|refute roomMap.activeScene.
@@ -330,11 +254,11 @@ void indDeviceHandler(Event e) {
     roomMap.moDetected.put(deviceLabel, "${reported} (${expected})")
   }
 }
-
+*/
 // =====
 // ===== PICO BUTTON HANDLER
 // =====
-
+/*
 void toggleButton(String button) {
   // Toggle the button's device and let activate and deactivate react.
   // This will result in delivery of the scene change via a callback.
@@ -407,7 +331,7 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback()
+  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback(...)
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
@@ -422,75 +346,6 @@ void initialize() {
       'initialize',
       'The RSPbsg is pending additional configuration data.'
     )
-  }
-}
-
-void nameCustomScene() {
-  input(
-    name: customScene,
-    type: 'text',
-    title: heading2('Custom Scene Name (Optional)'),
-    width: 4,
-    submitOnChange: true,
-    required: false
-  )
-}
-
-void adjustStateScenesKeys() {
-  ArrayList assembleScenes = modeNames()
-  if (settings.customScene) {
-    assembleScenes << settings.customScene
-  }
-  if (settings.motionSensors || settings.luxSensors) {
-    assembleScenes << 'Off'
-  }
-  // The following is a work around after issues with map.retainAll {}
-  roomMap.scenes = roomMap.scenes?.collectEntries { k, v ->
-    assembleScenes.contains(k) ? [k, v] : [:]
-  }
-}
-
-Map roomScenesPage() {
-  // The parent application (Whole House Automation) assigns a unique label
-  // to each WHA Rooms instance. Capture app.label as roomMap.name.
-  return dynamicPage(
-    name: 'roomScenesPage',
-    title: [
-      heading1("${app.label} Scenes - ${app.id}"),
-      bullet1('Tab to register changes.'),
-      bullet1('Click <b>Done</b> to enable subscriptions.')
-    ].join('<br/>'),
-    install: true,
-    uninstall: true,
-  ) {
-    //---------------------------------------------------------------------------------
-    // REMOVE NO LONGER USED SETTINGS AND STATE
-    //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-    //-> app.removeSetting('..')
-    //-> state.remove('..')
-    //---------------------------------------------------------------------------------
-    roomMap.name = app.label  // WHA creates App w/ Label == Room Name
-    roomMap.luxSensors = []
-    section {
-      idMotionSensors()
-      idLuxSensors()
-      if (settings.luxSensors) { idLowLightThreshold() }
-      nameCustomScene()
-      //*********************************************************************
-      if (roomMap.scenes) {
-        ArrayList scenes = roomMap.scenes.collect { k, v -> return k }
-        Map rsPbsgConfig = [
-          'name': roomMap.name,
-          'allButtons': [ *scenes, 'Automatic' ] - [ 'Off' ],
-          'defaultButton': 'Automatic'
-        ]
-        pbsg_Initialize(rsPbsgConfig)
-      } else {
-        paragraph "Creation of the room's PBSG is pending identification of room scenes"
-      }
-      //*********************************************************************
-      adjustStateScenesKeys()
-    }
   }
 }
 */
@@ -623,7 +478,7 @@ Map room_initAllRooms() {
       'Cleaning': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
       'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
       'Night': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 74 ] ],
-      'Off': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': '??' ] ],
+      'Off': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
       'Party': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 3, 'RA2 Repeater 2 (ra2-83)': 76 ] ],
       'Play': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 4, 'RA2 Repeater 2 (ra2-83)': 76 ] ],
       'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'RA2 Repeater 2 (ra2-83)': 77 ] ],
@@ -810,9 +665,15 @@ Map room_initAllRooms() {
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
-    'luxSensors': [
-      'Control - Rear MultiSensor': 400,
-      'Control - Front MultiSensor': 400
+    'luxLowCounter': 0,
+    'lux': [
+      'sensors': [
+        'Control - Rear MultiSensor': 400,
+        'Control - Front MultiSensor': 400
+      ],
+      'lowCounter': 0,
+      'lowMin': 0,
+      'lowMax': 5
     ],
     'currScene': 'Off',
     'moDetected': [],
@@ -827,7 +688,7 @@ Map room_initAllRooms() {
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
       ],
       'Day': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-1)': 5, 'Caséta Repeater (pro2-1)': '??' ],
+        'Rep': [ 'RA2 Repeater 2 (ra2-1)': 5, 'Caséta Repeater (pro2-1)': 5 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Primary)': 0, 'Uplighting (Guest)': 17 ]
       ],
       'Night': [
@@ -856,9 +717,14 @@ Map room_initAllRooms() {
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
-    'luxSensors': [
-      'Control - Rear MultiSensor': 40,
-      'Control - Front MultiSensor': 40
+    'lux': [
+      'sensors': [
+        'Control - Rear MultiSensor': 40,
+        'Control - Front MultiSensor': 40
+      ],
+      'lowCounter': 0,
+      'lowMin': 0,
+      'lowMax': 5
     ],
     'currScene': 'Off',
     'moDetected': [],

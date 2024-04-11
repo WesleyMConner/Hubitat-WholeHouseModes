@@ -37,7 +37,7 @@ preferences {
 }
 
 void pbsg_ButtonOnCallback(Map pbsg) {
-  logInfo('pbsg_ButtonOnCallback()', "Received button: ${pbsg.activeButton}")
+  logInfo('pbsg_ButtonOnCallback(...)', "Received button: ${pbsg.activeButton}")
 }
 
 // GUI
@@ -71,7 +71,7 @@ Map TestPbsgPage() {
           // The PBSG is created and initialized as the Config is adjusted.
           // Normally, PBSG configs will be provided as a Map by the
           // application - i.e., NOT require user input via settings.
-          Map pbsg = pbsg_Initialize(config)
+          Map pbsg = pbsg_CreateInstance(config, 'testPbsg')
           paragraph "${pbsg_State(pbsg)}"
         } else {
           paragraph "PBSG creation is pending sufficient config data"
@@ -83,7 +83,7 @@ Map TestPbsgPage() {
         'allButtons': ['one', 'two', 'three', 'four', 'five', 'six'],
         'defaultButton': 'four'
       ]
-      Map bruteForcePbsg = pbsg_Initialize(bruteForceConfig)
+      Map bruteForcePbsg = pbsg_CreateInstance(bruteForceConfig, 'testPbsg')
       paragraph([
         heading1('Debug'),
         *appStateAsBullets(),

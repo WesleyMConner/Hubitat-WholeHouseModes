@@ -124,7 +124,7 @@ void initialize() {
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
-  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback()
+  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback(...)
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
@@ -200,7 +200,7 @@ Map RoomScenesPage() {
           'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'Off' ]),
           'defaultButton': 'Automatic'
         ]
-        Map rsPbsg = pbsg_Initialize(rsPbsgConfig)
+        Map rsPbsg = pbsg_CreateInstance(rsPbsgConfig, 'roomScene')
       } else {
         paragraph "Creation of the room's PBSG is pending identification of room scenes"
       }
