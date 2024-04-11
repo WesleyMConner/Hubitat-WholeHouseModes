@@ -87,20 +87,20 @@ void initialize () {
   logTrace('initialize', 'Entered')
 }
 
-void _idParticipatingRooms () {
-  roomPicklist = app.getRooms().collect {it.name.replace(' ', '_')}.sort()
-  input(
-    name: 'rooms',
-    type: 'enum',
-    title: heading2('Identify Participating Rooms'),
-    options: roomPicklist,
-    submitOnChange: true,
-    required: false,
-    multiple: true
-  )
-}
+//-> void _idParticipatingRooms () {
+//->   roomPicklist = app.getRooms().collect {it.name.replace(' ', '_')}.sort()
+//->   input(
+//->     name: 'rooms',
+//->     type: 'enum',
+//->     title: heading2('Identify Participating Rooms'),
+//->     options: roomPicklist,
+//->     submitOnChange: true,
+//->     required: false,
+//->     multiple: true
+//->   )
+//-> }
 
-void _displayInstantiatedRoomHrefs () {
+void displayInstantiatedRoomHrefs () {
   paragraph heading1('Room Scene Configuration')
   settings.rooms.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
@@ -275,7 +275,7 @@ Map WhaPage () {
       ]
       Map modePbsg = pbsg_Initialize(modePbsgConfig)
       if (settings.rooms) {
-        _displayInstantiatedRoomHrefs()
+        displayInstantiatedRoomHrefs()
       }
     }
   }

@@ -36,10 +36,10 @@ Map roomStore_Retrieve(String roomName) {
   return roomStore."${roomName}"
 }
 
-void roomStore_Save(Map room) {
+void roomStore_Save(Map roomMap) {
   // Add/update a "room" psuedo-class instance.
   Map roomStore = state.roomStore ?: [:]
-  roomStore."${room.name}" = room
+  roomStore."${roomMap.name}" = room
   state.roomStore = roomStore
 }
 
@@ -49,21 +49,20 @@ ArrayList roomStore_ListRooms() {
   return roomNames2
 }
 
-/*
 // The psuedo-class "roomStore" facilitates concurrent storage of multiple
 // "room" psuedo-class instances. A "room" psuedo-class instance (its Map)
 // extends a "pbsg" psuedo-class instance (its Map). Thus, a "room" Map
 // can be supplied where a "pbsg" Map is expected (but, not the converse).
 
-void room_ActivateScene(Map room) {
+void room_ActivateScene(Map roomMap) {
   String expectedScene = (
-    room.activeMotionSensors == false || room.luxSensors == true
-  ) ? 'Off' : room.activeScene
-  if (room.currScene != expectedScene) {
-    logInfo('activateScene', "${room.currScene} -> ${expectedScene}")
-    room.currScene = expectedScene
+    roomMap.activeMotionSensors == false || roomMap.luxSensors == true
+  ) ? 'Off' : roomMap.activeScene
+  if (roomMap.currScene != expectedScene) {
+    logInfo('activateScene', "${roomMap.currScene} -> ${expectedScene}")
+    roomMap.currScene = expectedScene
     // Decode and process the scene's per-device actions
-    Map actions = room.scenes.get(room.currScene)
+    Map actions = roomMap.scenes.get(roomMap.currScene)
     actions.get('Rep').each { repeaterId, button ->
       logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
       pushRa2RepButton(repeaterId, button)
@@ -74,31 +73,31 @@ void room_ActivateScene(Map room) {
   }
 }
 
-void pbsg_ButtonOnCallback(Map room) {
+void pbsg_ButtonOnCallback(Map pbsg) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   // Scene activation enforces room occupancy.
-  if (!button) {
-    logWarn(
+  if (!pbsg) {
+    logError(
       'pbsg_ButtonOnCallback',
-      'A null argument was received, using Automatic as a default'
+      'A null pbsg argument was received, assuming pbsg.activeButton is "Automatic"'
     )
   }
-  room.activeButton = button ?: 'Automatic'
+  roomMap.activeButton = pbsg?.activeButton ?: 'Automatic'
   logInfo(
     'pbsg_ButtonOnCallback',
-    "Button ${b(button)} -> room.activeButton: ${b(room.activeButton)}")
-  room.moDetected = [:] // clears Manual Override
+    "Button ${b(button)} -> roomMap.activeButton: ${b(roomMap.activeButton)}")
+  roomMap.moDetected = [:] // clears Manual Override
   // UPDATE THE TARGET SCENE
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
   if (
-    (room.activeButton == 'Automatic' && !room.activeScene)
-    || (room.activeButton == 'Automatic' && !room.moDetected)
+    (roomMap.activeButton == 'Automatic' && !roomMap.activeScene)
+    || (roomMap.activeButton == 'Automatic' && !roomMap.moDetected)
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     // groovylint-disable-next-line UnnecessaryGetter
-    room.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
+    roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
   } else {
-    room.activeScene = room.activeButton
+    roomMap.activeScene = roomMap.activeButton
   }
   room_ActivateScene(room)
 }
@@ -114,7 +113,7 @@ Boolean isDeviceType(String devTypeCandidate) {
 void subscribeToModeHandler() {
   logInfo(
     'subscribeToModeHandler',
-    "${room.name} subscribing to location 'mode'"
+    "${roomMap.name} subscribing to location 'mode'"
   )
   subscribe(location, 'mode', modeHandler)
 }
@@ -123,13 +122,7 @@ void modeHandler(Event e) {
   // Relay Hubitat mode changes to rooms.
   if (e.name == 'mode') {
     // FOR EACH ROOM --->
-
-
-
-
-
-
-    if (room.activeButton != 'Automatic') { room.activeButton = e.value }
+    if (roomMap.activeButton != 'Automatic') { roomMap.activeButton = e.value }
     logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
     logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
     pbsg.activeButton = 'Automatic'
@@ -137,10 +130,7 @@ void modeHandler(Event e) {
   } else {
     logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
   }
-
-
-
-  if (room.activeButton == 'Automatic') {
+  if (roomMap.activeButton == 'Automatic') {
     // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
       // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
@@ -155,20 +145,17 @@ void modeHandler(Event e) {
     logTrace(
       'modeHandler', [
         'Ignored: Mode Change',
-        "room.activeButton: ${b(room.activeButton)}",
-        "room.activeScene: ${b(room.activeScene)}"
+        "roomMap.activeButton: ${b(roomMap.activeButton)}",
+        "roomMap.activeScene: ${b(roomMap.activeScene)}"
       ]
     )
   }
 }
 
-void room_ModeChange(Map room, String newMode) {
+void room_ModeChange(Map roomMap, String newMode) {
   // Hubitat Mode changes only when the scene is 'Automatic'.
-  if (room.activeButton == 'Automatic') {
-    pbsg_ActivateButton(Map room, String newMode, DevW device = null)
-
-
-
+  if (roomMap.activeButton == 'Automatic') {
+    pbsg_ActivateButton(Map roomMap, String newMode, DevW device = null)
     if (e.name == 'mode') {
       // Let pbsg_ButtonOnCallback() handle activeButton == 'Automatic'!
       logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback()')
@@ -182,8 +169,8 @@ void room_ModeChange(Map room, String newMode) {
     logTrace(
       'modeHandler', [
         'Ignored: Mode Change',
-        "room.activeButton: ${b(room.activeButton)}",
-        "room.activeScene: ${b(room.activeScene)}"
+        "roomMap.activeButton: ${b(roomMap.activeButton)}",
+        "roomMap.activeScene: ${b(roomMap.activeScene)}"
       ]
     )
   }
@@ -210,37 +197,37 @@ void idMotionSensors() {
 
 void subscribeToMotionSensorHandler() { // RETAIN AT ROOM SCOPE
   if (settings.motionSensors) {
-    room.activeMotionSensors = []
+    roomMap.activeMotionSensors = []
     settings.motionSensors.each { d ->
       logInfo(
         'initialize',
-        "${room.name} subscribing to Motion Sensor ${deviceInfo(d)}"
+        "${roomMap.name} subscribing to Motion Sensor ${deviceInfo(d)}"
       )
       subscribe(d, motionSensorHandler, ['filterEvents': true])
       if (d.latestState('motion').value == 'active') {
-        room.activeMotionSensors = cleanStrings([*room.activeMotionSensors, d.displayName])
+        roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, d.displayName])
         room_ActivateScene(room)
       } else {
-        room.activeMotionSensors?.removeAll { activeSensor -> activeSensor == d.displayName }
+        roomMap.activeMotionSensors?.removeAll { activeSensor -> activeSensor == d.displayName }
         room_ActivateScene(room)
       }
     }
   } else {
-    room.activeMotionSensors = true
+    roomMap.activeMotionSensors = true
   }
 }
 
 void motionSensorHandler(Event e) {
-  // It IS POSSIBLE to have multiple motion sensors per room.
+  // It IS POSSIBLE to have multiple motion sensors per roomMap.
   logDebug('motionSensorHandler', eventDetails(e))
   if (e.name == 'motion') {
     if (e.value == 'active') {
       logInfo('motionSensorHandler', "${e.displayName} is active")
-      room.activeMotionSensors = cleanStrings([*room.activeMotionSensors, e.displayName])
+      roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
       room_ActivateScene(room)
     } else if (e.value == 'inactive') {
       logInfo('motionSensorHandler', "${e.displayName} is inactive")
-      room.activeMotionSensors?.removeAll { activeSensor -> activeSensor == e.displayName }
+      roomMap.activeMotionSensors?.removeAll { activeSensor -> activeSensor == e.displayName }
       room_ActivateScene(room)
     } else {
       logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
@@ -269,21 +256,21 @@ void idLuxSensors() {
 
 void subscribeToLuxSensorHandler() {
   if (settings.luxSensors) {
-    room.luxSensors = []
+    roomMap.luxSensors = []
     settings.luxSensors.each { d ->
       logInfo(
         'subscribeToLuxSensorHandler',
-        "${room.name} subscribing to Lux Sensor ${deviceInfo(d)}"
+        "${roomMap.name} subscribing to Lux Sensor ${deviceInfo(d)}"
       )
       subscribe(d, luxSensorHandler, ['filterEvents': true])
     }
   } else {
-    room.luxSensors = [ ]
+    roomMap.luxSensors = [ ]
   }
 }
 
 void luxSensorHandler(Event e) {
-  // It IS POSSIBLE to have multiple lux sensors impacting a room. The lux
+  // It IS POSSIBLE to have multiple lux sensors impacting a roomMap. The lux
   // sensor(s) change values frequently. The activateScene() method is only
   // invoked if the aggregate light level changes materially (i.e., from
   // no sensor detecting sufficient light to one or more sensors detecting
@@ -291,16 +278,16 @@ void luxSensorHandler(Event e) {
   if (e.name == 'illuminance') {
     if (e.value.toInteger() >= settings.lowLuxThreshold) {
       // Add sensor to list of sensors with sufficient light.
-      room.luxSensors = cleanStrings([*room.luxSensors, e.displayName])
+      roomMap.luxSensors = cleanStrings([*roomMap.luxSensors, e.displayName])
     } else {
       // Remove sensor from list of sensors with sufficient light.
-      room.luxSensors?.removeAll { brightSensor -> brightSensor == e.displayName }
+      roomMap.luxSensors?.removeAll { brightSensor -> brightSensor == e.displayName }
     }
     logTrace('luxSensorHandler', [
       "sensor name: ${e.displayName}",
       "illuminance level: ${e.value}",
       "sufficient light threshold: ${settings.lowLuxThreshold}",
-      "sufficient light: ${room.luxSensors}"
+      "sufficient light: ${roomMap.luxSensors}"
     ])
     room_ActivateScene(room)
   }
@@ -325,7 +312,7 @@ void idLowLightThreshold() {
 
 void indDeviceHandler(Event e) {
   // Devices send various events (e.g., switch, level, pushed, released).
-  // Isolate the events that confirm|refute room.activeScene.
+  // Isolate the events that confirm|refute roomMap.activeScene.
   Integer reported
   // Only select events are considered for MANUAL OVERRIDE detection.
   if (e.name == 'level') {
@@ -334,13 +321,13 @@ void indDeviceHandler(Event e) {
     reported = 0
   }
   String deviceLabel = e.displayName
-  Integer expected = room.scenes?."${room.activeScene}"?."${devType}"?."${deviceLabel}"
+  Integer expected = roomMap.scenes?."${roomMap.activeScene}"?."${devType}"?."${deviceLabel}"
   if (reported == expected) {
-    room.moDetected = room.moDetected.collect { key, value ->
+    roomMap.moDetected = roomMap.moDetected.collect { key, value ->
       if (key != deviceLabel) { [key, value] }
     }
   } else {
-    room.moDetected.put(deviceLabel, "${reported} (${expected})")
+    roomMap.moDetected.put(deviceLabel, "${reported} (${expected})")
   }
 }
 
@@ -351,7 +338,7 @@ void indDeviceHandler(Event e) {
 void toggleButton(String button) {
   // Toggle the button's device and let activate and deactivate react.
   // This will result in delivery of the scene change via a callback.
-  String dni = "${room.name}_${button}"
+  String dni = "${roomMap.name}_${button}"
   DevW device = getChildDevice(dni)
   if (switchState(device) == 'on') {
     device.off()
@@ -366,7 +353,7 @@ void picoHandler(Event e) {
     switch (e.name) {
       case 'pushed':
         // Check to see if the received button is assigned to a scene.
-        String scene = room.picoButtonToTargetScene?.getAt(e.deviceId.toString())
+        String scene = roomMap.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                    ?.getAt(e.value.toString())
         if (scene) {
           logInfo(
@@ -398,7 +385,7 @@ void picoHandler(Event e) {
         } else {
           logTrace(
             'picoHandler',
-            "${room.name} picoHandler() w/ ${e.deviceId}-${e.value} no action."
+            "${roomMap.name} picoHandler() w/ ${e.deviceId}-${e.value} no action."
           )
         }
         break
@@ -409,12 +396,12 @@ void picoHandler(Event e) {
 void initialize() {
   logInfo(
     'initialize',
-    "${room.name} initialize() of '${room.name}'. "
+    "${roomMap.name} initialize() of '${roomMap.name}'. "
       + 'Subscribing to modeHandler.'
   )
-  room.luxSensors = []
+  roomMap.luxSensors = []
   populateStateScenesAssignValues()
-  room.moDetected = [:] // clears Manual Override
+  roomMap.moDetected = [:] // clears Manual Override
   settings.zWaveDevices.each { device -> unsubscribe(device) }
   subscribeToModeHandler()
   subscribeToMotionSensorHandler()
@@ -424,7 +411,7 @@ void initialize() {
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
-  Map pbsg = pbsgStore_Retrieve(room.name)
+  Map pbsg = pbsgStore_Retrieve(roomMap.name)
   if (pbsg) {
     pbsg_ActivateButton(pbsg, 'Automatic')
     logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
@@ -458,14 +445,14 @@ void adjustStateScenesKeys() {
     assembleScenes << 'Off'
   }
   // The following is a work around after issues with map.retainAll {}
-  room.scenes = room.scenes?.collectEntries { k, v ->
+  roomMap.scenes = roomMap.scenes?.collectEntries { k, v ->
     assembleScenes.contains(k) ? [k, v] : [:]
   }
 }
 
 Map roomScenesPage() {
   // The parent application (Whole House Automation) assigns a unique label
-  // to each WHA Rooms instance. Capture app.label as room.name.
+  // to each WHA Rooms instance. Capture app.label as roomMap.name.
   return dynamicPage(
     name: 'roomScenesPage',
     title: [
@@ -482,18 +469,18 @@ Map roomScenesPage() {
     //-> app.removeSetting('..')
     //-> state.remove('..')
     //---------------------------------------------------------------------------------
-    room.name = app.label  // WHA creates App w/ Label == Room Name
-    room.luxSensors = []
+    roomMap.name = app.label  // WHA creates App w/ Label == Room Name
+    roomMap.luxSensors = []
     section {
       idMotionSensors()
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }
       nameCustomScene()
       //*********************************************************************
-      if (room.scenes) {
-        ArrayList scenes = room.scenes.collect { k, v -> return k }
+      if (roomMap.scenes) {
+        ArrayList scenes = roomMap.scenes.collect { k, v -> return k }
         Map rsPbsgConfig = [
-          'name': room.name,
+          'name': roomMap.name,
           'allButtons': [ *scenes, 'Automatic' ] - [ 'Off' ],
           'defaultButton': 'Automatic'
         ]
