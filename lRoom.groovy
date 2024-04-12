@@ -45,7 +45,7 @@ void roomStore_Save(Map roomMap) {
 
 ArrayList roomStore_ListRooms() {
   Map roomStore = state.roomStore ?: [:]
-  ArrayList roomNames2 =  roomStore.collect{ k, v -> k }.sort()
+  ArrayList roomNames2 =  roomStore.collect { k, v -> k }.sort()
   return roomNames2
 }
 
@@ -55,8 +55,10 @@ ArrayList roomStore_ListRooms() {
 // can be supplied where a "pbsg" Map is expected (but, not the converse).
 
 void room_ActivateScene(Map roomMap) {
+  // WARNING:
+  //   The caller is responsible for persisting "roomMap" to state.
   String expectedScene = (
-    roomMap.activeMotionSensors == false || roomMap.lux.lowCounter < roomMap.lux.lowMax
+    roomMap.activeMotionSensors == false || roomMap.lux?.lowCounter < roomMap.lux?.abelowMax
   ) ? 'Off' : roomMap.activeScene
   if (roomMap.currScene != expectedScene) {
     logInfo('activateScene', "${roomMap.currScene} -> ${expectedScene}")
@@ -64,10 +66,11 @@ void room_ActivateScene(Map roomMap) {
     // Decode and process the scene's per-device actions
     Map actions = roomMap.scenes.get(roomMap.currScene)
     actions.get('Rep').each { repeaterId, button ->
-      logInfo('activateScene', "Pushing repeater (${repeaterId}) button (${button})")
+      logInfo('activateScene', "Pushing ${repeaterId} button ${button}")
       pushRa2RepButton(repeaterId, button)
     }
     actions.get('Ind').each { deviceLabel, value ->
+      logInfo('activateScene', "Setting ${deviceLabel} to ${value}")
       setDeviceLevel(deviceLabel, value)
     }
   }
@@ -75,7 +78,7 @@ void room_ActivateScene(Map roomMap) {
 
 void pbsg_ButtonOnCallback(Map pbsg) {
   logInfo('pbsg_ButtonOnCallback#77', "pbsg.instType: >${pbsg.instType}<")
-  switch(pbsg.instType) {
+  switch (pbsg.instType) {
     case 'roomScene':
       // Pbsg/Dashboard/Alexa actions override Manual Overrides.
       // Scene activation enforces room occupancy.
@@ -351,7 +354,7 @@ void initialize() {
 */
 
 // groovylint-disable-next-line MethodSize
-Map room_initAllRooms() {
+Map room_restoreOriginalState() {
   roomStore_Save([   // Den
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
@@ -361,31 +364,31 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'Den',
     'scenes': [
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 46 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 45 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 41 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 47 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 42 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
+      'TV': [ 'Rep': [ 'Rep1': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 46 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'Chill': [ 'Rep': [ 'Rep1': 41 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 47 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 42 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
     ]
   ])
   roomStore_Save([   // DenLamp
     'activeButton': 'Automatic',
-    'activeMotionSensors': [ 'true' ],
+    'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
     'currScene': 'Day',
     'moDetected': [],
     'name': 'DenLamp',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 11 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 12 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 15 ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 15 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 16 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 17 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 15 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 11 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 12 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 15 ],
+      'Night': [ 'Rep': [ 'Rep1': 15 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 16 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 17 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 15 ] ]
       ]
     ]
   ])
@@ -398,13 +401,13 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'Guest',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 51 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 52 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 55 ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 55 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 56 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 57 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 58 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 51 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 52 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 55 ],
+      'Night': [ 'Rep': [ 'Rep1': 55 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 56 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 57 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 58 ] ]
       ]
     ]
   ])
@@ -417,14 +420,14 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'Hers',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 91 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 94 ] ],
-      'Off': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 95 ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 93 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 91 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 91 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 93 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 93 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 94 ] ],
+      'Off': [ 'Rep': [ 'Rep1': 95 ],
+      'Party': [ 'Rep': [ 'Rep1': 93 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 93 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 91 ] ]
       ]
     ]
   ])
@@ -437,14 +440,14 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'His',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 31 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 34 ] ],
-      'Off': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 35 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 33 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 31 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 31 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 33 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 33 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 34 ] ],
+      'Off': [ 'Rep': [ 'Rep1': 35 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 33 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 33 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 31 ] ]
     ]
   ])
   roomStore_Save([   // Kitchen
@@ -456,13 +459,13 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'Kitchen',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 21 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 22 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 25 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 25 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 26 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 27 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 28 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 21 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 22 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 25 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 25 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 26 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 27 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 28 ] ]
     ]
   ])
   roomStore_Save([   // Lanai
@@ -474,15 +477,15 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'Lanai',
     'scenes': [
-      'Chill': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'RA2 Repeater 2 (ra2-83)': 71 ] ],
-      'Cleaning': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
-      'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
-      'Night': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 74 ] ],
-      'Off': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'RA2 Repeater 2 (ra2-83)': 75 ] ],
-      'Party': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 3, 'RA2 Repeater 2 (ra2-83)': 76 ] ],
-      'Play': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 4, 'RA2 Repeater 2 (ra2-83)': 76 ] ],
-      'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'RA2 Repeater 2 (ra2-83)': 77 ] ],
-      'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 8, 'RA2 Repeater 2 (ra2-83)': 78 ] ]
+      'Chill': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'Rep2': 71 ] ],
+      'Cleaning': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
+      'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
+      'Night': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 74 ] ],
+      'Off': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
+      'Party': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 3, 'Rep2': 76 ] ],
+      'Play': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 4, 'Rep2': 76 ] ],
+      'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'Rep2': 77 ] ],
+      'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 8, 'Rep2': 78 ] ]
     ]
   ])
   roomStore_Save([   // Laundry
@@ -493,37 +496,34 @@ Map room_initAllRooms() {
     'currScene': 'Off',
     'moDetected': [],
     'name': 'Laundry',
-    'roomOccupied': [],
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 31 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 34 ] ],
-      'Off': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 35 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 33 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 38 ] ]
+      'Chill': [ 'Rep': [ 'Rep2': 31 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep2': 33 ] ],
+      'Day': [ 'Rep': [ 'Rep2': 33 ] ],
+      'Night': [ 'Rep': [ 'Rep2': 34 ] ],
+      'Off': [ 'Rep': [ 'Rep2': 35 ] ],
+      'Party': [ 'Rep': [ 'Rep2': 33 ] ],
+      'Supplement': [ 'Rep': [ 'Rep2': 33 ] ],
+      'TV': [ 'Rep': [ 'Rep2': 38 ] ]
     ]
   ])
   roomStore_Save([   // LhsBath
     'activeButton': 'Automatic',
-    'activeMotionSensors': [
-      'LHS Bath - Sensor (ra2-72)'
-    ],
+    'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
     'currScene': 'Day',
     'moDetected': [],
     'name': 'LhsBath',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 61 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 62 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 63 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 64 ] ],
-      'Off': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 65 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 66 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 67 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 68 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 61 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 62 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 63 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 64 ] ],
+      'Off': [ 'Rep': [ 'Rep1': 65 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 66 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 67 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 68 ] ]
     ]
   ])
   roomStore_Save([   // LhsBdrm
@@ -535,13 +535,13 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'LhsBdrm',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 41 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 42 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 45 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 45 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 46 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 41 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 48 ] ]
+      'Chill': [ 'Rep': [ 'Rep2': 41 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep2': 42 ] ],
+      'Day': [ 'Rep': [ 'Rep2': 45 ] ],
+      'Night': [ 'Rep': [ 'Rep2': 45 ] ],
+      'Party': [ 'Rep': [ 'Rep2': 46 ] ],
+      'Supplement': [ 'Rep': [ 'Rep2': 41 ] ],
+      'TV': [ 'Rep': [ 'Rep2': 48 ] ]
     ]
   ])
   roomStore_Save([   // Main
@@ -552,15 +552,14 @@ Map room_initAllRooms() {
     'currScene': 'Day',
     'moDetected': [],
     'name': 'Main',
-    'roomOccupied': true,
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 81 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 82 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 85 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 84 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 86 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 87 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 88 ] ]
+      'Chill': [ 'Rep': [ 'Rep1': 81 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 82 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 85 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 84 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 86 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 87 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 88 ] ]
     ]
   ])
   roomStore_Save([   // Office
@@ -575,15 +574,14 @@ Map room_initAllRooms() {
       ]
     ],
     'name': 'Office',
-    'roomOccupied': true,
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 51 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 52 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 55 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 55 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 56 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 57 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 58 ] ]
+      'Chill': [ 'Rep': [ 'Rep2': 51 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep2': 52 ] ],
+      'Day': [ 'Rep': [ 'Rep2': 55 ] ],
+      'Night': [ 'Rep': [ 'Rep2': 55 ] ],
+      'Party': [ 'Rep': [ 'Rep2': 56 ] ],
+      'Supplement': [ 'Rep': [ 'Rep2': 57 ] ],
+      'TV': [ 'Rep': [ 'Rep2': 58 ] ]
     ]
   ])
   roomStore_Save([   // Primary
@@ -594,15 +592,14 @@ Map room_initAllRooms() {
     'currScene': 'Day',
     'moDetected': [],
     'name': 'Primary',
-    'roomOccupied': true,
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 21 ], 'Ind': [ 'Primary Floor Lamp (0B)': 20 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 22 ], 'Ind': [ 'Primary Floor Lamp (0B)': 100 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 25 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 25 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 26 ], 'Ind': [ 'Primary Floor Lamp (0B)': 50 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 27 ], 'Ind': [ 'Primary Floor Lamp (0B)': 100 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 28 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ]
+      'Chill': [ 'Rep': [ 'Rep2': 21 ], 'Ind': [ 'Primary Floor Lamp (0B)': 20 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep2': 22 ], 'Ind': [ 'Primary Floor Lamp (0B)': 100 ] ],
+      'Day': [ 'Rep': [ 'Rep2': 25 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ],
+      'Night': [ 'Rep': [ 'Rep2': 25 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ],
+      'Party': [ 'Rep': [ 'Rep2': 26 ], 'Ind': [ 'Primary Floor Lamp (0B)': 50 ] ],
+      'Supplement': [ 'Rep': [ 'Rep2': 27 ], 'Ind': [ 'Primary Floor Lamp (0B)': 100 ] ],
+      'TV': [ 'Rep': [ 'Rep2': 28 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ]
     ]
   ])
   roomStore_Save([   // PrimBath
@@ -614,13 +611,13 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'PrimBath',
     'scenes': [
-      'Chill': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 11 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 12 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 15 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 15 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 16 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 17 ] ],
-      'TV': [ 'Rep': [ 'RA2 Repeater 2 (ra2-83)': 18 ] ]
+      'Chill': [ 'Rep': [ 'Rep2': 11 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep2': 12 ] ],
+      'Day': [ 'Rep': [ 'Rep2': 15 ] ],
+      'Night': [ 'Rep': [ 'Rep2': 15 ] ],
+      'Party': [ 'Rep': [ 'Rep2': 16 ] ],
+      'Supplement': [ 'Rep': [ 'Rep2': 17 ] ],
+      'TV': [ 'Rep': [ 'Rep2': 18 ] ]
     ]
   ])
   roomStore_Save([   // RhsBath
@@ -632,14 +629,14 @@ Map room_initAllRooms() {
     'moDetected': [],
     'name': 'RhsBath',
     'scenes': [
-      'TV': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 78 ] ],
-      'Party': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 76 ] ],
-      'Night': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 74 ] ],
-      'Chill': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 71 ] ],
-      'Supplement': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 77 ] ],
-      'Cleaning': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 72 ] ],
-      'Day': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 73 ] ],
-      'Off': [ 'Rep': [ 'RA2 Repeater 1 (ra2-1)': 75 ] ]
+      'TV': [ 'Rep': [ 'Rep1': 78 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 76 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 74 ] ],
+      'Chill': [ 'Rep': [ 'Rep1': 71 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 77 ] ],
+      'Cleaning': [ 'Rep': [ 'Rep1': 72 ] ],
+      'Day': [ 'Rep': [ 'Rep1': 73 ] ],
+      'Off': [ 'Rep': [ 'Rep1': 75 ] ]
     ]
   ])
   roomStore_Save([   // RhsBdrm
@@ -731,35 +728,35 @@ Map room_initAllRooms() {
     'name': 'Yard',
     'scenes': [
       'TV': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 64 ],
+        'Rep': [ 'Rep2': 64 ],
         'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
       ],
       'Party': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 61 ],
+        'Rep': [ 'Rep2': 61 ],
         'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
       ],
       'Night': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 64 ],
+        'Rep': [ 'Rep2': 64 ],
         'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
       ],
       'Chill': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 61 ],
+        'Rep': [ 'Rep2': 61 ],
         'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Guest)': 100, 'Uplighting (Primary)': 100 ]
       ],
       'Supplement': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ],
+        'Rep': [ 'Rep2': 65 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
       ],
       'Cleaning': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ],
+        'Rep': [ 'Rep2': 65 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
       ],
       'Day': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ],
+        'Rep': [ 'Rep2': 65 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Primary)': 0, 'Uplighting (Guest)': 0 ]
       ],
       'Off': [
-        'Rep': [ 'RA2 Repeater 2 (ra2-83)': 65 ],
+        'Rep': [ 'Rep2': 65 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
       ]
     ]

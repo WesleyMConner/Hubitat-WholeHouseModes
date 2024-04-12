@@ -72,7 +72,7 @@ void idRa2Repeaters() {
 
 void pushRa2RepButton(String repeaterId, Long buttonNumber) {
   settings.ra2Repeaters.each { repeater ->
-    if(getDeviceId(repeater) == repeaterId) {
+    if(repeater.deviceLabel == repeaterId) {
       repeater.push(buttonNumber)
     }
   }
@@ -122,25 +122,38 @@ void idMotionSensors() {
 //-> }
 
 void motionSensorHandler(Event e) {
-  // It IS POSSIBLE to have multiple motion sensors per room.
-  logInfo('motionSensorHandler', e.descriptionText)
-  /*
-  Map roomMap = xxx
-  logDebug('motionSensorHandler', eventDetails(e))
+  // Reminder
+  //   - One room can have more than one motion sensor.
+  //
+  // Sample Display Names
+  //   Laundry-MotionSensor
+  //   RhsBath-MotionSensor
+  //   LhsBath-MotionSensor
+  //   Hers-MotionSensor
+  //   His-MotionSensor
+  //             value  active
   if (e.name == 'motion') {
-    if (e.value == 'active') {
-      logInfo('motionSensorHandler', "${e.displayName} is active")
-      roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
-      room_ActivateScene()
-    } else if (e.value == 'inactive') {
-      logInfo('motionSensorHandler', "${e.displayName} is inactive")
-      roomMap.activeMotionSensors?.removeAll { it == e.displayName }
-      room_ActivateScene()
-    } else {
-      logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
+    ArrayList roomNameAndDeviceLabel = e.displayName.tokenize('-')
+    String roomName = roomNameAndDeviceLabel[0]
+    String deviceLabel = roomNameAndDeviceLabel[1]
+    Map roomMap = roomStore_Retrieve(roomName)
+    if (roomMap) {
+      if (e.value == 'active') {
+        logInfo('motionSensorHandler', "${e.displayName} is active")
+        roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
+        room_ActivateScene(roomMap)
+        roomStore_Save(roomMap)
+      } else if (e.value == 'inactive') {
+        logInfo('motionSensorHandler', "${e.displayName} is inactive")
+        roomMap.activeMotionSensors?.removeAll { it == e.displayName }
+        room_ActivateScene(roomMap)
+        roomStore_Save(roomMap)
+      } else {
+        logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
+      }
     }
+    roomStore_Save(roomMap)
   }
-  */
 }
 
 //====
@@ -172,10 +185,6 @@ void luxSensorHandler(Event e) {
       if (roomMap) {
         roomMap?.lux?.sensors.each{ deviceLabel, luxThreshold ->
           if (deviceLabel == e.displayName) {
-  //logInfo(
-  //  'luxSensorHandler',
-  //  "${e.displayName} (${luxLevel}), ---> ${roomName} (${luxThreshold})"
-  //)
             if (luxLevel < luxThreshold && roomMap.lux.lowCounter < roomMap.lux.lowMax) {
               // Only increment lux.lowCounter to a maximum value of lux.lowMax
               if (++roomMap.lux.lowCounter == roomMap.lux.lowMax) {
@@ -185,6 +194,7 @@ void luxSensorHandler(Event e) {
                 )
                 room_ActivateScene(roomMap)
               }
+              roomStore_Save(roomMap)
             } else if (luxLevel >= luxThreshold && roomMap.lux.lowCounter > roomMap.lux.lowMin) {
               // Only decrement lux.lowCounter to a minimum value of lux.lowMin
               if (--roomMap.lux.lowCounter == roomMap.lux.lowMin) {
@@ -194,6 +204,7 @@ void luxSensorHandler(Event e) {
                 )
                 room_ActivateScene(roomMap)
               }
+              roomStore_Save(roomMap)
             }
           }
         }
@@ -214,8 +225,6 @@ void luxSensorHandler(Event e) {
 //GenericZWaveOutlet
 //GeEnbrightenZWaveSmartSwitch
 //offerAll: true
-
-
 
 void subscribeIndDevToHandler(Map roomMap, Map data) {
   // USAGE:
@@ -265,6 +274,11 @@ void setDeviceLevel(String deviceId, Long level) {
 //====
 //==== PICOS TRIGGERING HUB ACTIONS
 //====
+// LhsBdrm-EntryPico
+// Office-DeskPico
+// LhsBdrm-TablePico
+// DenLamp-Pico
+
 
 void picoHandler(Event e) {
   Map roomMap = xxx
@@ -364,9 +378,10 @@ void updated () {
 }
 
 void initialize () {
-  // LOAD ROOM DATA
-  logInfo('initialize', 'Loading room data maps')
-  room_initAllRooms()
+  // RESTORE ORIGINAL STATE DATA
+  //   - Only required when WHA is created from scratch.
+  //   -> logInfo('initialize', 'Loading room data maps')
+  //   -> room_restoreOriginalState()
   ArrayList roomNames = roomStore_ListRooms()
   logInfo('initialize', "Room names: ${roomNames}")
   // INITIALIZE MODE PBSG
@@ -418,4 +433,5 @@ Map WhaPage () {
   }
 }
 //--HOLD->      if (settings.roomNames) { displayInstantiatedRoomHrefs() }
+//--HOLD->      if (roomStore_ListRooms()) { displayInstantiatedRoomHrefs() }
 //--HOLD->      if (roomStore_ListRooms()) { displayInstantiatedRoomHrefs() }
