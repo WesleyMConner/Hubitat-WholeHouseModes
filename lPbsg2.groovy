@@ -44,6 +44,14 @@ void pbsgStore_Save(Map pbsg) {
   state.pbsgStore = store
 }
 
+ArrayList pbsgStore_ListInstances(String instType) {
+  Map pbsgStore = state.pbsgStore ?: [:]
+  ArrayList instances =  pbsgStore.findResults { k, v ->
+    (v.instType == instType) ? k : null
+  }.sort()
+  return instances
+}
+
 // The psuedo-class "config" solicits the button data that drives the
 // creation of a psuedo-class "pbsg" instance.
 
@@ -134,24 +142,28 @@ void pbsg_ActivateButton(Map pbsgMap, String button, DevW device = null) {
         logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
         unsubscribe(d)
         d.on()
-        pbsg_ButtonOnCallback(pbsg)
-        pauseExecution(100)  // Take a breath to let device update
+        pbsg_ButtonOnCallback(pbsgMap)
+        pauseExecution(100)                // Pause for downstream changes
         subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
       }
     } else {
-      if (pbsg?.activeButton != null) {
+      if (pbsgMap?.activeButton != null) {
         // IMPORTANT: Move the currently active button out of the way, but
         //            DO NOT leverage pbsg_DeactivateButton() which will
         //            populate an empty activeButton with defaultButton.
-        DevW priorActive = pbsg_GetOrCreateMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
+        DevW priorActive = pbsg_GetOrCreateMissingDevice(
+          null,
+          "${pbsgMap.name}_${pbsgMap.activeButton}"
+        )
         unsubscribe(priorActive)
         priorActive.off()
-        pauseExecution(100)  // Take a breath to let device update
-        pbsg.buttonsLIFO.push(pbsg.activeButton)
-        pbsg.activeButton = null
+        pbsgMap.buttonsLIFO.push(pbsgMap.activeButton)
+        pbsgMap.activeButton = null
+        pbsgStore_Save(pbsgMap)            // Persist pbsg instance change
+        pauseExecution(100)                // Pause for downstream changes
         subscribe(priorActive, pbsg_VswEventHandler, ['filterEvents': true])
       }
-      // Relocate the newly activated button (from the LIFO) and turn it 'on'.
+      // Move the newly-activated button from the LIFO to the active slot.
       Integer indexInLIFO = null
       pbsgMap.buttonsLIFO.eachWithIndex { b, i ->
         if (b == button) { indexInLIFO = i }
@@ -162,8 +174,9 @@ void pbsg_ActivateButton(Map pbsgMap, String button, DevW device = null) {
       unsubscribe(d)
       pbsgMap.activeButton = button
       d.on()
-      pbsg_ButtonOnCallback(pbsgMap)
-      pauseExecution(100)  // Take a breath to let device update
+      pbsgStore_Save(pbsgMap)              // Persist pbsg instance change
+      pbsg_ButtonOnCallback(pbsgMap)       // Trigger button 'on' behavior
+      pauseExecution(100)                  // Pause for downstream changes
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
   } else {
@@ -171,71 +184,65 @@ void pbsg_ActivateButton(Map pbsgMap, String button, DevW device = null) {
   }
 }
 
-void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
-  DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsg.name}_${button}")
-  if (pbsg.activeButton == button) {
+void pbsg_DeactivateButton(Map pbsgMap, String button, DevW device = null) {
+  DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsgMap.name}_${button}")
+  if (pbsgMap.activeButton == button) {
     unsubscribe(d)
     d.off()
-    pauseExecution(100)  // Take a breath to let device update
-    pbsg.buttonsLIFO.push(pbsg.activeButton)
-    pbsg.activeButton = null
+    pbsgMap.buttonsLIFO.push(pbsgMap.activeButton)
+    pbsgMap.activeButton = null
+    pbsgStore_Save(pbsgMap  )              // Persist pbsg instance change
+    pauseExecution(100)                    // Pause for downstream changes
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
-    pbsg_EnforceDefault(pbsg)
-  } else if (!pbsg.buttonsLIFO.contains(button)) {
+    pbsg_EnforceDefault(pbsgMap)
+  } else if (!pbsgMap.buttonsLIFO.contains(button)) {
     //-> logInfo('pbsg_DeactivateButton', "Adding button '${button}' → ${pbsg.name} ${pbsg.buttonsLIFO}")
     unsubscribe(d)
     d.off()
-    pauseExecution(100)  // Take a breath to let device update
-    pbsg.buttonsLIFO.push(button)
+    pbsgMap.buttonsLIFO.push(button)
+    pbsgStore_Save(pbsgMap)                // Persist pbsg instance change
+    pauseExecution(100)                    // Pause for downstream changes
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
   }
-  // else -> Nothing to do, button is already deactivated
+  // Else: Nothing to do, button is already deactivated
 }
 
-//void pbsg_ActivatePrior(Map pbsg) {
-//  // Swap the currently active DNI with the DNI at the front of the LIFO.
-//  DevW temp = null
-//  if (pbsg.activeButton) { temp = pbsg.activeButton }
-//  pbsg.activeButton = pbsg.buttonsLIFO.pop()
-//  if (temp) { pbsg.buttonsLIFO.push(temp) }
-//}
-
-void pbsg_EnforceDefault(Map pbsg) {
-  if (pbsg && (!pbsg.activeButton && pbsg.defaultButton)) {
+void pbsg_EnforceDefault(Map pbsgMap) {
+  if (pbsgMap && (!pbsgMap.activeButton && pbsgMap.defaultButton)) {
     //-> logInfo('pbsg_EnforceDefault', "${pbsg.defaultButton} → active")
-    pbsg_ActivateButton(pbsg, pbsg.defaultButton)
+    pbsg_ActivateButton(pbsgMap, pbsgMap.defaultButton)
   }
 }
 
-Map pbsg_CreateInstance(Map pbsg, String instType) {
+Map pbsg_CreateInstance(Map pbsgMap, String instType) {
   // (Re-)Build the PBSG from config. [Ignore 'state.pbsgStore'.]
   // Per config_SolicitInstance(...), the following subsect of psuedo-class
   // "pbsg" fields functon collectively drive configuration:
   //   - name
   //   - allButtons
   //   - defaultButton
-  pbsg.instType = instType
-  pbsg.buttonsLIFO = []
-  pbsg.activeButton = null
+  pbsgMap.instType = instType
+  pbsgMap.buttonsLIFO = []
+  pbsgMap.activeButton = null
   // Process buttons into order leveraging their current state for treatment
   // as 'active' or 'inactive' (in the fifo). If a single button is active,
   // it should be preserved.
-  pbsg?.allButtons.each { button ->
-    DevW device = getChildDevice("${pbsg.name}_${button}")
+  pbsgMap?.allButtons.each { button ->
+    DevW device = getChildDevice("${pbsgMap.name}_${button}")
     switch (switchState(device)) {
       case 'on':
-        pbsg_ActivateButton(pbsg, button)
+        pbsg_ActivateButton(pbsgMap, button)
         break
       default:
-        pbsg_DeactivateButton(pbsg, button)
+        pbsg_DeactivateButton(pbsgMap, button)
     }
   }
-  if (!pbsg.activeButton) {
-    pbsg_EnforceDefault(pbsg)
+  if (!pbsgMap.activeButton) {
+    pbsg_EnforceDefault(pbsgMap)
   }
   // Post INIT: Use defaultButton to populate an empty activeButton
-  logInfo('pbsg_CreateInstance', pbsg_State(pbsg))
-  pbsgStore_Save(pbsg)
+  logInfo('pbsg_CreateInstance', pbsg_State(pbsgMap))
+  pbsgStore_Save(pbsgMap)
   // Delete Child Devices with DNIs prefixed with this PBSG instance name
   // and with buttons names that no longer exist.
   getChildDevices().each { device ->
@@ -243,12 +250,12 @@ Map pbsg_CreateInstance(Map pbsg, String instType) {
     ArrayList nameAndButton = dni.tokenize('_')
     String pbsgName = nameAndButton[0]
     String buttonName = nameAndButton[1]
-    if (pbsgName == pbsg.name && !pbsg.allButtons.contains(buttonName)) {
+    if (pbsgName == pbsgMap.name && !pbsgMap.allButtons.contains(buttonName)) {
       logWarn('pbsg_CreateInstance', "Deleting orphaned VSW '${dni}'")
       deleteChildDevice(dni)
     }
   }
-  return pbsg
+  return pbsgMap
 }
 
 void pbsg_VswEventHandler(Event e) {
@@ -268,9 +275,9 @@ void pbsg_VswEventHandler(Event e) {
   ArrayList parsedDNI = e.displayName.tokenize(' ')
   String pbsgName = parsedDNI[0]
   String button = parsedDNI[1]
-  Map pbsg = pbsgStore_Retrieve(pbsgName)
-  if (e.value == 'on') { pbsg_ActivateButton(pbsg, button) }
-  else if (e.value == 'off') { pbsg_DeactivateButton(pbsg, button) }
+  Map pbsgMap = pbsgStore_Retrieve(pbsgName)
+  if (e.value == 'on') { pbsg_ActivateButton(pbsgMap, button) }
+  else if (e.value == 'off') { pbsg_DeactivateButton(pbsgMap, button) }
   else {
     logWarn(
       'pbsg_VswEventHandler',
@@ -278,11 +285,11 @@ void pbsg_VswEventHandler(Event e) {
   }
 }
 
-String buttonState(Map pbsg, String button) {
+String buttonState(Map pbsgMap, String button) {
   if (button == null) { logError('buttonState', 'button arg is NULL') }
-  String tag = (button && (button == pbsg.defaultButton)) ? '*' : ''
+  String tag = (button && (button == pbsgMap.defaultButton)) ? '*' : ''
   String summary = "${tag}<b>${button}</b> "
-  DevW device = getChildDevice("${pbsg.name}_${button}")
+  DevW device = getChildDevice("${pbsgMap.name}_${button}")
   String swState = switchState(device)
     ?: logError('buttonState', "switchState() failed for button (${button}).")
   if (swState == 'on') { summary += '(<b>on</b>)' }
@@ -290,17 +297,17 @@ String buttonState(Map pbsg, String button) {
   else { summary += '(--)' }
 }
 
-String pbsg_State(Map pbsg) {
+String pbsg_State(Map pbsgMap) {
   String result
-  if (pbsg) {
-    result = "PBSG \"<b>${pbsg.name}</b>\" "
+  if (pbsgMap) {
+    result = "PBSG \"<b>${pbsgMap.name}</b>\" "
     result += '['
-    result += pbsg.buttonsLIFO.collect { button ->
-      buttonState(pbsg, button)
+    result += pbsgMap.buttonsLIFO.collect { button ->
+      buttonState(pbsgMap, button)
     }.join(', ')
     result += ']'
-    if (pbsg.activeButton) {
-      result += " → ${buttonState(pbsg, pbsg.activeButton)}"
+    if (pbsgMap.activeButton) {
+      result += " → ${buttonState(pbsgMap, pbsgMap.activeButton)}"
     }
   } else {
     logError('pbsg_State', 'Called with null pbsg instance.')

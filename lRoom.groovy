@@ -27,37 +27,29 @@ library(
   category: 'general purpose'
 )
 
-ArrayList pbsgStore_ListRooms() {
-  Map pbsgStore = state.pbsgStore ?: [:]
-  ArrayList roomNames =  pbsgStore.findResults { k, v ->
-    (v.instType == 'room') ? k : null
-  }.sort()
-  return roomNames
-}
-
-// The "room" psuedo-class extends a "pbsg" psuedo-class instance. Thus,
-// a "room" instance Map can be supplied where a "pbsg" instance Map
-// is expected (but, not the converse). The psuedo-class "pbsgStore"
-// is used to store "room" instance Maps.
+// The "room" psuedo-class extends a "pbsg" psuedo-class instance.
+//   - The psuedo-class "pbsgStore" is used to store "room" instance Maps.
+//   - A "room" instance Map can be supplied where a "pbsg" instance Map
+//     is expected. The converse IS NOT true.
 
 String room_State(Map roomMap) {
   String result = roomMap.moDetected ? 'MANUAL_OVERRIDE ' : ''
   return "${result}${pbsg_State(roomMap)}"
 }
 
-ArrayList room_getScenes (Map roomMap) {
+ArrayList room_getScenes(Map roomMap) {
   return roomMap?.scenes.collect { k, v -> k }
 }
 
 void room_ActivateScene(Map roomMap) {
-  // WARNING:
-  //   The caller is responsible for persisting "roomMap" to state.
   String expectedScene = (
-    roomMap.activeMotionSensors == false || roomMap.lux?.lowCounter < roomMap.lux?.abelowMax
+    roomMap.activeMotionSensors == false
+    || roomMap.lux?.lowCounter < roomMap.lux?.abelowMax
   ) ? 'Off' : roomMap.activeScene
   if (roomMap.currScene != expectedScene) {
     logInfo('activateScene', "${roomMap.currScene} -> ${expectedScene}")
     roomMap.currScene = expectedScene
+    pbsgStore_Save(roomMap)
     // Decode and process the scene's per-device actions
     Map actions = roomMap.scenes.get(roomMap.currScene)
     actions.'Rep'.each { repeaterId, button ->
@@ -72,54 +64,45 @@ void room_ActivateScene(Map roomMap) {
 }
 
 void pbsg_ButtonOnCallback(Map pbsgMap) {
-  //----------------------------------------------------------------------
-  // WARNING:
-  //   The caller is responsible for persisting "roomMap" to state.
-  //----------------------------------------------------------------------
   logInfo('pbsg_ButtonOnCallback', pbsg_State(pbsgMap))
-  /*
-  if (!pbsgMap) {
-    logError('pbsg_ButtonOnCallback', 'Received null pbsg')
-  } else if (!pbsgMap.isActive) {
-    logError('pbsg_ButtonOnCallback', 'Received null pbsg.isActive')
-  } else {
-    logInfo('pbsg_ButtonOnCallback#89', "pbsg.instType: >${pbsg.instType}<")
-    switch (pbsg.instType) {
+  switch (pbsgMap?.instType) {
+    case 'pbsg':
+      logInfo('pbsg_ButtonOnCallback', "Processing ${pbsg_State(pbsgMap)}")
+      // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
+      /*
+      if (roomOverrides) {
+        rooms.each{ room ->
+          if (roomOverrides.contains(room.name) == false) {
+            // Push the appropriate ROOM scene repeater button(s)
+            // And, set appropriate ROOM scene device levels
+          }
+        }
+      } else {
+        // Push the appropriate WHA scene reepater button(s)
+        // And, set appropriate WHA scene device levels
+      }
+      */
+      break
     case 'room':
-        // The provided pbsgMap is functionally a roomMap.
-
-        // Clear any prior Manual Override
-        pbsgMap.moDetected = [:]
-        // Update the room's current scene
-
-      if (roomMap.activeButton == 'Automatic') {
-        // The room scene should be set based on the current Hubitat mode.
-      } else if (roomMap.activeButton == 'Automatic' && !roomMap.moDetected) {
-
+      logInfo('pbsg_ButtonOnCallback', "Processing ${pbsg_State(pbsgMap)}")
+      // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
+      /*
+      if (newScene == currModeScene) {
+        // Minus roomManualOverride
       } else {
-
+        // Plus roomManualOverride
       }
-
-      ) {
-          // Ensure that targetScene is per the latest Hubitat mode.
-          // groovylint-disable-next-line UnnecessaryGetter
-          roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
-      } else {
-          roomMap.activeScene = roomMap.activeButton
-      }
-        room_ActivateScene(room)
-        break
-    case 'modePbsg':
-        logWarn('pbsg_ButtonOnCallback', 'MODE PBSG - IMPLEMENTATION IS PENDING')
-        break
-    case 'testPbsg':
-        logError('pbsg_ButtonOnCallback', 'Unexpected pbsg instType "testPbsg"')
-        break
+      // Push the appropriate ROOM scene repeater button(s)
+      // And, set appropriate ROOM scene device levels
+      */
+      break
     default:
-      logError('pbsg_ButtonOnCallback', "Unknown pbsg instType '${pbsg.instType}'")
-    }
+      if (pbsgMap) {
+        logError('pbsg_ButtonOnCallback', "Unexpected instType (${pbsgMap.instType})")
+      } else {
+        logError('pbsg_ButtonOnCallback', 'Missing pbsgMap')
+      }
   }
-  */
 }
 
 //-> Boolean isDeviceType(String devTypeCandidate) {
@@ -135,7 +118,8 @@ void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
       logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
-      pbsg_ButtonOnCallback(room)
+      pbsgStore_Save(pbsgMap)
+      pbsg_ButtonOnCallback(roomMap)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -154,17 +138,17 @@ void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
 // ===== PICO BUTTON HANDLER
 // =====
 
-void toggleButton(String button) {
-  // Toggle the button's device and let activate and deactivate react.
-  // This will result in delivery of the scene change via a callback.
-  String dni = "${roomMap.name}_${button}"
-  DevW device = getChildDevice(dni)
-  if (switchState(device) == 'on') {
-    device.off()
-  } else {
-    devive.on()
-  }
-}
+//-> void toggleButton(String button) {
+//->   // Toggle the button's device and let activate and deactivate react.
+//->   // This will result in delivery of the scene change via a callback.
+//->   String dni = "${roomMap.name}_${button}"
+//->   DevW device = getChildDevice(dni)
+//->   if (switchState(device) == 'on') {
+//->     device.off()
+//->   } else {
+//->     devive.on()
+//->   }
+//-> }
 
 /*
 void picoHandler(Event e) {

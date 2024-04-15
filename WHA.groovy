@@ -40,15 +40,13 @@ preferences {
 }
 
 void logHouseState() {
-  //----REPLACE--->   ArrayList results = ['']
-  //----REPLACE--->   results += pbsg_State(pbsgStore_Retrieve('mode'))
-  //----REPLACE--->   Map pbsgStore = state.pbsgStore ?: [:]
-  //----REPLACE--->   pbsgStore.each { roomName, roomMap ->
-  //----REPLACE--->     if (roomMap.instType == 'room') {
-  //----REPLACE--->       results += room_State(roomMap)
-  //----REPLACE--->     }
-  //----REPLACE--->   }
-  //----REPLACE--->   logInfo('logHouseState', results)
+  ArrayList results = ['']
+  results += pbsg_State(pbsgStore_Retrieve('mode'))
+  pbsgStore = state.pbsgStore ?: [:]
+  pbsgStore.each { roomName, roomMap ->
+    if (roomMap.instType == 'room') { results += room_State(roomMap) }
+  }
+  logInfo('logHouseState', results)
 }
 
 void AllAuto () {
@@ -344,34 +342,48 @@ void updated () {
 }
 
 void initialize () {
-  // RESTORE ORIGINAL STATE DATA
-  //   - Only required when WHA is created from scratch.
-  //   -> logInfo('initialize', 'Loading room data maps')
-  //   -> room_restoreOriginalState()
-  // INITIALIZE MODE PBSG
+  ////
+  //// Initialize a Mode PBSG instance with mode configuration data.
+  ////
   Map modePbsg = [
     name: 'mode',
     allButtons: modeNames(),
     defaultButton: getLocation().getMode()
   ]
   modePbsg = pbsg_CreateInstance(modePbsg, 'pbsg')
+  logInfo('initialize', pbsg_State(modePbsg))
   pbsgStore_Save(modePbsg)
+  ////
+  //// Initialize room state data "from scratch" if and only if required.
+  ////
+  // PARKED-> logInfo('initialize', 'Loading room data maps')
+  // PARKED-> room_restoreOriginalState()
+  ////
+  //// Leverage per-room config data to populate per-room PBSGs
+  ////
   Map pbsgStore = (state.pbsgStore ?: [:])
-  //-> Map pbsgStore = (state.pbsgStore ?: [:])
   pbsgStore.each{ k, v ->
     if (v.instType == 'room') {
       v.allButtons = [*room_getScenes(v), 'Automatic']
       v.defaultButton = 'Automatic'
       pbsg_CreateInstance(v, 'room')
+      logInfo('initialize', pbsg_State(modePbsg))
     }
   }
-  logInfo('initialize', "Room names: ${pbsgStore_ListRooms()}")
-  // BEGIN PROCESSING LUX SENSORS
+  ////
+  //// SUMMARIZE STATE OF MODE PBSG AND ROOMS
+  ////
+  logHouseState()
+  ////
+  //// BEGIN PROCESSING LUX SENSORS
+  ////
   settings?.luxSensors.each{ device ->
     logInfo('initialize', "Subscribing to events for ${device}")
     subscribe(device, luxSensorHandler, ['filterEvents': true])
   }
-  // BEGIN PROCESSING MOTION SENSORS
+  ////
+  //// BEGIN PROCESSING MOTION SENSORS
+  ////
   settings?.motionSensors.each{ device ->
     logInfo('initialize', "Subcribing to events for ${device}")
     subscribe(device, motionSensorHandler, ['filterEvents': true])
@@ -407,6 +419,3 @@ Map WhaPage () {
     }
   }
 }
-//--HOLD->      if (settings.roomNames) { displayInstantiatedRoomHrefs() }
-//--HOLD->      if (pbsgStore_ListRooms()) { displayInstantiatedRoomHrefs() }
-//--HOLD->      if (pbsgStore_ListRooms()) { displayInstantiatedRoomHrefs() }
