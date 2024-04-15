@@ -27,6 +27,23 @@ library(
   category: 'general purpose'
 )
 
+// The psuedo-class "pbsgStore" facilitates concurrent storage of multiple
+// "pbsg" psuedo-class instances. This storage facility can and should be
+// used for descendent psuedo-classes - e.g., "roomStore".
+
+Map pbsgStore_Retrieve(String pbsgName) {
+  // Retrieve a "pbsg" psuedo-class instance.
+  Map store = state.pbsgStore ?: [:]
+  return store."${pbsgName}"
+}
+
+void pbsgStore_Save(Map pbsg) {
+  // Add/update a "pbsg" psuedo-class instance.
+  Map store = state.pbsgStore ?: [:]
+  store."${pbsg.name}" = pbsg
+  state.pbsgStore = store
+}
+
 // The psuedo-class "config" solicits the button data that drives the
 // creation of a psuedo-class "pbsg" instance.
 
@@ -85,9 +102,6 @@ Map config_SolicitInstance(Integer settingsKeySuffix) {
   return config
 }
 
-// The psuedo-class "pbsg" is built to a psuedo-class "config" instance,
-// creating and managing per-button VSWs.
-
 DevW pbsg_GetOrCreateMissingDevice(DevW device, String deviceDNI) {
   if (device && device.deviceNetworkId != deviceDNI) {
     logError(
@@ -110,50 +124,50 @@ DevW pbsg_GetOrCreateMissingDevice(DevW device, String deviceDNI) {
   return d
 }
 
-void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
-  DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsg.name}_${button}")
-  String dState = switchState(d)
-  if (pbsg.activeButton == button) {
-    // The button is already active. Ensure its VSW is 'on'.
-    if (dState != 'on') {
-      logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
+void pbsg_ActivateButton(Map pbsgMap, String button, DevW device = null) {
+  if (pbsgMap) {
+    DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsgMap.name}_${button}")
+    String dState = switchState(d)
+    if (pbsg?.activeButton == button) {
+      // The button is already active. Ensure its VSW is 'on'.
+      if (dState != 'on') {
+        logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
+        unsubscribe(d)
+        d.on()
+        pbsg_ButtonOnCallback(pbsg)
+        pauseExecution(100)  // Take a breath to let device update
+        subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
+      }
+    } else {
+      if (pbsg?.activeButton != null) {
+        // IMPORTANT: Move the currently active button out of the way, but
+        //            DO NOT leverage pbsg_DeactivateButton() which will
+        //            populate an empty activeButton with defaultButton.
+        DevW priorActive = pbsg_GetOrCreateMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
+        unsubscribe(priorActive)
+        priorActive.off()
+        pauseExecution(100)  // Take a breath to let device update
+        pbsg.buttonsLIFO.push(pbsg.activeButton)
+        pbsg.activeButton = null
+        subscribe(priorActive, pbsg_VswEventHandler, ['filterEvents': true])
+      }
+      // Relocate the newly activated button (from the LIFO) and turn it 'on'.
+      Integer indexInLIFO = null
+      pbsgMap.buttonsLIFO.eachWithIndex { b, i ->
+        if (b == button) { indexInLIFO = i }
+      }
+      if (indexInLIFO) {
+        pbsgMap.buttonsLIFO.removeAt(indexInLIFO)
+      }
       unsubscribe(d)
+      pbsgMap.activeButton = button
       d.on()
-      pbsg_ButtonOnCallback(pbsg)
+      pbsg_ButtonOnCallback(pbsgMap)
       pauseExecution(100)  // Take a breath to let device update
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
   } else {
-    if (pbsg.activeButton != null) {
-      // IMPORTANT: Move the currently active button out of the way, but
-      //            DO NOT leverage pbsg_DeactivateButton() which will
-      //            populate an empty activeButton with defaultButton.
-      DevW priorActive = pbsg_GetOrCreateMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
-      unsubscribe(priorActive)
-      priorActive.off()
-      pauseExecution(100)  // Take a breath to let device update
-      pbsg.buttonsLIFO.push(pbsg.activeButton)
-      pbsg.activeButton = null
-      subscribe(priorActive, pbsg_VswEventHandler, ['filterEvents': true])
-    }
-    // Relocate the newly activated button (from the LIFO) and turn it 'on'.
-    Integer indexInLIFO = null
-    pbsg.buttonsLIFO.eachWithIndex { b, i ->
-      if (b == button) { indexInLIFO = i }
-    }
-    if (indexInLIFO == null) {
-      logWarn(
-        'pbsg_ActivateButton',
-        "Target ${button} not found in LIFO (${pbsg.buttonsLIFO})")
-    } else {
-      pbsg.buttonsLIFO.removeAt(indexInLIFO)
-    }
-    unsubscribe(d)
-    pbsg.activeButton = button
-    d.on()
-    pbsg_ButtonOnCallback(pbsg)
-    pauseExecution(100)  // Take a breath to let device update
-    subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
+    logError('pbsg_ActivateButton', 'Reveived null pbsgMap')
   }
 }
 
@@ -168,7 +182,7 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     pbsg_EnforceDefault(pbsg)
   } else if (!pbsg.buttonsLIFO.contains(button)) {
-    logWarn('pbsg_DeactivateButton', "Adding button '${button}' → ${pbsg.name} ${pbsg.buttonsLIFO}")
+    //-> logInfo('pbsg_DeactivateButton', "Adding button '${button}' → ${pbsg.name} ${pbsg.buttonsLIFO}")
     unsubscribe(d)
     d.off()
     pauseExecution(100)  // Take a breath to let device update
@@ -188,25 +202,26 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
 
 void pbsg_EnforceDefault(Map pbsg) {
   if (pbsg && (!pbsg.activeButton && pbsg.defaultButton)) {
-    logInfo('pbsg_EnforceDefault', "${pbsg.defaultButton} → active")
+    //-> logInfo('pbsg_EnforceDefault', "${pbsg.defaultButton} → active")
     pbsg_ActivateButton(pbsg, pbsg.defaultButton)
   }
 }
 
-Map pbsg_CreateInstance(Map config, String instType) {
+Map pbsg_CreateInstance(Map pbsg, String instType) {
   // (Re-)Build the PBSG from config. [Ignore 'state.pbsgStore'.]
-  Map pbsg = [
-    instType: instType,
-    name: config?.name,
-    buttonsLIFO: [],
-    defaultButton: null,
-    activeButton: null
-  ]
+  // Per config_SolicitInstance(...), the following subsect of psuedo-class
+  // "pbsg" fields functon collectively drive configuration:
+  //   - name
+  //   - allButtons
+  //   - defaultButton
+  pbsg.instType = instType
+  pbsg.buttonsLIFO = []
+  pbsg.activeButton = null
   // Process buttons into order leveraging their current state for treatment
   // as 'active' or 'inactive' (in the fifo). If a single button is active,
   // it should be preserved.
-  config?.allButtons.each { button ->
-    DevW device = getChildDevice("${config.name}_${button}")
+  pbsg?.allButtons.each { button ->
+    DevW device = getChildDevice("${pbsg.name}_${button}")
     switch (switchState(device)) {
       case 'on':
         pbsg_ActivateButton(pbsg, button)
@@ -216,11 +231,10 @@ Map pbsg_CreateInstance(Map config, String instType) {
     }
   }
   if (!pbsg.activeButton) {
-    pbsg.defaultButton = config.defaultButton
     pbsg_EnforceDefault(pbsg)
   }
   // Post INIT: Use defaultButton to populate an empty activeButton
-  logInfo('pbsg_CreateInstance', "Initial PBSG: ${pbsg_State(pbsg)}")
+  logInfo('pbsg_CreateInstance', pbsg_State(pbsg))
   pbsgStore_Save(pbsg)
   // Delete Child Devices with DNIs prefixed with this PBSG instance name
   // and with buttons names that no longer exist.
@@ -229,7 +243,7 @@ Map pbsg_CreateInstance(Map config, String instType) {
     ArrayList nameAndButton = dni.tokenize('_')
     String pbsgName = nameAndButton[0]
     String buttonName = nameAndButton[1]
-    if (pbsgName == pbsg.name && !config.allButtons.contains(buttonName)) {
+    if (pbsgName == pbsg.name && !pbsg.allButtons.contains(buttonName)) {
       logWarn('pbsg_CreateInstance', "Deleting orphaned VSW '${dni}'")
       deleteChildDevice(dni)
     }
@@ -292,20 +306,4 @@ String pbsg_State(Map pbsg) {
     logError('pbsg_State', 'Called with null pbsg instance.')
   }
   return result
-}
-
-// The psuedo-class "pbsgStore" facilitates concurrent storage of multiple
-// "pbsg" psuedo-class instances.
-
-Map pbsgStore_Retrieve(String pbsgName) {
-  // Retrieve a "pbsg" psuedo-class instance.
-  Map store = state.pbsgStore ?: [:]
-  return store."${pbsgName}"
-}
-
-void pbsgStore_Save(Map pbsg) {
-  // Add/update a "pbsg" psuedo-class instance.
-  Map store = state.pbsgStore ?: [:]
-  store."${pbsg.name}" = pbsg
-  state.pbsgStore = store
 }

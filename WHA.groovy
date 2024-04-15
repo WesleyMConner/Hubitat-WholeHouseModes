@@ -39,17 +39,28 @@ preferences {
   page(name: 'WhaPage')
 }
 
+void logHouseState() {
+  //----REPLACE--->   ArrayList results = ['']
+  //----REPLACE--->   results += pbsg_State(pbsgStore_Retrieve('mode'))
+  //----REPLACE--->   Map pbsgStore = state.pbsgStore ?: [:]
+  //----REPLACE--->   pbsgStore.each { roomName, roomMap ->
+  //----REPLACE--->     if (roomMap.instType == 'room') {
+  //----REPLACE--->       results += room_State(roomMap)
+  //----REPLACE--->     }
+  //----REPLACE--->   }
+  //----REPLACE--->   logInfo('logHouseState', results)
+}
+
 void AllAuto () {
-//->  settings.roomNames.each { roomName ->
-  roomStore_ListRooms().each { roomName ->
-    // FUTURE
-    //   - pbsg_ActivateButton(pbsg, 'Automatic')
-    //   - pbsg_ButtonOnCallback(pbsg)
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
-    String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
-    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
-    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
-  }
+//--FUTURE->  roomStore_ListRooms().each { roomName ->
+//--FUTURE->    // FUTURE
+//--FUTURE->    //   - pbsg_ActivateButton(pbsg, 'Automatic')
+//--FUTURE->    //   - pbsg_ButtonOnCallback(pbsg)
+//--FUTURE->    InstAppW roomApp = app.getChildAppByLabel(roomName)
+//--FUTURE->    String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
+//--FUTURE->    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
+//--FUTURE->    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
+//--FUTURE->  }
 }
 
 //====
@@ -99,28 +110,6 @@ void idMotionSensors() {
   )
 }
 
-//-> void subscribeToMotionSensorHandler(Map roomMap) {
-//->   if (settings.motionSensors) {
-//->     roomMap.activeMotionSensors = []
-//->     settings.motionSensors.each { d ->
-//->       logInfo(
-//->         'initialize',
-//->         "${roomMap.name} subscribing to Motion Sensor ${deviceInfo(d)}"
-//->       )
-//->       subscribe(d, motionSensorHandler, ['filterEvents': true])
-//->       if (d.latestState('motion').value == 'active') {
-//->         roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, displayName])
-//->         room_ActivateScene()
-//->       } else {
-//->         roomMap.activeMotionSensors?.removeAll { it == displayName }
-//->         room_ActivateScene()
-//->       }
-//->     }
-//->   } else {
-//->     roomMap.activeMotionSensors = [ true ]
-//->   }
-//-> }
-
 void motionSensorHandler(Event e) {
   // Reminder
   //   - One room can have more than one motion sensor.
@@ -136,23 +125,23 @@ void motionSensorHandler(Event e) {
     ArrayList roomNameAndDeviceLabel = e.displayName.tokenize('-')
     String roomName = roomNameAndDeviceLabel[0]
     String deviceLabel = roomNameAndDeviceLabel[1]
-    Map roomMap = roomStore_Retrieve(roomName)
+    Map roomMap = pbsgStore_Retrieve(roomName)
     if (roomMap) {
       if (e.value == 'active') {
         logInfo('motionSensorHandler', "${e.displayName} is active")
         roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
         room_ActivateScene(roomMap)
-        roomStore_Save(roomMap)
+        pbsgStore_Save(roomMap)
       } else if (e.value == 'inactive') {
         logInfo('motionSensorHandler', "${e.displayName} is inactive")
         roomMap.activeMotionSensors?.removeAll { it == e.displayName }
         room_ActivateScene(roomMap)
-        roomStore_Save(roomMap)
+        pbsgStore_Save(roomMap)
       } else {
         logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
       }
     }
-    roomStore_Save(roomMap)
+    pbsgStore_Save(roomMap)
   }
 }
 
@@ -180,8 +169,8 @@ void idLuxSensors() {
 void luxSensorHandler(Event e) {
   if (e.name == 'illuminance') {
     Integer luxLevel = e.value.toInteger()
-    Map roomStore = state.roomStore ?: [:]
-    roomStore.each{ roomName, roomMap ->
+    Map pbsgStore = state.pbsgStore ?: [:]
+    pbsgStore.each{ roomName, roomMap ->
       if (roomMap) {
         roomMap?.lux?.sensors.each{ deviceLabel, luxThreshold ->
           if (deviceLabel == e.displayName) {
@@ -194,7 +183,7 @@ void luxSensorHandler(Event e) {
                 )
                 room_ActivateScene(roomMap)
               }
-              roomStore_Save(roomMap)
+              pbsgStore_Save(roomMap)
             } else if (luxLevel >= luxThreshold && roomMap.lux.lowCounter > roomMap.lux.lowMin) {
               // Only decrement lux.lowCounter to a minimum value of lux.lowMin
               if (--roomMap.lux.lowCounter == roomMap.lux.lowMin) {
@@ -204,7 +193,7 @@ void luxSensorHandler(Event e) {
                 )
                 room_ActivateScene(roomMap)
               }
-              roomStore_Save(roomMap)
+              pbsgStore_Save(roomMap)
             }
           }
         }
@@ -331,29 +320,6 @@ void picoHandler(Event e) {
 //==== OTHER
 //====
 
-void displayInstantiatedRoomHrefs () {
-  paragraph heading1('Room Scene Configuration')
-//->   settings.roomNames.each { roomName ->
-  roomStore_ListRooms().each { roomName ->
-    InstAppW roomApp = app.getChildAppByLabel(roomName)
-    if (!roomApp) {
-      logWarn(
-        'addRoomAppsIfMissing',
-        "Adding room ${roomName}"
-      )
-      roomApp = addChildApp('wesmc', 'RoomScenes', roomName)
-    }
-    href (
-      name: roomName,
-      width: 2,
-      url: "/installedapp/configure/${roomApp?.id}",
-      style: 'internal',
-      title: "${appInfo(roomApp)} Scenes",
-      state: null
-    )
-  }
-}
-
 void installed () {
   logWarn('installed', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
@@ -382,16 +348,24 @@ void initialize () {
   //   - Only required when WHA is created from scratch.
   //   -> logInfo('initialize', 'Loading room data maps')
   //   -> room_restoreOriginalState()
-  ArrayList roomNames = roomStore_ListRooms()
-  logInfo('initialize', "Room names: ${roomNames}")
   // INITIALIZE MODE PBSG
-  logInfo('initialize', 'Initializing the modePbsg')
-  Map modePbsg = pbsg_CreateInstance([
-    'name': 'mode',
-    'allButtons': getLocation().getModes().collect { it.name },
-    'defaultButton': getLocation().currentMode.name
-  ], 'modePbsg')
+  Map modePbsg = [
+    name: 'mode',
+    allButtons: modeNames(),
+    defaultButton: getLocation().getMode()
+  ]
+  modePbsg = pbsg_CreateInstance(modePbsg, 'pbsg')
   pbsgStore_Save(modePbsg)
+  Map pbsgStore = (state.pbsgStore ?: [:])
+  //-> Map pbsgStore = (state.pbsgStore ?: [:])
+  pbsgStore.each{ k, v ->
+    if (v.instType == 'room') {
+      v.allButtons = [*room_getScenes(v), 'Automatic']
+      v.defaultButton = 'Automatic'
+      pbsg_CreateInstance(v, 'room')
+    }
+  }
+  logInfo('initialize', "Room names: ${pbsgStore_ListRooms()}")
   // BEGIN PROCESSING LUX SENSORS
   settings?.luxSensors.each{ device ->
     logInfo('initialize', "Subscribing to events for ${device}")
@@ -421,6 +395,7 @@ Map WhaPage () {
     //-> app.removeSetting('..')
     //-> state.remove('..')
     //---------------------------------------------------------------------------------
+    state.remove('roomStore')
     app.updateLabel('WHA')
     //state.MODES = getLocation().getModes().collect { it.name }
     //getGlobalVar('defaultMode').value
@@ -433,5 +408,5 @@ Map WhaPage () {
   }
 }
 //--HOLD->      if (settings.roomNames) { displayInstantiatedRoomHrefs() }
-//--HOLD->      if (roomStore_ListRooms()) { displayInstantiatedRoomHrefs() }
-//--HOLD->      if (roomStore_ListRooms()) { displayInstantiatedRoomHrefs() }
+//--HOLD->      if (pbsgStore_ListRooms()) { displayInstantiatedRoomHrefs() }
+//--HOLD->      if (pbsgStore_ListRooms()) { displayInstantiatedRoomHrefs() }

@@ -27,32 +27,27 @@ library(
   category: 'general purpose'
 )
 
-// The psuedo-class "roomStore" facilitates concurrent storage of multiple
-// "room" psuedo-class instances.
-
-Map roomStore_Retrieve(String roomName) {
-  // Retrieve a "room" psuedo-class instance.
-  Map roomStore = state.roomStore ?: [:]
-  return roomStore."${roomName}"
+ArrayList pbsgStore_ListRooms() {
+  Map pbsgStore = state.pbsgStore ?: [:]
+  ArrayList roomNames =  pbsgStore.findResults { k, v ->
+    (v.instType == 'room') ? k : null
+  }.sort()
+  return roomNames
 }
 
-void roomStore_Save(Map roomMap) {
-  // Add/update a "room" psuedo-class instance.
-  Map roomStore = state.roomStore ?: [:]
-  roomStore."${roomMap.name}" = roomMap
-  state.roomStore = roomStore
+// The "room" psuedo-class extends a "pbsg" psuedo-class instance. Thus,
+// a "room" instance Map can be supplied where a "pbsg" instance Map
+// is expected (but, not the converse). The psuedo-class "pbsgStore"
+// is used to store "room" instance Maps.
+
+String room_State(Map roomMap) {
+  String result = roomMap.moDetected ? 'MANUAL_OVERRIDE ' : ''
+  return "${result}${pbsg_State(roomMap)}"
 }
 
-ArrayList roomStore_ListRooms() {
-  Map roomStore = state.roomStore ?: [:]
-  ArrayList roomNames2 =  roomStore.collect { k, v -> k }.sort()
-  return roomNames2
+ArrayList room_getScenes (Map roomMap) {
+  return roomMap?.scenes.collect { k, v -> k }
 }
-
-// The psuedo-class "roomStore" facilitates concurrent storage of multiple
-// "room" psuedo-class instances. A "room" psuedo-class instance (its Map)
-// extends a "pbsg" psuedo-class instance (its Map). Thus, a "room" Map
-// can be supplied where a "pbsg" Map is expected (but, not the converse).
 
 void room_ActivateScene(Map roomMap) {
   // WARNING:
@@ -65,103 +60,71 @@ void room_ActivateScene(Map roomMap) {
     roomMap.currScene = expectedScene
     // Decode and process the scene's per-device actions
     Map actions = roomMap.scenes.get(roomMap.currScene)
-    actions.get('Rep').each { repeaterId, button ->
+    actions.'Rep'.each { repeaterId, button ->
       logInfo('activateScene', "Pushing ${repeaterId} button ${button}")
       pushRa2RepButton(repeaterId, button)
     }
-    actions.get('Ind').each { deviceLabel, value ->
+    actions.'Ind'.each { deviceLabel, value ->
       logInfo('activateScene', "Setting ${deviceLabel} to ${value}")
       setDeviceLevel(deviceLabel, value)
     }
   }
 }
 
-void pbsg_ButtonOnCallback(Map pbsg) {
-  logInfo('pbsg_ButtonOnCallback#77', "pbsg.instType: >${pbsg.instType}<")
-  switch (pbsg.instType) {
-    case 'roomScene':
-      // Pbsg/Dashboard/Alexa actions override Manual Overrides.
-      // Scene activation enforces room occupancy.
-      roomMap.activeButton = pbsg?.activeButton ?: 'Automatic'
-      logInfo(
-        'pbsg_ButtonOnCallback',
-        "Button ${b(button)} -> roomMap.activeButton: ${b(roomMap.activeButton)}"
-      )
-      roomMap.moDetected = [:] // clears Manual Override
-      // UPDATE THE TARGET SCENE
-      // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
-      if (
-        (roomMap.activeButton == 'Automatic' && !roomMap.activeScene)
-        || (roomMap.activeButton == 'Automatic' && !roomMap.moDetected)
-      ) {
-        // Ensure that targetScene is per the latest Hubitat mode.
-        // groovylint-disable-next-line UnnecessaryGetter
-        roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
+void pbsg_ButtonOnCallback(Map pbsgMap) {
+  //----------------------------------------------------------------------
+  // WARNING:
+  //   The caller is responsible for persisting "roomMap" to state.
+  //----------------------------------------------------------------------
+  logInfo('pbsg_ButtonOnCallback', pbsg_State(pbsgMap))
+  /*
+  if (!pbsgMap) {
+    logError('pbsg_ButtonOnCallback', 'Received null pbsg')
+  } else if (!pbsgMap.isActive) {
+    logError('pbsg_ButtonOnCallback', 'Received null pbsg.isActive')
+  } else {
+    logInfo('pbsg_ButtonOnCallback#89', "pbsg.instType: >${pbsg.instType}<")
+    switch (pbsg.instType) {
+    case 'room':
+        // The provided pbsgMap is functionally a roomMap.
+
+        // Clear any prior Manual Override
+        pbsgMap.moDetected = [:]
+        // Update the room's current scene
+
+      if (roomMap.activeButton == 'Automatic') {
+        // The room scene should be set based on the current Hubitat mode.
+      } else if (roomMap.activeButton == 'Automatic' && !roomMap.moDetected) {
+
       } else {
-        roomMap.activeScene = roomMap.activeButton
+
       }
-      room_ActivateScene(room)
-      break
+
+      ) {
+          // Ensure that targetScene is per the latest Hubitat mode.
+          // groovylint-disable-next-line UnnecessaryGetter
+          roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
+      } else {
+          roomMap.activeScene = roomMap.activeButton
+      }
+        room_ActivateScene(room)
+        break
     case 'modePbsg':
-      logWarn('pbsg_ButtonOnCallback', 'MODE PBSG - IMPLEMENTATION IS PENDING')
-      break
+        logWarn('pbsg_ButtonOnCallback', 'MODE PBSG - IMPLEMENTATION IS PENDING')
+        break
     case 'testPbsg':
-      logError('pbsg_ButtonOnCallback', 'Unexpected pbsg instType "testPbsg"')
-      break
+        logError('pbsg_ButtonOnCallback', 'Unexpected pbsg instType "testPbsg"')
+        break
     default:
       logError('pbsg_ButtonOnCallback', "Unknown pbsg instType '${pbsg.instType}'")
-  }
-}
-
-Boolean isDeviceType(String devTypeCandidate) {
-  return ['Rep', 'Ind'].contains(devTypeCandidate)
-}
-
-// =====
-// ===== MODE HANDLER
-// =====
-
-void subscribeToModeHandler() {
-  logInfo(
-    'subscribeToModeHandler',
-    "${roomMap.name} subscribing to location 'mode'"
-  )
-  subscribe(location, 'mode', modeHandler)
-}
-
-void modeHandler(Event e) {
-  // Relay Hubitat mode changes to rooms.
-  if (e.name == 'mode') {
-    // FOR EACH ROOM --->
-    if (roomMap.activeButton != 'Automatic') { roomMap.activeButton = e.value }
-    logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
-    logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-    pbsg.activeButton = 'Automatic'
-    pbsg_ButtonOnCallback(pbsg)
-  } else {
-    logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
-  }
-  if (roomMap.activeButton == 'Automatic') {
-    // Hubitat Mode changes only apply when the room's button is 'Automatic'.
-    if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
-      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
-      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-      pbsg.activeButton = 'Automatic'
-      pbsg_ButtonOnCallback(pbsg)
-    } else {
-      logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
-  } else {
-    logTrace(
-      'modeHandler', [
-        'Ignored: Mode Change',
-        "roomMap.activeButton: ${b(roomMap.activeButton)}",
-        "roomMap.activeScene: ${b(roomMap.activeScene)}"
-      ]
-    )
   }
+  */
 }
+
+//-> Boolean isDeviceType(String devTypeCandidate) {
+//->   return ['Rep', 'Ind'].contains(devTypeCandidate)
+//-> }
 
 void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
   // Hubitat Mode changes only when the scene is 'Automatic'.
@@ -188,80 +151,9 @@ void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
 }
 
 // =====
-// ===== MOTION SENSOR HANDLER
-// =====
-
-/*
-void subscribeToMotionSensorHandler() { // RETAIN AT ROOM SCOPE
-  if (settings.motionSensors) {
-    roomMap.activeMotionSensors = []
-    settings.motionSensors.each { d ->
-      logInfo(
-        'initialize',
-        "${roomMap.name} subscribing to Motion Sensor ${deviceInfo(d)}"
-      )
-      subscribe(d, motionSensorHandler, ['filterEvents': true])
-      if (d.latestState('motion').value == 'active') {
-        roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, d.displayName])
-        room_ActivateScene(room)
-      } else {
-        roomMap.activeMotionSensors?.removeAll { activeSensor -> activeSensor == d.displayName }
-        room_ActivateScene(room)
-      }
-    }
-  } else {
-    roomMap.activeMotionSensors = true
-  }
-}
-
-void motionSensorHandler(Event e) {
-  // It IS POSSIBLE to have multiple motion sensors per roomMap.
-  logDebug('motionSensorHandler', eventDetails(e))
-  if (e.name == 'motion') {
-    if (e.value == 'active') {
-      logInfo('motionSensorHandler', "${e.displayName} is active")
-      roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
-      room_ActivateScene(room)
-    } else if (e.value == 'inactive') {
-      logInfo('motionSensorHandler', "${e.displayName} is inactive")
-      roomMap.activeMotionSensors?.removeAll { activeSensor -> activeSensor == e.displayName }
-      room_ActivateScene(room)
-    } else {
-      logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
-    }
-  }
-}
-*/
-
-// =====
-// ===== INDEPENDENT DEVICE HANDLER
-// =====
-/*
-void indDeviceHandler(Event e) {
-  // Devices send various events (e.g., switch, level, pushed, released).
-  // Isolate the events that confirm|refute roomMap.activeScene.
-  Integer reported
-  // Only select events are considered for MANUAL OVERRIDE detection.
-  if (e.name == 'level') {
-    reported = safeParseInt(e.value)
-  } else if (e.name == 'switch' && e.value == 'off') {
-    reported = 0
-  }
-  String deviceLabel = e.displayName
-  Integer expected = roomMap.scenes?."${roomMap.activeScene}"?."${devType}"?."${deviceLabel}"
-  if (reported == expected) {
-    roomMap.moDetected = roomMap.moDetected.collect { key, value ->
-      if (key != deviceLabel) { [key, value] }
-    }
-  } else {
-    roomMap.moDetected.put(deviceLabel, "${reported} (${expected})")
-  }
-}
-*/
-// =====
 // ===== PICO BUTTON HANDLER
 // =====
-/*
+
 void toggleButton(String button) {
   // Toggle the button's device and let activate and deactivate react.
   // This will result in delivery of the scene change via a callback.
@@ -274,6 +166,7 @@ void toggleButton(String button) {
   }
 }
 
+/*
 void picoHandler(Event e) {
   Integer changePercentage = 10
   if (e.isStateChange == true) {
@@ -293,7 +186,7 @@ void picoHandler(Event e) {
           settings.zWaveDevices.each { d ->
             if (switchState(d) == 'off') {
               d.setLevel(5)
-              //d.on()
+            //d.on()
             } else {
               d.setLevel(Math.min(
                 (d.currentValue('level') as Integer) + changePercentage,
@@ -319,43 +212,11 @@ void picoHandler(Event e) {
     }
   }
 }
-
-void initialize() {
-  logInfo(
-    'initialize',
-    "${roomMap.name} initialize() of '${roomMap.name}'. "
-      + 'Subscribing to modeHandler.'
-  )
-  roomMap.luxSensors = []
-  populateStateScenesAssignValues()
-  roomMap.moDetected = [:] // clears Manual Override
-  settings.zWaveDevices.each { device -> unsubscribe(device) }
-  subscribeToModeHandler()
-  subscribeToMotionSensorHandler()
-  subscribeToLuxSensorHandler()
-  // ACTIVATION
-  //   - If Automatic is already active in the PBSG, pbsg_ButtonOnCallback(...)
-  //     will not be called.
-  //   - It is better to include a redundant call here than to miss
-  //     proper room activation on initialization.
-  Map pbsg = pbsgStore_Retrieve(roomMap.name)
-  if (pbsg) {
-    pbsg_ActivateButton(pbsg, 'Automatic')
-    logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-    pbsg.activeButton = 'Automatic'
-    pbsg_ButtonOnCallback(pbsg)
-  } else {
-    logWarn(
-      'initialize',
-      'The RSPbsg is pending additional configuration data.'
-    )
-  }
-}
 */
 
 // groovylint-disable-next-line MethodSize
 Map room_restoreOriginalState() {
-  roomStore_Save([   // Den
+  pbsgStore_Save([   // Den
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -373,7 +234,7 @@ Map room_restoreOriginalState() {
       'Day': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
     ]
   ])
-  roomStore_Save([   // DenLamp
+  pbsgStore_Save([   // DenLamp
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -392,7 +253,7 @@ Map room_restoreOriginalState() {
       ]
     ]
   ])
-  roomStore_Save([   // Guest
+  pbsgStore_Save([   // Guest
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -411,7 +272,7 @@ Map room_restoreOriginalState() {
       ]
     ]
   ])
-  roomStore_Save([   // Hers
+  pbsgStore_Save([   // Hers
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -431,7 +292,7 @@ Map room_restoreOriginalState() {
       ]
     ]
   ])
-  roomStore_Save([   // His
+  pbsgStore_Save([   // His
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -450,7 +311,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 31 ] ]
     ]
   ])
-  roomStore_Save([   // Kitchen
+  pbsgStore_Save([   // Kitchen
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -468,7 +329,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 28 ] ]
     ]
   ])
-  roomStore_Save([   // Lanai
+  pbsgStore_Save([   // Lanai
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -488,7 +349,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 8, 'Rep2': 78 ] ]
     ]
   ])
-  roomStore_Save([   // Laundry
+  pbsgStore_Save([   // Laundry
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -507,7 +368,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep2': 38 ] ]
     ]
   ])
-  roomStore_Save([   // LhsBath
+  pbsgStore_Save([   // LhsBath
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -526,7 +387,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 68 ] ]
     ]
   ])
-  roomStore_Save([   // LhsBdrm
+  pbsgStore_Save([   // LhsBdrm
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -544,7 +405,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep2': 48 ] ]
     ]
   ])
-  roomStore_Save([   // Main
+  pbsgStore_Save([   // Main
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -562,7 +423,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 88 ] ]
     ]
   ])
-  roomStore_Save([   // Office
+  pbsgStore_Save([   // Office
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -584,7 +445,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep2': 58 ] ]
     ]
   ])
-  roomStore_Save([   // Primary
+  pbsgStore_Save([   // Primary
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -602,7 +463,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep2': 28 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ]
     ]
   ])
-  roomStore_Save([   // PrimBath
+  pbsgStore_Save([   // PrimBath
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -620,7 +481,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep2': 18 ] ]
     ]
   ])
-  roomStore_Save([   // RhsBath
+  pbsgStore_Save([   // RhsBath
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -639,7 +500,7 @@ Map room_restoreOriginalState() {
       'Off': [ 'Rep': [ 'Rep1': 75 ] ]
     ]
   ])
-  roomStore_Save([   // RhsBdrm
+  pbsgStore_Save([   // RhsBdrm
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -658,7 +519,7 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 15 ] ]
     ]
   ])
-  roomStore_Save([   // WHA
+  pbsgStore_Save([   // WHA
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -710,7 +571,7 @@ Map room_restoreOriginalState() {
       ]
     ]
   ])
-  roomStore_Save([   // Yard
+  pbsgStore_Save([   // Yard
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -761,5 +622,5 @@ Map room_restoreOriginalState() {
       ]
     ]
   ])
-  return state.roomStore as Map
+  return state.pbsgStore as Map
 }

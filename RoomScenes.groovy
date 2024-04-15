@@ -200,7 +200,7 @@ Map RoomScenesPage() {
           'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'Off' ]),
           'defaultButton': 'Automatic'
         ]
-        Map rsPbsg = pbsg_CreateInstance(rsPbsgConfig, 'roomScene')
+        Map rsPbsg = pbsg_CreateInstance(rsPbsgConfig, 'room')
       } else {
         paragraph "Creation of the room's PBSG is pending identification of room scenes"
       }

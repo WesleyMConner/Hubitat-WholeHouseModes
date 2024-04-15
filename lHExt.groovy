@@ -66,9 +66,15 @@ Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
 }
 
 ArrayList modeNames() {
-  //return getLocation().getModes().collect { modeObj -> modeObj.name }
   return getLocation().getModes()*.name
 }
+
+String modeNamesAsString() {
+  String result = modeNames().join(' ')
+  logInfo('modeNameAsString', result)
+  return result
+}
+
 
 String switchState(DevW d) {
   /* groovylint-disable-next-line UseCollectMany */
