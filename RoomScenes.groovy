@@ -95,12 +95,12 @@ void room_ModeChange(Map roomMap, String newMode) {
 }
 
 void installed() {
-  logTrace('installed', 'At Entry')
+  //-> logTrace('installed', 'At Entry')
   initialize()
 }
 
 void updated() {
-  logTrace('updated', 'At Entry')
+  //-> logTrace('updated', 'At Entry')
   unsubscribe()  // Suspend all events (e.g., child devices, mode changes).
   initialize()
 }

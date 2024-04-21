@@ -39,35 +39,36 @@ preferences {
   page(name: 'WhaPage')
 }
 
-void logHouseState() {
+void logModeAndPerRoomState() {
   ArrayList results = ['']
-  results += pbsg_State(pbsgStore_Retrieve('mode'))
+  modePbsg = pbsgStore_Retrieve('mode')
+  results += modePbsg ?pbsg_State(modePbsg) : 'Null modePbsg'
   pbsgStore = state.pbsgStore ?: [:]
   pbsgStore.each { roomName, roomMap ->
     if (roomMap.instType == 'room') { results += room_State(roomMap) }
   }
-  logInfo('logHouseState', results)
+  logInfo('logModeAndPerRoomState', results)
 }
 
 void AllAuto () {
-//--FUTURE->  roomStore_ListRooms().each { roomName ->
-//--FUTURE->    // FUTURE
-//--FUTURE->    //   - pbsg_ActivateButton(pbsg, 'Automatic')
-//--FUTURE->    //   - pbsg_ButtonOnCallback(pbsg)
-//--FUTURE->    InstAppW roomApp = app.getChildAppByLabel(roomName)
-//--FUTURE->    String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
-//--FUTURE->    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
-//--FUTURE->    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
-//--FUTURE->  }
+//--TBD->  roomStore_ListRooms().each { roomName ->
+//--TBD->    // TBD
+//--TBD->    //   - pbsg_ActivateButton(pbsg, 'Automatic')
+//--TBD->    //   - pbsg_ButtonOnCallback(pbsg)
+//--TBD->    InstAppW roomApp = app.getChildAppByLabel(roomName)
+//--TBD->    String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
+//--TBD->    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
+//--TBD->    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
+//--TBD->  }
 }
 
 //====
 //==== REPEATER METHODS
 //====
 
-void idRa2Repeaters() {
+void idLutronRepeaters() {
   input(
-    name: 'ra2Repeaters',
+    name: 'lutronRepeaters',
     title: [
       heading3('Identify Lutron RA2 Repeaters'),
     ].join('<br/>'),
@@ -79,12 +80,23 @@ void idRa2Repeaters() {
   )
 }
 
-void pushRa2RepButton(String repeaterId, Long buttonNumber) {
-  settings.ra2Repeaters.each { repeater ->
+void pushLutronRepButton(String repeaterId, Long buttonNumber) {
+  settings.lutronRepeaters.each { repeater ->
     if(repeater.deviceLabel == repeaterId) {
       repeater.push(buttonNumber)
     }
   }
+}
+
+void beginProcessingRepeaterEvents() {
+  settings?.lutronRepeaters.each{ device ->
+    logInfo('beginProcessingRepeaterEvents', "Subcribing to events for ${device}")
+    subscribe(device, repeaterHandler, ['filterEvents': true])
+  }
+}
+
+void repeaterHandler(Event e) {
+  logInfo('repeaterHandler', eventDetails(e))
 }
 
 //====
@@ -140,6 +152,13 @@ void motionSensorHandler(Event e) {
       }
     }
     pbsgStore_Save(roomMap)
+  }
+}
+
+void beginProcessingMotionSensorEvents() {
+  settings?.motionSensors.each{ device ->
+    logInfo('beginProcessingMotionSensorEvents', "Subcribing to events for ${device}")
+    subscribe(device, motionSensorHandler, ['filterEvents': true])
   }
 }
 
@@ -202,6 +221,13 @@ void luxSensorHandler(Event e) {
   }
 }
 
+void beginProcessingLuxSensorEvents() {
+  settings?.luxSensors.each{ device ->
+    logInfo('beginProcessingLuxSensorEvents', "Subscribing to events for ${device}")
+    subscribe(device, luxSensorHandler, ['filterEvents': true])
+  }
+}
+
 //====
 //==== Z-WAVE DEVICE METHODS
 //====
@@ -213,6 +239,8 @@ void luxSensorHandler(Event e) {
 //GeEnbrightenZWaveSmartSwitch
 //offerAll: true
 
+// TBD
+/*
 void subscribeIndDevToHandler(Map roomMap, Map data) {
   // USAGE:
   //   runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
@@ -220,25 +248,31 @@ void subscribeIndDevToHandler(Map roomMap, Map data) {
   // Hubitat state data if callbacks occur quickly (within 1/2 second)
   // after a level change. So, briefly unsubscribe/subscribe to avoid
   // this situation.
-  logTrace(
+  logInfo(
     'subscribeIndDevToHandler',
     "${roomMap.name} subscribing ${deviceInfo(data.device)}"
   )
   subscribe(device, indDeviceHandler, ['filterEvents': true])
 }
+*/
 
+// TBD
+/*
 void unsubscribeIndDevToHandler(Map roomMap, DevW device) {
   // Independent Devices (especially RA2 and Caséta) are subject to stale
   // Hubitat state data if callbacks occur quickly (within 1/2 second)
   // after a level change. So, briefly unsubscribe/subscribe to avoid
   // this situation.
-  logTrace(
+  logInfo(
     '_unsubscribeToIndDeviceHandler',
     "${roomMap.name} unsubscribing ${deviceInfo(device)}"
   )
   unsubscribe(device)
 }
+*/
 
+//TBD
+/*
 void setDeviceLevel(String deviceId, Long level) {
   settings.indDevices.each { device ->
     if (getDeviceId(device) == deviceId) {
@@ -257,6 +291,7 @@ void setDeviceLevel(String deviceId, Long level) {
     }
   }
 }
+*/
 
 //====
 //==== PICOS TRIGGERING HUB ACTIONS
@@ -266,7 +301,8 @@ void setDeviceLevel(String deviceId, Long level) {
 // LhsBdrm-TablePico
 // DenLamp-Pico
 
-
+// TBD
+/*
 void picoHandler(Event e) {
   Map roomMap = xxx
   Integer changePercentage = 10
@@ -283,7 +319,7 @@ void picoHandler(Event e) {
           )
           toggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
-          logTrace('picoHandler', "Raising ${settings.indDevices}")
+          logInfo('picoHandler', "Raising ${settings.indDevices}")
           settings.indDevices.each { d ->
             if (switchState(d) == 'off') {
               d.setLevel(5)
@@ -296,7 +332,7 @@ void picoHandler(Event e) {
             }
           }
         } else if (e.value == '4') {  // Default "Lower" behavior
-          logTrace('picoHandler', "Lowering ${settings.indDevices}")
+          logInfo('picoHandler', "Lowering ${settings.indDevices}")
           settings.indDevices.each { d ->
             d.setLevel(Math.max(
               (d.currentValue('level') as Integer) - changePercentage,
@@ -304,7 +340,7 @@ void picoHandler(Event e) {
             ))
           }
         } else {
-          logTrace(
+          logInfo(
             'picoHandler',
             "${roomMap.name} picoHandler() w/ ${e.deviceId}-${e.value} no action."
           )
@@ -313,6 +349,7 @@ void picoHandler(Event e) {
     }
   }
 }
+*/
 
 //====
 //==== OTHER
@@ -341,53 +378,43 @@ void updated () {
   initialize()
 }
 
-void initialize () {
-  ////
-  //// Initialize a Mode PBSG instance with mode configuration data.
-  ////
+void initializeModePbsg() {
   Map modePbsg = [
     name: 'mode',
     allButtons: modeNames(),
     defaultButton: getLocation().getMode()
   ]
   modePbsg = pbsg_CreateInstance(modePbsg, 'pbsg')
-  logInfo('initialize', pbsg_State(modePbsg))
   pbsgStore_Save(modePbsg)
-  ////
-  //// Initialize room state data "from scratch" if and only if required.
-  ////
-  // PARKED-> logInfo('initialize', 'Loading room data maps')
-  // PARKED-> room_restoreOriginalState()
-  ////
-  //// Leverage per-room config data to populate per-room PBSGs
-  ////
+  logInfo('initializeModePbsg', pbsg_State(modePbsg))
+}
+
+void createRoomStateDataFromScratch() {
+  // Create room state data "from scratch" (if and only if required).
+  logInfo('createRoomStateDataFromScratch', 'Loading room data maps')
+  room_restoreOriginalState()
+}
+
+void populatePerRoomPbsgs() {
   Map pbsgStore = (state.pbsgStore ?: [:])
   pbsgStore.each{ k, v ->
     if (v.instType == 'room') {
       v.allButtons = [*room_getScenes(v), 'Automatic']
       v.defaultButton = 'Automatic'
-      pbsg_CreateInstance(v, 'room')
-      logInfo('initialize', pbsg_State(modePbsg))
+      roomPbsg = pbsg_CreateInstance(v, 'room')
+      logInfo('populatePerRoomPbsgs', pbsg_State(roomPbsg))
     }
   }
-  ////
-  //// SUMMARIZE STATE OF MODE PBSG AND ROOMS
-  ////
-  logHouseState()
-  ////
-  //// BEGIN PROCESSING LUX SENSORS
-  ////
-  settings?.luxSensors.each{ device ->
-    logInfo('initialize', "Subscribing to events for ${device}")
-    subscribe(device, luxSensorHandler, ['filterEvents': true])
-  }
-  ////
-  //// BEGIN PROCESSING MOTION SENSORS
-  ////
-  settings?.motionSensors.each{ device ->
-    logInfo('initialize', "Subcribing to events for ${device}")
-    subscribe(device, motionSensorHandler, ['filterEvents': true])
-  }
+}
+
+void initialize () {
+  initializeModePbsg()
+  //createRoomStateDataFromScratch()
+  populatePerRoomPbsgs()
+  logModeAndPerRoomState()
+  beginProcessingRepeaterEvents()
+  beginProcessingLuxSensorEvents()
+  beginProcessingMotionSensorEvents()
 }
 
 Map WhaPage () {
@@ -413,7 +440,7 @@ Map WhaPage () {
     //getGlobalVar('defaultMode').value
     section {
       settings.appLogThreshold = 'INFO'
-      idRa2Repeaters()
+      idLutronRepeaters()
       idMotionSensors()
       idLuxSensors()
     }

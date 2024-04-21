@@ -240,11 +240,14 @@ Map pbsg_CreateInstance(Map pbsgMap, String instType) {
   if (!pbsgMap.activeButton) {
     pbsg_EnforceDefault(pbsgMap)
   }
-  // Post INIT: Use defaultButton to populate an empty activeButton
-  logInfo('pbsg_CreateInstance', pbsg_State(pbsgMap))
+  // Summarize the initial state of the PBSG
+  if (!pbsgMap) {
+    logError('pbsg_CreateInstance', 'Encountered a null pbsgMap')
+  }
+  //-> logTrace('pbsg_CreateInstance', pbsg_State(pbsgMap))
   pbsgStore_Save(pbsgMap)
-  // Delete Child Devices with DNIs prefixed with this PBSG instance name
-  // and with buttons names that no longer exist.
+  // Clean up (delete) Child Devices with DNIs prefixed with this PBSG
+  // instance name and with buttons names that no longer exist.
   getChildDevices().each { device ->
     String dni = device.deviceNetworkId
     ArrayList nameAndButton = dni.tokenize('_')

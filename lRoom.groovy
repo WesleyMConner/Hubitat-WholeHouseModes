@@ -33,6 +33,9 @@ library(
 //     is expected. The converse IS NOT true.
 
 String room_State(Map roomMap) {
+  if (!roomMap) {
+    logError('room_State', 'Called with a null roomMap')
+  }
   String result = roomMap.moDetected ? 'MANUAL_OVERRIDE ' : ''
   return "${result}${pbsg_State(roomMap)}"
 }
@@ -47,27 +50,29 @@ void room_ActivateScene(Map roomMap) {
     || roomMap.lux?.lowCounter < roomMap.lux?.abelowMax
   ) ? 'Off' : roomMap.activeScene
   if (roomMap.currScene != expectedScene) {
-    logInfo('activateScene', "${roomMap.currScene} -> ${expectedScene}")
+    logInfo('room_ActivateScene', "${roomMap.currScene} -> ${expectedScene}")
     roomMap.currScene = expectedScene
     pbsgStore_Save(roomMap)
     // Decode and process the scene's per-device actions
     Map actions = roomMap.scenes.get(roomMap.currScene)
     actions.'Rep'.each { repeaterId, button ->
-      logInfo('activateScene', "Pushing ${repeaterId} button ${button}")
+      logInfo('room_ActivateScene', "Pushing ${repeaterId} button ${button}")
       pushRa2RepButton(repeaterId, button)
     }
     actions.'Ind'.each { deviceLabel, value ->
-      logInfo('activateScene', "Setting ${deviceLabel} to ${value}")
+      logInfo('room_ActivateScene', "Setting ${deviceLabel} to ${value}")
       setDeviceLevel(deviceLabel, value)
     }
   }
 }
 
 void pbsg_ButtonOnCallback(Map pbsgMap) {
-  logInfo('pbsg_ButtonOnCallback', pbsg_State(pbsgMap))
+  if (!pbsgMap) {
+    logError('pbsg_ButtonOnCallback', 'Encountered a null pbsgMap')
+  }
   switch (pbsgMap?.instType) {
     case 'pbsg':
-      logInfo('pbsg_ButtonOnCallback', "Processing ${pbsg_State(pbsgMap)}")
+      logInfo('pbsg_ButtonOnCallback', "Processing pbsg ${pbsg_State(pbsgMap)}")
       // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
       /*
       if (roomOverrides) {
@@ -84,7 +89,7 @@ void pbsg_ButtonOnCallback(Map pbsgMap) {
       */
       break
     case 'room':
-      logInfo('pbsg_ButtonOnCallback', "Processing ${pbsg_State(pbsgMap)}")
+      logInfo('pbsg_ButtonOnCallback', "Processing room ${pbsg_State(pbsgMap)}")
       // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
       /*
       if (newScene == currModeScene) {
@@ -115,8 +120,8 @@ void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
     pbsg_ActivateButton(roomMap, newMode, device)
     if (e.name == 'mode') {
       // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
-      logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
-      logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
+      logInfo('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
+      logInfo('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
       pbsgStore_Save(pbsgMap)
       pbsg_ButtonOnCallback(roomMap)
@@ -124,7 +129,7 @@ void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
   } else {
-    logTrace(
+    logInfo(
       'modeHandler', [
         'Ignored: Mode Change',
         "roomMap.activeButton: ${b(roomMap.activeButton)}",
@@ -166,7 +171,7 @@ void picoHandler(Event e) {
           )
           toggleButton(scene)
         } else if (e.value == '2') {  // Default "Raise" behavior
-          logTrace('picoHandler', "Raising ${settings.zWaveDevices}")
+          logInfo('picoHandler', "Raising ${settings.zWaveDevices}")
           settings.zWaveDevices.each { d ->
             if (switchState(d) == 'off') {
               d.setLevel(5)
@@ -179,7 +184,7 @@ void picoHandler(Event e) {
             }
           }
         } else if (e.value == '4') {  // Default "Lower" behavior
-          logTrace('picoHandler', "Lowering ${settings.zWaveDevices}")
+          logInfo('picoHandler', "Lowering ${settings.zWaveDevices}")
           settings.zWaveDevices.each { d ->
             d.setLevel(Math.max(
               (d.currentValue('level') as Integer) - changePercentage,
@@ -187,7 +192,7 @@ void picoHandler(Event e) {
             ))
           }
         } else {
-          logTrace(
+          logInfo(
             'picoHandler',
             "${roomMap.name} picoHandler() w/ ${e.deviceId}-${e.value} no action."
           )
