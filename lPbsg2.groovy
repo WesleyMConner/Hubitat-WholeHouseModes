@@ -244,7 +244,7 @@ Map pbsg_CreateInstance(Map pbsgMap, String instType) {
   if (!pbsgMap) {
     logError('pbsg_CreateInstance', 'Encountered a null pbsgMap')
   }
-  //-> logTrace('pbsg_CreateInstance', pbsg_State(pbsgMap))
+  //->logTrace('pbsg_CreateInstance', pbsg_State(pbsgMap))
   pbsgStore_Save(pbsgMap)
   // Clean up (delete) Child Devices with DNIs prefixed with this PBSG
   // instance name and with buttons names that no longer exist.
