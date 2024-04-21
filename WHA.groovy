@@ -96,7 +96,16 @@ void beginProcessingRepeaterEvents() {
 }
 
 void repeaterHandler(Event e) {
-  logInfo('repeaterHandler', eventDetails(e))
+  Integer buttonNumber = safeParseInt(e.name[10])
+  if (buttonNumber > 0) {
+    if (e.value == 'on') {
+      logInfo('repeaterHandler', "${e.deviceId} ${buttonNumber} on")
+    } else {
+      logInfo('repeaterHandler', "${e.deviceId} ${buttonNumber} off")
+    }
+  } else {
+    logError('repeaterHandler', "Unexpected event ${e.descriptionText}")
+  }
 }
 
 //====
