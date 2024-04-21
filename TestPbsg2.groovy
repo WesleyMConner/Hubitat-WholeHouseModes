@@ -56,14 +56,14 @@ Map TestPbsgPage() {
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
     //-> app.removeSetting('..')
-    //-> state.remove('..')
+    //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
     app.updateLabel('TestPbsgPage')
-    state.remove('childVsws')
+    atomicState.remove('childVsws')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-      // NOTE: state.pbsgs are ALWAYS rebuilt from settings and child VSW discovery.
+      atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
+      // NOTE: atomicState.pbsgs are ALWAYS rebuilt from settings and child VSW discovery.
       // Create two PBSGs by Soliciting input data from a human
       for (i in [0, 1]) {
         Map config = config_SolicitInstance(i)
@@ -71,7 +71,7 @@ Map TestPbsgPage() {
           // The PBSG is created and initialized as the Config is adjusted.
           // Normally, PBSG configs will be provided as a Map by the
           // application - i.e., NOT require user input via settings.
-          Map pbsg = pbsg_CreateInstance(config, 'testPbsg')
+          Map pbsg = pbsg_BuildToConfig(config, 'testPbsg')
           paragraph "${pbsg_State(pbsg)}"
         } else {
           paragraph "PBSG creation is pending sufficient config data"
@@ -83,7 +83,7 @@ Map TestPbsgPage() {
         'allButtons': ['one', 'two', 'three', 'four', 'five', 'six'],
         'defaultButton': 'four'
       ]
-      Map bruteForcePbsg = pbsg_CreateInstance(bruteForceConfig, 'testPbsg')
+      Map bruteForcePbsg = pbsg_BuildToConfig(bruteForceConfig, 'testPbsg')
       paragraph([
         heading1('Debug'),
         *appStateAsBullets(),

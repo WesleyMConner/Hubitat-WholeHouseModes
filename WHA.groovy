@@ -39,13 +39,19 @@ preferences {
   page(name: 'WhaPage')
 }
 
+ArrayList identifyRoomNames() {
+  return atomicState.findResults{ k, v -> (v.instType = 'room') ? k : null }
+}
+
 void logModeAndPerRoomState() {
   ArrayList results = ['']
-  modePbsg = pbsgStore_Retrieve('mode')
-  results += modePbsg ?pbsg_State(modePbsg) : 'Null modePbsg'
-  pbsgStore = state.pbsgStore ?: [:]
-  pbsgStore.each { roomName, roomMap ->
-    if (roomMap.instType == 'room') { results += room_State(roomMap) }
+  Map modePbsg = atomicState.mode
+  results += modePbsg ? pbsg_State(modePbsg) : 'Null modePbsg'
+  ArrayList roomNames = identifyRoomNames()
+  roomNames.each { roomName ->
+    if (atomicState."${roomName}".instType == 'room') {
+      results += room_State(atomicState."${roomName}")
+    }
   }
   logInfo('logModeAndPerRoomState', results)
 }
@@ -131,7 +137,7 @@ void idMotionSensors() {
 
 void motionSensorHandler(Event e) {
   // Reminder
-  //   - One room can have more than one motion sensor.
+  //   - One room pbsg_BuildToConfig have more than one motion sensor.
   //
   // Sample Display Names
   //   Laundry-MotionSensor
@@ -144,23 +150,27 @@ void motionSensorHandler(Event e) {
     ArrayList roomNameAndDeviceLabel = e.displayName.tokenize('-')
     String roomName = roomNameAndDeviceLabel[0]
     String deviceLabel = roomNameAndDeviceLabel[1]
-    Map roomMap = pbsgStore_Retrieve(roomName)
+    Map roomMap = atomicState."${roomName}"
+
     if (roomMap) {
       if (e.value == 'active') {
         logInfo('motionSensorHandler', "${e.displayName} is active")
         roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
         room_ActivateScene(roomMap)
-        pbsgStore_Save(roomMap)
+        atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
+        //-> pbsgStore_Save(roomMap)
       } else if (e.value == 'inactive') {
         logInfo('motionSensorHandler', "${e.displayName} is inactive")
         roomMap.activeMotionSensors?.removeAll { it == e.displayName }
         room_ActivateScene(roomMap)
-        pbsgStore_Save(roomMap)
+        atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
+        //-> pbsgStore_Save(roomMap)
       } else {
         logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
       }
     }
-    pbsgStore_Save(roomMap)
+    atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
+    //-> pbsgStore_Save(roomMap)
   }
 }
 
@@ -195,7 +205,7 @@ void idLuxSensors() {
 void luxSensorHandler(Event e) {
   if (e.name == 'illuminance') {
     Integer luxLevel = e.value.toInteger()
-    Map pbsgStore = state.pbsgStore ?: [:]
+    Map pbsgStore = atomicState.pbsgs ?: [:]
     pbsgStore.each{ roomName, roomMap ->
       if (roomMap) {
         roomMap?.lux?.sensors.each{ deviceLabel, luxThreshold ->
@@ -209,7 +219,8 @@ void luxSensorHandler(Event e) {
                 )
                 room_ActivateScene(roomMap)
               }
-              pbsgStore_Save(roomMap)
+              atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
+              //-> pbsgStore_Save(roomMap)
             } else if (luxLevel >= luxThreshold && roomMap.lux.lowCounter > roomMap.lux.lowMin) {
               // Only decrement lux.lowCounter to a minimum value of lux.lowMin
               if (--roomMap.lux.lowCounter == roomMap.lux.lowMin) {
@@ -219,7 +230,8 @@ void luxSensorHandler(Event e) {
                 )
                 room_ActivateScene(roomMap)
               }
-              pbsgStore_Save(roomMap)
+              atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
+              //-> pbsgStore_Save(roomMap)
             }
           }
         }
@@ -281,7 +293,6 @@ void unsubscribeIndDevToHandler(Map roomMap, DevW device) {
 */
 
 //TBD
-/*
 void setDeviceLevel(String deviceId, Long level) {
   settings.indDevices.each { device ->
     if (getDeviceId(device) == deviceId) {
@@ -300,7 +311,6 @@ void setDeviceLevel(String deviceId, Long level) {
     }
   }
 }
-*/
 
 //====
 //==== PICOS TRIGGERING HUB ACTIONS
@@ -319,7 +329,7 @@ void picoHandler(Event e) {
     switch (e.name) {
       case 'pushed':
         // Check to see if the received button is assigned to a scene.
-        String scene = state.picoButtonToTargetScene?.getAt(e.deviceId.toString())
+        String scene = atomicState.picoButtonToTargetScene?.getAt(e.deviceId.toString())
                                                     ?.getAt(e.value.toString())
         if (scene) {
           logInfo(
@@ -367,6 +377,7 @@ void picoHandler(Event e) {
 void installed () {
   logWarn('installed', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
+  pauseExecution(100)
   initialize()
 }
 
@@ -378,24 +389,29 @@ void uninstalled () {
 void updated () {
   logWarn('updated', 'Entered')
   unsubscribe()  // Suspend event processing to rebuild state variables.
+  pauseExecution(100)
   //---------------------------------------------------------------------------------
   // REMOVE NO LONGER USED SETTINGS AND STATE
   //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
-  //   - state.remove('X')
+  //   - atomicState.remove('X')
   //   - app.removeSetting('Y')
   //---------------------------------------------------------------------------------
   initialize()
 }
 
 void initializeModePbsg() {
-  Map modePbsg = [
+  // Initialize the Mode PBSG instance with config data only.
+  atomicState.mode = [
     name: 'mode',
+    instType: 'pbsg',
     allButtons: modeNames(),
     defaultButton: getLocation().getMode()
   ]
-  modePbsg = pbsg_CreateInstance(modePbsg, 'pbsg')
-  pbsgStore_Save(modePbsg)
-  logInfo('initializeModePbsg', pbsg_State(modePbsg))
+  // Leverage the config (above) to (re-)build the PBSG and its devices.
+  /*modePbsg = */ pbsg_BuildToConfig('mode')
+  //->atomicState."${atomicState.mode.name}" = modePbsg // Persist pbsg instance change
+  //-> pbsgStore_Save(modePbsg)
+  logInfo('initializeModePbsg', pbsg_State('mode'))
 }
 
 void createRoomStateDataFromScratch() {
@@ -405,25 +421,24 @@ void createRoomStateDataFromScratch() {
 }
 
 void populatePerRoomPbsgs() {
-  Map pbsgStore = (state.pbsgStore ?: [:])
-  pbsgStore.each{ k, v ->
-    if (v.instType == 'room') {
-      v.allButtons = [*room_getScenes(v), 'Automatic']
-      v.defaultButton = 'Automatic'
-      roomPbsg = pbsg_CreateInstance(v, 'room')
-      logInfo('populatePerRoomPbsgs', pbsg_State(roomPbsg))
-    }
+  identifyRoomNames().each{ roomName ->
+    // Leverage the config (per room) to (re-)build the room's PBSG and its devices.
+    pbsg_BuildToConfig(roomName)
+    logInfo('populatePerRoomPbsgs', pbsg_State(roomName))
   }
 }
 
 void initialize () {
+  //-> atomicState.each{ k, v ->
+  //->   atomicState."${k}" = v
+  //-> }
   initializeModePbsg()
   //createRoomStateDataFromScratch()
   populatePerRoomPbsgs()
-  logModeAndPerRoomState()
-  beginProcessingRepeaterEvents()
-  beginProcessingLuxSensorEvents()
-  beginProcessingMotionSensorEvents()
+//  logModeAndPerRoomState()
+//  beginProcessingRepeaterEvents()
+//  beginProcessingLuxSensorEvents()
+//  beginProcessingMotionSensorEvents()
 }
 
 Map WhaPage () {
@@ -441,11 +456,13 @@ Map WhaPage () {
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
     //-> app.removeSetting('..')
-    //-> state.remove('..')
+    //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
-    state.remove('roomStore')
+    atomicState.remove('roomStore')
+    atomicState.remove('pbsgStore')
+    atomicState.remove('pbsgs')
     app.updateLabel('WHA')
-    //state.MODES = getLocation().getModes().collect { it.name }
+    //atomicState.MODES = getLocation().getModes().collect { it.name }
     //getGlobalVar('defaultMode').value
     section {
       settings.appLogThreshold = 'INFO'

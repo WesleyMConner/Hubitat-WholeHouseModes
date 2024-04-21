@@ -60,12 +60,12 @@ Map Ra2Page() {
     // REMOVE NO LONGER USED SETTINGS AND STATE
     //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
     //-> app.removeSetting('..')
-    //-> state.remove('..')
+    //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
     app.updateLabel('Ra2TestPage')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      state.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
+      atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       solicitRa2IntegrationReport()
     }
   }
@@ -121,7 +121,7 @@ void parseRa2IntegRpt() {
   ra2Data.circuits = [:]
   ra2Data.timeclock = [:]
   ra2Data.green = []
-  ra2IR_Ingest(settings.ra2IntegReport)
+  ra2IR_SplitRows(settings.ra2IntegReport)
   // Confirm that the expected Integration Report header is present.
   String headerRow = ra2IR_currRow()
   String expectedHeader = 'RadioRA 2 Integration Report'

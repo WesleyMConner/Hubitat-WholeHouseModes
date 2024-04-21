@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// ( L U T R O N )   R A 2
+// RA2 Integration Report (RA2IR)
 //
 // Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -43,38 +43,38 @@ String normalizeRowCsv(String raw) {
   return raw?.trim()?.replaceAll(', ', ',')
 }
 
-void ra2IR_Ingest(String rawData) {
-  // Use split (vs tokenize) to preserve empty rows.
-  state.ra2IR = [ 'rows': rawData.split('\n'), 'row': 0 ]
-}
-
-Map ra2IR() {
-  if (!state.ra2IR) {
-    logError('ra2IR', [
-      '',
-      'Cannot find state.ra2IR.',
-      'Ensure ra2IR_Ingest() is called.'
-    ])
+Map ra2IR_Retrieve() {
+  // The ra2IR Map has two keys
+  //   rows: An ArrayList of raw row data excluding empty rows.
+  //    row: The current index in 'rows', which advances as raw data is processed.
+  Map ra2IR = atomicState.ra2IR
+  if (!ra2IR) {
+    if (!settings.ra2IntegReport) {
+      logError('ra2IR_Retrieve', 'Missing "settings.ra2IntegReport"')
+    } else {
+      ra2IR.rows = settings.ra2IntegReport.tokenize('\n')
+      ra2IR.row = 0  // Current index in the
+    }
   }
-  return state.ra2IR
+  return ra2IR
 }
 
-Boolean ra2IR_unprocessedRows() {
-  Map rpt = ra2IR()
+Boolean ra2IR_hasUnprocessedRows() {
+  Map rpt = ra2IR_Retrieve()
   return (rpt.row + 1 < rpt.rows.size())
 }
 
 String ra2IR_currRow() {
-  Map rpt = ra2IR()
+  Map rpt = ra2IR_Retrieve()
   return normalizeRowCsv(rpt.rows[rpt.row])
 }
 
 String ra2IR_nextRow() {
   String result
-  if (ra2IR_unprocessedRows()) {
-    Map rpt = ra2IR()
+  if (ra2IR_hasUnprocessedRows()) {
+    Map rpt = ra2IR_Retrieve()
     rpt.row = ++rpt.row
-    state.ra2IR = [ 'rows': rpt.rows, 'row': rpt.row ]
+    atomicState.ra2IR = [ 'rows': rpt.rows, 'row': rpt.row ]
     result = normalizeRowCsv(rpt.rows[rpt.row])
   } else {
     result = 'EOF'

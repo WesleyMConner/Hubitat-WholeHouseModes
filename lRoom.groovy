@@ -32,47 +32,61 @@ library(
 //   - A "room" instance Map can be supplied where a "pbsg" instance Map
 //     is expected. The converse IS NOT true.
 
-String room_State(Map roomMap) {
-  if (!roomMap) {
-    logError('room_State', 'Called with a null roomMap')
+String room_State(String roomName) {
+  String result = 'NOT FOUND'
+  if (atomicState."${roomName}") {
+    result = atomicState."${roomName}".moDetected ? 'MANUAL_OVERRIDE ' : ''
+    result += pbsg_State(atomicState."${roomName}")
+  } else {
+    logError('room_State', "Cannot find room '${roomName}'")
   }
-  String result = roomMap.moDetected ? 'MANUAL_OVERRIDE ' : ''
-  return "${result}${pbsg_State(roomMap)}"
+  return result
 }
 
-ArrayList room_getScenes(Map roomMap) {
-  return roomMap?.scenes.collect { k, v -> k }
+ArrayList room_getScenes(String roomName) {
+  ArrayList results = []
+  if (atomicState."${roomName}") {
+    results = atomicState."${roomName}"?.scenes.collect { k, v -> k }
+  } else {
+    logError('room_getScenes', "Cannot find room '${roomName}'")
+  }
+  return results
 }
 
-void room_ActivateScene(Map roomMap) {
-  String expectedScene = (
-    roomMap.activeMotionSensors == false
-    || roomMap.lux?.lowCounter < roomMap.lux?.abelowMax
-  ) ? 'Off' : roomMap.activeScene
-  if (roomMap.currScene != expectedScene) {
-    logInfo('room_ActivateScene', "${roomMap.currScene} -> ${expectedScene}")
-    roomMap.currScene = expectedScene
-    pbsgStore_Save(roomMap)
-    // Decode and process the scene's per-device actions
-    Map actions = roomMap.scenes.get(roomMap.currScene)
-    actions.'Rep'.each { repeaterId, button ->
-      logInfo('room_ActivateScene', "Pushing ${repeaterId} button ${button}")
-      pushRa2RepButton(repeaterId, button)
+void room_ActivateScene(String roomName) {
+  Map room = atomicState."${roomName}"
+  if (room) {
+    String expectedScene = (
+      room.activeMotionSensors == false
+      || room.lux?.lowCounter < room.lux?.belowMax
+    ) ? 'Off' : room.activeScene
+    if (room.currScene != expectedScene) {
+      logInfo('room_ActivateScene', "${room.currScene} -> ${expectedScene}")
+      atomicState.updateMapValue(roomName, 'currScene', expectedScene)
+      // Decode and process the scene's per-device actions
+      Map actions = roomMap.scenes.get(roomMap.currScene)
+      atomicState."${roomName}".actions.'Rep'.each { repeaterId, button ->
+        logInfo('room_ActivateScene', "Pushing ${repeaterId} button ${button}")
+        pushLutronRepButton(repeaterId, button)
+      }
+      atomicState."${roomName}".actions.'Ind'.each { deviceLabel, value ->
+        logInfo('room_ActivateScene', "Setting ${deviceLabel} to ${value}")
+        setDeviceLevel(deviceLabel, value)
+      }
     }
-    actions.'Ind'.each { deviceLabel, value ->
-      logInfo('room_ActivateScene', "Setting ${deviceLabel} to ${value}")
-      setDeviceLevel(deviceLabel, value)
-    }
+  } else {
+    logError('room_ActivateScene', "Cannot find room '${roomName}'")
   }
 }
 
-void pbsg_ButtonOnCallback(Map pbsgMap) {
+void pbsg_ButtonOnCallback(String pbsgName) {
+  Map pbsgMap = atomicState."${pbsgName}"
   if (!pbsgMap) {
     logError('pbsg_ButtonOnCallback', 'Encountered a null pbsgMap')
   }
   switch (pbsgMap?.instType) {
     case 'pbsg':
-      logInfo('pbsg_ButtonOnCallback', "Processing pbsg ${pbsg_State(pbsgMap)}")
+      logInfo('pbsg_ButtonOnCallback', "Processing pbsg ${pbsg_State(pbsgName)}")
       // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
       /*
       if (roomOverrides) {
@@ -89,7 +103,7 @@ void pbsg_ButtonOnCallback(Map pbsgMap) {
       */
       break
     case 'room':
-      logInfo('pbsg_ButtonOnCallback', "Processing room ${pbsg_State(pbsgMap)}")
+      logInfo('pbsg_ButtonOnCallback', "Processing room ${pbsg_State(pbsgName)}")
       // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
       /*
       if (newScene == currModeScene) {
@@ -114,17 +128,19 @@ void pbsg_ButtonOnCallback(Map pbsgMap) {
 //->   return ['Rep', 'Ind'].contains(devTypeCandidate)
 //-> }
 
-void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
+void room_ModeChange(String roomName, String newMode, DevW device = null) {
+  Map roomMap = atomicState."${roomName}"
   // Hubitat Mode changes only when the scene is 'Automatic'.
   if (roomMap.activeButton == 'Automatic') {
-    pbsg_ActivateButton(roomMap, newMode, device)
+    pbsg_ActivateButton(roomName, newMode, device)
     if (e.name == 'mode') {
       // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
       logInfo('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logInfo('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
       pbsg.activeButton = 'Automatic'
-      pbsgStore_Save(pbsgMap)
-      pbsg_ButtonOnCallback(roomMap)
+      atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
+      //-> pbsgStore_Save(roomMap)
+      pbsg_ButtonOnCallback(roomName)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
     }
@@ -205,7 +221,7 @@ void picoHandler(Event e) {
 
 // groovylint-disable-next-line MethodSize
 Map room_restoreOriginalState() {
-  pbsgStore_Save([   // Den
+  atomicState.Den = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -222,8 +238,8 @@ Map room_restoreOriginalState() {
       'Cleaning': [ 'Rep': [ 'Rep1': 42 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
       'Day': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
     ]
-  ])
-  pbsgStore_Save([   // DenLamp
+  ]
+  atomicState.DenLamp = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -241,8 +257,8 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 15 ] ]
       ]
     ]
-  ])
-  pbsgStore_Save([   // Guest
+  ]
+  atomicState.Guest = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -260,8 +276,8 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 58 ] ]
       ]
     ]
-  ])
-  pbsgStore_Save([   // Hers
+  ]
+  atomicState.Hers = [
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -280,8 +296,8 @@ Map room_restoreOriginalState() {
       'TV': [ 'Rep': [ 'Rep1': 91 ] ]
       ]
     ]
-  ])
-  pbsgStore_Save([   // His
+  ]
+  atomicState.His = [
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -299,8 +315,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep1': 33 ] ],
       'TV': [ 'Rep': [ 'Rep1': 31 ] ]
     ]
-  ])
-  pbsgStore_Save([   // Kitchen
+  ]
+  atomicState.Kitchen = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -317,8 +333,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep1': 27 ] ],
       'TV': [ 'Rep': [ 'Rep1': 28 ] ]
     ]
-  ])
-  pbsgStore_Save([   // Lanai
+  ]
+  atomicState.Lanai = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -337,8 +353,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'Rep2': 77 ] ],
       'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 8, 'Rep2': 78 ] ]
     ]
-  ])
-  pbsgStore_Save([   // Laundry
+  ]
+  atomicState.Laundry = [
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -356,8 +372,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep2': 33 ] ],
       'TV': [ 'Rep': [ 'Rep2': 38 ] ]
     ]
-  ])
-  pbsgStore_Save([   // LhsBath
+  ]
+  atomicState.LhsBath = [
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -375,8 +391,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep1': 67 ] ],
       'TV': [ 'Rep': [ 'Rep1': 68 ] ]
     ]
-  ])
-  pbsgStore_Save([   // LhsBdrm
+  ]
+  atomicState.LhsBdrm = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -393,8 +409,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep2': 41 ] ],
       'TV': [ 'Rep': [ 'Rep2': 48 ] ]
     ]
-  ])
-  pbsgStore_Save([   // Main
+  ]
+  atomicState.Main = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -411,8 +427,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep1': 87 ] ],
       'TV': [ 'Rep': [ 'Rep1': 88 ] ]
     ]
-  ])
-  pbsgStore_Save([   // Office
+  ]
+  atomicState.Office = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -433,8 +449,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep2': 57 ] ],
       'TV': [ 'Rep': [ 'Rep2': 58 ] ]
     ]
-  ])
-  pbsgStore_Save([   // Primary
+  ]
+  atomicState.Primary = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -451,8 +467,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep2': 27 ], 'Ind': [ 'Primary Floor Lamp (0B)': 100 ] ],
       'TV': [ 'Rep': [ 'Rep2': 28 ], 'Ind': [ 'Primary Floor Lamp (0B)': 0 ] ]
     ]
-  ])
-  pbsgStore_Save([   // PrimBath
+  ]
+  atomicState.PrimBath = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -469,8 +485,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Rep2': 17 ] ],
       'TV': [ 'Rep': [ 'Rep2': 18 ] ]
     ]
-  ])
-  pbsgStore_Save([   // RhsBath
+  ]
+  atomicState.RhsBath = [
     'activeButton': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
@@ -488,8 +504,8 @@ Map room_restoreOriginalState() {
       'Day': [ 'Rep': [ 'Rep1': 73 ] ],
       'Off': [ 'Rep': [ 'Rep1': 75 ] ]
     ]
-  ])
-  pbsgStore_Save([   // RhsBdrm
+  ]
+  atomicState.RhsBdrm = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -507,8 +523,8 @@ Map room_restoreOriginalState() {
       'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 9 ] ],
       'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 15 ] ]
     ]
-  ])
-  pbsgStore_Save([   // WHA
+  ]
+  atomicState.WHA = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -559,8 +575,8 @@ Map room_restoreOriginalState() {
         'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
       ]
     ]
-  ])
-  pbsgStore_Save([   // Yard
+  ]
+  atomicState.Yard = [
     'activeButton': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
@@ -610,6 +626,6 @@ Map room_restoreOriginalState() {
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
       ]
     ]
-  ])
-  return state.pbsgStore as Map
+  ]
+  return atomicState.pbsgs as Map
 }
