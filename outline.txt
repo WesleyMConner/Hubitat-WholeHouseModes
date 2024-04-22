@@ -1,0 +1,42 @@
+Parse RA2 Integration Report
+  - repeater : button : room : scene
+  - room : scene : repeater : button
+  - Lutron Integration: code,id,name
+
+LED Events (and PBSG Events)
+  - For WHA : Scene 'on'
+    - // Treat Central Keypad buttons as a global MO override
+      whaManualOverride = []
+      allRooms.each{ room ->
+        room.manualOverride = []
+        // No need to push any RA2 buttons
+        // Do push PRO2 button for Automatic
+        // Do set IndDev levels for Automatic
+      }
+    - Mode PBSG Button turned 'on'
+      - if (whaManualOverride == []) {
+          Push WHA-scoped button for mode (follow any indirection)
+        } else {
+          allRooms.minus(whaManualOverride).each{ room ->
+            Push room-scoped button for mode (following any indirection)
+          }
+        }
+  - For WHA : Scene 'off'
+    - Ignore
+  - For Room : Scene 'on'
+    - Turn on corresponding PBSG
+  - For Room : Scene 'off'
+    - Turn off corresponding PBSG
+  - PBSG Room Button 'on' Event
+    - if (button == Room-scoped button for mode, following any indirection) {
+        roomManualOverride.minus(reportingDevice)
+        if (roomManualOverride = []) { whaManualOverride.minus(roomName) }
+      } else {
+        roomManualOverride.plus(reportingDevice)
+        whaManualOverride.plus(roomName) // No Dups
+      }
+    - if (Automatic) {
+        Push Room-scoped button for mode (if not already on), following any indirection
+      } else {
+        Push button (following any indirection)
+      }
