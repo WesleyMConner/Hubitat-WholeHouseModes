@@ -72,43 +72,18 @@ Map Ra2Page() {
 }
 
 void installed() {
-  logWarn('installed', 'Entered')
-  unsubscribe()  // Suspend event processing to rebuild state variables.
+  unsubscribe()
   initialize()
 }
 
 void uninstalled() {
-  logWarn('uninstalled', 'Entered')
-  removeAllChildApps()
 }
 
 void updated() {
-  logWarn('updated', 'Entered')
-  unsubscribe()  // Suspend event processing to rebuild state variables.
+  unsubscribe()
   initialize()
 }
 
 void initialize() {
-  // - The same keypad may be associated with two different, specialized handlers
-  //   (e.g., mode changing buttons vs special functionalily buttons).
-  logWarn('initialize', 'Entered')
-
-  settings.ra2Repeaters.each{ device ->
-  logInfo('initialize', "Subscribing >${device}< to ra2RepHandler")
-    subscribe(device, ra2RepHandler, ['filterEvents': true])
-  }
   parseRa2IntegRpt(settings.ra2IntegReport)
-}
-
-//-> String normalizeCsv(String raw) {
-//->   raw?.trim()?.replaceAll(', ', ',')
-//-> }
-
-Boolean kpadSupportsLedEvents(String ra2Model) {
-  return [
-    'RR-MAIN-REP-WH',
-    'RR-T15RL-SW',
-    'RRD-H6BRL-WH',
-    'RRD-W7B-WH'
-  ].findAll{ it == ra2Model } ? true : false
 }

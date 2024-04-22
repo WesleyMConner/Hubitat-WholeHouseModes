@@ -40,6 +40,15 @@ String ra2ModelToHubitatCode(String model) {
   }
 }
 
+Boolean kpadSupportsLedEvents(String ra2Model) {
+  return [
+    'RR-MAIN-REP-WH',
+    'RR-T15RL-SW',
+    'RRD-H6BRL-WH',
+    'RRD-W7B-WH'
+  ].findAll{ it == ra2Model } ? true : false
+}
+
 String normalizeCsv(String rawRow) {
   return rawRow?.trim()?.replaceAll(', ', ',')
 }
@@ -63,14 +72,44 @@ ArrayList ra2IR_NextRow(Map irMap) {
   return result
 }
 
-Boolean colsMatch(ArrayList left, ArrayList right) {
-  Boolean result = (left == right)
-  logInfo('colsMatch', ['',
-    "left: ${left}",
-    "right: ${right}",
-    "result: ${result}",
-  ])
-  return result
+Map parseKeypads(Map irMap) {
+  logInfo('parseKeypads', "KPAD_COLS: ${ra2IR_CurrRow(irMap)}")
+  ArrayList cols = []
+  // This inner while loop expects a Keypad sticky row OR Keypad body row.
+  while (
+    (cols = ra2IR_NextRow(irMap)) != EOF
+    && (
+      (cols[0] && cols.size() == 5)
+      || !cols[0]                             // NOTE: cols.size() can vary
+    )
+  ) {
+    if (cols[0]) {
+      logInfo('parseKeypads', "HEADER: ${cols} (${cols.size()})")
+    } else {
+      logInfo('parseKeypads', "BODY: ${cols} (${cols.size()})")
+    }
+  }
+  return [:]
+}
+
+Map parseRooms(Map irMap) {
+  logInfo('parseRooms', "ROOM_COLS: ${ra2IR_CurrRow(irMap)}")
+  return [:]
+}
+
+Map parseDevices(Map irMap) {
+  logInfo('parseDevices', "DEVICE_COLS: ${ra2IR_CurrRow(irMap)}")
+  return [:]
+}
+
+Map parseTimeClocks(Map irMap) {
+  logInfo('parseTimeClocks', "TIME_CLOCKCOLS: ${ra2IR_CurrRow(irMap)}")
+  return [:]
+}
+
+Map parseGreenModes(Map irMap) {
+  logInfo('parseGreenModes', "GREEN_MODE_COLS: ${ra2IR_CurrRow(irMap)}")
+  return [:]
 }
 
 Map parseRa2IntegRpt(String lutronIntegrationReport) {
@@ -126,25 +165,25 @@ Map parseRa2IntegRpt(String lutronIntegrationReport) {
   ]
   // Confirm that the expected Integration Report header is present.
   ArrayList actualHeaderRow = ra2IR_CurrRow(irMap)
-  if (colsMatch(actualHeaderRow, RA2_EXPECTED_HEADER_ROW)) {
+  if (actualHeaderRow == RA2_EXPECTED_HEADER_ROW) {
     ArrayList cols = []
     // The outer while loop identifies the table data that is being extracted.
     while ((cols = ra2IR_NextRow(irMap)) != EOF) {
       switch (cols) {
-        case KPAD_COLS:
-          logInfo('#130', "KPAD_COLS: ${cols}")
+        case { it == KPAD_COLS }:
+          parseKeypads(irMap)
           break
-        case ROOM_COLS:
-          logInfo('#132', "ROOM_COLS: ${cols}")
+        case { it == ROOM_COLS }:
+          parseRooms(irMap)
           break
-        case DEVICE_COLS:
-          logInfo('#134', "DEVICE_COLS: ${cols}")
+        case { it == DEVICE_COLS }:
+          parseDevices(irMap)
           break
-        case TIME_CLOCK_COLS:
-          logInfo('#136', "TIME_CLOCKCOLS: ${cols}")
+        case { it == TIME_CLOCK_COLS }:
+          parseTimeClocks(irMap)
           break
-        case GREEN_MODE_COLS:
-          logInfo('#138', "GREEN_MODE_COLS: ${cols}")
+        case { it == GREEN_MODE_COLS }:
+          parseGreenModes(irMap)
           break
         default:
           if (cols[0]) {
