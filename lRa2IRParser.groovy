@@ -72,10 +72,15 @@ ArrayList ra2IR_NextRow(Map irMap) {
   return result
 }
 
+void ra2IR_DecrementRow(Map irMap) {
+  if (ra2IR_hasUnprocessedRows(irMap)) {
+    irMap.row = irMap.row - 1
+  }
+}
+
 Map parseKeypads(Map irMap) {
   logInfo('parseKeypads', "KPAD_COLS: ${ra2IR_CurrRow(irMap)}")
   ArrayList cols = []
-  // This inner while loop expects a Keypad sticky row OR Keypad body row.
   while (
     (cols = ra2IR_NextRow(irMap)) != EOF
     && (
@@ -89,26 +94,88 @@ Map parseKeypads(Map irMap) {
       logInfo('parseKeypads', "BODY: ${cols} (${cols.size()})")
     }
   }
+  ra2IR_DecrementRow(irMap)
   return [:]
 }
 
 Map parseRooms(Map irMap) {
   logInfo('parseRooms', "ROOM_COLS: ${ra2IR_CurrRow(irMap)}")
+  ArrayList cols = []
+  while (
+    (cols = ra2IR_NextRow(irMap)) != EOF
+    && (
+      (cols[0] && cols.size() == 2)
+      || !cols[0]                             // NOTE: cols.size() can vary
+    )
+  ) {
+    if (cols[0]) {
+      logInfo('parseRooms', "HEADER: ${cols} (${cols.size()})")
+    } else {
+      logInfo('parseRooms', "BODY: ${cols} (${cols.size()})")
+    }
+  }
+  ra2IR_DecrementRow(irMap)
   return [:]
 }
 
 Map parseDevices(Map irMap) {
   logInfo('parseDevices', "DEVICE_COLS: ${ra2IR_CurrRow(irMap)}")
+  ArrayList cols = []
+  while (
+    (cols = ra2IR_NextRow(irMap)) != EOF
+    && (
+      (cols[0] && (cols[0] != 'Timeclock') && cols.size() == 3)
+      || !cols[0]                             // NOTE: cols.size() can vary
+    )
+  ) {
+    if (cols[0]) {
+      logInfo('parseDevices', "HEADER: ${cols} (${cols.size()})")
+    } else {
+      logInfo('parseDevices', "BODY: ${cols} (${cols.size()})")
+    }
+  }
+  ra2IR_DecrementRow(irMap)
   return [:]
 }
 
 Map parseTimeClocks(Map irMap) {
   logInfo('parseTimeClocks', "TIME_CLOCKCOLS: ${ra2IR_CurrRow(irMap)}")
+  ArrayList cols = []
+  while (
+    (cols = ra2IR_NextRow(irMap)) != EOF
+    && (
+      (cols[0] && (cols[0] != 'Green Mode') && cols.size() == 2)
+      || !cols[0]                             // NOTE: cols.size() can vary
+    )
+  ) {
+    if (cols[0]) {
+      logInfo('parseTimeClocks', "HEADER: ${cols} (${cols.size()})")
+    } else {
+      logInfo('parseTimeClocks', "BODY: ${cols} (${cols.size()})")
+    }
+  }
+  ra2IR_DecrementRow(irMap)
   return [:]
 }
 
 Map parseGreenModes(Map irMap) {
   logInfo('parseGreenModes', "GREEN_MODE_COLS: ${ra2IR_CurrRow(irMap)}")
+  ArrayList cols = []
+  while (
+    (cols = ra2IR_NextRow(irMap)) != EOF
+    && (
+      (cols[0] && cols.size() == 2)
+      || !cols[0]                             // NOTE: cols.size() can vary
+    )
+  ) {
+    if (cols[0]) {
+      logInfo('parseGreenModes', "HEADER: ${cols} (${cols.size()})")
+    } else {
+      logInfo('parseGreenModes', "BODY: ${cols} (${cols.size()})")
+    }
+  }
+  // Decremenmt the row counter to backup one position
+  ra2IR_DecrementRow(irMap)
   return [:]
 }
 
@@ -132,12 +199,12 @@ Map parseRa2IntegRpt(String lutronIntegrationReport) {
   //       timeclock → RA2 timeclock data
   //           green → RA2 green mode data
   ArrayList RA2_EXPECTED_HEADER_ROW = ['RadioRA 2 Integration Report']
-  ArrayList KPAD_COLS = ['Device Room','Device Location','Device name',
-    'Model','ID','Component','Component Number','Name']
-  ArrayList ROOM_COLS = ['Room','ID']
-  ArrayList DEVICE_COLS = ['Zone Room','Zone Name','ID']
-  ArrayList TIME_CLOCK_COLS = ['Timeclock','ID','Event','Event Index']
-  ArrayList GREEN_MODE_COLS = ['Green Mode','ID','Mode Name','Step Number']
+  ArrayList KPAD_COLS = ['Device Room', 'Device Location', 'Device name',
+    'Model', 'ID', 'Component', 'Component Number', 'Name']
+  ArrayList ROOM_COLS = ['Room', 'ID']
+  ArrayList DEVICE_COLS = ['Zone Room', 'Zone Name', 'ID']
+  ArrayList TIME_CLOCK_COLS = ['Timeclock', 'ID', 'Event', 'Event Index']
+  ArrayList GREEN_MODE_COLS = ['Green Mode', 'ID', 'Mode Name', 'Step Number']
   ArrayList EOF = ['EOF']
   Map results = [
     rA2Devices: '',
@@ -170,26 +237,29 @@ Map parseRa2IntegRpt(String lutronIntegrationReport) {
     // The outer while loop identifies the table data that is being extracted.
     while ((cols = ra2IR_NextRow(irMap)) != EOF) {
       switch (cols) {
-        case { it == KPAD_COLS }:
+        //-> case { x -> x == [] }:
+        //->   logInfo('#229', 'Unexpected null row')
+        //->   break
+        case { x -> x == KPAD_COLS }:
           parseKeypads(irMap)
           break
-        case { it == ROOM_COLS }:
+        case { x -> x == ROOM_COLS }:
           parseRooms(irMap)
           break
-        case { it == DEVICE_COLS }:
+        case { x -> x == DEVICE_COLS }:
           parseDevices(irMap)
           break
-        case { it == TIME_CLOCK_COLS }:
+        case { x -> x == TIME_CLOCK_COLS }:
           parseTimeClocks(irMap)
           break
-        case { it == GREEN_MODE_COLS }:
+        case { x -> x == GREEN_MODE_COLS }:
           parseGreenModes(irMap)
           break
         default:
           if (cols[0]) {
-            logInfo('#140', "STRANDED STICKY ROW: ${cols}")
+            logInfo('#140', "STRANDED STICKY ROW: ${cols} (${cols.size()})")
           } else {
-            logInfo('#142', "STRANDED BODY ROW: ${cols}")
+            logInfo('#142', "STRANDED BODY ROW: ${cols} (${cols.size()})")
           }
       }
     }
