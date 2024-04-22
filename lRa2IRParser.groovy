@@ -1,3 +1,4 @@
+/* groovylint-disable DuplicateListLiteral, VariableName */
 // ---------------------------------------------------------------------------------
 // RA2 Integration Report (RA2IR)
 //
@@ -14,7 +15,7 @@
 // ---------------------------------------------------------------------------------
 
 library(
-  name: 'lRa2',
+  name: 'lRa2IRParser',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Isolate RA2 Methods',
@@ -44,20 +45,20 @@ String normalizeCsv(String rawRow) {
 }
 
 Boolean ra2IR_hasUnprocessedRows(Map irMap) {
-  return (irMap.row + 1 < irMap.rows.size())
+  return (irMap.row + 1 < irMap.rowCols.size())
 }
 
 ArrayList ra2IR_CurrRow(Map irMap) {
-  return irMap.rows[irMap.row]
+  return irMap.rowCols[irMap.row]
 }
 
 ArrayList ra2IR_NextRow(Map irMap) {
   ArrayList result
   if (ra2IR_hasUnprocessedRows(irMap)) {
     irMap.row = irMap.row + 1
-    result = irMap.rows[irMap.row]
+    result = irMap.rowCols[irMap.row]
   } else {
-    result = [ 'EOF' ]
+    result = ['EOF']
   }
   return result
 }
@@ -72,36 +73,33 @@ Boolean colsMatch(ArrayList left, ArrayList right) {
   return result
 }
 
-Map parseRa2IntegRpt() {
-  // This method processes "settings.ra2IntegReport" and returns a Map with
-  // the following keys:
-  //      rA2Devices - A multi-row String that can be used in the "Lutron Integrator"
-  //                   App to make Hubitat aware of RA2 devices. Said App expects
-  //                   triplets in the form "code,id,name", where:
-  //                     'code' informs the devices Type
-  //                     'id' is used as the DeviceName (aka event.deviceId)
-  //                     'name' is used as the DeviceLabel (aka event.name)
-  //   buttonToScene - A nested Map in the form:
-  //                   repDevId -> buttonNumber -> room -> scene
-  //   sceneToButton - A nested Map in the form:
-  //                   room -> scene -> repDevId -> buttonNumber
-  //           kpads - RA2 keypad details
-  //        ra2Rooms - RA2 rooms (which ARE NOT the same as Hubitat rooms)
-  //        circuits - RA2 circuits that can be switched or dimmed
-  //       timeclock - RA2 timeclock data
-  //           green - RA2 green mode data
-  // Internally, this method and supporting methods leverage the temporary
-  // Map "irMap", which has two keys:
-  //            rows - An ArrayList of ra2IntegReport rows, but which excludes
-  //                   empty rows and brings rows into proper CSV conformance.
-  //             row - The current 'rows' index, which advances as rows are
-  //                   processed.
+Map parseRa2IntegRpt(String lutronIntegrationReport) {
+  //---------------------------------------------------------------------------------
+  //  Processes a 'lutronIntegrationReport' (provided as a multi-line String)
+  //
+  //  Produces a Map with the following keys:
+  //      rA2Devices → A (multi-line) String that can be copy-pasted into the
+  //                   "Lutron Integrator App" to create a new RA2 integration
+  //                   instance, where each line is a "code,id,name" triplet:
+  //                          code: Informs the device 'Type'
+  //                            id: Specifies the Hubitat 'DeviceName'
+  //                                (see 'deviceID' in Device events)
+  //                          name: Specifies the Hubitat 'DeviceLabel'
+  //                                (see 'name' in Device events)
+  //           kpads → A nested Map of RA2 keypad details
+  //        ra2Rooms → An ArrayList of RA2 rooms
+  //                   ("RA2 rooms" can and often do differ from "Hubitat rooms")
+  //        circuits → RA2 circuits which can be switched or dimmed
+  //       timeclock → RA2 timeclock data
+  //           green → RA2 green mode data
   ArrayList RA2_EXPECTED_HEADER_ROW = ['RadioRA 2 Integration Report']
-  ArrayList KPAD_COLS = ['Device Room','Device Location','Device name','Model','ID','Component','Component Number','Name']
+  ArrayList KPAD_COLS = ['Device Room','Device Location','Device name',
+    'Model','ID','Component','Component Number','Name']
   ArrayList ROOM_COLS = ['Room','ID']
   ArrayList DEVICE_COLS = ['Zone Room','Zone Name','ID']
   ArrayList TIME_CLOCK_COLS = ['Timeclock','ID','Event','Event Index']
   ArrayList GREEN_MODE_COLS = ['Green Mode','ID','Mode Name','Step Number']
+  ArrayList EOF = ['EOF']
   Map results = [
     rA2Devices: '',
     buttonToScene: [:],
@@ -112,20 +110,52 @@ Map parseRa2IntegRpt() {
     timeclock: [],
     green: []
   ]
+  // The following irMap facilitates navigation of an Integration Report (IR)
+  //   rowCols: The original IR string is first tokenized into an ArrayList
+  //            of rows (with empty rows removed). Each row is subsequently
+  //            CSV normalized and split into columns (retaining empty columns).
+  //            Thus 'rowCols' is an ArrayList of rows where each row is an
+  //            ArrayList of (possibly empty) columns.
+  //       row: The 'current' row (rowCols index) which advances as as IR
+  //            data is parsed.
   Map irMap = [
-    rows: settings.ra2IntegReport
-          .tokenize('\n')                   // Tokenize removes empty rows.
-          .collect { row ->
-            normalizeCsv(row).split(',')    // Split preserves empty cols.
-          },
+    rowCols: lutronIntegrationReport.tokenize('\n').collect { row ->
+      normalizeCsv(row).split(',')
+    },
     row: 0
   ]
-  //-> logInfo('parseRa2IntegRpt', "ra2IR_CurrRow()[0]: ${ra2IR_CurrRow(irMap)[0]}")
   // Confirm that the expected Integration Report header is present.
   ArrayList actualHeaderRow = ra2IR_CurrRow(irMap)
   if (colsMatch(actualHeaderRow, RA2_EXPECTED_HEADER_ROW)) {
     ArrayList cols = []
-    while ((cols = ra2IR_NextRow(irMap)) != [ 'EOF' ]) {
+    // The outer while loop identifies the table data that is being extracted.
+    while ((cols = ra2IR_NextRow(irMap)) != EOF) {
+      switch (cols) {
+        case KPAD_COLS:
+          logInfo('#130', "KPAD_COLS: ${cols}")
+          break
+        case ROOM_COLS:
+          logInfo('#132', "ROOM_COLS: ${cols}")
+          break
+        case DEVICE_COLS:
+          logInfo('#134', "DEVICE_COLS: ${cols}")
+          break
+        case TIME_CLOCK_COLS:
+          logInfo('#136', "TIME_CLOCKCOLS: ${cols}")
+          break
+        case GREEN_MODE_COLS:
+          logInfo('#138', "GREEN_MODE_COLS: ${cols}")
+          break
+        default:
+          if (cols[0]) {
+            logInfo('#140', "STRANDED STICKY ROW: ${cols}")
+          } else {
+            logInfo('#142', "STRANDED BODY ROW: ${cols}")
+          }
+      }
+    }
+    /*
+        while ((cols = ra2IR_NextRow(irMap)) != [ 'EOF' ]) {
       if (cols == KPAD_COLS) {
         logInfo('#130', "KPAD_COLS: ${cols}")
       } else if (cols == ROOM_COLS) {
@@ -137,14 +167,14 @@ Map parseRa2IntegRpt() {
       } else if (cols == GREEN_MODE_COLS) {
         logInfo('#138', "GREEN_MODE_COLS: ${cols}")
       } else if (cols[0]) {
-        logInfo('#140', "STICKY: ${cols}")
+        logInfo('#140', "STRANDED STICKY ROW: ${cols}")
       } else {
-        logInfo('#142', "BODY: ${cols}")
+        logInfo('#142', "STRANDED BODY ROW: ${cols}")
       }
     }
+    */
+
     /*****
-    // The Outerloop Identifies the Extraction Mode
-    // DO NOT DEPEND ON EMPTY ROWS. INSTEAD WATCH FOR COL COUNT CHANGES, ETC.
     //--> rowData = ra2IR_nextNonEmptyRow()
     while (rowData != 'EOF') {
       logInfo('parseRa2IntegRpt', "Processing >${rowData}<")
@@ -287,4 +317,5 @@ Map parseRa2IntegRpt() {
       "actual header: ${actualHeaderRow}"
     ])
   }
+  return results
 }

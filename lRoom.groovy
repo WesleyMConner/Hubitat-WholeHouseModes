@@ -27,6 +27,35 @@ library(
   category: 'general purpose'
 )
 
+  // --------------------------------------------------------------------------------
+  // Leverage the lRa2IRParser
+  //   - The parser input is an RA2 Integration Report (provided as one long string)
+  //
+  //   - The parser produces a Map with the following keys:
+  //      rA2Devices - A multi-row String that can be pasted into the
+  //                   "Lutron Integrator App" to create a new RA2 integration
+  //                   instance. The App expects triplets in the form
+  //                   "code,id,name", where:
+  //                      code: Informs the devices 'Type'
+  //                        id: Specifies a Hubitat 'DeviceName'
+  //                            (see also the 'deviceID' field in Device events)
+  //                      name: Specifies a Hubitat 'DeviceLabel'
+  //                            (see also the 'name' field in Device events )
+  //           kpads - RA2 keypad details
+  //        ra2Rooms - RA2 rooms (which ARE NOT the same as Hubitat rooms)
+  //        circuits - RA2 circuits that can be switched or dimmed
+  //       timeclock - RA2 timeclock data
+  //           green - RA2 green mode data
+  //
+  //   - WHA leverages the Map produced by the lRa2IRParser to produce:
+  //   buttonToScene - A nested Map in the form:
+  //                   repDevId -> buttonNumber -> room -> scene
+  //   sceneToButton - A nested Map in the form:
+  //                   room -> scene -> repDevId -> buttonNumber
+
+  // --------------------------------------------------------------------------------
+
+
 // The "room" psuedo-class extends a "pbsg" psuedo-class instance.
 //   - The psuedo-class "pbsgStore" is used to store "room" instance Maps.
 //   - A "room" instance Map can be supplied where a "pbsg" instance Map

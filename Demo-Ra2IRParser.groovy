@@ -18,10 +18,10 @@ import com.hubitat.hub.domain.Event as Event
 // The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lRa2
+#include wesmc.lRa2IRParser
 
 definition (
-  name: 'Test-lRa2',
+  name: 'Demo-Ra2IRParser',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Preview lRa2 functionality',
@@ -50,7 +50,7 @@ Map Ra2Page() {
   return dynamicPage(
     name: 'Ra2Page',
     title: [
-      heading1("Ra2 Test Page - ${app.id}"),
+      heading1("Ra2 Integration Report Demo Page - ${app.id}"),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
     install: true,
@@ -62,7 +62,7 @@ Map Ra2Page() {
     //-> app.removeSetting('..')
     //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
-    app.updateLabel('Ra2TestPage')
+    app.updateLabel('Demo-Ra2IRParser')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
@@ -97,7 +97,7 @@ void initialize() {
   logInfo('initialize', "Subscribing >${device}< to ra2RepHandler")
     subscribe(device, ra2RepHandler, ['filterEvents': true])
   }
-  parseRa2IntegRpt()
+  parseRa2IntegRpt(settings.ra2IntegReport)
 }
 
 //-> String normalizeCsv(String raw) {
