@@ -85,5 +85,6 @@ void updated() {
 }
 
 void initialize() {
+  logInfo('initialize', 'Calling parseRa2IntegRpt')
   parseRa2IntegRpt(settings.ra2IntegReport)
 }
