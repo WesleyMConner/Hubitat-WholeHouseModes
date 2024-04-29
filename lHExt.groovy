@@ -69,13 +69,6 @@ ArrayList modeNames() {
   return getLocation().getModes()*.name
 }
 
-String modeNamesAsString() {
-  String result = modeNames().join(' ')
-  logInfo('modeNameAsString', result)
-  return result
-}
-
-
 String switchState(DevW d) {
   /* groovylint-disable-next-line UseCollectMany */
   ArrayList stateValues = d.collect { device -> device.currentStates.value }.flatten()
