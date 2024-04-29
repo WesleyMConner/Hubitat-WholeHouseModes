@@ -86,5 +86,17 @@ void updated() {
 
 void initialize() {
   logInfo('initialize', 'Calling parseRa2IntegRpt')
-  parseRa2IntegRpt(settings.ra2IntegReport)
+  Map irMap = ra2IR_init(settings.ra2IntegReport)
+  List rowCols = ra2IR_CurrRow(irMap)
+  logInfo('#91', ['',
+    "ra2IR_UserFriendlyRowCols(): ${ra2IR_UserFriendlyRowCols(irMap)}",
+    "rowCols: ${rowCols}"
+  ])
+  while (ra2IR_hasUnprocessedRows(irMap)) {
+    rowCols = ra2IR_NextNonNullRow(irMap)
+    logInfo('#97', ['',
+      "ra2IR_UserFriendlyRowCols(): ${ra2IR_UserFriendlyRowCols(irMap)}",
+      "rowCols: ${rowCols}"
+    ])
+  }
 }
