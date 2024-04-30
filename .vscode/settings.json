@@ -41,7 +41,7 @@
   },
   "asciidoc.extensions.enableKroki": true,
   "editor.fontLigatures": true,
-  "editor.fontSize": 14,
+  "editor.fontSize": 15,
   "editor.fontFamily": "Fira Code",
   "editor.rulers": [
     // DEFAULT

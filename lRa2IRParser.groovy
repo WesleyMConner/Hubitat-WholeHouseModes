@@ -22,75 +22,85 @@ library(
   category: 'general purpose'
 )
 
-String ra2IR_UserFriendlyRowCols(Map irMap) {
-  return "${irMap.currRow + 1}: ${irMap.rowCols[irMap.currRow]}"
-}
+// Revised Strategy
+//   - Keep original data
+//   - Supply non-null rows as String or as ArrayList cols
 
 Map ra2IR_init(String ra2IntegrationReport) {
-  // rowCols - ArrayList of rows (where each row is an ArrayList of cols)
-  // currRow - User-friendly index that starts at 1 (instead of 0)
+  // rows - ArrayList of original rows ('as supplied', preserving nulls)
+  // currRow - Index into rows ["+ 1" for user-friendly display]
   return [
-    rowCols: // ArrayList of rows (where each row is an ArrayList of cols)
-      ra2IntegrationReport.split('\n').collect { row ->
-        String normalizedCsvRow = row.trim()?.replaceAll(', ', ',')
-        normalizedCsvRow.split(',')
-      },
+    rowCols: ra2IntegrationReport.split('\n'),
     currRow: 0
   ]
 }
 
+ArrayList rowToCols(String rowText) {
+  // Preserve null columns.
+  return rowText.trim()?.replaceAll(', ', ',').split(',')
+
+}
+
 Boolean ra2IR_hasUnprocessedRows(Map irMap) {
-  //-> logInfo('ra2IR_hasUnprocessedRows', "At ${irMap.currRow} of ${irMap.rowCols.size() + 1}")
   return (irMap.currRow < irMap.rowCols.size())
 }
 
-ArrayList ra2IR_CurrRow(Map irMap) {
+String ra2IR_CurrRow(Map irMap) {
   return irMap.rowCols[irMap.currRow]
 }
 
-ArrayList ra2IR_NextNonNullRow(Map irMap) {
-  ArrayList result = []
-  Integer loop = 0
-  logInfo("STRT ${loop}", "${irMap.currRow}")
-  while (ra2IR_hasUnprocessedRows(irMap) && result.size() == 0) {
-    ++loop
+ArrayList ra2IR_CurrRowCols(Map irMap) {
+  return rowToCols(ra2IR_CurrRow(irMap))
+}
+
+String ra2IR_CurrRowUI(Map irMap) {
+  [
+    "${(irMap.currRow + 1).padLeft(5, "0")}: ${irMap.rowCols[irMap.currRow]}",
+    "       ${rowToCols(irMap.rowCols[irMap.currRow])}"
+  ].join('\n')
+}
+
+String ra2IR_NextNonNullRow(Map irMap) {
+  String result = ''
+  while (result == '' && ra2IR_hasUnprocessedRows(irMap)) {
     irMap.currRow = irMap.currRow + 1
     result = irMap.rowCols[irMap.currRow]
-    logInfo("LOOP ${loop}", "${irMap.currRow} .. ${result.size()}: >${result}<")
   }
-  logInfo("EXIT ${loop}", "${irMap.currRow} .. ${result.size()}: >${result}<")
   return result
 }
 
+ArrayList ra2IR_NextNonNullRowCols(Map irMap) {
+  return rowToCols(ra2IR_NextNonNullRow(irMap))
+}
+
 void ra2IR_DecrementRow(Map irMap) {
-  //if (ra2IR_hasUnprocessedRows(irMap)) {
   if (irMap.currRow > 0) {
     irMap.currRow = irMap.currRow - 1
   }
-  //}
 }
 
 void ra2IR_ForceEOF(Map irMap) {
   irMap.currRow = irMap.rowCols.size()
 }
 
-Boolean isExpectedHeaderRow(ArrayList actualHeaderRow) {
-  ArrayList expectedHeaderRow = ['RadioRA 2 Integration Report']
-  Boolean isExpected = (actualHeaderRow == expectedHeaderRow)
-  if (!isExpected) {
-    logError('isExpectedHeaderRow', [
-      '',
-      "expected header: ${expectedHeaderRow}",
-      "actual header: ${actualHeaderRow}"
+Boolean hasExpectedHeaderRow(Map irMap) {
+  String expectedHeaderRow = 'RadioRA 2 Integration Report'
+  irMap.currRow = 0
+  Boolean result = (irMap.rowCols[irMap.currRow] == expectedHeaderRow)
+  if (!result) {
+    logError('hasExpectedHeaderRow', ['Unexpected Header',
+      "Found: ${irMap.rowCols[irMap.currRow]}",
+      "Expected: ${expectedHeaderRow}"
     ])
+    ra2IR_ForceEOF()
   }
-  return isExpected
+  return result
 }
 
 Map getNextTableType(Map irMap) {
-  logInfo('getNextTableType#72', "At #${irMap.currRow}")
-  ArrayList tableTypeCols = ra2IR_NextNonNullRow(irMap)
-  logInfo('getNextTableType#74', "At #${irMap.currRow} w/ tableTypeCols> ${tableTypeCols}")
+  //logInfo('getNextTableType', "At #${irMap.currRow}")
+  ArrayList tableTypeCols = ra2IR_NextNonNullRowCols(irMap)
+  logInfo('getNextTableType', "At #${irMap.currRow} w/ tableTypeCols> ${tableTypeCols}")
   Map tableTypes = [
     [ 'Device Room', 'Device Location', 'Device name',
       'Model', 'ID', 'Component', 'Component Number', 'Name' ] : [
@@ -129,13 +139,14 @@ Map getNextTableType(Map irMap) {
     // Remove whitespace when creating per-column keys.
     tableType.colKeys = tableTypeCols*.replaceAll('\\s', '')
   } else {
-    logError('getTableType', "No tableType for >${tableTypeCols}<")
+    logError('getNextTableType', "No tableType for >${tableTypeCols}<")
     ra2IR_ForceEOF(irMap)
   }
   return tableType
 }
 
 String getHubitatCode(String controlModel) {
+  String hubitatCode
   Map controlModelToHubitatCode = [
     'LRF2-OCR2B-P-WH': 'm',
     'PJ2-3BRL-GWH-L01': 'q',
@@ -146,7 +157,7 @@ String getHubitatCode(String controlModel) {
     'RRD-W6BRL-WH' : 'w',
     'RRD-W7B-WH': 'w'
   ]
-  String hubitatCode = controlModelToHubitatCode[controlModel]
+  hubitatCode = controlModelToHubitatCode[controlModel]
   if (!hubitatCode) {
     logError('getHubitatCode', "No HubitatCode for >${controlModel}<")
   }
@@ -155,36 +166,33 @@ String getHubitatCode(String controlModel) {
 
 Map getNewEntry(Map tableType, Map irMap, Map results) {
   Map newEntry = [:]
-  logInfo('getNewEntry_IN', "currRow: ${irMap.currRow}")
-  ArrayList dataCols = ra2IR_NextNonNullRow(irMap)
+  logInfo('getNewEntry_IN', "currRow #: ${irMap.currRow}")
+  ArrayList dataCols = ra2IR_NextNonNullRowCols(irMap)
   if (
     dataCols
     && dataCols[0]
     && dataCols.size() == tableType.instanceCols
   ) {
     newEntry = tableType.colKeys.withIndex()
-    .findAll { colTitle, i -> i < tableType.instanceCols }
-    .collectEntries { colTitle, i ->
-      String entryKey = colTitle.replaceAll('\\s', '')
-      //logInfo('getNewEntry', "${i}: colTitle: ${colTitle}, instanceCols: ${tableType.instanceCols}")
-      [ entryKey, dataCols[i] ]
-    }
-    //-> logInfo('getNewEntry-A', "newEntry: ${newEntry}")
+    .findAll { colKey, i -> i < tableType.instanceCols }
+    .collectEntries { colKey, i -> [ colKey, dataCols[i] ] }
+    logInfo('getNewEntry-A', "newEntry: ${newEntry}")
     if (tableType.recurringComponents) {
       tableType.recurringComponents.each { recurringItem ->
-        newEntry."${recurringItem.key}" = []  // Possible ArrayList of Maps
+        newEntry."${recurringItem.key}" = []  // ArrayList of (prospective) Maps
       }
-      //-> logInfo('getNewEntry-B', "newEntry: ${newEntry}")
+      logInfo('getNewEntry-B', "newEntry: ${newEntry}")
       while (ra2IR_hasUnprocessedRows(irMap)) {
-        ArrayList recurringCols = ra2IR_NextNonNullRow(irMap)
-        //-> logInfo('getNewEntry-C', "recurringCols: ${recurringCols}")
+        ArrayList recurringCols = ra2IR_NextNonNullRowCols(irMap)
+        logInfo('getNewEntry-C', "recurringCols: ${recurringCols}")
         if (recurringCols != null && !recurringCols[0]) {
           String regexCol = recurringCols[tableType.instanceCols]
           //-> logInfo('getNewEntry-C', "regexCol: ${regexCol}")
           tableType.recurringComponents.each { recurringItem ->
-          logInfo('getNewEntry#162', "recurringItem: ${recurringItem}")
+          logInfo('getNewEntry-D', "recurringItem: ${recurringItem}")
+          // Sample recurringItem: [ 'key': 'buttons', 'regexp': /^Button / ],
             if (regexCol =~ recurringItem.regexp) {
-              logInfo('getNewEntry#164', ['',
+              logInfo('getNewEntry-E', ['',
                 "regexCol: ${regexCol}",
                 "recurringItem.regexp: ${recurringItem.regexp}",
                 "regexCol =~ recurringItem.regexp: ${regexCol =~ recurringItem.regexp}"
@@ -205,7 +213,6 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
           }
         }
       }
-
     }
     ////  'recurringComponents' : [
     ////    [ 'key': 'buttons', 'regexp': /^Button / ],
@@ -214,47 +221,28 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
     // Processes recurringComponent rows for the current newEntry.
   }
   if (newEntry) {
-    logInfo('getNewEntry#188', "newEntry: ${newEntry}")
+    logInfo('getNewEntry-EXIT', "newEntry: ${newEntry}")
     results."${tableType.instanceType}" += newEntry
   } else {
-    logInfo('getNewEntry-NULL', "currRow: ${irMap.currRow}")
+    logInfo('getNewEntry-NULL', "No new entry at row ${irMap.currRow}")
+    ra2IR_ForceEOF(irMap)
   }
   return newEntry
 }
 
-Map parseRa2IntegRpt(String lutronIntegrationReport) {
+Map parseRa2IntegRpt(String ra2IntegrationReport) {
   Map results = [
-    ra2Devices: [],
-    kpads: [:],
-    ra2Rooms: [],
-    circuits: [],
-    timeclock: [:],
-    green: [:]
+    ra2Devices: [],     kpads: [:],         ra2Rooms: [],
+    circuits: [],       timeclock: [:],     green: [:]
   ]
-  Map irMap = [
-    rowCols: // ArrayList of rows (where each row is an ArrayList of cols)
-      lutronIntegrationReport.split('\n').collect { row ->
-        String normalizedCsvRow = row.trim()?.replaceAll(', ', ',')
-        normalizedCsvRow.split(',')
-      },
-    currRow: 0  // Start at #1 to easier comparisons with the IR CSV file.
-  ]
+  Map irMap = ra2IR_init(ra2IntegrationReport)
   //logInfo('parseRa2IntegRpt', "irMap: ${irMap}")
-  ArrayList actualHeaderRow = ra2IR_CurrRow(irMap)
-  isExpectedHeaderRow(actualHeaderRow) || ra2IR_ForceEOF(irMap)
+  hasExpectedHeaderRow(irMap)
   while (ra2IR_hasUnprocessedRows(irMap)) {
     Map tableType = getNextTableType(irMap)
-logInfo('parseRa2IntegRpt--A', "ra2IR_CurrRow: ${ra2IR_CurrRow(irMap)}")
-    while (tableType) {
-logInfo('parseRa2IntegRpt--B', "ra2IR_CurrRow: ${ra2IR_CurrRow(irMap)}")
-      Map newEntry = getNewEntry(tableType, irMap, results)
-      if (!newEntry) {
-logInfo('parseRa2IntegRep', "No new entry at row ${irMap.currRow}")
-        tableType = [:]
-      }
-      logInfo('parseRa2IntegRpt--C', "ra2IR_CurrRow: ${ra2IR_CurrRow(irMap)}")
+    if (tableType) {
+      while( getNewEntry(tableType, irMap, results) ) { }
     }
-      //??-> ra2IR_DecrementRow(irMap)
   }
   return results
 }
