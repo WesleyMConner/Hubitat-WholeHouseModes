@@ -27,8 +27,8 @@ library(
 //   - Supply non-null rows as String or as ArrayList cols
 
 Map ra2IR_init(String ra2IntegrationReport) {
-  // rows - ArrayList of original rows ('as supplied', preserving nulls)
-  // currRow - Index into rows ["+ 1" for user-friendly display]
+  //    rows - ArrayList of raw rows 'as supplied'
+  // currRow - Index into rows, "+ 1" for user-friendly display
   return [
     rowCols: ra2IntegrationReport.split('\n'),
     currRow: 0
@@ -38,11 +38,10 @@ Map ra2IR_init(String ra2IntegrationReport) {
 ArrayList rowToCols(String rowText) {
   // Preserve null columns.
   return rowText.trim()?.replaceAll(', ', ',').split(',')
-
 }
 
 Boolean ra2IR_hasUnprocessedRows(Map irMap) {
-  return (irMap.currRow < irMap.rowCols.size())
+  return (irMap.currRow + 1 < irMap.rowCols.size())
 }
 
 String ra2IR_CurrRow(Map irMap) {
@@ -55,9 +54,10 @@ ArrayList ra2IR_CurrRowCols(Map irMap) {
 
 String ra2IR_CurrRowUI(Map irMap) {
   [
-    "${(irMap.currRow + 1).padLeft(5, "0")}: ${irMap.rowCols[irMap.currRow]}",
-    "       ${rowToCols(irMap.rowCols[irMap.currRow])}"
-  ].join('\n')
+    '',
+    "<b>${(irMap.currRow + 1).toString().padLeft(5, '0')}:</b> ${irMap.rowCols[irMap.currRow]}",
+    "<br/>Cols: <em>${rowToCols(irMap.rowCols[irMap.currRow])}</em>"
+  ].join('')
 }
 
 String ra2IR_NextNonNullRow(Map irMap) {
@@ -98,17 +98,38 @@ Boolean hasExpectedHeaderRow(Map irMap) {
 }
 
 Map getNextTableType(Map irMap) {
-  //logInfo('getNextTableType', "At #${irMap.currRow}")
   ArrayList tableTypeCols = ra2IR_NextNonNullRowCols(irMap)
-  logInfo('getNextTableType', "At #${irMap.currRow} w/ tableTypeCols> ${tableTypeCols}")
+  //-> logInfo('getNextTableType', ra2IR_CurrRowUI(irMap))
   Map tableTypes = [
     [ 'Device Room', 'Device Location', 'Device name',
       'Model', 'ID', 'Component', 'Component Number', 'Name' ] : [
       'instanceType': 'kpads',
       'instanceCols': 5,
       'recurringComponents' : [
-        [ 'key': 'buttons', 'regexp': /^Button / ],
-        [ 'key': 'leds', 'regexp': /^Led / ]
+        [
+          'key': 'buttons',
+          'controlModels': [
+            'PJ2-3BRL-GWH-L01', 'RR-MAIN-REP-WH', 'RR-T15RL-SW',
+            'RR-VCRX-WH', 'RRD-H6BRL-WH', 'RRD-W6BRL-WH', 'RRD-W7B-WH'
+          ],
+          'regexpCol': 5,
+          'regexp': /^Button /
+        ],
+        [
+          'key': 'ccis',
+          'controlModels': [ 'RR-VCRX-WH' ],
+          'regexpCol': 4,  // NOTE: Subitems (outputs) will have their own ID!
+          'regexp': /^CCI /
+        ],
+        [
+          'key': 'leds',
+          'controlModels': [
+            'RR-MAIN-REP-WH', 'RR-T15RL-SW', 'RR-VCRX-WH', 'RRD-H6BRL-WH',
+            'RRD-W6BRL-WH', 'RRD-W7B-WH'
+          ],
+          'regexpCol': 5,
+          'regexp': /^Led /
+        ]
       ]
     ],
     ['Room', 'ID']: [
@@ -123,14 +144,22 @@ Map getNextTableType(Map irMap) {
       'instanceType': 'timeclock',
       'instanceCols': 2,
       'recurringComponents' : [
-        [ 'key': 'actions', 'regexp': /^*/ ]
+        [
+          'key': 'actions',
+          'regexpCol': 2,
+          'regexp': /^*/
+        ]
       ]
     ],
     ['Green Mode', 'ID', 'Mode Name', 'Step Number'] : [
       'instanceType': 'green',
       'instanceCols': 2,
       'recurringComponents' : [
-        [ 'key': 'green', 'regexp': /^Green/ ]
+        [
+          'key': 'green',
+          'regexpCol': 2,
+          'regexp': /^Green/
+        ]
       ]
     ]
   ]
@@ -164,9 +193,63 @@ String getHubitatCode(String controlModel) {
   return hubitatCode
 }
 
+Boolean appliesToModel(Map recurringComponent, String controlModel) {
+  Boolean applyAll = recurringComponent.controlModels == NULL
+  Boolean applySpecific = recurringComponent.controlModels?.contains(controlModel)
+  //logInfo('#191', ['',
+  //  "parta: ${applyAll}",
+  //  "partb: ${applySpecific}",
+  //  "parta || partb: ${applyAll || applySpecific}"
+  //])
+  return (applyAll || applySpecific)
+}
+
+void addSubitemsToEntry(Map tableType, Map irMap, Map newEntry) {
+  tableType.recurringComponents
+  .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.Model) }
+  .each { recurringItem ->
+    newEntry."${recurringItem.key}" = []  // ArrayList for subitem Maps
+  }
+  while (ra2IR_hasUnprocessedRows(irMap)) {
+    ArrayList recurringCols = ra2IR_NextNonNullRowCols(irMap)
+    if (recurringCols != null && !recurringCols[0]) {
+      tableType.recurringComponents
+      .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.Model) }
+      .each { recurringItem ->
+        Integer reColIdx = recurringItem.regexpCol
+        String reColData = recurringCols[reColIdx]
+        //-> logInfo('#213', ['',
+        //->   "<b>recurringCols</b>: ${recurringCols}",
+        //->   "<b>recurringItem.regexp</b>: ${recurringItem.regexp}",
+        //->   "<b>reColIdx</b>: ${reColIdx}",
+        //->   "<b>reColData</b>: ${reColData}",
+        //->   "<b>reColData =~ recurringItem.regexp</b>: ${reColData =~ recurringItem.regexp}"
+        //-> ])
+        if (reColData =~ recurringItem.regexp) {
+          //-> logInfo('#221', "${reColData} in scope for ${recurringItem.key}")
+          Map newSubEntry = recurringCols.withIndex()
+          .findAll { colData, i -> i >= recurringItem.regexpCol }
+          .collectEntries { colData, i ->
+            //-> logInfo('#225', "i: ${i}, colData: ${colData}, colKeys[i]: ${tableType.colKeys[i]}")
+            [ tableType.colKeys[i], colData ]
+          }
+          newEntry."${recurringItem.key}" << newSubEntry
+          //logInfo('addSubitemsToEntry', [
+          //  '#239',
+          //  "<b>${j}</b>: ${colData}",
+          //  "<b>newSubEntry</b>: ${newSubEntry}"
+          //])
+        }
+      }
+    } else {
+      ra2IR_DecrementRow(irMap) // Push back the prospective recurringCols
+      break                     // Stop looping
+    }
+  }
+}
+
 Map getNewEntry(Map tableType, Map irMap, Map results) {
-  Map newEntry = [:]
-  logInfo('getNewEntry_IN', "currRow #: ${irMap.currRow}")
+  Map newEntry
   ArrayList dataCols = ra2IR_NextNonNullRowCols(irMap)
   if (
     dataCols
@@ -176,56 +259,21 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
     newEntry = tableType.colKeys.withIndex()
     .findAll { colKey, i -> i < tableType.instanceCols }
     .collectEntries { colKey, i -> [ colKey, dataCols[i] ] }
-    logInfo('getNewEntry-A', "newEntry: ${newEntry}")
     if (tableType.recurringComponents) {
-      tableType.recurringComponents.each { recurringItem ->
-        newEntry."${recurringItem.key}" = []  // ArrayList of (prospective) Maps
-      }
-      logInfo('getNewEntry-B', "newEntry: ${newEntry}")
-      while (ra2IR_hasUnprocessedRows(irMap)) {
-        ArrayList recurringCols = ra2IR_NextNonNullRowCols(irMap)
-        logInfo('getNewEntry-C', "recurringCols: ${recurringCols}")
-        if (recurringCols != null && !recurringCols[0]) {
-          String regexCol = recurringCols[tableType.instanceCols]
-          //-> logInfo('getNewEntry-C', "regexCol: ${regexCol}")
-          tableType.recurringComponents.each { recurringItem ->
-          logInfo('getNewEntry-D', "recurringItem: ${recurringItem}")
-          // Sample recurringItem: [ 'key': 'buttons', 'regexp': /^Button / ],
-            if (regexCol =~ recurringItem.regexp) {
-              logInfo('getNewEntry-E', ['',
-                "regexCol: ${regexCol}",
-                "recurringItem.regexp: ${recurringItem.regexp}",
-                "regexCol =~ recurringItem.regexp: ${regexCol =~ recurringItem.regexp}"
-              ])
-              Map newSubEntry = recurringCols.withIndex()
-              .findAll { colData, i -> tableType.instanceCols <= i }
-              .collectEntries { colData, i -> [ tableType.colKeys[i], colData ] }
-              newEntry."${recurringItem.key}" << newSubEntry
-/*
-              ArrayList subEntries = newEntry."${recurringItem.key}"
-              logInfo('getNewEntry-D', "priorSubEntries (before): ${subEntries}")
-              subEntries << newSubEntry
-              logInfo('getNewEntry-E', " priorSubEntries (after): ${subEntries}")
-              newEntry."${recurringItem.key}" = subEntries
-              logInfo('getNewEntry-F', "newEntry: ${newEntry}")
-*/
-            }
-          }
-        }
-      }
+      addSubitemsToEntry(tableType, irMap, newEntry)
+      logInfo('getNewEntry', "<b>newEntry</b>: ${newEntry}")
+      results."${tableType.instanceType}" += newEntry
     }
-    ////  'recurringComponents' : [
-    ////    [ 'key': 'buttons', 'regexp': /^Button / ],
-    ////    [ 'key': 'leds', 'regexp': /^Button / ]
-    ////  ]
-    // Processes recurringComponent rows for the current newEntry.
-  }
-  if (newEntry) {
-    logInfo('getNewEntry-EXIT', "newEntry: ${newEntry}")
+    //-> logInfo('getNewEntry', [
+    //->   'ADDED NEW ENTRY:',
+    //->   "<b>newEntry</b>: ${newEntry}",
+    //->   ra2IR_CurrRowUI(irMap)
+    //-> ])
     results."${tableType.instanceType}" += newEntry
-  } else {
-    logInfo('getNewEntry-NULL', "No new entry at row ${irMap.currRow}")
-    ra2IR_ForceEOF(irMap)
+  }
+  if (!newEntry) {
+    //-> logInfo('getNewEntry', [ '<b>NO NEW ENTRY</b>:', ra2IR_CurrRowUI(irMap) ])
+  //ra2IR_ForceEOF(irMap)
   }
   return newEntry
 }
@@ -241,8 +289,15 @@ Map parseRa2IntegRpt(String ra2IntegrationReport) {
   while (ra2IR_hasUnprocessedRows(irMap)) {
     Map tableType = getNextTableType(irMap)
     if (tableType) {
-      while( getNewEntry(tableType, irMap, results) ) { }
+      /* groovylint-disable-next-line EmptyWhileStatement */
+      while (getNewEntry(tableType, irMap, results)) { }
+    } else {
+      logInfo('parseRa2IntegRpt', [ 'No tableType was found',
+        ra2IR_CurrRowUI(irMap) ])
+      ra2IR_ForceEOF(irMap)
     }
+    // O N E   E N T R Y   A N D   S T O P
+    break
   }
   return results
 }
