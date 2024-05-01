@@ -86,7 +86,14 @@ void updated() {
 
 void initialize() {
   logInfo('initialize', 'Calling parseRa2IntegRpt')
-  Map irMap = ra2IR_init(settings.ra2IntegReport)
+  //Map irMap = ra2IR_init(settings.ra2IntegReport)
   Map results = parseRa2IntegRpt(settings.ra2IntegReport)
-  logInfo('parseRa2IntegRpt', "results: ${results}")
+  //logInfo('initialize', 'Parse complete')
+  //logMapUI(results, 0)
+  logInfo('initialize', "results.ra2Devices: ${results.ra2Devices}")
+  logInfo('initialize', "results.kpads: ${results.kpads}")
+  logInfo('initialize', "results.ra2Rooms: ${results.ra2Rooms}")
+  logInfo('initialize', "results.circuits: ${results.circuits}")
+  logInfo('initialize', "results.timeclock: ${results.timeclock}")
+  logInfo('initialize', "results.green: ${results.green}")
 }
