@@ -178,25 +178,6 @@ Map getNextTableType(Map irMap) {
   return tableType
 }
 
-String getHubitatCode(String controlModel) {
-  String hubitatCode
-  Map controlModelToHubitatCode = [
-    'LRF2-OCR2B-P-WH': 'm',
-    'PJ2-3BRL-GWH-L01': 'q',
-    'RR-MAIN-REP-WH': 'k',
-    'RR-T15RL-SW': 'k',
-    'RR-VCRX-WH': 'v',
-    'RRD-H6BRL-WH': 'w',
-    'RRD-W6BRL-WH' : 'w',
-    'RRD-W7B-WH': 'w'
-  ]
-  hubitatCode = controlModelToHubitatCode[controlModel]
-  if (!hubitatCode) {
-    logError('getHubitatCode', "No HubitatCode for >${controlModel}<")
-  }
-  return hubitatCode
-}
-
 Boolean appliesToModel(Map recurringComponent, String controlModel) {
   Boolean applyAll = recurringComponent.controlModels == NULL
   Boolean applySpecific = recurringComponent.controlModels?.contains(controlModel)
@@ -247,11 +228,52 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
     if (tableType.recurringComponents) {
       addSubitemsToEntry(tableType, irMap, newEntry)
     }
-    results."${tableType.instanceType}" += newEntry
+    results."${tableType.instanceType}" << newEntry
   } else {
     ra2IR_DecrementRow(irMap) // Push back the unused dataCols
   }
   return newEntry
+}
+
+String getHubitatCode(String controlModel) {
+  String hubitatCode
+  Map controlModelToHubitatCode = [
+    'LRF2-OCR2B-P-WH': 'm',
+    'PJ2-3BRL-GWH-L01': 'q',
+    'RR-MAIN-REP-WH': 'k',
+    'RR-T15RL-SW': 'k',
+    'RR-VCRX-WH': 'v',
+    'RRD-H6BRL-WH': 'w',
+    'RRD-W6BRL-WH' : 'w',
+    'RRD-W7B-WH': 'w'
+  ]
+  hubitatCode = controlModelToHubitatCode[controlModel]
+  if (!hubitatCode) {
+    logError('getHubitatCode', "No HubitatCode for >${controlModel}<")
+  }
+  return hubitatCode
+}
+
+void populateRa2Devices(Map results) {
+  //  code: Informs the device 'Type'
+  //    id: Specifies the Hubitat 'DeviceName'
+  //        (see 'deviceID' in Device events)
+  //  name: Specifies the Hubitat 'DeviceLabel'
+  //        (see 'name' in Device events)
+  // PRIOR EXAMPLES
+  //   k,1,RA2 Repeater 1 (ra2-1)
+  //   q,3,LHS Bdrm - Entry Pico (ra2-3)
+  //   d,4,Kitchen - Soffit (ra2-4)
+  //   d,5,Guest - RHS Hall Lamp (ra2-5)
+  //   d,6,Yard - Front Porch (ra2-6)
+  //   d,7,Control - Zone 01 (ra2-7)
+  //   m,8,Laundry - Sensor (ra2-8)
+  results.kpads.each{ kpad ->
+    results.ra2Devices = "${getHubitatCode(kpad.Model)},${kpad.Devicename},${kpad.ID}"
+  }
+  results.circuits.each{ device ->
+    results.ra2Devices = "d,${device.ZoneName},${device.ID}"
+  }
 }
 
 //--BROKEN-> void logMapUI(Map m, Integer level) {
@@ -268,8 +290,8 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
 
 Map parseRa2IntegRpt(String ra2IntegrationReport) {
   Map results = [
-    ra2Devices: [],     kpads: [:],         ra2Rooms: [],
-    circuits: [],       timeclock: [:],     green: [:]
+    ra2Devices: [],     kpads: [],         ra2Rooms: [],
+    circuits: [],       timeclock: [],     green: []
   ]
   Map irMap = ra2IR_init(ra2IntegrationReport)
   hasExpectedHeaderRow(irMap)
@@ -279,8 +301,8 @@ Map parseRa2IntegRpt(String ra2IntegrationReport) {
       /* groovylint-disable-next-line EmptyWhileStatement */
       while (getNewEntry(tableType, irMap, results)) { }
     }
-    //-> break  // O N E   E N T R Y   A N D   S T O P
   }
+  //populateRa2Devices(results)
   return results
 }
 
