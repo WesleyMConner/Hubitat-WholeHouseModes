@@ -17,26 +17,26 @@ import com.hubitat.hub.domain.Event as Event
 // The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lRa2IRParser
+#include wesmc.lPro2IRParser
 
 definition (
-  name: 'Demo-Ra2IRParser',
+  name: 'Demo-Pro2IRParser',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
-  description: 'Preview lRa2 functionality',
+  description: 'Preview lPro2 functionality',
   singleInstance: true,
   iconUrl: '',
   iconX2Url: ''
 )
 
 preferences {
-  page(name: 'Ra2Page')
+  page(name: 'Pro2Page')
 }
 
-void solicitRa2IntegrationReport() {
+void solicitPro2IntegrationReport() {
   input(
-    name: 'ra2IntegReport',
-    title: 'Paste in the Lutron RA2 Integration Report',
+    name: 'pro2IntegReport',
+    title: 'Paste in the Lutron Pro2 Integration Report',
     type: 'textarea',
     rows: 5,
     submitOnChange: true,
@@ -45,11 +45,11 @@ void solicitRa2IntegrationReport() {
   )
 }
 
-Map Ra2Page() {
+Map Pro2Page() {
   return dynamicPage(
-    name: 'Ra2Page',
+    name: 'Pro2Page',
     title: [
-      heading1("Ra2 Integration Report Demo Page - ${app.id}"),
+      heading1("Pro2 Integration Report Demo Page - ${app.id}"),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
     install: true,
@@ -61,11 +61,11 @@ Map Ra2Page() {
     //-> app.removeSetting('..')
     //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
-    app.updateLabel('Demo-Ra2IRParser')
+    app.updateLabel('Demo-Pro2IRParser')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
-      solicitRa2IntegrationReport()
+      solicitPro2IntegrationReport()
     }
   }
 }
@@ -84,13 +84,11 @@ void updated() {
 }
 
 void initialize() {
-  logInfo('initialize', 'Calling parseRa2IntegRpt .. logging results may take a few seconds')
-  Map results = parseRa2IntegRpt(settings.ra2IntegReport)
-  logInfo('initialize', 'Parse complete')
-  logResults(results, 'ra2Devices')
-  logResults(results, 'kpads')
-  logResults(results, 'ra2Rooms')
-  logResults(results, 'circuits')
-  logResults(results, 'timeclock')
-  logResults(results, 'green')
+  logInfo('initialize', 'Calling parsePro2IntegRpt .. logging results may take a few seconds')
+  Map results = parsePro2IntegRpt(settings.pro2IntegReport)
+  //logInfo('initialize', 'Parse complete')
+  //logResults(results, 'pro2Devices')
+  //logResults(results, 'kpads')
+  //logResults(results, 'pro2Rooms')
+  //logResults(results, 'circuits')
 }

@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------------
-// lRa2IRParser - RA2 Integration Report Parser (Library)
+// lPro2IRParser - Pro2 Integration Report Parser (Library)
 //
 // Copyright (C) 2023-Present Wesley M. Conner
 //
@@ -13,58 +13,64 @@
 //   implied.
 // ---------------------------------------------------------------------------------
 
+import java.util.regex.Matcher
+
 library(
-  name: 'lRa2IRParser',
+  name: 'lPro2IRParser',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Isolate RA2 Methods',
   category: 'general purpose'
 )
 
-Map ra2IR_init(String ra2IntegrationReport) {
+// The Pro2 parser is patterned after the Ra2 parser
+//
+// +-----------------+------------------+
+// | Ra2 Result Keys | Pro2 Result Keys | Comments
+// +-----------------+------------------+
+// |   ra2Devices    |   pro2Devices    | Per kpads and circuits         |
+// |      kpads      |      kpads       | LIPIdList/Devices (w/ buttons) |
+// |    ra2Rooms     |    pro2Rooms     | A Component of kpads and zones |
+// |     circuits    |     circuits     | Per zones
+// |    timeclock    |        n/a       |
+// |      green      |        n/a       |
+// +-----------------+------------------+
+
+Map pro2IR_init(String pro2IntegrationReport) {
   // rows - ArrayList of raw rows 'as supplied' (includes empty lines)
   // curr - Index into rows, "+ 1" for user-friendly display
   return [
-    rows: ra2IntegrationReport.split('\n'),
+    rows: pro2IntegrationReport.split('\n'),
     curr: 0
   ]
 }
 
-String ra2IR_CurrRow(Map irMap) {
+String pro2IR_CurrRow(Map irMap) {
   return (irMap.curr + 1 == irMap.rows.size())
     ? 'EOF'
     : irMap.rows[irMap.curr]
 }
 
 ArrayList rowToCols(String rowText) {
-  /* groovylint-disable-next-line ReturnsNullInsteadOfEmptyCollection */
   return (rowText == 'EOF') ? null
     : rowText.trim()?.replaceAll(', ', ',').split(',')
 }
 
-Boolean ra2IR_hasUnprocessedRows(Map irMap) {
+Boolean pro2IR_hasUnprocessedRows(Map irMap) {
   return (irMap.curr + 1 < irMap.rows.size())
 }
 
-ArrayList ra2IR_CurrRowCols(Map irMap) {
-  return rowToCols(ra2IR_CurrRow(irMap))
-}
-
-String ra2IR_CurrRowUI(Map irMap) {
+String pro2IR_CurrRowUI(Map irMap) {
   String rowText = irMap.rows[irMap.curr]
-  return [
-    '',
-    "<b>${(irMap.curr + 1).toString().padLeft(5, '0')}:</b> ${rowText}",
-    "<br/>Cols: <em>${rowToCols(rowText)} ?: 'null'</em>"
-  ].join('')
+  return "<b>${(irMap.curr + 1).toString().padLeft(5, '0')}:</b> ${rowText}"
 }
 
-String ra2IR_NextNonNullRow(Map irMap) {
+String pro2IR_NextNonNullRow(Map irMap) {
   String result = ''
   while (result == '') {
-    if (ra2IR_hasUnprocessedRows(irMap)) {
+    if (pro2IR_hasUnprocessedRows(irMap)) {
       irMap.curr = irMap.curr + 1
-      result = ra2IR_CurrRow(irMap)
+      result = pro2IR_CurrRow(irMap)
     } else {
       result = 'EOF'
     }
@@ -72,17 +78,23 @@ String ra2IR_NextNonNullRow(Map irMap) {
   return result
 }
 
-ArrayList ra2IR_NextNonNullRowCols(Map irMap) {
-  return rowToCols(ra2IR_NextNonNullRow(irMap))
+/*
+ArrayList pro2IR_CurrRowCols(Map irMap) {
+  return rowToCols(pro2IR_CurrRow(irMap))
 }
 
-void ra2IR_DecrementRow(Map irMap) {
+
+ArrayList pro2IR_NextNonNullRowCols(Map irMap) {
+  return rowToCols(pro2IR_NextNonNullRow(irMap))
+}
+
+void pro2IR_DecrementRow(Map irMap) {
   if (irMap.curr > 0) {
     irMap.curr = irMap.curr - 1
   }
 }
 
-void ra2IR_ForceEOF(Map irMap) {
+void pro2IR_ForceEOF(Map irMap) {
   irMap.curr = irMap.rows.size()
 }
 
@@ -95,14 +107,14 @@ Boolean hasExpectedHeaderRow(Map irMap) {
       "Found: ${irMap.rows[irMap.curr]}",
       "Expected: ${expectedHeaderRow}"
     ])
-    ra2IR_ForceEOF()
+    pro2IR_ForceEOF()
   }
   return result
 }
 
 Map getNextTableType(Map irMap) {
   Map tableType = null
-  ArrayList tableTypeCols = ra2IR_NextNonNullRowCols(irMap)
+  ArrayList tableTypeCols = pro2IR_NextNonNullRowCols(irMap)
   if (tableTypeCols) {
     Map tableTypes = [
       [ 'Device Room', 'Device Location', 'Device name',
@@ -137,7 +149,7 @@ Map getNextTableType(Map irMap) {
         ]
       ],
       ['Room', 'ID']: [
-        'instanceType': 'ra2Rooms',
+        'instanceType': 'pro2Rooms',
         'instanceCols': 2
       ],
       ['Zone Room', 'Zone Name', 'ID'] : [
@@ -151,7 +163,7 @@ Map getNextTableType(Map irMap) {
           [
             'key': 'actions',
             'regexpCol': 2,
-            'regexp': /^*/
+            'regexp': /..^..*../
           ]
         ]
       ],
@@ -172,7 +184,7 @@ Map getNextTableType(Map irMap) {
       tableType.colKeys = tableTypeCols*.replaceAll('\\s', '')
     } else {
       logError('getNextTableType', "No tableType for >${tableTypeCols}<")
-      ra2IR_ForceEOF(irMap)
+      pro2IR_ForceEOF(irMap)
     }
   }
   return tableType
@@ -190,8 +202,8 @@ void addSubitemsToEntry(Map tableType, Map irMap, Map newEntry) {
   .each { recurringItem ->
     newEntry."${recurringItem.key}" = []  // ArrayList for subitem Maps
   }
-  while (ra2IR_hasUnprocessedRows(irMap)) {
-    ArrayList recurringCols = ra2IR_NextNonNullRowCols(irMap)
+  while (pro2IR_hasUnprocessedRows(irMap)) {
+    ArrayList recurringCols = pro2IR_NextNonNullRowCols(irMap)
     if (recurringCols != null && !recurringCols[0]) {
       tableType.recurringComponents
       .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.Model) }
@@ -208,7 +220,7 @@ void addSubitemsToEntry(Map tableType, Map irMap, Map newEntry) {
         }
       }
     } else {
-      ra2IR_DecrementRow(irMap)    // Push back the unused recurringCols
+      pro2IR_DecrementRow(irMap)    // Push back the unused recurringCols
       break                        // Stop looping
     }
   }
@@ -216,7 +228,7 @@ void addSubitemsToEntry(Map tableType, Map irMap, Map newEntry) {
 
 Map getNewEntry(Map tableType, Map irMap, Map results) {
   Map newEntry
-  ArrayList dataCols = ra2IR_NextNonNullRowCols(irMap)
+  ArrayList dataCols = pro2IR_NextNonNullRowCols(irMap)
   if (
     dataCols
     && dataCols[0]
@@ -230,7 +242,7 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
     }
     results."${tableType.instanceType}" << newEntry
   } else {
-    ra2IR_DecrementRow(irMap) // Push back the unused dataCols
+    pro2IR_DecrementRow(irMap) // Push back the unused dataCols
   }
   return newEntry
 }
@@ -255,7 +267,7 @@ String getHubitatCode(String controlModel) {
 }
 
 void populateRa2Devices(Map results) {
-  // Populates the ArrayList of results.ra2Devices code,id,name strings
+  // Populates the ArrayList of results.pro2Devices code,id,name strings
   //   code → The device 'Type' (see below)
   //     id → Specifies the Hubitat 'DeviceName' (aka 'deviceID' in Device events)
   //   name → Specifies the Hubitat 'DeviceLabel' (aka 'name' in Device events)
@@ -278,17 +290,17 @@ void populateRa2Devices(Map results) {
   //     o: VCRX Output ... Assigned 'd' by default per results.circuits (above)
   //     p: Pico (pushed/held) ... Assigned 'q' by default per getHubitatCode()
   //     s: Switch ... Assigned 'd' by default per results.circuits (above)
-  results.ra2Devices = []             // Erase any prior values and rebuild
+  results.pro2Devices = []             // Erase any prior values and rebuild
   results.kpads.each { kpad ->
     // Users cannot edit repeater 'Devicename', but can edit repeater 'DeviceLocation'.
     if (kpad.Devicename == 'Enclosure Device 001') {
-      results.ra2Devices << "${getHubitatCode(kpad.Model)},${kpad.DeviceLocation},${kpad.ID}"
+      results.pro2Devices << "${getHubitatCode(kpad.Model)},${kpad.DeviceLocation},${kpad.ID}"
     } else {
-      results.ra2Devices << "${getHubitatCode(kpad.Model)},${kpad.Devicename},${kpad.ID}"
+      results.pro2Devices << "${getHubitatCode(kpad.Model)},${kpad.Devicename},${kpad.ID}"
     }
   }
   results.circuits.each { device ->
-    results.ra2Devices << "d,${device.ZoneName},${device.ID}"
+    results.pro2Devices << "d,${device.ZoneName},${device.ID}"
   }
 }
 
@@ -298,8 +310,14 @@ void logResults(Map results, String key) {
   results."${key}".each { entry -> lines << "${entry}" }
   logInfo('logResults', lines)
 }
+*/
 
-Map parseRa2IntegRpt(String ra2IntegrationReport) {
+String paddedRowNumber(Map irMap) {
+  return (irMap.curr + 1).toString().padLeft(5, '0')
+}
+
+Map parsePro2IntegRpt(String pro2IntegrationReport) {
+  logInfo('parsePro2IntegRpt', 'AT ENTRY')
   //---------------------------------------------------------------------------------
   //  Processes a 'lutronIntegrationReport' (provided as a multi-line String)
   //  Produces a 'results' Map with the following keys:
@@ -307,24 +325,85 @@ Map parseRa2IntegRpt(String ra2IntegrationReport) {
   //                   "Lutron Integrator App" to create a new RA2 integration
   //                   instance
   //           kpads → An ArrayList of RA2 keypad Map(s)
-  //        ra2Rooms → An ArrayList of RA2 room Map(s_
+  //        pro2Rooms → An ArrayList of RA2 room Map(s_
   //                   "RA2 rooms" can and often do differ from "Hubitat rooms" !!!
   //        circuits → An ArrayList of RA2 circuit Map(s) - switched or dimmed
   //       timeclock → An ArrayList of RA2 timeclock Map(s)
   //           green → An ArrayList of RA2 green mode Map(s)
-  Map results = [
-    ra2Devices: [],     kpads: [],         ra2Rooms: [],
-    circuits: [],       timeclock: [],     green: []
+  // RexEx Notes
+  //       {  }  "  [  ]  - Escape once:  \{  \}  \"  \[  \]
+  //   In a string: [  ]  - Escape twice:  "\\[  \\]"
+  //    switch statements - The whole expression must be matched
+  Map results = [ pro2Devices: [], kpads: [], pro2Rooms: [], circuits: [] ]
+  Map irMap = pro2IR_init(pro2IntegrationReport)
+  Integer indentLevel = 0
+  ArrayList rowInfo = ['']
+  /*
+  ArrayList data = [
+    'This is quoted "text" in a string',
+    'This is a number 58 in a string',
+    'This is a [ in a string',
+    'This is a ] in a string',
+    'This is a { in a string',
+    'This is a } in a string'
   ]
-  Map irMap = ra2IR_init(ra2IntegrationReport)
-  hasExpectedHeaderRow(irMap)
-  while (ra2IR_hasUnprocessedRows(irMap)) {
-    Map tableType = getNextTableType(irMap)
-    if (tableType) {
-      /* groovylint-disable-next-line EmptyWhileStatement */
-      while (getNewEntry(tableType, irMap, results)) { }
+  data.each{ d ->
+    if (d =~ /\"(.*)\"/) {
+      logInfo('A', "Found quoted text for ${d}")
+    }
+    switch (d) {
+      case ~/\"(.*)\"/:
+        logInfo('B', "Found quoted text for ${d}")
+        break
     }
   }
-  populateRa2Devices(results)
+  */
+  while (pro2IR_hasUnprocessedRows(irMap)) {
+    String rowN = paddedRowNumber(irMap)
+    String row = pro2IR_NextNonNullRow(irMap)
+    // matcher[0] is the first match object.
+    // matcher[0][0] is everything that matched in this match.
+    // matcher[0][1] is the first capture in this match.
+    // matcher[0][n] is the n capture in this match.
+    switch (row) {
+      case ~/.*(Buttons).*/:
+        rowInfo << "${rowN}: [${indentLevel}] B U T T O N S .. ${Matcher.lastMatcher.group(1)}"
+        break
+      case ~/\"([^"]*)\":\s+(d+)"/ :
+        String label = Matcher.lastMatcher.group(1)
+        String iVal = Matcher.lastMatcher.group(1)
+        rowInfo << "${rowN}: [${indentLevel}] ${label} = ${iVal}"
+        break
+      case ~/\"([^"]*)\":\s+\"([^"]*)\""/ :
+        String label = Matcher.lastMatcher.group(1)
+        String sVal = Matcher.lastMatcher.group(1)
+        rowInfo << "${rowN}: [${indentLevel}] ${label} = ${sVal}"
+        break
+      case ~/\"([^"]*)\":\s+\{$/ :
+        String label = Matcher.lastMatcher.group(1)
+        rowInfo << "${rowN}: [${indentLevel}] ${label} START MAP"
+        ++indentLevel
+        break
+      case ~/\}/ :
+        rowInfo << "${rowN}: [${indentLevel}] END MAP"
+        --indentLevel
+        break
+      case ~/\"([^"]*)\":\s+\[$/ :
+        String label = Matcher.lastMatcher.group(1)
+        rowInfo << "${rowN}: [${indentLevel}] ${label} START LIST"
+        ++indentLevel
+        break
+      case ~/\]/ :
+        rowInfo << "${rowN}: [${indentLevel}] END LIST"
+        --indentLevel
+        break
+      default:
+        rowInfo << "${rowN}: [${indentLevel}] DEFAULT ${row}"
+    }
+    if (row.contains('}')) { ++indentLevel }
+  }
+  logInfo('parsePro2IntegRpt', rowInfo)
+  //----> }
+  //----> populateRa2Devices(results)
   return results
 }

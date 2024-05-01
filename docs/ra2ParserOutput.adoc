@@ -1,0 +1,51 @@
+result: [
+  ra2Devices: [
+    'k,REP1,1',
+    'q,LhsBdrm-EntryPico (1),3',
+      :
+  ],
+  kpads: [
+    [
+      DeviceRoom: 'Den',
+      DeviceLocation: 'REP1',
+      Devicename: 'Enclosure Device 001',
+      Model: 'RR-MAIN-REP-WH',
+      ID: 1,
+      buttons: [ [Component: 'Button 1', ComponentNumber: 1, Name: 'WHA Chill' ] ... ],
+      leds: [ [ Component: 'Led 1', ComponentNumber: 101] ... ]
+    ],
+    [
+      DeviceRoom: 'LhsBdrm',
+      DeviceLocation: 'Entry',
+      Devicename: 'LhsBdrm-EntryPico (1)',
+      Model: 'PJ2-3BRL-GWH-L01',
+      ID: 3,
+      buttons:[ [ Component: 'Button 1', ComponentNumber: 2, Name: 'LhsBdrm 100%' ], ... ]
+    ]
+      :
+  ]
+  ra2Rooms: [
+    [ Room: 'RhsBath', ID: 2 ]
+    [ Room: 'Main', ID: 11 ]
+      :
+  ],
+  circuits: [
+    [ ZoneRoom: 'Den', ZoneName: 'Kitchen-Soffit', ID: 4 ]
+    [ ZoneRoom: 'RhsHall', ZoneName: 'RhsHall-Lamp', ID: 5 ]
+      :
+  ],
+  timeclock: [
+    Timeclock: 'Project Timeclock',
+    ID: 25,
+    actions: [ [ Event: 'Activate Sensors', EventIndex: 1 ] ...]
+  ],
+  green: [
+    GreenMode: 'Green Button Mode',
+    ID:'24,
+    green: [
+      [ ModeName:'Green Mode', StepNumber: 2 ],
+        :
+      [ ModeName: 'Green80%', StepNumber: 6]
+    ]
+  ]
+]
