@@ -1,4 +1,3 @@
-/* groovylint-disable DuplicateListLiteral, VariableName */
 // ---------------------------------------------------------------------------------
 // RA2 Integration Report (RA2IR)
 //
@@ -38,6 +37,7 @@ String ra2IR_CurrRow(Map irMap) {
 }
 
 ArrayList rowToCols(String rowText) {
+  /* groovylint-disable-next-line ReturnsNullInsteadOfEmptyCollection */
   return (rowText == 'EOF') ? null
     : rowText.trim()?.replaceAll(', ', ',').split(',')
 }
@@ -52,7 +52,7 @@ ArrayList ra2IR_CurrRowCols(Map irMap) {
 
 String ra2IR_CurrRowUI(Map irMap) {
   String rowText = irMap.rows[irMap.curr]
-  [
+  return [
     '',
     "<b>${(irMap.curr + 1).toString().padLeft(5, '0')}:</b> ${rowText}",
     "<br/>Cols: <em>${rowToCols(rowText)} ?: 'null'</em>"
@@ -91,7 +91,7 @@ Boolean hasExpectedHeaderRow(Map irMap) {
   irMap.curr = 0
   Boolean result = (irMap.rows[irMap.curr] == expectedHeaderRow)
   if (!result) {
-    logError('hasExpectedHeaderRow', ['Unexpected Header',
+    logError('hasExpectedHeaderRow() → ', ['Unexpected Header',
       "Found: ${irMap.rows[irMap.curr]}",
       "Expected: ${expectedHeaderRow}"
     ])
@@ -199,12 +199,12 @@ void addSubitemsToEntry(Map tableType, Map irMap, Map newEntry) {
         Integer reColIdx = recurringItem.regexpCol
         String reColData = recurringCols[reColIdx]
         if (reColData =~ recurringItem.regexp) {
-          Map newSubEntry = recurringCols.withIndex()
-          .findAll { colData, i -> i >= recurringItem.regexpCol }
-          .collectEntries { colData, i ->
-            [ tableType.colKeys[i], colData ]
-          }
-          newEntry."${recurringItem.key}" << newSubEntry
+            Map newSubEntry = recurringCols.withIndex()
+            .findAll { colData, i -> i >= recurringItem.regexpCol }
+            .collectEntries { colData, i ->
+              [ tableType.colKeys[i], colData ]
+            }
+            newEntry."${recurringItem.key}" << newSubEntry
         }
       }
     } else {
@@ -255,40 +255,63 @@ String getHubitatCode(String controlModel) {
 }
 
 void populateRa2Devices(Map results) {
-  //  code: Informs the device 'Type'
-  //    id: Specifies the Hubitat 'DeviceName'
-  //        (see 'deviceID' in Device events)
-  //  name: Specifies the Hubitat 'DeviceLabel'
-  //        (see 'name' in Device events)
-  // PRIOR EXAMPLES
-  //   k,1,RA2 Repeater 1 (ra2-1)
-  //   q,3,LHS Bdrm - Entry Pico (ra2-3)
-  //   d,4,Kitchen - Soffit (ra2-4)
-  //   d,5,Guest - RHS Hall Lamp (ra2-5)
-  //   d,6,Yard - Front Porch (ra2-6)
-  //   d,7,Control - Zone 01 (ra2-7)
-  //   m,8,Laundry - Sensor (ra2-8)
-  results.kpads.each{ kpad ->
-    results.ra2Devices = "${getHubitatCode(kpad.Model)},${kpad.Devicename},${kpad.ID}"
+  // Populates the ArrayList of results.ra2Devices code,id,name strings
+  //   code → The device 'Type' (see below)
+  //     id → Specifies the Hubitat 'DeviceName' (aka 'deviceID' in Device events)
+  //   name → Specifies the Hubitat 'DeviceLabel' (aka 'name' in Device events)
+  // Allowed Device Types
+  //   results.kpads are mapped per getHubitatCode()
+  //     k: Keypad
+  //     m: Motion
+  //     q: Pico (pushed/released)
+  //     v: VCRX
+  //     w: Wall mount Keypad
+  //   results.circuits are assigned as dimmers by 'brute force'
+  //     d: Dimmer
+  //   None of the following devices were available for testing
+  //     e: Shade ... No te
+  //     f: Fan Control ... x
+  //     h: HVAC Controller ... x
+  //     r: Shade Remote ... x
+  //     t: Thermostat ... x
+  //   Available options for MANUAL fine-tuning
+  //     o: VCRX Output ... Assigned 'd' by default per results.circuits (above)
+  //     p: Pico (pushed/held) ... Assigned 'q' by default per getHubitatCode()
+  //     s: Switch ... Assigned 'd' by default per results.circuits (above)
+  results.ra2Devices = []             // Erase any prior values and rebuild
+  results.kpads.each { kpad ->
+    // Users cannot edit repeater 'Devicename', but can edit repeater 'DeviceLocation'.
+    if (kpad.Devicename == 'Enclosure Device 001') {
+      results.ra2Devices << "${getHubitatCode(kpad.Model)},${kpad.DeviceLocation},${kpad.ID}"
+    } else {
+      results.ra2Devices << "${getHubitatCode(kpad.Model)},${kpad.Devicename},${kpad.ID}"
+    }
   }
-  results.circuits.each{ device ->
-    results.ra2Devices = "d,${device.ZoneName},${device.ID}"
+  results.circuits.each { device ->
+    results.ra2Devices << "d,${device.ZoneName},${device.ID}"
   }
 }
 
-//--BROKEN-> void logMapUI(Map m, Integer level) {
-//--BROKEN->   Integer tabSize = 2 * level
-//--BROKEN->   map.each{ k, v ->
-//--BROKEN->     logInfo('logMapUI', "<pre style='tab-size: ${tabSize}'>\t<b>${k}</b></pre>")
-//--BROKEN->     if (v instanceof Map) {
-//--BROKEN->       logMapUI(v, level + 1)
-//--BROKEN->     } else {
-//--BROKEN->       logInfo('logMapUI', "<pre style='tab-size: ${tabSize}'>\t${v}</pre>")
-//--BROKEN->     }
-//--BROKEN->   }
-//--BROKEN-> }
+void logResults(Map results, String key) {
+  ArrayList lines = []
+  lines << "<b>${key}</b>"
+  results."${key}".each { entry -> lines << "${entry}" }
+  logInfo('logResults', lines)
+}
 
 Map parseRa2IntegRpt(String ra2IntegrationReport) {
+  //---------------------------------------------------------------------------------
+  //  Processes a 'lutronIntegrationReport' (provided as a multi-line String)
+  //  Produces a 'results' Map with the following keys:
+  //      rA2Devices → An ArrayList of strings that can be copy-pasted into the
+  //                   "Lutron Integrator App" to create a new RA2 integration
+  //                   instance
+  //           kpads → An ArrayList of RA2 keypad Map(s)
+  //        ra2Rooms → An ArrayList of RA2 room Map(s_
+  //                   "RA2 rooms" can and often do differ from "Hubitat rooms" !!!
+  //        circuits → An ArrayList of RA2 circuit Map(s) - switched or dimmed
+  //       timeclock → An ArrayList of RA2 timeclock Map(s)
+  //           green → An ArrayList of RA2 green mode Map(s)
   Map results = [
     ra2Devices: [],     kpads: [],         ra2Rooms: [],
     circuits: [],       timeclock: [],     green: []
@@ -302,25 +325,6 @@ Map parseRa2IntegRpt(String ra2IntegrationReport) {
       while (getNewEntry(tableType, irMap, results)) { }
     }
   }
-  //populateRa2Devices(results)
+  populateRa2Devices(results)
   return results
 }
-
-  //---------------------------------------------------------------------------------
-  //  Processes a 'lutronIntegrationReport' (provided as a multi-line String)
-  //
-  //  Produces a Map with the following keys:
-  //      rA2Devices → A (multi-line) String that can be copy-pasted into the
-  //                   "Lutron Integrator App" to create a new RA2 integration
-  //                   instance, where each line is a "code,id,name" triplet:
-  //                          code: Informs the device 'Type'
-  //                            id: Specifies the Hubitat 'DeviceName'
-  //                                (see 'deviceID' in Device events)
-  //                          name: Specifies the Hubitat 'DeviceLabel'
-  //                                (see 'name' in Device events)
-  //           kpads → A nested Map of RA2 keypad details
-  //        ra2Rooms → An ArrayList of RA2 rooms
-  //                   ("RA2 rooms" can and often do differ from "Hubitat rooms")
-  //        circuits → RA2 circuits which can be switched or dimmed
-  //       timeclock → RA2 timeclock data
-  //           green → RA2 green mode data
