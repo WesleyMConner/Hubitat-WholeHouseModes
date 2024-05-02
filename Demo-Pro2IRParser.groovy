@@ -13,6 +13,7 @@
 //   implied.
 // ---------------------------------------------------------------------------------
 import com.hubitat.hub.domain.Event as Event
+import groovy.json.JsonSlurper
 
 // The Groovy Linter generates NglParseError on Hubitat #include !!!
 #include wesmc.lHExt
@@ -50,7 +51,7 @@ Map Pro2Page() {
     name: 'Pro2Page',
     title: [
       heading1("Pro2 Integration Report Demo Page - ${app.id}"),
-      bullet1('Click <b>Done</b> to enable subscriptions.')
+      bullet1('Click <b>Done</b> to parse report.')
     ].join('<br/>'),
     install: true,
     uninstall: true
@@ -84,11 +85,10 @@ void updated() {
 }
 
 void initialize() {
-  logInfo('initialize', 'Calling parsePro2IntegRpt .. logging results may take a few seconds')
+  logInfo('initialize', 'Calling parsePro2IntegRpt')
   Map results = parsePro2IntegRpt(settings.pro2IntegReport)
-  //logInfo('initialize', 'Parse complete')
-  //logResults(results, 'pro2Devices')
-  //logResults(results, 'kpads')
-  //logResults(results, 'pro2Rooms')
-  //logResults(results, 'circuits')
+  logInfo('initialize', 'Parse complete')
+  logPro2Results(results, 'ra2Devices')
+  logPro2Results(results, 'kpads')
+  logPro2Results(results, 'circuits')
 }

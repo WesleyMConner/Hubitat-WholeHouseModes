@@ -8,7 +8,7 @@ result: [
     [
       ra2Room: 'Den',
       physicalLocation: 'REP1',
-      name: 'Enclosure Device 001',
+      name: 'Enclosure Device 001',    // see physicalLocation
       model: 'RR-MAIN-REP-WH',
       id: 1,
       buttons: [

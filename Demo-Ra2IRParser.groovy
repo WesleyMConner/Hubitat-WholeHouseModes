@@ -50,7 +50,7 @@ Map Ra2Page() {
     name: 'Ra2Page',
     title: [
       heading1("Ra2 Integration Report Demo Page - ${app.id}"),
-      bullet1('Click <b>Done</b> to enable subscriptions.')
+      bullet1('Click <b>Done</b> to parse report.')
     ].join('<br/>'),
     install: true,
     uninstall: true
@@ -87,10 +87,10 @@ void initialize() {
   logInfo('initialize', 'Calling parseRa2IntegRpt .. logging results may take a few seconds')
   Map results = parseRa2IntegRpt(settings.ra2IntegReport, true)
   logInfo('initialize', 'Parse complete')
-  logResults(results, 'ra2Devices')
-  logResults(results, 'kpads')
-  logResults(results, 'ra2Rooms')
-  logResults(results, 'circuits')
-  logResults(results, 'timeclock')
-  logResults(results, 'green')
+  logRa2Results(results, 'ra2Devices')
+  logRa2Results(results, 'kpads')
+  logRa2Results(results, 'ra2Rooms')
+  logRa2Results(results, 'circuits')
+  logRa2Results(results, 'timeclock')
+  logRa2Results(results, 'green')
 }

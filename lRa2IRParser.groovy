@@ -298,24 +298,24 @@ void populateRa2Devices(Map results) {
   //     id → Specifies the Hubitat 'DeviceName' (aka 'deviceID' in Device events)
   //   name → Specifies the Hubitat 'DeviceLabel' (aka 'name' in Device events)
   // Allowed Device Types
-  //   results.kpads are mapped per getHubitatCode()
+  //   From getHubitatCode(kpad.model)
   //     k: Keypad
   //     m: Motion
-  //     q: Pico (pushed/released)
+  //     q: Pico (pushed/released)     // See 'q' below
   //     v: VCRX
   //     w: Wall mount Keypad
-  //   results.circuits are assigned as dimmers by 'brute force'
-  //     d: Dimmer
-  //   None of the following devices were available for testing
-  //     e: Shade ... No te
-  //     f: Fan Control ... x
-  //     h: HVAC Controller ... x
-  //     r: Shade Remote ... x
-  //     t: Thermostat ... x
-  //   Available options for MANUAL fine-tuning
-  //     o: VCRX Output ... Assigned 'd' by default per results.circuits (above)
-  //     p: Pico (pushed/held) ... Assigned 'q' by default per getHubitatCode()
-  //     s: Switch ... Assigned 'd' by default per results.circuits (above)
+  //   From circuits
+  //     d: Dimmer                     // See 's' and 'o' below
+  //   Some manual adjustments may be appropriate
+  //     o: VCRX Output                // See 'd' above
+  //     p: Pico (pushed/held)         // See 'q' above
+  //     s: Switch .                   // See 'd' above
+  //   Unused / Not Tested
+  //     e: Shade
+  //     f: Fan Control
+  //     h: HVAC Controller
+  //     r: Shade Remote
+  //     t: Thermostat
   results.ra2Devices = []             // Erase any prior values and rebuild
   results.kpads.each { kpad ->
     // Users cannot edit the name of some device types (e.g., main repeaters,
@@ -332,16 +332,16 @@ void populateRa2Devices(Map results) {
   }
 }
 
-void logResults(Map results, String key) {
+void logRa2Results(Map results, String key) {
   ArrayList lines = []
   lines << "<b>${key}</b>"
   results."${key}".each { e -> lines << "${e}" }
-  logInfo('logResults', lines)
+  logInfo('logRa2Results', lines)
 }
 
 Map parseRa2IntegRpt(String ra2IntegrationReport, Boolean sortResults = false) {
   //---------------------------------------------------------------------------------
-  //  Processes a 'lutronIntegrationReport' (provided as a multi-line String)
+  //  Processes a 'ra2IntegrationReport' (provided as a multi-line String)
   //  Produces a 'results' Map with the following keys:
   //      rA2Devices → An ArrayList of strings that can be copy-pasted into the
   //                   "Lutron Integrator App" to create a new RA2 integration
