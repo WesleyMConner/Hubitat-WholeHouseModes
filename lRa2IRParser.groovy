@@ -55,7 +55,7 @@ String ra2IR_CurrRowUI(Map irMap) {
   return [
     '',
     "<b>${(irMap.curr + 1).toString().padLeft(5, '0')}:</b> ${rowText}",
-    "<br/>Cols: <em>${rowToCols(rowText)} ?: 'null'</em>"
+    "<br/>Cols: <em>${rowToCols(rowText) ?: 'null'}</em>"
   ].join('')
 }
 
@@ -107,76 +107,108 @@ Map getNextTableType(Map irMap) {
     Map tableTypes = [
       [ 'Device Room', 'Device Location', 'Device name',
         'Model', 'ID', 'Component', 'Component Number', 'Name' ] : [
-        'instanceType': 'kpads',
-        'instanceCols': 5,
-        'recurringComponents' : [
+        instanceType: 'kpads',
+        keyNames: [
+          'ra2Room',              // Device Room
+          'physicalLocation',     // Device Location
+          'name',                 // Device name
+          'model',                // Model
+          'id',                   // ID
+          null,                   // Component
+          'number',               // Component Number
+          'label'                 // Name
+        ],
+        entryCols: 5,
+        recurring: [
           [
-            'key': 'buttons',
-            'controlModels': [
+            key: 'buttons',
+            controlModels: [
               'PJ2-3BRL-GWH-L01', 'RR-MAIN-REP-WH', 'RR-T15RL-SW',
               'RR-VCRX-WH', 'RRD-H6BRL-WH', 'RRD-W6BRL-WH', 'RRD-W7B-WH'
             ],
-            'regexpCol': 5,
-            'regexp': /^Button /
+            regexIndex: 5,
+            regexp: /^Button /
           ],
           [
-            'key': 'ccis',
-            'controlModels': [ 'RR-VCRX-WH' ],
-            'regexpCol': 4,  // NOTE: CCI subitems will carry an ID key
-            'regexp': /^CCI /
+            key: 'ccis',
+            controlModels: [ 'RR-VCRX-WH' ],
+            regexIndex: 4,  // NOTE: CCI subitems will carry an ID key
+            regexp: /^CCI /
           ],
           [
-            'key': 'leds',
-            'controlModels': [
+            key: 'leds',
+            controlModels: [
               'RR-MAIN-REP-WH', 'RR-T15RL-SW', 'RR-VCRX-WH', 'RRD-H6BRL-WH',
               'RRD-W6BRL-WH', 'RRD-W7B-WH'
             ],
-            'regexpCol': 5,
-            'regexp': /^Led /
+            regexIndex: 5,
+            regexp: /^Led /
           ]
         ]
       ],
       ['Room', 'ID']: [
-        'instanceType': 'ra2Rooms',
-        'instanceCols': 2
+        instanceType: 'ra2Rooms',
+        keyNames: [
+          'name',                 // Room
+          'id'                    // ID
+        ],
+        entryCols: 2
       ],
       ['Zone Room', 'Zone Name', 'ID'] : [
-        'instanceType': 'circuits',
-        'instanceCols': 3
+        instanceType: 'circuits',
+        keyNames: [
+          'ra2Room',              // Zone Room
+          'name',                 // Zone Name
+          'id'                    // ID
+        ],
+        entryCols: 3
       ],
       ['Timeclock', 'ID', 'Event', 'Event Index']: [
-        'instanceType': 'timeclock',
-        'instanceCols': 2,
-        'recurringComponents' : [
+        instanceType: 'timeclock',
+        keyNames: [
+          'name',                 // Timeclock
+          'id',                   // ID
+          'event',                // Event
+          'eventIndex'            // Event Index
+        ],
+        entryCols: 2,
+        recurring: [
           [
-            'key': 'actions',
-            'regexpCol': 2,
-            'regexp': /^*/
+            key: 'actions',
+            regexIndex: 2,
+            regexp: /^*/
           ]
         ]
       ],
       ['Green Mode', 'ID', 'Mode Name', 'Step Number'] : [
-        'instanceType': 'green',
-        'instanceCols': 2,
-        'recurringComponents' : [
+        instanceType: 'green',
+        keyNames: [
+          'greenMode',            // Green Mode
+          'id',                   // ID
+          'name',                 // Mode Name
+          'stepNumber'            // Step Number'
+        ],
+        entryCols: 2,
+        recurring: [
           [
-            'key': 'green',
-            'regexpCol': 2,
-            'regexp': /^Green/
+            key: 'green',
+            regexIndex: 2,
+            regexp: /^Green/
           ]
         ]
       ]
     ]
     tableType = tableTypes[(tableTypeCols)]
-    if (tableType) {
-      tableType.colKeys = tableTypeCols*.replaceAll('\\s', '')
-    } else {
+    //--> if (tableType) {
+    //-->   tableType.keyNames = tableTypeCols*.replaceAll('\\s', '')
+    //--> } else {
+    if (!tableType) {
       logError('getNextTableType', "No tableType for >${tableTypeCols}<")
       ra2IR_ForceEOF(irMap)
     }
-  }
+    }
   return tableType
-}
+  }
 
 Boolean appliesToModel(Map recurringComponent, String controlModel) {
   Boolean applyAll = recurringComponent.controlModels == NULL
@@ -185,24 +217,28 @@ Boolean appliesToModel(Map recurringComponent, String controlModel) {
 }
 
 void addSubitemsToEntry(Map tableType, Map irMap, Map newEntry) {
-  tableType.recurringComponents
-  .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.Model) }
+  tableType.recurring
+  .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.model) }
   .each { recurringItem ->
     newEntry."${recurringItem.key}" = []  // ArrayList for subitem Maps
   }
   while (ra2IR_hasUnprocessedRows(irMap)) {
     ArrayList recurringCols = ra2IR_NextNonNullRowCols(irMap)
     if (recurringCols != null && !recurringCols[0]) {
-      tableType.recurringComponents
-      .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.Model) }
+      tableType.recurring
+      .findAll { recurringItem -> appliesToModel(recurringItem, newEntry.model) }
       .each { recurringItem ->
-        Integer reColIdx = recurringItem.regexpCol
+        Integer reColIdx = recurringItem.regexIndex
         String reColData = recurringCols[reColIdx]
         if (reColData =~ recurringItem.regexp) {
             Map newSubEntry = recurringCols.withIndex()
-            .findAll { colData, i -> i >= recurringItem.regexpCol }
+            .findAll { colData, i ->
+              (tableType.keyNames[i] != null) && (i >= recurringItem.regexIndex)
+            }
             .collectEntries { colData, i ->
-              [ tableType.colKeys[i], colData ]
+              String keyName = tableType.keyNames[i]
+              //-> if (keyName) { [ keyName, colData ] }
+              [ keyName, colData ]
             }
             newEntry."${recurringItem.key}" << newSubEntry
         }
@@ -220,12 +256,14 @@ Map getNewEntry(Map tableType, Map irMap, Map results) {
   if (
     dataCols
     && dataCols[0]
-    && dataCols.size() == tableType.instanceCols
+    && dataCols.size() == tableType.entryCols
   ) {
-    newEntry = tableType.colKeys.withIndex()
-    .findAll { colKey, i -> i < tableType.instanceCols }
+    newEntry = tableType.keyNames.withIndex()
+    .findAll { colKey, i ->
+      (colKey != null) && (i < tableType.entryCols)
+    }
     .collectEntries { colKey, i -> [ colKey, dataCols[i] ] }
-    if (tableType.recurringComponents) {
+    if (tableType.recurring) {
       addSubitemsToEntry(tableType, irMap, newEntry)
     }
     results."${tableType.instanceType}" << newEntry
@@ -280,26 +318,28 @@ void populateRa2Devices(Map results) {
   //     s: Switch ... Assigned 'd' by default per results.circuits (above)
   results.ra2Devices = []             // Erase any prior values and rebuild
   results.kpads.each { kpad ->
-    // Users cannot edit repeater 'Devicename', but can edit repeater 'DeviceLocation'.
-    if (kpad.Devicename == 'Enclosure Device 001') {
-      results.ra2Devices << "${getHubitatCode(kpad.Model)},${kpad.DeviceLocation},${kpad.ID}"
+    // Users cannot edit the name of some device types (e.g., main repeaters,
+    // motion sensors). For these devices the (editable) "Device Location"
+    // (aka 'physicalLocation' is used as the device name.
+    if (['Enclosure Device 001', 'Device 001'].contains(kpad.name)) {
+      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.physicalLocation},${kpad.id}"
     } else {
-      results.ra2Devices << "${getHubitatCode(kpad.Model)},${kpad.Devicename},${kpad.ID}"
+      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.name},${kpad.id}"
     }
   }
   results.circuits.each { device ->
-    results.ra2Devices << "d,${device.ZoneName},${device.ID}"
+    results.ra2Devices << "d,${device.name},${device.id}"
   }
 }
 
 void logResults(Map results, String key) {
   ArrayList lines = []
   lines << "<b>${key}</b>"
-  results."${key}".each { entry -> lines << "${entry}" }
+  results."${key}".each { e -> lines << "${e}" }
   logInfo('logResults', lines)
 }
 
-Map parseRa2IntegRpt(String ra2IntegrationReport) {
+Map parseRa2IntegRpt(String ra2IntegrationReport, Boolean sortResults = false) {
   //---------------------------------------------------------------------------------
   //  Processes a 'lutronIntegrationReport' (provided as a multi-line String)
   //  Produces a 'results' Map with the following keys:
@@ -326,5 +366,17 @@ Map parseRa2IntegRpt(String ra2IntegrationReport) {
     }
   }
   populateRa2Devices(results)
+  if (sortResults) {
+    results.ra2Devices = results.ra2Devices.sort { triplet ->
+      ArrayList elements = triplet.split(',')
+      elements[1]
+    }
+    results.kpads = results.kpads.sort { kpad ->
+      (kpad.name == 'Enclosure Device 001') ? kpad.physicalLocation : kpad.name
+    }
+    results.ra2Rooms = results.ra2Rooms.sort { room -> room.name }
+    results.circuits = results.circuits.sort { circuit -> circuit.name }
+  }
+
   return results
 }

@@ -11,8 +11,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 6, 6, WHA Party
 , , , , , Button 7, 7, WHA Supp
 , , , , , Button 8, 8, WHA TV
-, , , , , Button 9, 9, 
-, , , , , Button 10, 10, 
+, , , , , Button 9, 9,
+, , , , , Button 10, 10,
 , , , , , Button 11, 11, DenLamp Chill
 , , , , , Button 12, 12, DenLamp Clean
 , , , , , Button 13, 13, #15 DenLamp Day
@@ -21,8 +21,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 16, 16, DenLamp Party
 , , , , , Button 17, 17, DenLamp Supp
 , , , , , Button 18, 18, #15 DenLamp TV
-, , , , , Button 19, 19, 
-, , , , , Button 20, 20, 
+, , , , , Button 19, 19,
+, , , , , Button 20, 20,
 , , , , , Button 21, 21, Kitchen Chill
 , , , , , Button 22, 22, Kitchen Clean
 , , , , , Button 23, 23, #25 Kitchen Day
@@ -32,7 +32,7 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 27, 27, Kitchen Supp
 , , , , , Button 28, 28, Kitchen TV
 , , , , , Button 29, 29, Kitchen Cook
-, , , , , Button 30, 30, 
+, , , , , Button 30, 30,
 , , , , , Button 31, 31, His Chill
 , , , , , Button 32, 32, #33 Den Clean
 , , , , , Button 33, 33, His Day
@@ -41,8 +41,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 36, 36, #33 His Party
 , , , , , Button 37, 37, #33 His Supp
 , , , , , Button 38, 38, #31 His TV
-, , , , , Button 39, 39, 
-, , , , , Button 40, 40, 
+, , , , , Button 39, 39,
+, , , , , Button 40, 40,
 , , , , , Button 41, 41, Den Chill
 , , , , , Button 42, 42, Den Clean
 , , , , , Button 43, 43, #45 Den Day
@@ -51,8 +51,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 46, 46, Den Party
 , , , , , Button 47, 47, Den Supp
 , , , , , Button 48, 48, Den TV
-, , , , , Button 49, 49, 
-, , , , , Button 50, 50, 
+, , , , , Button 49, 49,
+, , , , , Button 50, 50,
 , , , , , Button 51, 51, Guest Chill
 , , , , , Button 52, 52, Guest Clean
 , , , , , Button 53, 53, #55 Guest Day
@@ -61,8 +61,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 56, 56, Guest Party
 , , , , , Button 57, 57, Guest Supp
 , , , , , Button 58, 58, Guest TV
-, , , , , Button 59, 59, 
-, , , , , Button 60, 60, 
+, , , , , Button 59, 59,
+, , , , , Button 60, 60,
 , , , , , Button 61, 61, LhsBath Chill
 , , , , , Button 62, 62, LhsBath Clean
 , , , , , Button 63, 63, LhsBath Day
@@ -71,8 +71,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 66, 66, LhsBath Party
 , , , , , Button 67, 67, LhsBath Supp
 , , , , , Button 68, 68, LhsBath TV
-, , , , , Button 69, 69, 
-, , , , , Button 70, 70, 
+, , , , , Button 69, 69,
+, , , , , Button 70, 70,
 , , , , , Button 71, 71, RhsBath Chill
 , , , , , Button 72, 72, RhsBath Clean
 , , , , , Button 73, 73, RhsBath Day
@@ -81,8 +81,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 76, 76, RhsBath Party
 , , , , , Button 77, 77, RhsBath Supp
 , , , , , Button 78, 78, RhsBath TV
-, , , , , Button 79, 79, 
-, , , , , Button 80, 80, 
+, , , , , Button 79, 79,
+, , , , , Button 80, 80,
 , , , , , Button 81, 81, Main Chill
 , , , , , Button 82, 82, Main Clean
 , , , , , Button 83, 83, #85 Main Day
@@ -92,7 +92,7 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 87, 87, Main Supp
 , , , , , Button 88, 88, Main TV
 , , , , , Button 89, 89, Main Play
-, , , , , Button 90, 90, 
+, , , , , Button 90, 90,
 , , , , , Button 91, 91, Hers Chill
 , , , , , Button 92, 92, #93 Hers Clean
 , , , , , Button 93, 93, Hers Day
@@ -101,8 +101,8 @@ Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 96, 96, #93 Hers Party
 , , , , , Button 97, 97, #93 Hers Supp
 , , , , , Button 98, 98, #91 Hers TV
-, , , , , Button 99, 99, 
-, , , , , Button 100, 100, 
+, , , , , Button 99, 99,
+, , , , , Button 100, 100,
 , , , , , Led 1, 101
 , , , , , Led 2, 102
 , , , , , Led 3, 103
@@ -220,8 +220,8 @@ Main, FrontDoor, Control-MainFoyerKpad (3), RRD-H6BRL-WH, 10
 , , , , , Button 4, 4, Main Chill
 , , , , , Button 5, 5, Main TV
 , , , , , Button 6, 6, Foyer
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -236,8 +236,8 @@ Primary, PrimaryEntry, Control-PrimaryEntryKpad, RRD-H6BRL-WH, 20
 , , , , , Button 4, 4, Bath TV
 , , , , , Button 5, 5, Bath Off
 , , , , , Button 6, 6, Lamps
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -252,8 +252,8 @@ Main, FrontDoor, Control-MainEntryKpad (2), RRD-H6BRL-WH, 29
 , , , , , Button 4, 4, Yard Night
 , , , , , Button 5, 5, Yard Off
 , , , , , Button 6, 6, Porch
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -291,8 +291,8 @@ Main, NicheWall, Control-DiningKpad (1), RRD-H6BRL-WH, 38
 , , , , , Button 4, 4, Main Chill
 , , , , , Button 5, 5, Main TV
 , , , , , Button 6, 6, Niche
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -307,8 +307,8 @@ Den, KitchenSliderRight, Control-LanaiKpad (3), RRD-H6BRL-WH, 41
 , , , , , Button 4, 4, Lanai TV
 , , , , , Button 5, 5, Lanai Off
 , , , , , Button 6, 6, Pendants
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -323,8 +323,8 @@ Den, GarageEntry, Control-GarageKpad (2), RRD-H6BRL-WH, 44
 , , , , , Button 4, 4, CHILL
 , , , , , Button 5, 5, Kit Cook
 , , , , , Button 6, 6, Hall
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -339,8 +339,8 @@ Primary, PrimSlider, Control-PrimarySliderKpad (2), RRD-W6BRL-WH, 46
 , , , , , Button 4, 4, Lanai Chill
 , , , , , Button 5, 5, Lanai Off
 , , , , , Button 6, 6, Spots
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -388,8 +388,8 @@ Primary, Credenza, Control-Primary15ButKpad, RR-T15RL-SW, 73
 , , , , , Button 15, 15, Floor Lamp
 , , , , , Button 16, 16, ALL OFF
 , , , , , Button 17, 17, CLEAN
-, , , , , Button 24, 24, 
-, , , , , Button 25, 25, 
+, , , , , Button 24, 24,
+, , , , , Button 25, 25,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -415,8 +415,8 @@ Den, RhsEntry, Control-KitchenKpad (3), RRD-H6BRL-WH, 80
 , , , , , Button 4, 4, Den Chill
 , , , , , Button 5, 5, Den TV
 , , , , , Button 6, 6, TV Wall
-, , , , , Button 18, 18, 
-, , , , , Button 19, 19, 
+, , , , , Button 18, 18,
+, , , , , Button 19, 19,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -429,8 +429,8 @@ Control, Visor CTRL, Device 001, RR-VCRX-WH, 82
 , , , , , Button 2, 2, AWAY
 , , , , , Button 3, 3, FLASH
 , , , , , Button 4, 4, ALARM
-, , , , , Button 5, 5, 
-, , , , , Button 6, 6, 
+, , , , , Button 5, 5,
+, , , , , Button 6, 6,
 , , , , , Led 1, 81
 , , , , , Led 2, 82
 , , , , , Led 3, 83
@@ -461,8 +461,8 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 16, 16, PrimBath Party
 , , , , , Button 17, 17, PrimBath Supp
 , , , , , Button 18, 18, PrimBath TV
-, , , , , Button 19, 19, 
-, , , , , Button 20, 20, 
+, , , , , Button 19, 19,
+, , , , , Button 20, 20,
 , , , , , Button 21, 21, Primary Chill
 , , , , , Button 22, 22, Primary Clean
 , , , , , Button 23, 23, #25 Primary Day
@@ -471,8 +471,8 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 26, 26, Primary Party
 , , , , , Button 27, 27, Primary Supp
 , , , , , Button 28, 28, Primary TV
-, , , , , Button 29, 29, 
-, , , , , Button 30, 30, 
+, , , , , Button 29, 29,
+, , , , , Button 30, 30,
 , , , , , Button 31, 31, Laundry Chill
 , , , , , Button 32, 32, #33 Laundry Clean
 , , , , , Button 33, 33, Laundry Day
@@ -481,8 +481,8 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 36, 36, #33 Laundry Party
 , , , , , Button 37, 37, #33 Laundry Supp
 , , , , , Button 38, 38, Laundry TV
-, , , , , Button 39, 39, 
-, , , , , Button 40, 40, 
+, , , , , Button 39, 39,
+, , , , , Button 40, 40,
 , , , , , Button 41, 41, LhsBdrm Chill
 , , , , , Button 42, 42, LhsBdrm Clean
 , , , , , Button 43, 43, #45 LhsBdrm Day
@@ -491,8 +491,8 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 46, 46, LhsBdrm Party
 , , , , , Button 47, 47, #41 LhsBdrm Supp
 , , , , , Button 48, 48, LhsBdrm TV
-, , , , , Button 49, 49, 
-, , , , , Button 50, 50, 
+, , , , , Button 49, 49,
+, , , , , Button 50, 50,
 , , , , , Button 51, 51, Office Chill
 , , , , , Button 52, 52, Office Clean
 , , , , , Button 53, 53, #55 Office Day
@@ -501,8 +501,8 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 56, 56, Office Party
 , , , , , Button 57, 57, Office Supp
 , , , , , Button 58, 58, Office TV
-, , , , , Button 59, 59, 
-, , , , , Button 60, 60, 
+, , , , , Button 59, 59,
+, , , , , Button 60, 60,
 , , , , , Button 61, 61, Yard Chill
 , , , , , Button 62, 62, #65 Yard Clean
 , , , , , Button 63, 63, #65 Yard Day
@@ -511,8 +511,8 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 66, 66, #61 Yard Party
 , , , , , Button 67, 67, #65 Yard Supp
 , , , , , Button 68, 68, #64 Yard TV
-, , , , , Button 69, 69, 
-, , , , , Button 70, 70, 
+, , , , , Button 69, 69,
+, , , , , Button 70, 70,
 , , , , , Button 71, 71, Lanai Chill
 , , , , , Button 72, 72, #75 Lanai Clean
 , , , , , Button 73, 73, #75 Lanai Day
@@ -522,27 +522,27 @@ MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 77, 77, Lanai Supp
 , , , , , Button 78, 78, Lanai TV
 , , , , , Button 79, 79, Lanai Play
-, , , , , Button 80, 80, 
-, , , , , Button 81, 81, 
-, , , , , Button 82, 82, 
-, , , , , Button 83, 83, 
-, , , , , Button 84, 84, 
-, , , , , Button 85, 85, 
-, , , , , Button 86, 86, 
-, , , , , Button 87, 87, 
-, , , , , Button 88, 88, 
-, , , , , Button 89, 89, 
-, , , , , Button 90, 90, 
+, , , , , Button 80, 80,
+, , , , , Button 81, 81,
+, , , , , Button 82, 82,
+, , , , , Button 83, 83,
+, , , , , Button 84, 84,
+, , , , , Button 85, 85,
+, , , , , Button 86, 86,
+, , , , , Button 87, 87,
+, , , , , Button 88, 88,
+, , , , , Button 89, 89,
+, , , , , Button 90, 90,
 , , , , , Button 91, 91, WHA ALARM
 , , , , , Button 92, 92, WHA AUTO
 , , , , , Button 93, 93, WHA AWAY
 , , , , , Button 94, 94, WHA FLASH
 , , , , , Button 95, 95, WHA PANIC
 , , , , , Button 96, 96, WHA QUIET
-, , , , , Button 97, 97, 
-, , , , , Button 98, 98, 
-, , , , , Button 99, 99, 
-, , , , , Button 100, 100, 
+, , , , , Button 97, 97,
+, , , , , Button 98, 98,
+, , , , , Button 99, 99,
+, , , , , Button 100, 100,
 , , , , , Led 1, 101
 , , , , , Led 2, 102
 , , , , , Led 3, 103

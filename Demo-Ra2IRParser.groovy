@@ -85,7 +85,7 @@ void updated() {
 
 void initialize() {
   logInfo('initialize', 'Calling parseRa2IntegRpt .. logging results may take a few seconds')
-  Map results = parseRa2IntegRpt(settings.ra2IntegReport)
+  Map results = parseRa2IntegRpt(settings.ra2IntegReport, true)
   logInfo('initialize', 'Parse complete')
   logResults(results, 'ra2Devices')
   logResults(results, 'kpads')
