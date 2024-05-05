@@ -20,7 +20,7 @@ import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lPbsgV1
+#include wesmc.lPbsgV2
 
 definition (
   name: 'WHA',
@@ -46,17 +46,25 @@ void AllAuto () {
   }
 }
 
-void pbsg_ButtonOnCallback (Map pbsg) {
-  // - The MPbsg instance calls this method to reflect a state change.
-  String newMode = pbsg.activeButton
-  logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
-  getLocation().setMode(newMode)
-  // Pass new mode to rooms to alleviate their need to handle modes.
-  ArrayList roomNames = settings.rooms
-  roomNames.each{ roomName ->
-    InstAppW roomObj = app.getChildAppByLabel(roomName)
-    logInfo('pbsg_ButtonOnCallback', "roomName: ${roomName}, newMode: ${newMode}")
-    roomObj.room_ModeChange(newMode)
+void pbsg_ButtonOnCallback (String pbsgName) {
+  pbsg = atomicState."${pbsgName}"
+  if (pbsg?.name == 'mode') {
+    // - The MPbsg instance calls this method to reflect a state change.
+    String newMode = pbsg.activeButton
+    logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
+    getLocation().setMode(newMode)
+    // Pass new mode to rooms to alleviate their need to handle modes.
+    ArrayList roomNames = settings.rooms
+    roomNames.each{ roomName ->
+      InstAppW roomObj = app.getChildAppByLabel(roomName)
+      logInfo('pbsg_ButtonOnCallback', "roomName: ${roomName}, newMode: ${newMode}")
+      roomObj.room_ModeChange(newMode)
+    }
+  } else {
+    logError(
+      'pbsg_ButtonOnCallback',
+      "Could not find PBSG '${pbsgName}' via atomicState"
+    )
   }
 }
 
@@ -145,6 +153,7 @@ Map WhaPage () {
     //-> app.removeSetting('..')
     //-> state.remove('..')
     //---------------------------------------------------------------------------------
+    app.removeSetting('pbsgLogThresh')
     app.removeSetting('hubitatQueryString')
     app.removeSetting('modeButton_Chill')
     app.removeSetting('modeButton_Cleaning')
@@ -165,14 +174,15 @@ Map WhaPage () {
     getGlobalVar('defaultMode').value
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+      //solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       _idParticipatingRooms()
-      Map modePbsgConfig = [
+      atomicState.mode = [
         'name': 'mode',
         'allButtons': getLocation().getModes().collect { it.name },
-        'defaultButton': getLocation().currentMode.name
+        'defaultButton': getLocation().currentMode.name,
+        'instType': 'pbsg'
       ]
-      Map modePbsg = pbsg_Initialize(modePbsgConfig)
+      pbsg_BuildToConfig('mode')
       if (settings.rooms) {
         _displayInstantiatedRoomHrefs()
       }

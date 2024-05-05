@@ -19,7 +19,7 @@ import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lPbsgV1
+#include wesmc.lPbsgV2
 
 definition (
   parent: 'wesmc:WHA',
@@ -139,22 +139,23 @@ void updateTargetScene() {
   }
 }
 
-void pbsg_ButtonOnCallback(Map pbsg) {
+void pbsg_ButtonOnCallback(String pbsgName) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
-  // Scene activation enforces room occupancy.
-  if (!pbsg) {
+  pbsg = atomicState."${pbsgName}"
+  if (pbsg) {
+    state.activeButton = pbsg?.activeButton ?: 'Automatic'
+    logInfo(
+      'pbsg_ButtonOnCallback',
+      "Button ?${b(button)}? -> state.activeButton: ${b(state.activeButton)}")
+    clearManualOverride()
+    updateTargetScene()
+    activateScene()
+  } else {
     logError(
       'pbsg_ButtonOnCallback',
-      'A null pbsg argument was received, assuming pbsg.activeButton is "Automatic"'
+      "Could not find PBSG '${pbsgName}' via atomicState"
     )
   }
-  state.activeButton = pbsg?.activeButton ?: 'Automatic'
-  logInfo(
-    'pbsg_ButtonOnCallback',
-    "Button ${b(button)} -> state.activeButton: ${b(state.activeButton)}")
-  clearManualOverride()
-  updateTargetScene()
-  activateScene()
 }
 
 Boolean isDeviceType(String devTypeCandidate) {
@@ -417,10 +418,10 @@ void initialize() {
   //     will not be called.
   //   - It is better to include a redundant call here than to miss
   //     proper room activation on initialization.
-  Map pbsg = pbsgStore_Retrieve(state.ROOM_LABEL)
+  Map pbsg = atomicState."${state.ROOM_LABEL}"
   if (pbsg) {
-    pbsg_ActivateButton(pbsg, 'Automatic')
-    pbsg_ButtonOnCallback(pbsg)
+    pbsg_ActivateButton(pbsg.name, 'Automatic')
+    pbsg_ButtonOnCallback(pbsg.name)
   } else {
     logWarn(
       'initialize',
@@ -649,6 +650,8 @@ Map RoomScenesPage() {
     state.remove('targetScene')
     state.brightLuxSensors = []
     state.remove('RSPBSG_LABEL')
+    state.remove('pbsgStore')
+    app.removeSetting('pbsgLogThresh')
     app.removeSetting('modeToScene^Chill')
     app.removeSetting('modeToScene^Cleaning')
     app.removeSetting('modeToScene^Day')
@@ -670,12 +673,14 @@ Map RoomScenesPage() {
       //*********************************************************************
       if (state.scenes) {
         ArrayList scenes = state.scenes.collect{ k, v -> return k }
-        Map rsPbsgConfig = [
+        // For now, state.ROOM_LABEL is redundant given atomicState.name.
+        atomicState."${state.ROOM_LABEL}" = [
           'name': state.ROOM_LABEL,
           'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
-          'defaultButton': 'Automatic'
+          'defaultButton': 'Automatic',
+          'instType': 'pbsg'  // Just a pbsg until elevated to 'room'
         ]
-        Map rsPbsg = pbsg_Initialize(rsPbsgConfig)
+        Map rsPbsg = pbsg_BuildToConfig(state.ROOM_LABEL)
       } else {
         paragraph "Creation of the room's PBSG is pending identification of room scenes"
       }

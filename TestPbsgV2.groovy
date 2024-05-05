@@ -23,7 +23,7 @@ import com.hubitat.hub.domain.Event as Event
 #include wesmc.lPbsgV2
 
 definition (
-  name: 'TestPbsg2',
+  name: 'TestPbsgV2',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Preview Pbsg functionality',
@@ -33,7 +33,7 @@ definition (
 )
 
 preferences {
-  page(name: 'TestPbsgPage')
+  page(name: 'TestPbsgV2')
 }
 
 void pbsg_ButtonOnCallback(Map pbsg) {
@@ -42,11 +42,11 @@ void pbsg_ButtonOnCallback(Map pbsg) {
 
 // GUI
 
-Map TestPbsgPage() {
+Map TestPbsgV2() {
   return dynamicPage(
-    name: 'TestPbsgPage',
+    name: 'TestPbsgV2',
     title: [
-      heading1("TestPbsgPage - ${app.id}"),
+      heading1("TestPbsgV2 - ${app.id}"),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
     install: true,
@@ -58,7 +58,7 @@ Map TestPbsgPage() {
     //-> app.removeSetting('..')
     //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
-    app.updateLabel('TestPbsgPage')
+    app.updateLabel('TestPbsgV2')
     atomicState.remove('childVsws')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
@@ -78,12 +78,13 @@ Map TestPbsgPage() {
         }
       }
       // Create a third PBSG by hard-coding a configuration
-      Map bruteForceConfig = [
-        'name': 'bruteForce',
+      atomicState.TestPbsg = [
+        'name': 'TestPbsg',
+        'instType': 'pbsg',
         'allButtons': ['one', 'two', 'three', 'four', 'five', 'six'],
         'defaultButton': 'four'
       ]
-      Map bruteForcePbsg = pbsg_BuildToConfig(bruteForceConfig, 'testPbsg')
+      Map bruteForcePbsg = pbsg_BuildToConfig('TestPbsg')
       paragraph([
         heading1('Debug'),
         *appStateAsBullets(),
