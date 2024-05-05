@@ -3,7 +3,7 @@ language: en
 caseSensitive: false
 words:
   - autowidth
-  - Caséta
+  - caséta
   - groovylintrc
   - hubitat
   - kpad
@@ -12,5 +12,6 @@ words:
   - linfo
   - lutron
   - pbsg
+  - pbsg
   - pico
-  - Timeclock
+  - timeclock

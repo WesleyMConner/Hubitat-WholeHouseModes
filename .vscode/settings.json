@@ -52,7 +52,8 @@
   ],
   "files.associations": {
     ".groovylintrc.json": "jsonc",
-    "casetaIntegrationReport.json": "jsonc",
+    "docs/casetaIntegrationReport.json": "jsonc",
+    ".hubitat/metadata.json": "jsonc"
   },
   "groovyLint.basic.config": "./.groovylintrc.json",
   "hubitat.hub.hostname": "192.168.8.94",

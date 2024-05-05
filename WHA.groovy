@@ -20,7 +20,7 @@ import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
-#include wesmc.lPbsgv2
+#include wesmc.lPbsgV1
 
 definition (
   name: 'WHA',

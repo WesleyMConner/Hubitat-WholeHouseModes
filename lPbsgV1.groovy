@@ -20,7 +20,7 @@
 //   - #include wesmc.lHUI
 
 library(
-  name: 'lPbsgv2',
+  name: 'lPbsgV1',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Push Button Switch Group (PBSG) Implementation',

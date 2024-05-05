@@ -207,11 +207,11 @@ void pbsg_EnforceDefault(String pbsgName) {
   }
 }
 
-String missingKey(String stateKey, String objectKey) {
+void missingKey(String stateKey, String objectKey) {
   logError('missingKey', "Cannot find objectKey '${objectKey}' for stateKey '${stateKey}'")
 }
 
-Boolean pbsgConfigExists (String pbsgName) {
+Boolean pbsgConfigExists(String pbsgName) {
   // PBSG creation leverages the following initial 'configuration' fields:
   //   - name ............. required
   //   - instType ......... required
