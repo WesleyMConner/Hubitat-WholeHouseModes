@@ -80,15 +80,15 @@ void populatePro2Devices(Map results) {
     // (aka 'physicalLocation' is used as the device name.
     String nameNormalized = kpad.name.toLowerCase()
     if (nameNormalized.contains('pico')) {
-      results.ra2Devices << "q,${kpad.name},${kpad.id}"
+      results.ra2Devices << "q,${kpad.name},${kpad.name}"
     } else if (nameNormalized.contains('pro2')) {
-      results.ra2Devices << "k,${kpad.name},${kpad.id}"
+      results.ra2Devices << "k,${kpad.name},${kpad.name}"
     } else {
-      results.ra2Devices << "d,${kpad.name},${kpad.id}"
+      results.ra2Devices << "d,${kpad.name},${kpad.name}"
     }
   }
   results.circuits.each { device ->
-    results.ra2Devices << "d,${device.name},${device.id}"
+    results.ra2Devices << "d,${device.name},${device.name}"
   }
 }
 

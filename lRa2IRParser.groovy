@@ -322,13 +322,13 @@ void populateRa2Devices(Map results) {
     // motion sensors). For these devices the (editable) "Device Location"
     // (aka 'physicalLocation' is used as the device name.
     if (['Enclosure Device 001', 'Device 001'].contains(kpad.name)) {
-      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.physicalLocation},${kpad.id}"
+      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.physicalLocation},${kpad.physicalLocation}"
     } else {
-      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.name},${kpad.id}"
+      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.name},${kpad.name}"
     }
   }
   results.circuits.each { device ->
-    results.ra2Devices << "d,${device.name},${device.id}"
+    results.ra2Devices << "d,${device.name},${device.name}"
   }
 }
 

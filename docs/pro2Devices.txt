@@ -1,10 +1,15 @@
 // Output of pro2Devices from Demo-Pro2IRParser
-d,Lanai-DownLighting,4
-d,Lanai-GrillCan,5
-d,Lanai-OutdoorDining,7
-d,RhsBdrm-FloorLamp,3
-d,RhsBdrm-TableLamps,2
-k,Control-Pro2,1
-q,Lanai-GrillCanPico,6
-q,RhsBdrm-EntryPico,9
-q,RhsBdrm-TablePico,10
+//   Omit one pico as it's bound to the Lanai-GrillCan circuit
+//     q,Lanai-GrillCanPico,Lanai-GrillCanPico
+//   Adjust 'Lanai-OutdoorDining' from dimmer to switch
+//     s,Lanai-OutdoorDining,Lanai-OutdoorDining
+//   AFTER IMPORT !!!
+//     Lutron Telnet -> Pro2 Telnet
+d,Lanai-DownLighting,Lanai-DownLighting
+d,Lanai-GrillCan,Lanai-GrillCan
+d,RhsBdrm-FloorLamp,RhsBdrm-FloorLamp
+d,RhsBdrm-TableLamps,RhsBdrm-TableLamps
+k,Control-Pro2,Control-Pro2
+q,RhsBdrm-EntryPico,RhsBdrm-EntryPico
+q,RhsBdrm-TablePico,RhsBdrm-TablePico
+s,Lanai-OutdoorDining,Lanai-OutdoorDining

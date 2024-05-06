@@ -671,7 +671,7 @@ Laundry, 99
 Zone Room, Zone Name, ID
 
 Den, Kitchen-Soffit, 4
-RhsHall, RhsHall-Lamp, 5
+RhsHall, Guest-RhsHallLamp, 5
 Main, Yard-FrontPorch, 6
 Control, VCRX Output 1, 7
 Main, Main-DiningTable, 9
@@ -683,7 +683,7 @@ Control, VCRX Output 2, 22
 Den, Den-TvWall, 23
 Shop, Yard-ShopPorch, 26
 LhsBath, LhsBath-Shower, 27
-RhsHall, RhsHall-Cans, 28
+RhsHall, Guest-RhsHallCans, 28
 Main, Main-FoyerCans, 31
 Main, Main-LivRmLamps, 33
 Den, Den-KitchenTable, 34

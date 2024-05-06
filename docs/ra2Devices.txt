@@ -1,73 +1,79 @@
 // Output of ra2Devices from Demo-Ra2IRParser
 //   Out-of-Scope
-//     d,NA-BackOutlet,90
-//     d,NA-PantryLedFixture,67
-//     d,NA-RhsHallCloset,42
-//     d,NA-WaterCloset,15
-//     d,VCRX Output 1,7
-//     d,VCRX Output 2,22
-//     d,VCRX Output 3,77
-//     d,VCRX Output 4,81
-//     k,Control-Primary15ButKpad,73
-//     m,NA-PantrySensor,69
-//     m,NA-RhsClosetMotionSensor,60
-//     w,Control-CentralKpad,32
-//     w,Control-DiningKpad (1),38
-//     w,Control-GarageKpad (2),44
-//     w,Control-KitchenKpad (3),80
-//     w,Control-LanaiKpad (3),41
-//     w,Control-MainEntryKpad (2),29
-//     w,Control-MainFoyerKpad (3),10
-//     w,Control-PrimaryEntryKpad,20
-//     w,Control-PrimarySliderKpad (2),46
-d,Den-BevStation,63
-d,Den-DenCans,62
-d,Den-HallCans,43
-d,Den-KitchenTable,34
-d,Den-TvWall,23
-d,Den-UplightLeds,64
-d,DenLamp-Dimmer,59
-d,Guest-LhsHallCans,76
-d,Hers-CeilingLight,53
-d,His-CeilingLight,56
-d,Kitchen-Cans,61
-d,Kitchen-CounterLeds,65
-d,Kitchen-Soffit,4
-d,Lanai-LedUplighting,68
-d,Lanai-Pendants,39
-d,Lanai-Pool,54
-d,Laundry-Cans,18
-d,LhsBath-Shower,27
-d,LhsBath-Soffit,74
-d,LhsBdrm-FloorLamp,45
-d,LhsBdrm-TableLamps,36
-d,Main-ArtNiche,37
-d,Main-DiningTable,9
-d,Main-FoyerCans,31
-d,Main-LivRmLamps,33
-d,Office-LeftTableLamp,35
-d,Primary-TableLamps,19
-d,PrimBath-Cans,51
-d,PrimBath-Soffit,47
-d,PrimBath-TubAndShower,52
-d,RhsBath-Lamp,16
-d,RhsBath-Shower,78
-d,RhsBath-Vanity,79
-d,RhsHall-Cans,28
-d,RhsHall-Lamp,5
-d,Yard-BackPorch,75
-d,Yard-FrontPorch,6
-d,Yard-ShopPorch,26
-d,Yard-Spots,71
-k,REP1,1
-k,REP2,83
-m,Hers-MotionSensor,86
-m,His-MotionSensor,87
-m,Laundry-MotionSensor,8
-m,LhsBath-MotionSensor,72
-m,RhsBath-MotionSensor,49
-q,DenLamp-Pico (A),50
-q,LhsBdrm-EntryPico (1),3
-q,LhsBdrm-TablePico,48
-q,Office-DeskPico(W),30
-v,Visor CTRL,82
+//     d,NA-BackOutlet,NA-BackOutlet
+//     d,NA-PantryLedFixture,NA-PantryLedFixture
+//     d,NA-RhsHallCloset,NA-RhsHallCloset
+//     d,NA-WaterCloset,NA-WaterCloset
+//     d,VCRX Output 1,VCRX Output 1
+//     d,VCRX Output 2,VCRX Output 2
+//     d,VCRX Output 3,VCRX Output 3
+//     d,VCRX Output 4,VCRX Output 4
+//     k,Control-Primary15ButKpad,Control-Primary15ButKpad
+//     m,NA-PantrySensor,NA-PantrySensor
+//     m,NA-RhsClosetMotionSensor,NA-RhsClosetMotionSensor
+//     v,Visor CTRL,Visor CTRL
+//     w,Control-CentralKpad,Control-CentralKpad
+//     w,Control-DiningKpad (1),Control-DiningKpad (1)
+//     w,Control-GarageKpad (2),Control-GarageKpad (2)
+//     w,Control-KitchenKpad (3),Control-KitchenKpad (3)
+//     w,Control-LanaiKpad (3),Control-LanaiKpad (3)
+//     w,Control-MainEntryKpad (2),Control-MainEntryKpad (2)
+//     w,Control-MainFoyerKpad (3),Control-MainFoyerKpad (3)
+//     w,Control-PrimaryEntryKpad,Control-PrimaryEntryKpad
+//     w,Control-PrimarySliderKpad (2),Control-PrimarySliderKpad (2)
+//   Manual Adjustments
+//          DenLamp-Pico (A) -> DenLamp-Pico
+//               DeskPico(W) -> Office-DeskPico
+//     LhsBdrm-EntryPico (1) -> LhsBdrm-EntryPico
+//   AFTER IMPORT !!!
+//     Lutron Telnet -> Ra2 Telnet
+d,Den-BevStation,Den-BevStation
+d,Den-DenCans,Den-DenCans
+d,Den-HallCans,Den-HallCans
+d,Den-KitchenTable,Den-KitchenTable
+d,Den-TvWall,Den-TvWall
+d,Den-UplightLeds,Den-UplightLeds
+d,DenLamp-Dimmer,DenLamp-Dimmer
+d,Guest-LhsHallCans,Guest-LhsHallCans
+d,Guest-RhsHallCans,Guest-RhsHallCans
+d,Guest-RhsHallLamp,Guest-RhsHallLamp
+d,Hers-CeilingLight,Hers-CeilingLight
+d,His-CeilingLight,His-CeilingLight
+d,Kitchen-Cans,Kitchen-Cans
+d,Kitchen-CounterLeds,Kitchen-CounterLeds
+d,Kitchen-Soffit,Kitchen-Soffit
+d,Lanai-LedUplighting,Lanai-LedUplighting
+d,Lanai-Pendants,Lanai-Pendants
+d,Lanai-Pool,Lanai-Pool
+d,Laundry-Cans,Laundry-Cans
+d,LhsBath-Shower,LhsBath-Shower
+d,LhsBath-Soffit,LhsBath-Soffit
+d,LhsBdrm-FloorLamp,LhsBdrm-FloorLamp
+d,LhsBdrm-TableLamps,LhsBdrm-TableLamps
+d,Main-ArtNiche,Main-ArtNiche
+d,Main-DiningTable,Main-DiningTable
+d,Main-FoyerCans,Main-FoyerCans
+d,Main-LivRmLamps,Main-LivRmLamps
+d,Office-LeftTableLamp,Office-LeftTableLamp
+d,Primary-TableLamps,Primary-TableLamps
+d,PrimBath-Cans,PrimBath-Cans
+d,PrimBath-Soffit,PrimBath-Soffit
+d,PrimBath-TubAndShower,PrimBath-TubAndShower
+d,RhsBath-Lamp,RhsBath-Lamp
+d,RhsBath-Shower,RhsBath-Shower
+d,RhsBath-Vanity,RhsBath-Vanity
+d,Yard-BackPorch,Yard-BackPorch
+d,Yard-FrontPorch,Yard-FrontPorch
+d,Yard-ShopPorch,Yard-ShopPorch
+d,Yard-Spots,Yard-Spots
+k,REP1,REP1
+k,REP2,REP2
+m,Hers-MotionSensor,Hers-MotionSensor
+m,His-MotionSensor,His-MotionSensor
+m,Laundry-MotionSensor,Laundry-MotionSensor
+m,LhsBath-MotionSensor,LhsBath-MotionSensor
+m,RhsBath-MotionSensor,RhsBath-MotionSensor
+q,DenLamp-Pico,DenLamp-Pico
+q,LhsBdrm-EntryPico,LhsBdrm-EntryPico
+q,LhsBdrm-TablePico,LhsBdrm-TablePico
+q,Office-DeskPico,Office-DeskPico
