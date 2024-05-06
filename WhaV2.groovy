@@ -39,6 +39,39 @@ preferences {
   page(name: 'WhaPage')
 }
 
+//====
+//==== PARSE RA2 and PRO2 INTEGRATION REPORTS TO PRODUCE:
+//====   - Repeaters requiring Access Permissions
+//====   - Motion Sensors requiring Access Permissions
+//====   - Lux Sensors requiring Access Permissions
+//====   - RA2 and PRO2 device lists
+//====   - Repeater->Button to Room->Scene
+//====   - Room->Scene to Repeater->Button
+//==== TACTICALLY, SUPPLEMENT NON-PARSABLE DATA
+//====   - Picos triggering Room Scenes
+//====   - Per-Room LUX Thresholds
+//====
+//==== WHA CONFIG (designed for efficient atomicState updates)
+//====    atomicState.WHA = [
+//====      rooms: [],                      // ArrayList of roomNames
+//====      repeaters: [],                  // ArrayList of repeater(Ids?)
+//====      motionSensors: [:],             // sensor(Ids?) -> room
+//====      luxSensors: [:],                // sensor(Ids?) -> room -> sufficientLux
+//====      ra2Devices: [],                 // ArrayList of ?
+//====      pro2Devices: [],                // ArrayList of ?
+//====      indDevices: [:],                // device -> room -> scene -> level
+//====      repButtonToRoomScene: [:],      // repeater -> button -> room -> scene
+//====      roomSceneToRepButton: [:]       // room -> scene -> repeater -> button
+//====    ]
+//====
+//==== ADDITIONAL TOP-LEVEL CONFIG (designed for efficient atomicState updates)
+//====   atomicState."${roomName}"          // scene -> "repID? button"
+//====   atomicState."${repID?}"            // Button -> "Room Scene"
+//====   atomicState."${roomScene}"         // "Rep Button"
+//====   atomicState."${motionSensorID?}"   // MAY NOT BE REQUIRED
+//====   atomicState."${luxSensorID?}"      // MAY NOT BE REQUIRED
+//====   atomicState."${indDeviceID?}"      // "Room Scene" -> Level
+
 ArrayList identifyRoomNames() {
   return atomicState.findResults{ k, v -> (v.instType = 'room') ? k : null }
 }
@@ -56,17 +89,22 @@ void logModeAndPerRoomState() {
   logInfo('logModeAndPerRoomState', results)
 }
 
-void AllAuto () {
-//--TBD->  roomStore_ListRooms().each { roomName ->
-//--TBD->    // TBD
-//--TBD->    //   - pbsg_ActivateButton(pbsg, 'Automatic')
-//--TBD->    //   - pbsg_ButtonOnCallback(pbsg)
-//--TBD->    InstAppW roomApp = app.getChildAppByLabel(roomName)
-//--TBD->    String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
-//--TBD->    logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
-//--TBD->    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
-//--TBD->  }
+void idParticipatingRooms () {
+  roomPicklist = getRooms().name.sort()
+  paragraph "_idParticipating Rooms with >${roomPickList}<"
+  input(
+    name: 'rooms',
+    type: 'enum',
+    title: heading2('Identify Participating Rooms'),
+    options: roomPicklist,
+    submitOnChange: true,
+    required: false,
+    multiple: true
+  )
 }
+
+
+
 
 //====
 //==== REPEATER METHODS
@@ -249,19 +287,6 @@ void beginProcessingLuxSensorEvents() {
   }
 }
 
-//====
-//==== Z-WAVE DEVICE METHODS
-//====
-
-// Find devices
-
-//GenericZWaveDimmer
-//GenericZWaveOutlet
-//GeEnbrightenZWaveSmartSwitch
-//offerAll: true
-
-// TBD
-/*
 void subscribeIndDevToHandler(Map roomMap, Map data) {
   // USAGE:
   //   runIn(1, 'subscribeIndDevToHandler', [data: [device: d]])
@@ -275,10 +300,7 @@ void subscribeIndDevToHandler(Map roomMap, Map data) {
   )
   subscribe(device, indDeviceHandler, ['filterEvents': true])
 }
-*/
 
-// TBD
-/*
 void unsubscribeIndDevToHandler(Map roomMap, DevW device) {
   // Independent Devices (especially RA2 and Caséta) are subject to stale
   // Hubitat state data if callbacks occur quickly (within 1/2 second)
@@ -290,9 +312,7 @@ void unsubscribeIndDevToHandler(Map roomMap, DevW device) {
   )
   unsubscribe(device)
 }
-*/
 
-//TBD
 void setDeviceLevel(String deviceId, Long level) {
   settings.indDevices.each { device ->
     if (getDeviceId(device) == deviceId) {

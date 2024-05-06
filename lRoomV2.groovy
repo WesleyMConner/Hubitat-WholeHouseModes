@@ -259,13 +259,13 @@ Map room_restoreOriginalState() {
     'moDetected': [],
     'name': 'Den',
     'scenes': [
-      'TV': [ 'Rep': [ 'Rep1': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Party': [ 'Rep': [ 'Rep1': 46 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Night': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
       'Chill': [ 'Rep': [ 'Rep1': 41 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
-      'Supplement': [ 'Rep': [ 'Rep1': 47 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
       'Cleaning': [ 'Rep': [ 'Rep1': 42 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
       'Day': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
+      'Night': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'Party': [ 'Rep': [ 'Rep1': 46 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 47 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
     ]
   ]
   atomicState.DenLamp = [
@@ -376,9 +376,9 @@ Map room_restoreOriginalState() {
       'Cleaning': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
       'Day': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
       'Night': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 74 ] ],
-      'Off': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
+'Off': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 5, 'Rep2': 75 ] ],
       'Party': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 3, 'Rep2': 76 ] ],
-      'Play': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 4, 'Rep2': 76 ] ],
+'Play': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 4, 'Rep2': 76 ] ],
       'Supplement': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 1, 'Rep2': 77 ] ],
       'TV': [ 'Rep': [ 'Caséta Repeater (pro2-1)': 8, 'Rep2': 78 ] ]
     ]
@@ -524,14 +524,14 @@ Map room_restoreOriginalState() {
     'moDetected': [],
     'name': 'RhsBath',
     'scenes': [
-      'TV': [ 'Rep': [ 'Rep1': 78 ] ],
-      'Party': [ 'Rep': [ 'Rep1': 76 ] ],
-      'Night': [ 'Rep': [ 'Rep1': 74 ] ],
       'Chill': [ 'Rep': [ 'Rep1': 71 ] ],
-      'Supplement': [ 'Rep': [ 'Rep1': 77 ] ],
       'Cleaning': [ 'Rep': [ 'Rep1': 72 ] ],
       'Day': [ 'Rep': [ 'Rep1': 73 ] ],
+      'Night': [ 'Rep': [ 'Rep1': 74 ] ],
       'Off': [ 'Rep': [ 'Rep1': 75 ] ]
+      'Party': [ 'Rep': [ 'Rep1': 76 ] ],
+      'Supplement': [ 'Rep': [ 'Rep1': 77 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 78 ] ],
     ]
   ]
   atomicState.RhsBdrm = [
@@ -622,25 +622,9 @@ Map room_restoreOriginalState() {
     'moDetected': [],
     'name': 'Yard',
     'scenes': [
-      'TV': [
-        'Rep': [ 'Rep2': 64 ],
-        'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
-      ],
-      'Party': [
-        'Rep': [ 'Rep2': 61 ],
-        'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
-      ],
-      'Night': [
-        'Rep': [ 'Rep2': 64 ],
-        'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
-      ],
       'Chill': [
         'Rep': [ 'Rep2': 61 ],
         'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Guest)': 100, 'Uplighting (Primary)': 100 ]
-      ],
-      'Supplement': [
-        'Rep': [ 'Rep2': 65 ],
-        'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
       ],
       'Cleaning': [
         'Rep': [ 'Rep2': 65 ],
@@ -650,9 +634,25 @@ Map room_restoreOriginalState() {
         'Rep': [ 'Rep2': 65 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Primary)': 0, 'Uplighting (Guest)': 0 ]
       ],
+      'Night': [
+        'Rep': [ 'Rep2': 64 ],
+        'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
+      ],
       'Off': [
         'Rep': [ 'Rep2': 65 ],
         'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
+      ],
+      'Party': [
+        'Rep': [ 'Rep2': 61 ],
+        'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
+      ],
+      'Supplement': [
+        'Rep': [ 'Rep2': 65 ],
+        'Ind': [ 'Uplighting (Front)': 0, 'Uplighting (Guest)': 0, 'Uplighting (Primary)': 0 ]
+      ],
+      'TV': [
+        'Rep': [ 'Rep2': 64 ],
+        'Ind': [ 'Uplighting (Front)': 100, 'Uplighting (Primary)': 100, 'Uplighting (Guest)': 100 ]
       ]
     ]
   ]

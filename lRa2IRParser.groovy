@@ -321,14 +321,15 @@ void populateRa2Devices(Map results) {
     // Users cannot edit the name of some device types (e.g., main repeaters,
     // motion sensors). For these devices the (editable) "Device Location"
     // (aka 'physicalLocation' is used as the device name.
+    // Code,Id,Name
     if (['Enclosure Device 001', 'Device 001'].contains(kpad.name)) {
-      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.physicalLocation},${kpad.physicalLocation}"
+      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.id},${kpad.physicalLocation}"
     } else {
-      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.name},${kpad.name}"
+      results.ra2Devices << "${getHubitatCode(kpad.model)},${kpad.id},${kpad.name}"
     }
   }
   results.circuits.each { device ->
-    results.ra2Devices << "d,${device.name},${device.name}"
+    results.ra2Devices << "d,${device.id},${device.name}"
   }
 }
 

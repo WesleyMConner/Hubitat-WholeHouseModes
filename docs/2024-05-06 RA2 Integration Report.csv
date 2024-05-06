@@ -2,7 +2,7 @@ RadioRA 2 Integration Report
 
 Device Room, Device Location, Device name, Model, ID, Component, Component Number, Name
 
-Den, REP1, Enclosure Device 001, RR-MAIN-REP-WH, 1
+Den, Control-Rep1, Enclosure Device 001, RR-MAIN-REP-WH, 1
 , , , , , Button 1, 1, WHA Chill
 , , , , , Button 2, 2, WHA Clean
 , , , , , Button 3, 3, #5 WHA Day
@@ -213,7 +213,7 @@ LhsBdrm, Entry, LhsBdrm-EntryPico (1), PJ2-3BRL-GWH-L01, 3
 
 MotionSensors, Laundry-MotionSensor, Device 001, LRF2-OCR2B-P-WH, 8
 
-Main, FrontDoor, Control-MainFoyerKpad (3), RRD-H6BRL-WH, 10
+Main, FrontDoor, na-MainFoyerKpad (3), RRD-H6BRL-WH, 10
 , , , , , Button 1, 1, FLASH
 , , , , , Button 2, 2, Main Party
 , , , , , Button 3, 3, Main Play
@@ -229,7 +229,7 @@ Main, FrontDoor, Control-MainFoyerKpad (3), RRD-H6BRL-WH, 10
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Primary, PrimaryEntry, Control-PrimaryEntryKpad, RRD-H6BRL-WH, 20
+Primary, PrimaryEntry, na-PrimaryEntryKpad, RRD-H6BRL-WH, 20
 , , , , , Button 1, 1, Room Chill
 , , , , , Button 2, 2, Room TV
 , , , , , Button 3, 3, Room Off
@@ -245,7 +245,7 @@ Primary, PrimaryEntry, Control-PrimaryEntryKpad, RRD-H6BRL-WH, 20
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Main, FrontDoor, Control-MainEntryKpad (2), RRD-H6BRL-WH, 29
+Main, FrontDoor, na-MainEntryKpad (2), RRD-H6BRL-WH, 29
 , , , , , Button 1, 1, AUTO
 , , , , , Button 2, 2, AWAY
 , , , , , Button 3, 3, Yard Chill
@@ -261,14 +261,14 @@ Main, FrontDoor, Control-MainEntryKpad (2), RRD-H6BRL-WH, 29
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Office, Desk, Office-DeskPico(W), PJ2-3BRL-GWH-L01, 30
+Office, Desk, Office-DeskPico, PJ2-3BRL-GWH-L01, 30
 , , , , , Button 1, 2, Office 100%
 , , , , , Button 2, 3, Toggle Auto
 , , , , , Button 3, 4, Office 0%
 , , , , , Button 4, 5, Office Raise
 , , , , , Button 5, 6, Office Lower
 
-Main, CentralHall, Control-CentralKpad, RRD-W7B-WH, 32
+Main, CentralHall, na-CentralKpad, RRD-W7B-WH, 32
 , , , , , Button 1, 1, CLEAN
 , , , , , Button 2, 2, DAY
 , , , , , Button 3, 3, NIGHT
@@ -284,7 +284,7 @@ Main, CentralHall, Control-CentralKpad, RRD-W7B-WH, 32
 , , , , , Led 6, 86
 , , , , , Led 7, 87
 
-Main, NicheWall, Control-DiningKpad (1), RRD-H6BRL-WH, 38
+Main, NicheWall, na-DiningKpad (1), RRD-H6BRL-WH, 38
 , , , , , Button 1, 1, Kit Cook
 , , , , , Button 2, 2, Main Play
 , , , , , Button 3, 3, Main Party
@@ -300,7 +300,7 @@ Main, NicheWall, Control-DiningKpad (1), RRD-H6BRL-WH, 38
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Den, KitchenSliderRight, Control-LanaiKpad (3), RRD-H6BRL-WH, 41
+Den, KitchenSliderRight, na-LanaiKpad (3), RRD-H6BRL-WH, 41
 , , , , , Button 1, 1, Lanai Play
 , , , , , Button 2, 2, Lanai Party
 , , , , , Button 3, 3, Lanai Chill
@@ -316,7 +316,7 @@ Den, KitchenSliderRight, Control-LanaiKpad (3), RRD-H6BRL-WH, 41
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Den, GarageEntry, Control-GarageKpad (2), RRD-H6BRL-WH, 44
+Den, GarageEntry, na-GarageKpad (2), RRD-H6BRL-WH, 44
 , , , , , Button 1, 1, AUTO
 , , , , , Button 2, 2, AWAY
 , , , , , Button 3, 3, PARTY
@@ -332,7 +332,7 @@ Den, GarageEntry, Control-GarageKpad (2), RRD-H6BRL-WH, 44
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Primary, PrimSlider, Control-PrimarySliderKpad (2), RRD-W6BRL-WH, 46
+Primary, PrimSlider, na-PrimarySliderKpad (2), RRD-W6BRL-WH, 46
 , , , , , Button 1, 1, Room Chill
 , , , , , Button 2, 2, Room TV
 , , , , , Button 3, 3, Room Off
@@ -357,20 +357,20 @@ LhsBdrm, Bedside, LhsBdrm-TablePico, PJ2-3BRL-GWH-L01, 48
 
 MotionSensors, RhsBath-MotionSensor, Device 001, LRF2-OCR2B-P-WH, 49
 
-Den, DenLampPico, DenLamp-Pico (A), PJ2-3BRL-GWH-L01, 50
+Den, DenLampPico, DenLamp-Pico, PJ2-3BRL-GWH-L01, 50
 , , , , , Button 1, 2, FULL
 , , , , , Button 2, 3, Toggle Auto
 , , , , , Button 3, 4, Off
 , , , , , Button 4, 5, DLamp Up
 , , , , , Button 5, 6, DLamp down
 
-RhsHall, NA-RhsClosetMotionSensor, Device 001, LRF2-OCR2B-P-WH, 60
+RhsHall, na-RhsClosetMotionSensor, Device 001, LRF2-OCR2B-P-WH, 60
 
-Den, NA-PantrySensor, Device 001, LRF2-OCR2B-P-WH, 69
+Den, na-PantrySensor, Device 001, LRF2-OCR2B-P-WH, 69
 
 MotionSensors, LhsBath-MotionSensor, Device 001, LRF2-OCR2B-P-WH, 72
 
-Primary, Credenza, Control-Primary15ButKpad, RR-T15RL-SW, 73
+Primary, Credenza, na-Primary15ButKpad, RR-T15RL-SW, 73
 , , , , , Button 1, 1, ALARM
 , , , , , Button 2, 2, PANIC
 , , , , , Button 3, 3, FLASH
@@ -408,7 +408,7 @@ Primary, Credenza, Control-Primary15ButKpad, RR-T15RL-SW, 73
 , , , , , Led 16, 96
 , , , , , Led 17, 97
 
-Den, RhsEntry, Control-KitchenKpad (3), RRD-H6BRL-WH, 80
+Den, RhsEntry, na-KitchenKpad (3), RRD-H6BRL-WH, 80
 , , , , , Button 1, 1, Kit Cook
 , , , , , Button 2, 2, Kit Chill
 , , , , , Button 3, 3, Kit TV
@@ -424,7 +424,7 @@ Den, RhsEntry, Control-KitchenKpad (3), RRD-H6BRL-WH, 80
 , , , , , Led 5, 85
 , , , , , Led 6, 86
 
-Control, Visor CTRL, Device 001, RR-VCRX-WH, 82
+Control, na-VisorCtrl, Device 001, RR-VCRX-WH, 82
 , , , , , Button 1, 1, AUTO
 , , , , , Button 2, 2, AWAY
 , , , , , Button 3, 3, FLASH
@@ -442,7 +442,7 @@ Control, Visor CTRL, Device 001, RR-VCRX-WH, 82
 , , , , CCI 8, 33
 , , , , CCI 9, 34
 
-MotionSensors, REP2, Enclosure Device 001, RR-MAIN-REP-WH, 83
+MotionSensors, Control-Rep2, Enclosure Device 001, RR-MAIN-REP-WH, 83
 , , , , , Button 1, 1, A V O I D
 , , , , , Button 2, 2, A V O I D
 , , , , , Button 3, 3, A V O I D
@@ -659,7 +659,6 @@ Den, 17
 Primary, 21
 RhsHall, 40
 LhsBdrm, 55
-Pantry, 57
 LhsBath, 58
 LhsHall, 66
 PrimBath, 70
@@ -673,13 +672,13 @@ Zone Room, Zone Name, ID
 Den, Kitchen-Soffit, 4
 RhsHall, Guest-RhsHallLamp, 5
 Main, Yard-FrontPorch, 6
-Control, VCRX Output 1, 7
+Control, na-VcrxOutput1, 7
 Main, Main-DiningTable, 9
-PrimBath, NA-WaterCloset, 15
+PrimBath, na-WaterCloset, 15
 RhsBath, RhsBath-Lamp, 16
 Laundry, Laundry-Cans, 18
 Primary, Primary-TableLamps, 19
-Control, VCRX Output 2, 22
+Control, na-VcrxOutput2, 22
 Den, Den-TvWall, 23
 Shop, Yard-ShopPorch, 26
 LhsBath, LhsBath-Shower, 27
@@ -691,7 +690,7 @@ Office, Office-LeftTableLamp, 35
 LhsBdrm, LhsBdrm-TableLamps, 36
 Main, Main-ArtNiche, 37
 Den, Lanai-Pendants, 39
-RhsHall, NA-RhsHallCloset, 42
+RhsHall, na-RhsHallCloset, 42
 Den, Den-HallCans, 43
 LhsBdrm, LhsBdrm-FloorLamp, 45
 PrimBath, PrimBath-Soffit, 47
@@ -706,17 +705,17 @@ Den, Den-DenCans, 62
 Den, Den-BevStation, 63
 Den, Den-UplightLeds, 64
 Den, Kitchen-CounterLeds, 65
-Den, NA-PantryLedFixture, 67
+Den, na-PantryLedFixture, 67
 Main, Lanai-LedUplighting, 68
 Den, Yard-Spots, 71
 LhsBath, LhsBath-Soffit, 74
 LhsHall, Yard-BackPorch, 75
 LhsHall, Guest-LhsHallCans, 76
-Control, VCRX Output 3, 77
+Control, na-VcrxOutput3, 77
 RhsBath, RhsBath-Shower, 78
 RhsBath, RhsBath-Vanity, 79
-Control, VCRX Output 4, 81
-Gym, NA-BackOutlet, 90
+Control, na-VcrxOutput4, 81
+Gym, na-BackOutlet, 90
 
 Timeclock, ID, Event, Event Index
 

@@ -50,7 +50,9 @@ String extractDeviceIdFromLabel(String deviceLabel) {
 }
 
 String getDeviceId(DevW device) {
-  return device?.label ? extractDeviceIdFromLabel(device.label) : null
+  logInfo('#getDeviceId#53', "Tactically: Offering device name: ${device.getName()}")
+  //return device?.label ? extractDeviceIdFromLabel(device.label) : null
+  return device?.getName()
 }
 
 void clearManualOverride() {
@@ -146,7 +148,7 @@ void pbsg_ButtonOnCallback(String pbsgName) {
     state.activeButton = pbsg?.activeButton ?: 'Automatic'
     logInfo(
       'pbsg_ButtonOnCallback',
-      "Button ?${b(button)}? -> state.activeButton: ${b(state.activeButton)}")
+      "Button ?${b(pbsgName)}? -> state.activeButton: ${b(state.activeButton)}")
     clearManualOverride()
     updateTargetScene()
     activateScene()
@@ -492,6 +494,7 @@ void adjustStateScenesKeys() {
   if (settings.motionSensors || settings.luxSensors) {
     assembleScenes << 'OFF'
   }
+  logInfo('adjustStateScenesKeys', "assembleScenes: ${assembleScenes}")
   // The following is a work around after issues with map.retainAll {}
   state.scenes = state.scenes?.collectEntries { k, v ->
     assembleScenes.contains(k) ? [k, v] : [:]
@@ -603,7 +606,7 @@ void configureRoomScene() {
       }
       settings.repeaters?.each {d ->
   //-> logInfo('configureRoomScene', "-->${d.getCapabilities()}<--")
-        String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
+        String inputName = "scene^${sceneName}^Rep^${d.getName()}"
         currSettingsKeys += inputName
         tableCol += 3
         input(
@@ -669,6 +672,7 @@ Map RoomScenesPage() {
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }
       nameCustomScene()
+      logInfo('#677', "settings.customScene: ${settings.customScene}")
       adjustStateScenesKeys()
       //*********************************************************************
       if (state.scenes) {

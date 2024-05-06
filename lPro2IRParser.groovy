@@ -78,17 +78,18 @@ void populatePro2Devices(Map results) {
     // Users cannot edit the name of some device types (e.g., main repeaters,
     // motion sensors). For these devices the (editable) "Device Location"
     // (aka 'physicalLocation' is used as the device name.
+    // Code,Id,Name
     String nameNormalized = kpad.name.toLowerCase()
     if (nameNormalized.contains('pico')) {
-      results.ra2Devices << "q,${kpad.name},${kpad.name}"
+      results.ra2Devices << "q,${kpad.id},${kpad.name}"
     } else if (nameNormalized.contains('pro2')) {
-      results.ra2Devices << "k,${kpad.name},${kpad.name}"
+      results.ra2Devices << "k,${kpad.id},${kpad.name}"
     } else {
-      results.ra2Devices << "d,${kpad.name},${kpad.name}"
+      results.ra2Devices << "d,${kpad.id},${kpad.name}"
     }
   }
   results.circuits.each { device ->
-    results.ra2Devices << "d,${device.name},${device.name}"
+    results.ra2Devices << "d,${device.id},${device.name}"
   }
 }
 

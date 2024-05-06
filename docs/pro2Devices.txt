@@ -1,15 +1,17 @@
+// Caséta Pro2
+// 192.168.8.92
 // Output of pro2Devices from Demo-Pro2IRParser
 //   Omit one pico as it's bound to the Lanai-GrillCan circuit
 //     q,Lanai-GrillCanPico,Lanai-GrillCanPico
 //   Adjust 'Lanai-OutdoorDining' from dimmer to switch
 //     s,Lanai-OutdoorDining,Lanai-OutdoorDining
 //   AFTER IMPORT !!!
-//     Lutron Telnet -> Pro2 Telnet
-d,Lanai-DownLighting,Lanai-DownLighting
-d,Lanai-GrillCan,Lanai-GrillCan
-d,RhsBdrm-FloorLamp,RhsBdrm-FloorLamp
-d,RhsBdrm-TableLamps,RhsBdrm-TableLamps
-k,Control-Pro2,Control-Pro2
-q,RhsBdrm-EntryPico,RhsBdrm-EntryPico
-q,RhsBdrm-TablePico,RhsBdrm-TablePico
-s,Lanai-OutdoorDining,Lanai-OutdoorDining
+//     Lutron Telnet -> Control-Pro2Telnet
+d,2,RhsBdrm-TableLamps
+d,3,RhsBdrm-FloorLamp
+d,4,Lanai-DownLighting
+d,5,Lanai-GrillCan
+d,7,Lanai-OutdoorDining
+k,1,Control-Pro2
+q,10,RhsBdrm-TablePico
+q,9,RhsBdrm-EntryPico
