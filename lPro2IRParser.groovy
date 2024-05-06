@@ -78,8 +78,11 @@ void populatePro2Devices(Map results) {
     // Users cannot edit the name of some device types (e.g., main repeaters,
     // motion sensors). For these devices the (editable) "Device Location"
     // (aka 'physicalLocation' is used as the device name.
-    if (kpad.name.contains('pico')) {
+    String nameNormalized = kpad.name.toLowerCase()
+    if (nameNormalized.contains('pico')) {
       results.ra2Devices << "q,${kpad.name},${kpad.id}"
+    } else if (nameNormalized.contains('pro2')) {
+      results.ra2Devices << "k,${kpad.name},${kpad.id}"
     } else {
       results.ra2Devices << "d,${kpad.name},${kpad.id}"
     }
@@ -106,23 +109,29 @@ Map parsePro2IntegRpt(String pro2IntegrationReport) {
   //                   instance
   //           kpads → An ArrayList of RA2 keypad Map(s)
   //        circuits → An ArrayList of RA2 circuit Map(s) - switched or dimmed
+  // While Ra2 rooms reflect device installation location (vs circuit location)
+  // Pro2 rooms are functional and should match Hubitat rooms.
   Map m = JsonDeserializeMap(pro2IntegrationReport)
   logInfo('parsePro2IntegRpt', "m: ${m}")
   Map results = [ pro2Devices: [], kpads: [], circuits: [] ]
   results.kpads = m.LIPIdList.Devices.collect { d ->
+    String pro2Room = d.Area?.Name ?: 'Control'
+    String deviceName = (d.Name == 'Smart Bridge 2')
+      ? 'Pro2'
+      : d.Name
     [
-      name: d.Name,
+      name: "${pro2Room}-${deviceName}",
       id: d.ID,
-      pro2Room: d.Area?.Name,
       buttons: d.Buttons.collect { e ->
         [ number: e.Number, 'Name': e.Name ]
       }
     ]
   }
   results.circuits = m.LIPIdList.Zones.collect { z ->
+    String pro2Room = z.Area?.Name ?: 'Control'
     [
-      pro2Room: z.Area?.Name,
-      name: z.Name,
+      pro2Room: pro2Room,
+      name: "${pro2Room}-${z.Name}",
       id: z.ID
     ]
   }

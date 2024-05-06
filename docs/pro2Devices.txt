@@ -1,0 +1,10 @@
+// Output of pro2Devices from Demo-Pro2IRParser
+d,Lanai-DownLighting,4
+d,Lanai-GrillCan,5
+d,Lanai-OutdoorDining,7
+d,RhsBdrm-FloorLamp,3
+d,RhsBdrm-TableLamps,2
+k,Control-Pro2,1
+q,Lanai-GrillCanPico,6
+q,RhsBdrm-EntryPico,9
+q,RhsBdrm-TablePico,10

@@ -412,7 +412,7 @@
         "Area": {
           "Name": "Lanai"
         },
-        "Name": "Grill Can Remote 1",
+        "Name": "GrillCanPico",
         "Buttons": [
           {
             "Number": 2
@@ -436,7 +436,7 @@
         "Area": {
           "Name": "RhsBdrm"
         },
-        "Name": "Entry Pico",
+        "Name": "EntryPico",
         "Buttons": [
           {
             "Number": 2
@@ -460,7 +460,7 @@
         "Area": {
           "Name": "RhsBdrm"
         },
-        "Name": "Table Pico",
+        "Name": "TablePico",
         "Buttons": [
           {
             "Number": 2
@@ -483,35 +483,35 @@
     "Zones": [
       {
         "ID": 2,
-        "Name": "Table Lamps",
+        "Name": "TableLamps",
         "Area": {
           "Name": "RhsBdrm"
         }
       },
       {
         "ID": 3,
-        "Name": "Floor Lamp",
+        "Name": "FloorLamp",
         "Area": {
           "Name": "RhsBdrm"
         }
       },
       {
         "ID": 4,
-        "Name": "Down Lighting",
+        "Name": "DownLighting",
         "Area": {
           "Name": "Lanai"
         }
       },
       {
         "ID": 5,
-        "Name": "Grill Can",
+        "Name": "GrillCan",
         "Area": {
           "Name": "Lanai"
         }
       },
       {
         "ID": 7,
-        "Name": "Outdoor Dining",
+        "Name": "OutdoorDining",
         "Area": {
           "Name": "Lanai"
         }
