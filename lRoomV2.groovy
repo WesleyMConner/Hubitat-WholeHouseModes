@@ -261,11 +261,11 @@ Map room_restoreOriginalState() {
     'scenes': [
       'Chill': [ 'Rep': [ 'Rep1': 41 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
       'Cleaning': [ 'Rep': [ 'Rep1': 42 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
-      'Day': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ]
+      'Day': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
       'Night': [ 'Rep': [ 'Rep1': 45 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
       'Party': [ 'Rep': [ 'Rep1': 46 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
       'Supplement': [ 'Rep': [ 'Rep1': 47 ], 'Ind': [ 'Den - Fireplace (02)': 0 ] ],
-      'TV': [ 'Rep': [ 'Rep1': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 48 ], 'Ind': [ 'Den - Fireplace (02)': 100 ] ]
     ]
   ]
   atomicState.DenLamp = [
@@ -528,10 +528,10 @@ Map room_restoreOriginalState() {
       'Cleaning': [ 'Rep': [ 'Rep1': 72 ] ],
       'Day': [ 'Rep': [ 'Rep1': 73 ] ],
       'Night': [ 'Rep': [ 'Rep1': 74 ] ],
-      'Off': [ 'Rep': [ 'Rep1': 75 ] ]
+      'Off': [ 'Rep': [ 'Rep1': 75 ] ],
       'Party': [ 'Rep': [ 'Rep1': 76 ] ],
       'Supplement': [ 'Rep': [ 'Rep1': 77 ] ],
-      'TV': [ 'Rep': [ 'Rep1': 78 ] ],
+      'TV': [ 'Rep': [ 'Rep1': 78 ] ]
     ]
   ]
   atomicState.RhsBdrm = [

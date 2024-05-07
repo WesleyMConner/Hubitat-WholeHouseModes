@@ -25,7 +25,7 @@ import com.hubitat.hub.domain.Location as Loc
 #include wesmc.lRoomV2
 
 definition (
-  name: 'WHA',
+  name: 'WhaV2',
   namespace: 'wesmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
@@ -36,7 +36,7 @@ definition (
 )
 
 preferences {
-  page(name: 'WhaPage')
+  page(name: 'WhaV2Page')
 }
 
 //====
@@ -448,7 +448,7 @@ void populatePerRoomPbsgs() {
   }
 }
 
-void initialize () {
+void initialize() {
   //-> atomicState.each{ k, v ->
   //->   atomicState."${k}" = v
   //-> }
@@ -461,9 +461,9 @@ void initialize () {
 //  beginProcessingMotionSensorEvents()
 }
 
-Map WhaPage () {
+Map WhaV2Page() {
   return dynamicPage(
-    name: 'WhaPage',
+    name: 'WhaV2Page',
     title: [
       heading1("Whole House Automation (WHA) - ${app.id}"),
       bullet1('Tab to register changes.'),
@@ -478,10 +478,10 @@ Map WhaPage () {
     //-> app.removeSetting('..')
     //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
-    atomicState.remove('roomStore')
-    atomicState.remove('pbsgStore')
-    atomicState.remove('pbsgs')
-    app.updateLabel('WHA')
+    //-> atomicState.remove('roomStore')
+    //-> atomicState.remove('pbsgStore')
+    //-> atomicState.remove('pbsgs')
+    app.updateLabel('WhaV2')
     //atomicState.MODES = getLocation().getModes().collect { it.name }
     //getGlobalVar('defaultMode').value
     section {
@@ -489,6 +489,7 @@ Map WhaPage () {
       idLutronRepeaters()
       idMotionSensors()
       idLuxSensors()
+      idParticipatingRooms()
     }
   }
 }
