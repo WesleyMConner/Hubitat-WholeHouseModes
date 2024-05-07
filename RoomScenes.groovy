@@ -16,6 +16,8 @@ import com.hubitat.app.DeviceWrapper as DevW
 import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
+import java.util.regex.Pattern
+import java.util.regex.Matcher
 // The Groovy Linter generates false positives on Hubitat #include !!!
 #include wesmc.lHExt
 #include wesmc.lHUI
@@ -36,23 +38,6 @@ definition (
 
 preferences {
   page(name: 'RoomScenesPage')
-}
-
-String extractDeviceIdFromLabel(String deviceLabel) {
-  //->x = (deviceLabel =~ /\((.*)\)/)
-  //->logDebug('extractDeviceIdFromLabel', [
-  //->  "deviceLabel: ${deviceLabel}",
-  //->  "x: ${x}",
-  //->  "x[0]: ${x[0]}",
-  //->  "x[0]: ${x[0][1]}",
-  //->])
-  return (deviceLabel =~ /\((.*)\)/)[0][1]
-}
-
-String getDeviceId(DevW device) {
-  logInfo('#getDeviceId#53', "Tactically: Offering device name: ${device.getName()}")
-  //return device?.label ? extractDeviceIdFromLabel(device.label) : null
-  return device?.getName()
 }
 
 void clearManualOverride() {
@@ -82,17 +67,17 @@ String expectedScene() {
     ? 'OFF' : state.activeScene
 }
 
-void pushRepeaterButton(String repeaterId, Long buttonNumber) {
+void pushRepeaterButton(String repeaterName, Long buttonNumber) {
   settings.repeaters.each { repeater ->
-    if(getDeviceId(repeater) == repeaterId) {
+    if(repeater.getName() == repeaterName) {
       repeater.push(buttonNumber)
     }
   }
 }
 
-void setDeviceLevel(String deviceId, Long level) {
+void setDeviceLevel(String deviceName, Long level) {
   settings.indDevices.each { device ->
-    if (getDeviceId(device) == deviceId) {
+    if (device.getName() == deviceName) {
       if (device.hasCommand('setLevel')) {
         logInfo('activateScene', "Setting ${b(deviceId)} to level ${b(level)}")
         // Some devices DO NOT support a level of 100.
@@ -145,10 +130,12 @@ void pbsg_ButtonOnCallback(String pbsgName) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   pbsg = atomicState."${pbsgName}"
   if (pbsg) {
+    String priorActiveButton = state.activeButton
     state.activeButton = pbsg?.activeButton ?: 'Automatic'
     logInfo(
       'pbsg_ButtonOnCallback',
-      "Button ?${b(pbsgName)}? -> state.activeButton: ${b(state.activeButton)}")
+      "${b(priorActiveButton)} -> ${b(state.activeButton)}"
+    )
     clearManualOverride()
     updateTargetScene()
     activateScene()
@@ -284,17 +271,13 @@ void room_ModeChange(String newMode) {
   // If the PBSG activeButton is 'Automatic', adjust the state.activeScene
   // per the newMode.
   if (state.activeButton == 'Automatic') {
-    logInfo('room_ModeChange', "Adjusting activeScene to '${newMode}'")
+    logInfo('room_ModeChange', "Automatic; so, ${b(state.activeScene)} -> '${b(newMode)}'")
     state.activeScene = newMode
     activateScene()
   } else {
     logInfo(
-      'room_ModeChange', [
-        'Ignored: Mode Change',
-        "newMode: ${newMode}",
-        "state.activeButton: ${b(state.activeButton)}",
-        "state.activeScene: ${b(state.activeScene)}"
-      ]
+      'room_ModeChange',
+      "Manual (${b(state.activeScene)}, ignoring new mode (${b(newMode)})"
     )
   }
 }
@@ -408,6 +391,29 @@ void initialize() {
     "${state.ROOM_LABEL} initialize() of '${state.ROOM_LABEL}'. "
       //+ "Subscribing to modeHandler."
   )
+  /*
+  settings.each{ s ->
+    String x = "${s}"
+    logInfo('#658', x)
+    if (
+      x.contains('^ra2-1')
+      || x.contains('^ra2-83')
+      || x.contains('^pro2-1')
+      || x.contains('^Ind-02')
+      || x.contains('^Ind-0B')
+      || x.contains('^Ind-Front')
+      || x.contains('^Ind-Guest')
+      || x.contains('^Ind-Primary')
+      || x.contains('^Front')
+      || x.contains('^Guest')
+      || x.contains('^Primary')
+    ) {
+      app.removeSetting(x)
+      String xAfter = "${settings.s}"
+      logInfo('#673', "'${x}' -> '${xAfter}'")
+    }
+  }
+  */
   state.brightLuxSensors = []
   populateStateScenesAssignValues()
   clearManualOverride()
@@ -502,32 +508,48 @@ void adjustStateScenesKeys() {
 }
 
 Map getDeviceValues (String scene) {
-  String keyPrefix = "scene^${scene}^"
-  List<DevW> allowedDevices = allowedDevices = [ *settings.get('indDevices'), *settings.get('repeaters')]
-  List<String> allowedDeviceIds = allowedDevices.collect { getDeviceId(it) }
+  // Tactically
+  //   This routine processes ALL settings, isolates ALL scenes and
+  //   removes stale scenes that reference an invalid dType or out-of-scope
+  //   dName.
+  // Strategically
+  //   This routine should limit its focus to in-scope scenes.
+  ArrayList allowedDeviceNames = []
+  settings.indDevices.each{ d ->
+    if (d.getName()) { allowedDeviceNames << d.getName()}
+  }
+  settings.repeaters.each{ r ->
+    if (r.getName()) { allowedDeviceNames << r.getName()}
+  }
   Map results = ['Rep': [:], 'Ind': [:]]
   settings.findAll { k1, v1 ->
-    k1.startsWith(keyPrefix)
-  }.each { k2, v2 ->
-    ArrayList typeAndId = k2.substring(keyPrefix.size()).tokenize('^')
-    if (typeAndId[0] == 'RA2') {
-      logWarn('getDeviceValues', "Removing stale RA2 setting? >${k2}<")
-      app.removeSetting(k2)
-    } else if (allowedDeviceIds.contains(typeAndId[1]) == false) {
-      logWarn('getDeviceValues', "Removing stale Device setting? >${k2}<")
-    } else {
-      // Enforce min/max constraints on Independent (Ind) device value.
-      if (typeAndId[1] == 'Ind') {
-        if (v2 > 100) {
-          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):100])
-        } else if (v2 < 0) {
-          results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):0])
+    Pattern p = Pattern.compile(/scene\^(.*)\^(.*)\^(.*)/)
+    Matcher m = p.matcher(k1)
+    if (m.find()) {
+      String sceneName = m.group(1)
+      String dType = m.group(2)
+      Boolean inscopeDType = ['Rep', 'Ind'].contains(dType)
+      String dName =m.group(3)
+      Boolean inscopeDName = allowedDeviceNames?.contains(dName)
+      if (inscopeDType && inscopeDName) {
+        if (dType == 'Ind') {
+          if (v1 > 100) {
+            results.Ind << ["${dName}": 100]
+          } else if (v1 < 0) {
+            results.Ind << ["${dName}": 0]
+          } else {
+            results.Ind << ["${dName}": v1]
+          }
+        } else {  // DType = 'Rep'
+          results.Rep << ["${dName}": v1]
         }
       } else {
-        results.put(typeAndId[0], [*:results.get(typeAndId[0]), (typeAndId[1]):v2])
+        logWarn('getDeviceValues', "Dropping >${k1}")
+        app.removeSetting(k1)
       }
     }
   }
+  logInfo('#546', "results: ${results}")
   return results
 }
 
@@ -590,7 +612,7 @@ void configureRoomScene() {
       Integer tableCol = 3
       paragraph("<br/><b>${sceneName} →</b>", width: 2)
       settings.indDevices?.each { d ->
-        String inputName = "scene^${sceneName}^Ind^${getDeviceId(d)}"
+        String inputName = "scene^${sceneName}^Ind^${d.getName()}"
         currSettingsKeys += inputName
         tableCol += 3
         input(

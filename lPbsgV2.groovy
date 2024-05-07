@@ -108,7 +108,7 @@ DevW pbsg_GetOrCreateMissingDevice(DevW device, String deviceDNI) {
 }
 
 void pbsg_ActivateButton(String pbsgName, String button, DevW device = null) {
-  logInfo('pbsg_ActivateButton#111', "pbsgName: >${pbsgName }<")
+  //-> logInfo('pbsg_ActivateButton#111', "pbsgName: >${pbsgName }<")
   Map pbsgMap = atomicState."${pbsgName}"
   if (pbsgMap) {
     DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsgMap.name}_${button}")
