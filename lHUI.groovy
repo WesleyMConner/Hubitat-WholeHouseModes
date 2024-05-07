@@ -183,14 +183,14 @@ String appInfo(InstAppW app) {
   return "${app?.label ?: 'MISSING_LABEL'} (${app?.id ?: 'MISSING_ID'})"
 }
 
-String deviceInfo(def device) {
-  // Design Note:
-  //   - The parameter is passed as 'def' in lieu of 'DevW'.
-  //   - When devices are used from a LinkedHashMap (e.g., settings, state),
-  //     the original DevW type is lost - resulting in method call fail that
-  //     reports a type mismatch.
-  return device ? "${device.displayName} (${device.id})" : null
-}
+//-> String deviceInfo(def device) {
+//->   // Design Note:
+//->   //   - The parameter is passed as 'def' in lieu of 'DevW'.
+//->   //   - When devices are used from a LinkedHashMap (e.g., settings, state),
+//->   //     the original DevW type is lost - resulting in method call fail that
+//->   //     reports a type mismatch.
+//->   return device ? "${device.displayName} (${device.id})" : null
+//-> }
 
 String eventDetails(Event e) {
   String rows = """

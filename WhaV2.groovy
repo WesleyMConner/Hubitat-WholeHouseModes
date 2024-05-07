@@ -296,7 +296,7 @@ void subscribeIndDevToHandler(Map roomMap, Map data) {
   // this situation.
   logInfo(
     'subscribeIndDevToHandler',
-    "${roomMap.name} subscribing ${deviceInfo(data.device)}"
+    "${roomMap.name} subscribing ${data.device?.getName()}"
   )
   subscribe(device, indDeviceHandler, ['filterEvents': true])
 }
@@ -308,7 +308,7 @@ void unsubscribeIndDevToHandler(Map roomMap, DevW device) {
   // this situation.
   logInfo(
     '_unsubscribeToIndDeviceHandler',
-    "${roomMap.name} unsubscribing ${deviceInfo(device)}"
+    "${roomMap.name} unsubscribing ${device.getName()}"
   )
   unsubscribe(device)
 }
