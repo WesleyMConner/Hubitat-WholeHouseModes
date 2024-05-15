@@ -46,7 +46,7 @@ Map TestPbsgV2() {
   return dynamicPage(
     name: 'TestPbsgV2',
     title: [
-      heading1("TestPbsgV2 - ${app.id}"),
+      h1("TestPbsgV2 - ${app.id}"),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
     install: true,
@@ -61,8 +61,9 @@ Map TestPbsgV2() {
     app.updateLabel('TestPbsgV2')
     atomicState.remove('childVsws')
     section {
-      solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
+      atomicState.logLevel = logThreshToLogLevel('INFO')  // ERROR, WARN, INFO, DEBUG, TRACE
+      //solicitLogThreshold('appLogThresh', 'INFO')  // ERROR, WARN, INFO, DEBUG, TRACE
+      //atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       // NOTE: atomicState.pbsgs are ALWAYS rebuilt from settings and child VSW discovery.
       // Create two PBSGs by Soliciting input data from a human
       for (i in [0, 1]) {
@@ -86,7 +87,7 @@ Map TestPbsgV2() {
       ]
       Map bruteForcePbsg = pbsg_BuildToConfig('TestPbsg')
       paragraph([
-        heading1('Debug'),
+        h1('Debug'),
         *appStateAsBullets(),
         *appSettingsAsBullets(),
       ].join('<br/>'))
@@ -105,7 +106,6 @@ void installed() {
 
 void uninstalled() {
   logWarn('uninstalled', 'Entered')
-  removeAllChildApps()
 }
 
 void updated() {

@@ -36,9 +36,21 @@ library(
 // |      green      |        n/a       |           n/a          |
 // +-----------------+------------------+------------------------+
 
+void solicitPro2IntegrationReport() {
+  input(
+    name: 'pro2IntegReport',
+    title: h2('Lutron Pro2 Integration Report'),
+    type: 'textarea',
+    rows: 5,
+    submitOnChange: true,
+    required: true,
+    multiple: false
+  )
+}
+
 void logResults(Map results, String key) {
   ArrayList lines = []
-  lines << "<b>${key}</b>"
+  lines << "<b>results.${key}</b>"
   results."${key}".each { entry -> lines << "${entry}" }
   logInfo('logResults', lines)
 }

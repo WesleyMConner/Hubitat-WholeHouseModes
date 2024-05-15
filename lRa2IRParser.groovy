@@ -21,6 +21,18 @@ library(
   category: 'general purpose'
 )
 
+void solicitRa2IntegrationReport() {
+  input(
+    name: 'ra2IntegReport',
+    title: h2('Lutron RA2 Integration Report'),
+    type: 'textarea',
+    rows: 5,
+    submitOnChange: true,
+    required: true,
+    multiple: false
+  )
+}
+
 Map ra2IR_init(String ra2IntegrationReport) {
   // rows - ArrayList of raw rows 'as supplied' (includes empty lines)
   // curr - Index into rows, "+ 1" for user-friendly display
@@ -335,7 +347,7 @@ void populateRa2Devices(Map results) {
 
 void logRa2Results(Map results, String key) {
   ArrayList lines = []
-  lines << "<b>${key}</b>"
+  lines << "<b>results.${key}</b>"
   results."${key}".each { e -> lines << "${e}" }
   logInfo('logRa2Results', lines)
 }
@@ -378,6 +390,5 @@ Map parseRa2IntegRpt(String ra2IntegrationReport, Boolean sortResults = false) {
     results.ra2Rooms = results.ra2Rooms.sort { room -> room.name }
     results.circuits = results.circuits.sort { circuit -> circuit.name }
   }
-
   return results
 }

@@ -76,7 +76,6 @@ void installed () {
 
 void uninstalled () {
   logWarn('uninstalled', 'Entered')
-  removeAllChildApps()
 }
 
 void updated () {
@@ -106,7 +105,7 @@ void _idParticipatingRooms () {
   input(
     name: 'rooms',
     type: 'enum',
-    title: heading2('Identify Participating Rooms'),
+    title: h2('Identify Participating Rooms'),
     options: roomPicklist,
     submitOnChange: true,
     required: false,
@@ -115,7 +114,7 @@ void _idParticipatingRooms () {
 }
 
 void _displayInstantiatedRoomHrefs () {
-  paragraph heading1('Room Scene Configuration')
+  paragraph h1('Room Scene Configuration')
   settings.rooms.each { roomName ->
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     if (!roomApp) {
@@ -140,7 +139,7 @@ Map WhaPage () {
   return dynamicPage(
     name: 'WhaPage',
     title: [
-      heading1("Whole House Automation (WHA) - ${app.id}"),
+      h1("Whole House Automation (WHA) - ${app.id}"),
       bullet1('Tab to register changes.'),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
@@ -173,8 +172,8 @@ Map WhaPage () {
     state.MODES = getLocation().getModes().collect { it.name }
     getGlobalVar('defaultMode').value
     section {
-      solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
-      //solicitLogThreshold('pbsgLogThresh', 'INFO') // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+      solicitLogThreshold('appLogThresh', 'INFO')  // ERROR, WARN, INFO, DEBUG, TRACE
+      //solicitLogThreshold('pbsgLogThresh', 'INFO') // ERROR, WARN, INFO, DEBUG, TRACE
       _idParticipatingRooms()
       atomicState.mode = [
         'name': 'mode',

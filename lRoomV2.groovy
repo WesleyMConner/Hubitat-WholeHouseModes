@@ -55,7 +55,6 @@ library(
 
   // --------------------------------------------------------------------------------
 
-
 // The "room" psuedo-class extends a "pbsg" psuedo-class instance.
 //   - The psuedo-class "pbsgStore" is used to store "room" instance Maps.
 //   - A "room" instance Map can be supplied where a "pbsg" instance Map
@@ -93,7 +92,7 @@ void room_ActivateScene(String roomName) {
       logInfo('room_ActivateScene', "${room.currScene} -> ${expectedScene}")
       atomicState.updateMapValue(roomName, 'currScene', expectedScene)
       // Decode and process the scene's per-device actions
-      Map actions = roomMap.scenes.get(roomMap.currScene)
+      //-> Map actions = roomMap.scenes.get(roomMap.currScene)
       atomicState."${roomName}".actions.'Rep'.each { repeaterId, button ->
         logInfo('room_ActivateScene', "Pushing ${repeaterId} button ${button}")
         pushLutronRepButton(repeaterId, button)

@@ -38,71 +38,19 @@ preferences {
   page(name: 'RoomScenesPage')
 }
 
-//==> String extractDeviceIdFromLabel(String deviceLabel) {
-//==>   //->x = (deviceLabel =~ /\((.*)\)/)
-//==>   //->logDebug('extractDeviceIdFromLabel', [
-//==>   //->  "deviceLabel: ${deviceLabel}",
-//==>   //->  "x: ${x}",
-//==>   //->  "x[0]: ${x[0]}",
-//==>   //->  "x[0]: ${x[0][1]}",
-//==>   //->])
-//==>   return (deviceLabel =~ /\((.*)\)/)[0][1]
-//==> }
+String extractDeviceIdFromLabel(String deviceLabel) {
+  //->x = (deviceLabel =~ /\((.*)\)/)
+  //->logDebug('extractDeviceIdFromLabel', [
+  //->  "deviceLabel: ${deviceLabel}",
+  //->  "x: ${x}",
+  //->  "x[0]: ${x[0]}",
+  //->  "x[0]: ${x[0][1]}",
+  //->])
+  return (deviceLabel =~ /\((.*)\)/)[0][1]
+}
 
 String getDeviceId(DevW device) {
-//==>   return device?.label ? extractDeviceIdFromLabel(device.label) : null
-  Map deviceNameToId = [
-    // Pro2 Entries
-    'pro2': 1,
-    'RhsBdrm-TableLamps': 2,
-    'RhsBdrm-FloorLamp': 3,
-    'Lanai-DownLighting': 4,
-    'Lanai-GrillCan': 5,
-    'Lanai-OutdoorDining': 7,
-    // Ra2 Entries
-    'Rep1': 1,
-    'Rep2': 83,
-    'Kitchen-Soffit': 4,
-    'Guest-RhsHallLamp': 5,
-    'Yard-FrontPorch': 6,
-    'Main-DiningTable': 9,
-    'RhsBath-Lamp': 16,
-    'Laundry-Cans': 18,
-    'Primary-TableLamps': 19,
-    'Den-TvWall': 23,
-    'Yard-ShopPorch': 26,
-    'LhsBath-Shower': 27,
-    'Guest-RhsHallCans': 28,
-    'Main-FoyerCans': 31,
-    'Main-LivRmLamps': 33,
-    'Den-KitchenTable': 34,
-    'Office-LeftTableLamp': 35,
-    'LhsBdrm-TableLamps': 36,
-    'Main-ArtNiche': 37,
-    'Lanai-Pendants': 39,
-    'Den-HallCans': 43,
-    'LhsBdrm-FloorLamp': 45,
-    'PrimBath-Soffit': 47,
-    'PrimBath-Cans': 51,
-    'PrimBath-TubAndShower': 52,
-    'Hers-CeilingLight': 53,
-    'Lanai-Pool': 54,
-    'His-CeilingLight': 56,
-    'DenLamp-Dimmer': 59,
-    'Kitchen-Cans': 61,
-    'Den-DenCans': 62,
-    'Den-BevStation': 63,
-    'Den-UplightLeds': 64,
-    'Kitchen-CounterLeds': 65,
-    'Lanai-LedUplighting': 68,
-    'Yard-Spots': 71,
-    'LhsBath-Soffit': 74,
-    'Yard-BackPorch': 75,
-    'Guest-LhsHallCans': 76,
-    'RhsBath-Shower': 78,
-    'RhsBath-Vanity': 79
-  ]
-  return deviceNameToId[device.getName()]
+  return device?.label ? extractDeviceIdFromLabel(device.label) : null
 }
 
 void clearManualOverride() {
@@ -326,7 +274,7 @@ void toggleButton(String button) {
   if (switchState(device) == 'on') {
     device.off()
   } else {
-    devive.on()
+    device.on()
   }
 }
 
@@ -486,7 +434,7 @@ void idMotionSensors() {
   input(
     name: 'motionSensors',
     title: [
-      h3('Identify Room Motion Sensors'),
+      heading3('Identify Room Motion Sensors'),
       bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when the room is unoccupied')
     ].join('<br/>'),
@@ -501,7 +449,7 @@ void idLuxSensors() {
   input(
     name: 'luxSensors',
     title: [
-      h3('Identify Room Lux Sensors'),
+      heading3('Identify Room Lux Sensors'),
       bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when no Lux Sensor is above threshold')
     ].join('<br/>'),
@@ -516,7 +464,7 @@ void idLowLightThreshold() {
   input(
     name: 'lowLuxThreshold',
     title: [
-      h3('Identify Low-Light Lux Threshold')
+      heading3('Identify Low-Light Lux Threshold')
     ].join('<br/>'),
     type: 'number',
     submitOnChange: true,
@@ -529,7 +477,7 @@ void nameCustomScene() {
   input(
     name: customScene,
     type: 'text',
-    title: h2('Custom Scene Name (Optional)'),
+    title: heading2('Custom Scene Name (Optional)'),
     width: 4,
     submitOnChange: true,
     required: false
@@ -595,7 +543,7 @@ void populateStateScenesAssignValues() {
 void idRa2RepeatersImplementingScenes() {
   input(
     name: 'repeaters',
-    title: h3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
+    title: heading3("Identify RA2 Repeaters with Integration Buttons for Room Scenes"),
     type: 'device.LutronKeypad',
     submitOnChange: true,
     required: false,
@@ -606,7 +554,7 @@ void idRa2RepeatersImplementingScenes() {
 void idIndDevices() {
   input(
     name: 'indDevices',
-    title: h3("Identify the Room's Non-RA2 Devices (e.g., Lutron Caséta, Z-Wave)"),
+    title: heading3("Identify the Room's Non-RA2 Devices (e.g., Lutron Caséta, Z-Wave)"),
     type: 'capability.switch',
     submitOnChange: true,
     required: false,
@@ -683,7 +631,7 @@ Map RoomScenesPage() {
   return dynamicPage(
     name: 'RoomScenesPage',
     title: [
-      h1("${app.label} Scenes - ${app.id}"),
+      heading1("${app.label} Scenes - ${app.id}"),
       bullet1('Tab to register changes.'),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),
@@ -716,7 +664,7 @@ Map RoomScenesPage() {
     app.removeSetting('scene^INACTIVE^Rep^ra2-83')
     app.removeSetting('customScene1')
     section {
-      solicitLogThreshold('appLogThresh', 'INFO')  // ERROR, WARN, INFO, DEBUG, TRACE
+      solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
       idMotionSensors()
       idLuxSensors()
       if (settings.luxSensors) { idLowLightThreshold() }

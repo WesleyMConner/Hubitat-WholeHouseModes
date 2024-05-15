@@ -91,20 +91,17 @@ void logModeAndPerRoomState() {
 
 void idParticipatingRooms () {
   roomPicklist = getRooms().name.sort()
-  paragraph "_idParticipating Rooms with >${roomPickList}<"
   input(
     name: 'rooms',
     type: 'enum',
-    title: heading2('Identify Participating Rooms'),
+    title: h2('Identify Participating Rooms'),
     options: roomPicklist,
     submitOnChange: true,
     required: false,
-    multiple: true
+    multiple: true,
+    offerAll: true
   )
 }
-
-
-
 
 //====
 //==== REPEATER METHODS
@@ -114,7 +111,7 @@ void idLutronRepeaters() {
   input(
     name: 'lutronRepeaters',
     title: [
-      heading3('Identify Lutron RA2 Repeaters'),
+      h3('Identify Lutron RA2 Repeaters'),
     ].join('<br/>'),
     type: 'device.LutronKeypad',  // Odly, isolates RA2 and Pro2 Repeaters
     submitOnChange: true,
@@ -161,7 +158,7 @@ void idMotionSensors() {
   input(
     name: 'motionSensors',
     title: [
-      heading3('Identify Room Motion Sensors'),
+      h3('Identify Room Motion Sensors'),
       bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when the room is unoccupied')
     ].join('<br/>'),
@@ -228,7 +225,7 @@ void idLuxSensors() {
   input(
     name: 'luxSensors',
     title: [
-      heading3('Identify Room Lux Sensors'),
+      h3('Identify Room Lux Sensors'),
       bullet2('The special scene OFF is Automatically added'),
       bullet2('OFF is invoked when no Lux Sensor is above threshold')
     ].join('<br/>'),
@@ -403,7 +400,6 @@ void installed () {
 
 void uninstalled () {
   logWarn('uninstalled', 'Entered')
-  removeAllChildApps()
 }
 
 void updated () {
@@ -465,7 +461,7 @@ Map WhaV2Page() {
   return dynamicPage(
     name: 'WhaV2Page',
     title: [
-      heading1("Whole House Automation (WHA) - ${app.id}"),
+      h1("Whole House Automation (WHA) - ${app.id}"),
       bullet1('Tab to register changes.'),
       bullet1('Click <b>Done</b> to enable subscriptions.')
     ].join('<br/>'),

@@ -30,40 +30,28 @@ definition (
 )
 
 preferences {
-  page(name: 'Ra2Page')
-}
-
-void solicitRa2IntegrationReport() {
-  input(
-    name: 'ra2IntegReport',
-    title: 'Paste in the Lutron RA2 Integration Report',
-    type: 'textarea',
-    rows: 5,
-    submitOnChange: true,
-    required: true,
-    multiple: false
-  )
-}
-
-Map Ra2Page() {
-  return dynamicPage(
-    name: 'Ra2Page',
-    title: [
-      heading1("Ra2 Integration Report Demo Page - ${app.id}"),
-      bullet1('Click <b>Done</b> to parse report.')
-    ].join('<br/>'),
+  page(
+    name: 'Ra2Parser',
+    title: h1("Ra2 Integration Report Parser (Ra2IRParser) Demo (${app.id})"),
     install: true,
     uninstall: true
   ) {
     //---------------------------------------------------------------------------------
-    // REMOVE NO LONGER USED SETTINGS AND STATE
-    //   - https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
+    // Per https://community.hubitat.com/t/issues-with-deselection-of-settings/36054/42
     //-> app.removeSetting('..')
     //-> atomicState.remove('..')
     //---------------------------------------------------------------------------------
-    app.updateLabel('Demo-Ra2IRParser')
+    app.updateLabel("Demo-Ra2IRParser (${app.id})")
     section {
-      solicitLogThreshold('appLogThresh', 'INFO')  // 'ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'
+      paragraph([
+        h2('Instructions'),
+        bullet1("Download a RadioRA 2 ${bi('Integration Report')} (use menu ${bi('Reports')} → ${bi('Integration')})."),
+        bullet1("Open the downloaded ${bi('Integration Report')}."),
+        bullet1("Copy-paste the whole ${bi('Integration Report')} \"as is\" below."),
+        bullet1("Click ${bi('Done')} to begin parsing."),
+        bullet1("Allow a few seconds for results to appear in the ${bi('Hubitat log')}.")
+      ].join('<br/>'))
+      solicitLogThreshold('appLogThresh', 'INFO')  // ERROR, WARN, INFO, DEBUG, TRACE
       atomicState.logLevel = logThreshToLogLevel(settings.appLogThresh) ?: 5
       solicitRa2IntegrationReport()
     }
@@ -84,13 +72,15 @@ void updated() {
 }
 
 void initialize() {
-  logInfo('initialize', 'Calling parseRa2IntegRpt .. logging results may take a few seconds')
-  Map results = parseRa2IntegRpt(settings.ra2IntegReport, true)
-  logInfo('initialize', 'Parse complete')
-  logRa2Results(results, 'ra2Devices')
-  logRa2Results(results, 'kpads')
-  logRa2Results(results, 'ra2Rooms')
-  logRa2Results(results, 'circuits')
-  logRa2Results(results, 'timeclock')
-  logRa2Results(results, 'green')
+  if (settings.ra2IntegReport) {
+    Map results = parseRa2IntegRpt(settings.ra2IntegReport, true)
+    logRa2Results(results, 'ra2Devices')
+    logRa2Results(results, 'kpads')
+    logRa2Results(results, 'ra2Rooms')
+    logRa2Results(results, 'circuits')
+    logRa2Results(results, 'timeclock')
+    logRa2Results(results, 'green')
+  } else {
+    logError('initiaize', 'No content was supplied for "settings.ra2IntegReport"')
+  }
 }

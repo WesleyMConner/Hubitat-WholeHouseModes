@@ -2,8 +2,10 @@ version: "0.2"
 language: en
 caseSensitive: false
 words:
+  - alexa
   - autowidth
   - caséta
+  - curr
   - groovylintrc
   - hubitat
   - kpad
@@ -15,3 +17,6 @@ words:
   - pbsg
   - pico
   - timeclock
+  - wesmc
+  - scenename
+  - rspbsg

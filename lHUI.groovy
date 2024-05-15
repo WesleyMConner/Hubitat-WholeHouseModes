@@ -29,23 +29,28 @@ library(
 )
 
 ArrayList cleanStrings(ArrayList list) {
-  // Prune nulls, empty strings and dups
+  // Prunes nulls, empty strings and dups
   return list.findAll { s -> s ?: null }.unique()
 }
 
+/*
 String blackBar() { return '<hr style="border: 5px solid black;"/>' }
 String greenBar() { return '<hr style="border: 5px solid green;"/>' }
 String redBar() { return '<hr style="border: 5px solid red;"/>' }
+String heading1(s) { return h1(s) }
+String heading2(s) { return h2(s) }
+String heading3(s) { return h3(s) }
+*/
 
-String heading1(String s) {
+String h1(String s) {
   return """<span style='font-size: 2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String heading2(String s) {
-  return """<span style='font-size: 1.2em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
+String h2(String s) {
+  return """<span style='font-size: 1.3em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
-String heading3(String s) {
+String h3(String s) {
   return """<span style='font-size: 1.1em; font-family: Roboto; font-weight: bold;'>${s}</span>"""
 }
 
@@ -60,43 +65,54 @@ String bullet2(String s) {
 String b(def val) {
   String retVal = '<b>null</b>'
   if (val == '0') {
-    retVal = "'<b>0</b>'"
+    retVal = '<b>0</b>'
   } else if (val == 0) {
-    retVal = "'<b>0</b>'"
+    retVal = '<b>0</b>'
   } else if (val) {
-    retVal = "'<b>${val}</b>'"
+    retVal = "<b>${val}</b>"
   }
   return retVal
 }
 
 String i(def val) {
-  return val ? "'<i>${val}</i>'" : '<i>null</i>'
+  return val ? "<i>${val}</i>" : '<i>null</i>'
 }
 
-String tdLft(def x) {
+String bi(def val) {
+  return i(b(val))
+}
+
+/*
+String tdL(def x) {
   return "<td style='text-align: left; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
 
-String tdCtr(def x, String css = null) {
+String tdC(def x, String css = null) {
   return "<td style='text-align: center; padding-left: 10px; padding-right: 10px; ${css}'>${x}</td>"
 }
 
-String tdRght(def x) {
+String tdR(def x) {
   return "<td style='text-align: right; padding-left: 10px; padding-right: 10px;'>${x}</td>"
 }
+*/
 
-void solicitLogThreshold(String settingsKey, String dfltThresh) {
+void solicitLogThreshold(String settingsKey, String dfltThresh = 'INFO') {
   // By passing in the settings key, clients can:
   //   - Specify their choice of settings key.
   //   - Solicit two differentiate keys (e.g., App's level vs child PBSG's level)
   input(
     name: settingsKey,
     type: 'enum',
-    title: heading2("Select ${settingsKey}"),
+    title: h2("Select ${settingsKey}"),
     options: ['ERROR', 'WARN', 'INFO', 'DEBUG', 'TRACE'],
     defaultValue: dfltThresh,
     submitOnChange: true
   )
+}
+
+Integer logThresholdToLogLevel(String logThresh) {
+  Map threshToLevel = [ TRACE: 5, DEBUG: 4, INFO: 3, WARN: 2, ERROR: 1 ]
+  return threshToLevel."${logThresh}" ?: 'INFO'
 }
 
 Integer logThreshToLogLevel(String logThresh) {
@@ -224,18 +240,18 @@ String eventDetails(Event e) {
 
 ArrayList appStateAsBullets(Boolean includeHeading = false) {
   ArrayList result = []
-  if (includeHeading) { result += heading2("${appInfo(app)} STATE") }
+  if (includeHeading) { result += h2("${appInfo(app)} STATE") }
   state.sort().each { k, v ->
     result += bullet2("<b>${k}</b> → ${v}")
   }
-  return result.size() == 0 ? [ heading2('NO STATE DATA AVAILABLE') ] : result
+  return result.size() == 0 ? [ h2('NO STATE DATA AVAILABLE') ] : result
 }
 
 ArrayList appSettingsAsBullets(Boolean includeHeading = false) {
   ArrayList result = []
-  if (includeHeading) { result += heading2("${appInfo(app)} SETTINGS") }
+  if (includeHeading) { result += h2("${appInfo(app)} SETTINGS") }
   settings.sort().each { k, v ->
     result += bullet1("<b>${k}</b> → ${v}")
   }
-  return result.size() == 0 ? [ heading2('<i>NO SETTINGS DATA AVAILABLE</i>') ] : result
+  return result.size() == 0 ? [ h2('<i>NO SETTINGS DATA AVAILABLE</i>') ] : result
 }

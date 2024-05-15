@@ -27,26 +27,11 @@ library(
  importUrl: 'https://github.com/WesleyMConner/Hubitat-lHExt.git'
 )
 
-void settingsRemoveAndLog(String settingKey) {
-  if (settings."${settingKey}") {
-    logInfo('settingsRemoveAndLog', "Removing stale setting >${settingKey}")
-  }
-}
-
 Integer safeParseInt(String s) {
   return (s == '0') ? 0 : s.toInteger()
 }
 
-void removeAllChildApps() {
-  getAllChildApps().each { child ->
-    logWarn(
-      'removeAllChildApps',
-      "child: >${child.id}< >${child.label}<"
-    )
-    deleteChildApp(child.id)
-  }
-}
-
+/*
 Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
   Map<String, ArrayList> map = [:]
@@ -64,6 +49,7 @@ Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
   }
   return map
 }
+*/
 
 ArrayList modeNames() {
   return getLocation().getModes()*.name
@@ -79,12 +65,15 @@ String switchState(DevW d) {
         : 'unknown'
 }
 
+/*
 String showSwitchAndState(String name, String state) {
   String adjustedState = state ?: 'unk'
   String emphasizedState = state == 'on' ? "${b(adjustedState)}" : "<i>${adjustedState}</i>"
   return "→ ${emphasizedState} - ${name}"
 }
+*/
 
+/*
 void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"
   ArrayList result = []
@@ -98,25 +87,26 @@ void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
         Boolean isDup = index > 0
         if (isOrphan) {
           isWarning = true
-          result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}"
-            + "${tdCtr('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
+          result += "<tr>${tdC(label)}${tdC(a.id)}${tdC(a.getChildDevices().size())}"
+            + "${tdC('DELETED ORPHAN', 'font-weight: bold;')}</tr>"
           appBase.deleteChildApp(a.id)
         } else if (isDup) {
           isWarning = true
           result += """<tr>
-            ${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}
-            /* groovylint-disable-next-line DuplicateStringLiteral */
-            ${tdCtr('DELETED DUPLICATE', 'font-weight: bold;')}
+            ${tdC(label)}${tdC(a.id)}${tdC(a.getChildDevices().size())}
+            ${tdC('DELETED DUPLICATE', 'font-weight: bold;')}
           </tr>""".stripMargin().stripIndent()
           appBase.deleteChildApp(a.id)
         } else {
-          result += "<tr>${tdCtr(label)}${tdCtr(a.id)}${tdCtr(a.getChildDevices().size())}${tdCtr('Kept')}</tr>"
+          result += "<tr>${tdC(label)}${tdC(a.id)}${tdC(a.getChildDevices().size())}${tdC('Kept')}</tr>"
         }
       }
     }
   result += '</table>'
 }
+*/
 
+/*
 void removeChildApps() {
   getAllChildApps().each { child ->
     logDebug(
@@ -126,3 +116,4 @@ void removeChildApps() {
     deleteChildApp(child.id)
   }
 }
+*/
