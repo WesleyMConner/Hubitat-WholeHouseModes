@@ -17,9 +17,8 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lHExt
-#include wesmc.lHUI
-#include wesmc.lPbsgV2
+#include wesmc.lUtils
+#include wesmc.lPBSG
 
 definition (
   parent: 'wesmc:WHA',
@@ -178,7 +177,7 @@ void activateScene() {
 }
 
 void updateTargetScene() {
-  // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
+  // Upstream PBSG/Dashboard/Alexa actions should clear Manual Overrides
   if (
     (state.activeButton == 'Automatic' && !state.activeScene)
     || (state.activeButton == 'Automatic' && !isManualOverride())
@@ -192,7 +191,7 @@ void updateTargetScene() {
 }
 
 void pbsg_ButtonOnCallback(String pbsgName) {
-  // Pbsg/Dashboard/Alexa actions override Manual Overrides.
+  // PBSG/Dashboard/Alexa actions override Manual Overrides.
   pbsg = atomicState."${pbsgName}"
   if (pbsg) {
     state.activeButton = pbsg?.activeButton ?: 'Automatic'
@@ -477,7 +476,7 @@ void initialize() {
   } else {
     logWarn(
       'initialize',
-      'The RSPbsg is pending additional configuration data.'
+      'The RsPBSG is pending additional configuration data.'
     )
   }
 }
@@ -701,7 +700,7 @@ Map RoomScenesPage() {
     state.remove('sufficientLight')
     state.remove('targetScene')
     state.brightLuxSensors = []
-    state.remove('RSPBSG_LABEL')
+    state.remove('RsPBSG_LABEL')
     state.remove('pbsgStore')
     app.removeSetting('pbsgLogThresh')
     app.removeSetting('modeToScene^Chill')
@@ -732,7 +731,7 @@ Map RoomScenesPage() {
           'defaultButton': 'Automatic',
           'instType': 'pbsg'  // Just a pbsg until elevated to 'room'
         ]
-        Map rsPbsg = pbsg_BuildToConfig(state.ROOM_LABEL)
+        Map rsPBSG = pbsg_BuildToConfig(state.ROOM_LABEL)
       } else {
         paragraph "Creation of the room's PBSG is pending identification of room scenes"
       }

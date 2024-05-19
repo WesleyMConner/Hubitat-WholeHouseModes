@@ -16,8 +16,7 @@ import com.hubitat.hub.domain.Event as Event
 import groovy.json.JsonSlurper
 
 // The Groovy Linter generates NglParseError on Hubitat #include !!!
-#include wesmc.lHExt
-#include wesmc.lHUI
+#include wesmc.lUtils
 #include wesmc.lPro2IRParser
 
 definition (

@@ -18,9 +18,8 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lHExt
-#include wesmc.lHUI
-#include wesmc.lPbsgV2
+#include wesmc.lUtils
+#include wesmc.lPBSG
 
 definition (
   name: 'WHA',
@@ -42,14 +41,14 @@ void AllAuto () {
     InstAppW roomApp = app.getChildAppByLabel(roomName)
     String manualOverrideSwitchDNI = "${roomApp.label}_Automatic"
     logInfo('AllAuto', "Turning on ${b(manualOverrideSwitchDNI)}")
-    roomApp.getRSPbsg().turnOnSwitch(manualOverrideSwitchDNI)
+    roomApp.getRsPBSG().turnOnSwitch(manualOverrideSwitchDNI)
   }
 }
 
 void pbsg_ButtonOnCallback (String pbsgName) {
   pbsg = atomicState."${pbsgName}"
   if (pbsg?.name == 'mode') {
-    // - The MPbsg instance calls this method to reflect a state change.
+    // - The MPBSG instance calls this method to reflect a state change.
     String newMode = pbsg.activeButton
     logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
     getLocation().setMode(newMode)

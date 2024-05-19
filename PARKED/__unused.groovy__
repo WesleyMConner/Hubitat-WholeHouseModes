@@ -1,37 +1,3 @@
-// ---------------------------------------------------------------------------------
-// H ( U B I T A T )   E X T ( E N S I O N )
-//
-//  Copyright (C) 2023-Present Wesley M. Conner
-//
-// Licensed under the Apache License, Version 2.0 (aka Apache-2.0, the
-// "License"); you may not use this file except in compliance with the
-// License. You may obtain a copy of the License at
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-// ---------------------------------------------------------------------------------
-import com.hubitat.app.DeviceWrapper as DevW
-import com.hubitat.app.InstalledAppWrapper as InstAppW
-
-library(
- name: 'lHExt',
- namespace: 'wesmc',
- author: 'WesleyMConner',
- description: 'General-Purpose Methods that are Reusable across Hubitat Projects',
- category: 'general purpose',
- documentationLink: 'https://github.com/WesleyMConner/Hubitat-lHExt/README.adoc',
- importUrl: 'https://github.com/WesleyMConner/Hubitat-lHExt.git'
-)
-
-Integer safeParseInt(String s) {
-  return (s == '0') ? 0 : s.toInteger()
-}
-
-/*
 Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
   // Produces Button Lists for Map keys 'retained', 'dropped' and 'added'.
   Map<String, ArrayList> map = [:]
@@ -49,31 +15,13 @@ Map<String, ArrayList> compareLists(ArrayList existing, ArrayList revised) {
   }
   return map
 }
-*/
 
-ArrayList modeNames() {
-  return getLocation().getModes()*.name
-}
-
-String switchState(DevW d) {
-  /* groovylint-disable-next-line UseCollectMany */
-  ArrayList stateValues = d.collect { device -> device.currentStates.value }.flatten()
-  return stateValues?.contains('on')
-      ? 'on'
-      : stateValues?.contains('off')
-        ? 'off'
-        : 'unknown'
-}
-
-/*
 String showSwitchAndState(String name, String state) {
   String adjustedState = state ?: 'unk'
   String emphasizedState = state == 'on' ? "${b(adjustedState)}" : "<i>${adjustedState}</i>"
   return "→ ${emphasizedState} - ${name}"
 }
-*/
 
-/*
 void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
   // if keepLatest is false, it implies "Keep Oldest"
   ArrayList result = []
@@ -104,9 +52,7 @@ void pruneAppDups(ArrayList keepLabels, InstAppW appBase) {
     }
   result += '</table>'
 }
-*/
 
-/*
 void removeChildApps() {
   getAllChildApps().each { child ->
     logDebug(
@@ -116,4 +62,31 @@ void removeChildApps() {
     deleteChildApp(child.id)
   }
 }
-*/
+
+ArrayList appStateAsBullets(Boolean includeHeading = false) {
+  ArrayList result = []
+  if (includeHeading) { result += h2("${appInfo(app)} STATE") }
+  state.sort().each { k, v ->
+    result += bullet2("<b>${k}</b> → ${v}")
+  }
+  return result.size() == 0 ? [ h2('NO STATE DATA AVAILABLE') ] : result
+}
+
+ArrayList appSettingsAsBullets(Boolean includeHeading = false) {
+  ArrayList result = []
+  if (includeHeading) { result += h2("${appInfo(app)} SETTINGS") }
+  settings.sort().each { k, v ->
+    result += bullet1("<b>${k}</b> → ${v}")
+  }
+  return result.size() == 0 ? [ h2('<i>NO SETTINGS DATA AVAILABLE</i>') ] : result
+}
+
+String deviceInfo(def device) {
+  // Design Note:
+  //   - The parameter is passed as 'def' in lieu of 'DevW'.
+  //   - When devices are used from a LinkedHashMap (e.g., settings, state),
+  //     the original DevW type is lost - resulting in method call fail that
+  //     reports a type mismatch.
+  return device ? "${device.displayName} (${device.id})" : null
+}
+

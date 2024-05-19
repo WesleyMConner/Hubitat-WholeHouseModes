@@ -5,9 +5,8 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lHExt
-#include wesmc.lHUI
-#include wesmc.lPbsgV2
+#include wesmc.lUtils
+#include wesmc.lPBSG
 
 definition (
   name: 'RenameDevices',

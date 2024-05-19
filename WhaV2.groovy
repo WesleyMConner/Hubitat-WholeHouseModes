@@ -19,9 +19,8 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lHExt
-#include wesmc.lHUI
-#include wesmc.lPbsgV2
+#include wesmc.lUtils
+#include wesmc.lPBSG
 #include wesmc.lRoomV2
 
 definition (
@@ -78,8 +77,8 @@ ArrayList identifyRoomNames() {
 
 void logModeAndPerRoomState() {
   ArrayList results = ['']
-  Map modePbsg = atomicState.mode
-  results += modePbsg ? pbsg_State(modePbsg) : 'Null modePbsg'
+  Map modePBSG = atomicState.mode
+  results += modePBSG ? pbsg_State(modePBSG) : 'Null modePBSG'
   ArrayList roomNames = identifyRoomNames()
   roomNames.each { roomName ->
     if (atomicState."${roomName}".instType == 'room') {
@@ -415,7 +414,7 @@ void updated () {
   initialize()
 }
 
-void initializeModePbsg() {
+void initializeModePBSG() {
   // Initialize the Mode PBSG instance with config data only.
   atomicState.mode = [
     name: 'mode',
@@ -424,10 +423,10 @@ void initializeModePbsg() {
     defaultButton: getLocation().getMode()
   ]
   // Leverage the config (above) to (re-)build the PBSG and its devices.
-  /*modePbsg = */ pbsg_BuildToConfig('mode')
-  //->atomicState."${atomicState.mode.name}" = modePbsg // Persist pbsg instance change
-  //-> pbsgStore_Save(modePbsg)
-  logInfo('initializeModePbsg', pbsg_State('mode'))
+  /*modePBSG = */ pbsg_BuildToConfig('mode')
+  //->atomicState."${atomicState.mode.name}" = modePBSG // Persist pbsg instance change
+  //-> pbsgStore_Save(modePBSG)
+  logInfo('initializeModePBSG', pbsg_State('mode'))
 }
 
 void createRoomStateDataFromScratch() {
@@ -436,11 +435,11 @@ void createRoomStateDataFromScratch() {
   room_restoreOriginalState()
 }
 
-void populatePerRoomPbsgs() {
+void populatePerRoomPBSGs() {
   identifyRoomNames().each{ roomName ->
     // Leverage the config (per room) to (re-)build the room's PBSG and its devices.
     pbsg_BuildToConfig(roomName)
-    logInfo('populatePerRoomPbsgs', pbsg_State(roomName))
+    logInfo('populatePerRoomPBSGs', pbsg_State(roomName))
   }
 }
 
@@ -448,9 +447,9 @@ void initialize() {
   //-> atomicState.each{ k, v ->
   //->   atomicState."${k}" = v
   //-> }
-  initializeModePbsg()
+  initializeModePBSG()
   //createRoomStateDataFromScratch()
-  populatePerRoomPbsgs()
+  populatePerRoomPBSGs()
 //  logModeAndPerRoomState()
 //  beginProcessingRepeaterEvents()
 //  beginProcessingLuxSensorEvents()

@@ -15,8 +15,7 @@
 import com.hubitat.hub.domain.Event as Event
 
 // The Groovy Linter generates NglParseError on Hubitat #include !!!
-#include wesmc.lHExt
-#include wesmc.lHUI
+#include wesmc.lUtils
 #include wesmc.lRa2IRParser
 
 definition (
