@@ -1,58 +1,77 @@
-// ----------------------------------------------------
-// For .vscode/settings.json:
-//   "files.associations": {
-//     ".groovylintrc.json": "jsonc"
-//   },
-//   "groovyLint.basic.config": "./.groovylintrc.json",
-// ----------------------------------------------------
 {
-  "extends": "recommended",
-  "rules": {
-    "CompileStatic": {
-      // Hubitat library syntax triggers this issue
-      "enabled": false
-    },
-    "DuplicateNumberLiteral": {
-      // Literal numbers in Hubitat (class None) trigger this issue
-      "enabled": false
-    },
-    "DuplicateMapLiteral": {
-      // Event subscriptions include '[filterEvents: true]'
-      "enabled": false
-    },
-    "DuplicateStringLiteral": {
-      // Literal strings in Hubitat (class None) trigger this issue
-      "enabled": false
-    },
-    "ImplementationAsType": {
-      // The Hubitat sandbox prevents this best practice
-      "enabled": false
-    },
-    "MethodCount": {
-      // With Hubitat, class None has a high method count
-      "enabled": false
-    },
-    "MethodParameterTypeRequired": {
-      // Hubitat does not allow use of T in lieu of def
-      "enabled": false
-    },
-    "NglParseError": {
-      // Hubitat #include syntax triggers this issue
-      "enabled": false
-    },
-    "NoDef": {
-      // Hubitat does not allow T in lieu of def
-      "enabled": false
-    },
-    "UnnecessaryGetter": {
-      // These are actual Hubitat methods with not allow T in lieu of def
-      "enabled": true,
-      "ignoreMethodNames": "getAllChildApps, getChildDevices, getLocation, getModes"
-    },
-    "formatting.Indentation": {
-      // Personal preference is 2 space (vs 4 space) tabs
-      "spacesPerIndentLevel": 2,
-      "severity": "info"
+    "extends": "recommended",
+    "rules": {
+        "CatchException": {
+            "enabled": false
+        },
+        "CatchThrowable": {
+            "enabled": false
+        },
+        "ClassJavadoc": {
+            "enabled": false
+        },
+        "ClosureAsLastMethodParameter": {
+            "enabled": false
+        },
+        "CompileStatic": {
+            "enabled": false
+        },
+        "DuplicateNumberLiteral": {
+            "enabled": false
+        },
+        "DuplicateStringLiteral": {
+            "enabled": false
+        },
+        "FieldTypeRequired": {
+            "enabled": false
+        },
+        "ImplementationAsType": {
+            "enabled": false
+        },
+        "Indentation": {
+            "enabled": false
+        },
+        "JavaIoPackageAccess": {
+            "enabled": false
+        },
+        "MethodParameterTypeRequired": {
+            "enabled": false
+        },
+        "MethodSize": {
+            "enabled": false
+        },
+        "NglParseError": {
+            "enabled": true
+        },
+        "NoDef": {
+            "enabled": false
+        },
+        "PrintStackTrace": {
+            "enabled": false
+        },
+        "PropertyName": {
+            "enabled": false
+        },
+        "SpaceAroundMapEntryColon": {
+            "enabled": false
+        },
+        "SystemExit": {
+            "enabled": false
+        },
+        "UnnecessaryGetter": {
+            "enabled": false
+        },
+        "UnnecessaryObjectReferences": {
+            "enabled": false
+        },
+        "UnnecessarySetter": {
+            "enabled": false
+        },
+        "VariableName": {
+            "enabled": false
+        },
+        "VariableTypeRequired": {
+            "enabled": false
+        }
     }
-  }
 }
