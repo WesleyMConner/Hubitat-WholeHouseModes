@@ -128,14 +128,14 @@ void activateScene() {
 void updateTargetScene() {
   // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
   if (
-    (state.activeButton == 'Automatic' && !state.activeScene)
-    || (state.activeButton == 'Automatic' && !isManualOverride())
+    (state.active == 'Automatic' && !state.activeScene)
+    || (state.active == 'Automatic' && !isManualOverride())
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     logWarn('updateTargetScene', 'Making a call to getLocation().getMode()')
     state.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
   } else {
-    state.activeScene = state.activeButton
+    state.activeScene = state.active
   }
 }
 
@@ -143,10 +143,10 @@ void pbsg_ButtonOnCallback(String pbsgName) {
   // Pbsg/Dashboard/Alexa actions override Manual Overrides.
   pbsg = atomicState."${pbsgName}"
   if (pbsg) {
-    state.activeButton = pbsg?.activeButton ?: 'Automatic'
+    state.active = pbsg?.active ?: 'Automatic'
     logInfo(
       'pbsg_ButtonOnCallback',
-      "Button ?${b(button)}? -> state.activeButton: ${b(state.activeButton)}")
+      "Button ?${b(button)}? -> state.active: ${b(state.active)}")
     clearManualOverride()
     updateTargetScene()
     activateScene()
@@ -279,9 +279,9 @@ void toggleButton(String button) {
 }
 
 void room_ModeChange(String newMode) {
-  // If the PBSG activeButton is 'Automatic', adjust the state.activeScene
+  // If the PBSG active is 'Automatic', adjust the state.activeScene
   // per the newMode.
-  if (state.activeButton == 'Automatic') {
+  if (state.active == 'Automatic') {
     logInfo('room_ModeChange', "Adjusting activeScene to '${newMode}'")
     state.activeScene = newMode
     activateScene()
@@ -290,7 +290,7 @@ void room_ModeChange(String newMode) {
       'room_ModeChange', [
         'Ignored: Mode Change',
         "newMode: ${newMode}",
-        "state.activeButton: ${b(state.activeButton)}",
+        "state.active: ${b(state.active)}",
         "state.activeScene: ${b(state.activeScene)}"
       ]
     )
@@ -677,7 +677,7 @@ Map RoomScenesPage() {
         atomicState."${state.ROOM_LABEL}" = [
           'name': state.ROOM_LABEL,
           'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
-          'defaultButton': 'Automatic',
+          'default': 'Automatic',
           'instType': 'pbsg'  // Just a pbsg until elevated to 'room'
         ]
         Map rsPbsg = pbsg_BuildToConfig(state.ROOM_LABEL)

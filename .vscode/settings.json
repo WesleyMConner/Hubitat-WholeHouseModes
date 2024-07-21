@@ -3,9 +3,9 @@
   "[asciidoc]": {
     "editor.rulers": [
       {
-        "column": 75,
-        "color": "#CCCCCC"
-      },
+        "column": 80,
+        "color": "#cebcbcb5"
+      }
       {
         "column": 85,
         "color": "#ff2222"
@@ -16,8 +16,8 @@
   "[groovy]": {
     "editor.rulers": [
       {
-        "column": 75,
-        "color": "#CCCCCC"
+        "column": 80,
+        "color": "#cebcbcb5"
       },
       {
         "column": 85,
@@ -29,8 +29,8 @@
   "[typescript]": {
     "editor.rulers": [
       {
-        "column": 85,
-        "color": "#CCCCCC"
+        "column": 80,
+        "color": "#cebcbcb5"
       },
       {
         "column": 100,
@@ -48,8 +48,8 @@
     // DEFAULT
     {
       "column": 80,
-      "color": "#cccccc"
-    }
+      "color": "#cebcbcb5"
+  }
   ],
   "files.associations": {
     "docs/casetaIntegrationReport.json": "jsonc",

@@ -76,9 +76,9 @@ void toggleButton(Map roomMap, String button) {
 }
 
 void room_ModeChange(Map roomMap, String newMode) {
-  // If the PBSG activeButton is 'Automatic', adjust the roomMap.activeScene
+  // If the PBSG active is 'Automatic', adjust the roomMap.activeScene
   // per the newMode.
-  if (roomMap.activeButton == 'Automatic') {
+  if (roomMap.active == 'Automatic') {
     logInfo('room_ModeChange', "Adjusting activeScene to '${newMode}'")
     roomMap.activeScene = newMode
     room_ActivateScene()
@@ -87,7 +87,7 @@ void room_ModeChange(Map roomMap, String newMode) {
       'room_ModeChange', [
         'Ignored: Mode Change',
         "newMode: ${newMode}",
-        "roomMap.activeButton: ${b(roomMap.activeButton)}",
+        "roomMap.active: ${b(roomMap.active)}",
         "roomMap.activeScene: ${b(roomMap.activeScene)}"
       ]
     )
@@ -198,7 +198,7 @@ Map RoomScenesPage() {
         Map rsPbsgConfig = [
           'name': roomMap.name,
           'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'Off' ]),
-          'defaultButton': 'Automatic'
+          'default': 'Automatic'
         ]
         Map rsPbsg = pbsg_CreateInstance(rsPbsgConfig, 'room')
       } else {

@@ -91,23 +91,23 @@ void pbsg_ButtonOnCallback(Map pbsg) {
     case 'roomScene':
       // Pbsg/Dashboard/Alexa actions override Manual Overrides.
       // Scene activation enforces room occupancy.
-      //--??-> roomMap.activeButton = pbsg.activeButton ?: 'Automatic'
+      //--??-> roomMap.active = pbsg.active ?: 'Automatic'
       //logInfo(
       //  'pbsg_ButtonOnCallback',
-      //  "Button ${b(pbsg.activeButton)} -> roomMap.activeButton: ${b(roomMap.activeButton)}"
+      //  "Button ${b(pbsg.active)} -> roomMap.active: ${b(roomMap.active)}"
       //)
       roomMap.moDetected = [:] // clears Manual Override
       // UPDATE THE TARGET SCENE
       // Upstream Pbsg/Dashboard/Alexa actions should clear Manual Overrides
       if (
-        (roomMap.activeButton == 'Automatic' && !roomMap.activeScene)
-        || (roomMap.activeButton == 'Automatic' && !roomMap.moDetected)
+        (roomMap.active == 'Automatic' && !roomMap.activeScene)
+        || (roomMap.active == 'Automatic' && !roomMap.moDetected)
       ) {
         // Ensure that targetScene is per the latest Hubitat mode.
         // groovylint-disable-next-line UnnecessaryGetter
         roomMap.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
       } else {
-        roomMap.activeScene = roomMap.activeButton
+        roomMap.activeScene = roomMap.active
       }
       room_ActivateScene(room)
       break
@@ -143,21 +143,21 @@ void modeHandler(Event e) {
   // Relay Hubitat mode changes to rooms.
   if (e.name == 'mode') {
     // FOR EACH ROOM --->
-    if (roomMap.activeButton != 'Automatic') { roomMap.activeButton = e.value }
+    if (roomMap.active != 'Automatic') { roomMap.active = e.value }
     logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
     logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-    pbsg.activeButton = 'Automatic'
+    pbsg.active = 'Automatic'
     pbsg_ButtonOnCallback(pbsg)
   } else {
     logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
   }
-  if (roomMap.activeButton == 'Automatic') {
+  if (roomMap.active == 'Automatic') {
     // Hubitat Mode changes only apply when the room's button is 'Automatic'.
     if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
+      // Let pbsg_ButtonOnCallback(...) handle active == 'Automatic'!
       logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-      pbsg.activeButton = 'Automatic'
+      pbsg.active = 'Automatic'
       pbsg_ButtonOnCallback(pbsg)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
@@ -166,7 +166,7 @@ void modeHandler(Event e) {
     logTrace(
       'modeHandler', [
         'Ignored: Mode Change',
-        "roomMap.activeButton: ${b(roomMap.activeButton)}",
+        "roomMap.active: ${b(roomMap.active)}",
         "roomMap.activeScene: ${b(roomMap.activeScene)}"
       ]
     )
@@ -175,13 +175,13 @@ void modeHandler(Event e) {
 
 void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
   // Hubitat Mode changes only when the scene is 'Automatic'.
-  if (roomMap.activeButton == 'Automatic') {
+  if (roomMap.active == 'Automatic') {
     pbsg_ActivateButton(roomMap, newMode, device)
     if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
+      // Let pbsg_ButtonOnCallback(...) handle active == 'Automatic'!
       logTrace('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-      pbsg.activeButton = 'Automatic'
+      pbsg.active = 'Automatic'
       pbsg_ButtonOnCallback(room)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
@@ -190,7 +190,7 @@ void room_ModeChange(Map roomMap, String newMode, DevW device = null) {
     logTrace(
       'modeHandler', [
         'Ignored: Mode Change',
-        "roomMap.activeButton: ${b(roomMap.activeButton)}",
+        "roomMap.active: ${b(roomMap.active)}",
         "roomMap.activeScene: ${b(roomMap.activeScene)}"
       ]
     )
@@ -352,7 +352,7 @@ void initialize() {
   if (pbsg) {
     pbsg_ActivateButton(pbsg, 'Automatic')
     logError('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-    pbsg.activeButton = 'Automatic'
+    pbsg.active = 'Automatic'
     pbsg_ButtonOnCallback(pbsg)
   } else {
     logWarn(
@@ -366,7 +366,7 @@ void initialize() {
 // groovylint-disable-next-line MethodSize
 Map room_restoreOriginalState() {
   roomStore_Save([   // Den
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -384,7 +384,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // DenLamp
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -403,7 +403,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Guest
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -422,7 +422,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Hers
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -442,7 +442,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // His
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -461,7 +461,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Kitchen
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -479,7 +479,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Lanai
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -499,7 +499,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Laundry
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -518,7 +518,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // LhsBath
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -537,7 +537,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // LhsBdrm
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -555,7 +555,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Main
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -573,7 +573,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Office
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -595,7 +595,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Primary
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -613,7 +613,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // PrimBath
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -631,7 +631,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // RhsBath
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -650,7 +650,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // RhsBdrm
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -669,7 +669,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // WHA
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxLowCounter': 0,
@@ -721,7 +721,7 @@ Map room_restoreOriginalState() {
     ]
   ])
   roomStore_Save([   // Yard
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'lux': [

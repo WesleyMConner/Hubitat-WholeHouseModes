@@ -16,11 +16,11 @@
 //   - import com.hubitat.app.DeviceWrapper as DevW
 //   - import com.hubitat.hub.domain.Event as Event
 // The following are required when using this library.
-//   - //   - #include wesmc.lUtils
+//   - //   - #include Wmc.WmcUtilsLib_1.0.0
 
 library(
   name: 'lRoomV2',
-  namespace: 'wesmc',
+  namespace: 'Wmc',
   author: 'Wesley M. Conner',
   description: 'Room Implementation',
   category: 'general purpose'
@@ -63,7 +63,7 @@ String room_State(String roomName) {
   String result = 'NOT FOUND'
   if (atomicState."${roomName}") {
     result = atomicState."${roomName}".moDetected ? 'MANUAL_OVERRIDE ' : ''
-    result += pbsg_State(atomicState."${roomName}")
+    result += pbsg_StateHtml(atomicState."${roomName}")
   } else {
     logError('room_State', "Cannot find room '${roomName}'")
   }
@@ -91,7 +91,6 @@ void room_ActivateScene(String roomName) {
       logInfo('room_ActivateScene', "${room.currScene} -> ${expectedScene}")
       atomicState.updateMapValue(roomName, 'currScene', expectedScene)
       // Decode and process the scene's per-device actions
-      //-> Map actions = roomMap.scenes.get(roomMap.currScene)
       atomicState."${roomName}".actions.'Rep'.each { repeaterId, button ->
         logInfo('room_ActivateScene', "Pushing ${repeaterId} button ${button}")
         pushLutronRepButton(repeaterId, button)
@@ -113,7 +112,7 @@ void pbsg_ButtonOnCallback(String pbsgName) {
   }
   switch (pbsgMap?.instType) {
     case 'pbsg':
-      logInfo('pbsg_ButtonOnCallback', "Processing pbsg ${pbsg_State(pbsgName)}")
+      logInfo('pbsg_ButtonOnCallback', "Processing pbsg ${pbsg_StateHtml(pbsgName)}")
       // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
       /*
       if (roomOverrides) {
@@ -130,7 +129,7 @@ void pbsg_ButtonOnCallback(String pbsgName) {
       */
       break
     case 'room':
-      logInfo('pbsg_ButtonOnCallback', "Processing room ${pbsg_State(pbsgName)}")
+      logInfo('pbsg_ButtonOnCallback', "Processing room ${pbsg_StateHtml(pbsgName)}")
       // DO NOT FORGET -> pbsgStore_Save(pbsgMap)
       /*
       if (newScene == currModeScene) {
@@ -151,22 +150,17 @@ void pbsg_ButtonOnCallback(String pbsgName) {
   }
 }
 
-//-> Boolean isDeviceType(String devTypeCandidate) {
-//->   return ['Rep', 'Ind'].contains(devTypeCandidate)
-//-> }
-
 void room_ModeChange(String roomName, String newMode, DevW device = null) {
   Map roomMap = atomicState."${roomName}"
   // Hubitat Mode changes only when the scene is 'Automatic'.
-  if (roomMap.activeButton == 'Automatic') {
+  if (roomMap.active == 'Automatic') {
     pbsg_ActivateButton(roomName, newMode, device)
     if (e.name == 'mode') {
-      // Let pbsg_ButtonOnCallback(...) handle activeButton == 'Automatic'!
+      // Let pbsg_ButtonOnCallback(...) handle active == 'Automatic'!
       logInfo('modeHandler', 'Calling pbsg_ButtonOnCallback(...)')
       logInfo('modeHandler', 'TBD FIND PBSG AND SET ACTIVE TO "Automatic"')
-      pbsg.activeButton = 'Automatic'
+      pbsg.active = 'Automatic'
       atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
-      //-> pbsgStore_Save(roomMap)
       pbsg_ButtonOnCallback(roomName)
     } else {
       logWarn('modeHandler', ['UNEXPECTED EVENT', eventDetails(e)])
@@ -175,7 +169,7 @@ void room_ModeChange(String roomName, String newMode, DevW device = null) {
     logInfo(
       'modeHandler', [
         'Ignored: Mode Change',
-        "roomMap.activeButton: ${b(roomMap.activeButton)}",
+        "roomMap.active: ${b(roomMap.active)}",
         "roomMap.activeScene: ${b(roomMap.activeScene)}"
       ]
     )
@@ -185,18 +179,6 @@ void room_ModeChange(String roomName, String newMode, DevW device = null) {
 // =====
 // ===== PICO BUTTON HANDLER
 // =====
-
-//-> void toggleButton(String button) {
-//->   // Toggle the button's device and let activate and deactivate react.
-//->   // This will result in delivery of the scene change via a callback.
-//->   String dni = "${roomMap.name}_${button}"
-//->   DevW device = getChildDevice(dni)
-//->   if (switchState(device) == 'on') {
-//->     device.off()
-//->   } else {
-//->     devive.on()
-//->   }
-//-> }
 
 /*
 void picoHandler(Event e) {
@@ -249,7 +231,7 @@ void picoHandler(Event e) {
 // groovylint-disable-next-line MethodSize
 Map room_restoreOriginalState() {
   atomicState.Den = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -267,7 +249,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.DenLamp = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -286,7 +268,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Guest = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -305,7 +287,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Hers = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -325,7 +307,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.His = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -344,7 +326,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Kitchen = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -362,7 +344,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Lanai = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -382,7 +364,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Laundry = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -401,7 +383,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.LhsBath = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -420,7 +402,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.LhsBdrm = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -438,7 +420,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Main = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -456,7 +438,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Office = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -478,7 +460,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Primary = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -496,7 +478,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.PrimBath = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -514,7 +496,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.RhsBath = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': [],
     'activeScene': 'Day',
     'luxSensors': [],
@@ -533,7 +515,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.RhsBdrm = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxSensors': [],
@@ -552,7 +534,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.WHA = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'luxLowCounter': 0,
@@ -604,7 +586,7 @@ Map room_restoreOriginalState() {
     ]
   ]
   atomicState.Yard = [
-    'activeButton': 'Automatic',
+    'active': 'Automatic',
     'activeMotionSensors': true,
     'activeScene': 'Day',
     'lux': [

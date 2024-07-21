@@ -46,22 +46,22 @@ ArrayList config_SolicitButtons(String buttonsKey) {
   return settings."${buttonsKey}"?.tokenize(' ')
 }
 
-String config_SolicitDefault(String defaultButtonKey, ArrayList buttons) {
+String config_SolicitDefault(String defaultKey, ArrayList buttons) {
   input(
-    name: defaultButtonKey, title: '<b>DEFAULT BUTTON</b>', width: 3,
+    name: defaultKey, title: '<b>DEFAULT BUTTON</b>', width: 3,
     type: 'enum', submitOnChange: true, required: false, multiple: false,
     options: buttons
   )
-  return settings."${defaultButtonKey}"
+  return settings."${defaultKey}"
 }
 
-String config_SolicitInitialActive(String activeButtonKey, ArrayList buttons) {
+String config_SolicitInitialActive(String activeKey, ArrayList buttons) {
   input(
-    name: activeButtonKey, title: '<b>INITIAL ACTIVE BUTTON</b>', width: 3,
+    name: activeKey, title: '<b>INITIAL ACTIVE BUTTON</b>', width: 3,
     type: 'enum', submitOnChange: true, required: false, multiple: false,
     options: buttons
   )
-  return settings."${activeButtonKey}"
+  return settings."${activeKey}"
 }
 
 Map config_SolicitInstance(Integer settingsKeySuffix) {
@@ -73,11 +73,11 @@ Map config_SolicitInstance(Integer settingsKeySuffix) {
     String buttonsKey = "pbsgButtons^${settingsKeySuffix}"
     String defaultKey = "pbsgDefault^${settingsKeySuffix}"
     ArrayList allButtons = config_SolicitButtons(buttonsKey)
-    String defaultButton = config_SolicitDefault(defaultKey, allButtons)
+    String default = config_SolicitDefault(defaultKey, allButtons)
     config = [
       'name': name,
       'allButtons': allButtons,
-      'defaultButton': defaultButton
+      'default': default
     ]
   } else {
     paragraph('', width: 10)  // Filler for a 12 cell row
@@ -113,7 +113,7 @@ DevW pbsg_GetOrCreateMissingDevice(DevW device, String deviceDNI) {
 void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
   DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsg.name}_${button}")
   String dState = switchState(d)
-  if (pbsg.activeButton == button) {
+  if (pbsg.active == button) {
     // The button is already active. Ensure its VSW is 'on'.
     if (dState != 'on') {
       logWarn('pbsg_ActivateButton', "Correcting ACTIVE ${button} w/ state '${dState}'")
@@ -124,16 +124,16 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     }
   } else {
-    if (pbsg.activeButton != null) {
+    if (pbsg.active != null) {
       // IMPORTANT: Move the currently active button out of the way, but
       //            DO NOT leverage pbsg_DeactivateButton() which will
-      //            populate an empty activeButton with defaultButton.
-      DevW priorActive = pbsg_GetOrCreateMissingDevice(null, "${pbsg.name}_${pbsg.activeButton}")
+      //            populate an empty active with default.
+      DevW priorActive = pbsg_GetOrCreateMissingDevice(null, "${pbsg.name}_${pbsg.active}")
       unsubscribe(priorActive)
       priorActive.off()
       pauseExecution(100)  // Take a breath to let device update
-      pbsg.buttonsLIFO.push(pbsg.activeButton)
-      pbsg.activeButton = null
+      pbsg.buttonsLIFO.push(pbsg.active)
+      pbsg.active = null
       subscribe(priorActive, pbsg_VswEventHandler, ['filterEvents': true])
     }
     // Relocate the newly activated button (from the LIFO) and turn it 'on'.
@@ -149,7 +149,7 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
       pbsg.buttonsLIFO.removeAt(indexInLIFO)
     }
     unsubscribe(d)
-    pbsg.activeButton = button
+    pbsg.active = button
     d.on()
     pbsg_ButtonOnCallback(pbsg)
     pauseExecution(100)  // Take a breath to let device update
@@ -159,12 +159,12 @@ void pbsg_ActivateButton(Map pbsg, String button, DevW device = null) {
 
 void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
   DevW d = pbsg_GetOrCreateMissingDevice(device, "${pbsg.name}_${button}")
-  if (pbsg.activeButton == button) {
+  if (pbsg.active == button) {
     unsubscribe(d)
     d.off()
     pauseExecution(100)  // Take a breath to let device update
-    pbsg.buttonsLIFO.push(pbsg.activeButton)
-    pbsg.activeButton = null
+    pbsg.buttonsLIFO.push(pbsg.active)
+    pbsg.active = null
     subscribe(d, pbsg_VswEventHandler, ['filterEvents': true])
     pbsg_EnforceDefault(pbsg)
   } else if (!pbsg.buttonsLIFO.contains(button)) {
@@ -181,15 +181,15 @@ void pbsg_DeactivateButton(Map pbsg, String button, DevW device = null) {
 //void pbsg_ActivatePrior(Map pbsg) {
 //  // Swap the currently active DNI with the DNI at the front of the LIFO.
 //  DevW temp = null
-//  if (pbsg.activeButton) { temp = pbsg.activeButton }
-//  pbsg.activeButton = pbsg.buttonsLIFO.pop()
+//  if (pbsg.active) { temp = pbsg.active }
+//  pbsg.active = pbsg.buttonsLIFO.pop()
 //  if (temp) { pbsg.buttonsLIFO.push(temp) }
 //}
 
 void pbsg_EnforceDefault(Map pbsg) {
-  if (pbsg && (!pbsg.activeButton && pbsg.defaultButton)) {
-    logInfo('pbsg_EnforceDefault', "${pbsg.defaultButton} → active")
-    pbsg_ActivateButton(pbsg, pbsg.defaultButton)
+  if (pbsg && (!pbsg.active && pbsg.default)) {
+    logInfo('pbsg_EnforceDefault', "${pbsg.default} → active")
+    pbsg_ActivateButton(pbsg, pbsg.default)
   }
 }
 
@@ -198,8 +198,8 @@ Map pbsg_Initialize(Map config) {
   Map pbsg = [
     name: config?.name,
     buttonsLIFO: [],
-    defaultButton: null,
-    activeButton: null
+    default: null,
+    active: null
   ]
   // Process buttons into order leveraging their current state for treatment
   // as 'active' or 'inactive' (in the fifo). If a single button is active,
@@ -214,11 +214,11 @@ Map pbsg_Initialize(Map config) {
         pbsg_DeactivateButton(pbsg, button)
     }
   }
-  if (!pbsg.activeButton) {
-    pbsg.defaultButton = config.defaultButton
+  if (!pbsg.active) {
+    pbsg.default = config.default
     pbsg_EnforceDefault(pbsg)
   }
-  // Post INIT: Use defaultButton to populate an empty activeButton
+  // Post INIT: Use default to populate an empty active
   logInfo('pbsg_Initialize', "Initial PBSG: ${pbsg_State(pbsg)}")
   pbsgStore_Save(pbsg)
   // Delete Child Devices with DNIs prefixed with this PBSG instance name
@@ -265,7 +265,7 @@ void pbsg_VswEventHandler(Event e) {
 
 String buttonState(Map pbsg, String button) {
   if (button == null) { logError('buttonState', 'button arg is NULL') }
-  String tag = (button && (button == pbsg.defaultButton)) ? '*' : ''
+  String tag = (button && (button == pbsg.default)) ? '*' : ''
   String summary = "${tag}<b>${button}</b> "
   DevW device = getChildDevice("${pbsg.name}_${button}")
   String swState = switchState(device)
@@ -284,8 +284,8 @@ String pbsg_State(Map pbsg) {
       buttonState(pbsg, button)
     }.join(', ')
     result += ']'
-    if (pbsg.activeButton) {
-      result += " → ${buttonState(pbsg, pbsg.activeButton)}"
+    if (pbsg.active) {
+      result += " → ${buttonState(pbsg, pbsg.active)}"
     }
   } else {
     logError('pbsg_State', 'Called with null pbsg instance.')

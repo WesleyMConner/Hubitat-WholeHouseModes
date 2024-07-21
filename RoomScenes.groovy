@@ -17,13 +17,13 @@ import com.hubitat.app.InstalledAppWrapper as InstAppW
 import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lUtils
-#include wesmc.lPBSG
+#include Wmc.WmcUtilsLib_1.0.0
+#include Wmc.lPBSG
 
 definition (
-  parent: 'wesmc:WHA',
+  parent: 'Wmc:WHA',
   name: 'RoomScenes',
-  namespace: 'wesmc',
+  namespace: 'Wmc',
   author: 'Wesley M. Conner',
   description: 'Manage WHA Rooms for Whole House Automation',
   category: '',           // Not supported as of Q3'23
@@ -36,17 +36,6 @@ definition (
 preferences {
   page(name: 'RoomScenesPage')
 }
-
-//==> String extractDeviceIdFromLabel(String deviceLabel) {
-//==>   //->x = (deviceLabel =~ /\((.*)\)/)
-//==>   //->logDebug('extractDeviceIdFromLabel', [
-//==>   //->  "deviceLabel: ${deviceLabel}",
-//==>   //->  "x: ${x}",
-//==>   //->  "x[0]: ${x[0]}",
-//==>   //->  "x[0]: ${x[0][1]}",
-//==>   //->])
-//==>   return (deviceLabel =~ /\((.*)\)/)[0][1]
-//==> }
 
 String getDeviceId(DevW device) {
 //==>   return device?.label ? extractDeviceIdFromLabel(device.label) : null
@@ -179,14 +168,14 @@ void activateScene() {
 void updateTargetScene() {
   // Upstream PBSG/Dashboard/Alexa actions should clear Manual Overrides
   if (
-    (state.activeButton == 'Automatic' && !state.activeScene)
-    || (state.activeButton == 'Automatic' && !isManualOverride())
+    (state.active == 'Automatic' && !state.activeScene)
+    || (state.active == 'Automatic' && !isManualOverride())
   ) {
     // Ensure that targetScene is per the latest Hubitat mode.
     logWarn('updateTargetScene', 'Making a call to getLocation().getMode()')
     state.activeScene = getLocation().getMode() //settings["modeToScene^${mode}"]
   } else {
-    state.activeScene = state.activeButton
+    state.activeScene = state.active
   }
 }
 
@@ -194,10 +183,10 @@ void pbsg_ButtonOnCallback(String pbsgName) {
   // PBSG/Dashboard/Alexa actions override Manual Overrides.
   pbsg = atomicState."${pbsgName}"
   if (pbsg) {
-    state.activeButton = pbsg?.activeButton ?: 'Automatic'
+    state.active = pbsg?.active ?: 'Automatic'
     logInfo(
       'pbsg_ButtonOnCallback',
-      "Button ?${b(button)}? -> state.activeButton: ${b(state.activeButton)}")
+      "Button ?${b(button)}? -> state.active: ${b(state.active)}")
     clearManualOverride()
     updateTargetScene()
     activateScene()
@@ -330,9 +319,9 @@ void toggleButton(String button) {
 }
 
 void room_ModeChange(String newMode) {
-  // If the PBSG activeButton is 'Automatic', adjust the state.activeScene
+  // If the PBSG active is 'Automatic', adjust the state.activeScene
   // per the newMode.
-  if (state.activeButton == 'Automatic') {
+  if (state.active == 'Automatic') {
     logInfo('room_ModeChange', "Adjusting activeScene to '${newMode}'")
     state.activeScene = newMode
     activateScene()
@@ -341,7 +330,7 @@ void room_ModeChange(String newMode) {
       'room_ModeChange', [
         'Ignored: Mode Change',
         "newMode: ${newMode}",
-        "state.activeButton: ${b(state.activeButton)}",
+        "state.active: ${b(state.active)}",
         "state.activeScene: ${b(state.activeScene)}"
       ]
     )
@@ -461,7 +450,6 @@ void initialize() {
   populateStateScenesAssignValues()
   clearManualOverride()
   settings.indDevices.each { device -> unsubscribe(device) }
-  //-> subscribeToRepHandler()
   subscribeToMotionSensorHandler()
   subscribeToLuxSensorHandler()
   // ACTIVATION
@@ -653,7 +641,6 @@ void configureRoomScene() {
         )
       }
       settings.repeaters?.each {d ->
-  //-> logInfo('configureRoomScene', "-->${d.getCapabilities()}<--")
         String inputName = "scene^${sceneName}^Rep^${getDeviceId(d)}"
         currSettingsKeys += inputName
         tableCol += 3
@@ -727,8 +714,8 @@ Map RoomScenesPage() {
         // For now, state.ROOM_LABEL is redundant given atomicState.name.
         atomicState."${state.ROOM_LABEL}" = [
           'name': state.ROOM_LABEL,
-          'allButtons': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
-          'defaultButton': 'Automatic',
+          'all': [ *scenes, 'Automatic' ].minus([ 'INACTIVE', 'OFF' ]),
+          'dflt': 'Automatic',
           'instType': 'pbsg'  // Just a pbsg until elevated to 'room'
         ]
         Map rsPBSG = pbsg_BuildToConfig(state.ROOM_LABEL)

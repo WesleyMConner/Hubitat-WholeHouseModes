@@ -19,13 +19,13 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lUtils
-#include wesmc.lPBSG
-#include wesmc.lRoomV2
+#include Wmc.WmcUtilsLib_1.0.0
+#include Wmc.lPBSG
+#include Wmc.lRoomV2
 
 definition (
   name: 'WhaV2',
-  namespace: 'wesmc',
+  namespace: 'Wmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
   category: '',           // Not supported as of Q3'23
@@ -78,7 +78,7 @@ ArrayList identifyRoomNames() {
 void logModeAndPerRoomState() {
   ArrayList results = ['']
   Map modePBSG = atomicState.mode
-  results += modePBSG ? pbsg_State(modePBSG) : 'Null modePBSG'
+  results += modePBSG ? pbsg_StateHtml(modePBSG) : 'Null modePBSG'
   ArrayList roomNames = identifyRoomNames()
   roomNames.each { roomName ->
     if (atomicState."${roomName}".instType == 'room') {
@@ -192,19 +192,16 @@ void motionSensorHandler(Event e) {
         roomMap.activeMotionSensors = cleanStrings([*roomMap.activeMotionSensors, e.displayName])
         room_ActivateScene(roomMap)
         atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
-        //-> pbsgStore_Save(roomMap)
       } else if (e.value == 'inactive') {
         logInfo('motionSensorHandler', "${e.displayName} is inactive")
         roomMap.activeMotionSensors?.removeAll { it == e.displayName }
         room_ActivateScene(roomMap)
         atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
-        //-> pbsgStore_Save(roomMap)
       } else {
         logWarn('motionSensorHandler', "Unexpected event value (${e.value})")
       }
     }
     atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
-    //-> pbsgStore_Save(roomMap)
   }
 }
 
@@ -254,7 +251,6 @@ void luxSensorHandler(Event e) {
                 room_ActivateScene(roomMap)
               }
               atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
-              //-> pbsgStore_Save(roomMap)
             } else if (luxLevel >= luxThreshold && roomMap.lux.lowCounter > roomMap.lux.lowMin) {
               // Only decrement lux.lowCounter to a minimum value of lux.lowMin
               if (--roomMap.lux.lowCounter == roomMap.lux.lowMin) {
@@ -265,7 +261,6 @@ void luxSensorHandler(Event e) {
                 room_ActivateScene(roomMap)
               }
               atomicState."${roomMap.name}" = roomMap // Persist pbsg instance change
-              //-> pbsgStore_Save(roomMap)
             }
           }
         }
@@ -419,14 +414,12 @@ void initializeModePBSG() {
   atomicState.mode = [
     name: 'mode',
     instType: 'pbsg',
-    allButtons: modeNames(),
-    defaultButton: getLocation().getMode()
+    all: modeNames(),
+    dflt: getLocation().getMode()
   ]
   // Leverage the config (above) to (re-)build the PBSG and its devices.
-  /*modePBSG = */ pbsg_BuildToConfig('mode')
-  //->atomicState."${atomicState.mode.name}" = modePBSG // Persist pbsg instance change
-  //-> pbsgStore_Save(modePBSG)
-  logInfo('initializeModePBSG', pbsg_State('mode'))
+  pbsg_BuildToConfig('mode')
+  logInfo('initializeModePBSG', pbsg_StateHtml('mode'))
 }
 
 void createRoomStateDataFromScratch() {
@@ -439,16 +432,12 @@ void populatePerRoomPBSGs() {
   identifyRoomNames().each{ roomName ->
     // Leverage the config (per room) to (re-)build the room's PBSG and its devices.
     pbsg_BuildToConfig(roomName)
-    logInfo('populatePerRoomPBSGs', pbsg_State(roomName))
+    logInfo('populatePerRoomPBSGs', pbsg_StateHtml(roomName))
   }
 }
 
 void initialize() {
-  //-> atomicState.each{ k, v ->
-  //->   atomicState."${k}" = v
-  //-> }
   initializeModePBSG()
-  //createRoomStateDataFromScratch()
   populatePerRoomPBSGs()
 //  logModeAndPerRoomState()
 //  beginProcessingRepeaterEvents()
@@ -476,7 +465,6 @@ Map WhaV2Page() {
     //-> atomicState.remove('roomStore')
     //-> atomicState.remove('pbsgStore')
     //-> atomicState.remove('pbsgs')
-    app.updateLabel('WhaV2')
     //atomicState.MODES = getLocation().getModes().collect { it.name }
     //getGlobalVar('defaultMode').value
     section {

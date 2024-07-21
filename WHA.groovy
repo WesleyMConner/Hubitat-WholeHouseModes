@@ -18,12 +18,12 @@ import com.hubitat.hub.domain.Event as Event
 import com.hubitat.hub.domain.Location as Loc
 
 // The Groovy Linter generates false positives on Hubitat #include !!!
-#include wesmc.lUtils
-#include wesmc.lPBSG
+#include Wmc.WmcUtilsLib_1.0.0
+#include Wmc.lPBSG
 
 definition (
   name: 'WHA',
-  namespace: 'wesmc',
+  namespace: 'Wmc',
   author: 'Wesley M. Conner',
   description: 'Whole House Automation using Modes, RA2 and Room Overrides',
   category: '',           // Not supported as of Q3'23
@@ -49,7 +49,7 @@ void pbsg_ButtonOnCallback (String pbsgName) {
   pbsg = atomicState."${pbsgName}"
   if (pbsg?.name == 'mode') {
     // - The MPBSG instance calls this method to reflect a state change.
-    String newMode = pbsg.activeButton
+    String newMode = pbsg.active
     logInfo('pbsg_ButtonOnCallback', "Received mode: ${b(newMode)}")
     getLocation().setMode(newMode)
     // Pass new mode to rooms to alleviate their need to handle modes.
@@ -121,7 +121,7 @@ void _displayInstantiatedRoomHrefs () {
         'addRoomAppsIfMissing',
         "Adding room ${roomName}"
       )
-      roomApp = addChildApp('wesmc', 'RoomScenes', roomName)
+      roomApp = addChildApp('Wmc', 'RoomScenes', roomName)
     }
     href (
       name: roomName,
@@ -167,7 +167,6 @@ Map WhaPage () {
     //state.remove('MPBSG_LABEL')
     state.remove('specialFnButtonMap')
     state.remove('SPECIALTY_BUTTONS')
-    app.updateLabel('WHA')
     state.MODES = getLocation().getModes().collect { it.name }
     getGlobalVar('defaultMode').value
     section {
@@ -176,8 +175,8 @@ Map WhaPage () {
       _idParticipatingRooms()
       atomicState.mode = [
         'name': 'mode',
-        'allButtons': getLocation().getModes().collect { it.name },
-        'defaultButton': getLocation().currentMode.name,
+        'all': getLocation().getModes().collect { it.name },
+        'dflt': getLocation().currentMode.name,
         'instType': 'pbsg'
       ]
       pbsg_BuildToConfig('mode')

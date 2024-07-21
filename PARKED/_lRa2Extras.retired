@@ -520,7 +520,7 @@ Map Ra2Page() {
         heading1('Debug<br/>'),
         *appStateAsBullets(true),
         *appSettingsAsBullets(true)
-      ].join('<br/>'))
+      ], '<br/>')
     }
   }
 }

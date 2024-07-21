@@ -37,7 +37,7 @@ preferences {
 }
 
 void pbsg_ButtonOnCallback(Map pbsg) {
-  logInfo('pbsg_ButtonOnCallback()', "Received button: ${pbsg.activeButton}")
+  logInfo('pbsg_ButtonOnCallback()', "Received button: ${pbsg.active}")
 }
 
 // GUI
@@ -81,14 +81,14 @@ Map TestPbsgPage() {
       Map bruteForceConfig = [
         'name': 'bruteForce',
         'allButtons': ['one', 'two', 'three', 'four', 'five', 'six'],
-        'defaultButton': 'four'
+        'default': 'four'
       ]
       Map bruteForcePbsg = pbsg_Initialize(bruteForceConfig)
       paragraph([
         heading1('Debug'),
         *appStateAsBullets(),
         *appSettingsAsBullets(),
-      ].join('<br/>'))
+      ], '<br/>')
     }
   }
 }
