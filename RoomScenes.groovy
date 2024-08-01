@@ -700,7 +700,7 @@ Map RoomScenesPage() {
     app.removeSetting('modesAsScenes')
     app.removeSetting('scene^INACTIVE^Rep^ra2-1')
     app.removeSetting('scene^INACTIVE^Rep^ra2-83')
-    app.removeSetting('customScene1')
+    //app.removeSetting('customScene1')
     section {
       solicitLogThreshold('appLogThresh', 'INFO')  // ERROR, WARN, INFO, DEBUG, TRACE
       idMotionSensors()
